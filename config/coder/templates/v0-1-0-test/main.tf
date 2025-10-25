@@ -30,6 +30,7 @@ locals {
 # =============================================================================
 
 # SSH Parameters - see ssh-params.tf
+# Metadata Parameters - see metadata-params.tf
 
 # =============================================================================
 # Workspace Secret
@@ -41,16 +42,22 @@ resource "random_password" "workspace_secret" {
 }
 
 # =============================================================================
-# Test: Using Git-Based Modules
+# Modules
 # =============================================================================
-# This template tests migrated git-based modules incrementally
 
-# Module 1: Init Shell (simplest)
+# Metadata configuration
+module "metadata" {
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/metadata?ref=v0.1.0"
+  
+  enabled_blocks = split(",", data.coder_parameter.metadata_blocks.value)
+}
+
+# Init Shell
 module "init_shell" {
   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/init-shell?ref=v0.1.0"
 }
 
-# Module 2: Git Identity
+# Git Identity
 module "git_identity" {
   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/git-identity?ref=v0.1.0"
   
@@ -58,7 +65,7 @@ module "git_identity" {
   git_author_email = data.coder_workspace_owner.me.email
 }
 
-# Module 3: SSH Integration
+# SSH Integration
 module "ssh" {
   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/ssh-integration?ref=v0.1.0"
   
@@ -69,85 +76,51 @@ module "ssh" {
   ssh_port_default      = try(data.coder_parameter.ssh_port[0].value, "")
 }
 
-# =============================================================================
+# Docker Scripts (install + config only)
+module "docker" {
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/docker-integration?ref=v0.1.0"
+}
+
 # Coder Agent
-# =============================================================================
-
-resource "coder_agent" "main" {
-  arch = data.coder_provisioner.me.arch
-  os   = "linux"
-
-  # Compose startup script from module outputs
+module "agent" {
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/coder-agent?ref=v0.1.0"
+  
+  arch       = data.coder_provisioner.me.arch
+  os         = "linux"
+  
   startup_script = join("\n", [
     "#!/bin/bash",
     "set -e",
     "echo '[WORKSPACE] 🚀 Starting workspace ${data.coder_workspace.me.name}'",
     "",
     module.init_shell.setup_script,
-    "",
     module.git_identity.setup_script,
-    "",
     module.ssh.ssh_copy_script,
-    "",
-    "# TODO: Add more modules as we migrate them",
-    "",
+    module.docker.docker_install_script,
+    module.docker.docker_config_script,
     module.ssh.ssh_setup_script,
     "",
     "echo '[WORKSPACE] ✅ Workspace ready!'",
   ])
-
-  env = {
-    GIT_AUTHOR_NAME     = coalesce(data.coder_workspace_owner.me.full_name, data.coder_workspace_owner.me.name)
-    GIT_AUTHOR_EMAIL    = data.coder_workspace_owner.me.email
-    GIT_COMMITTER_NAME  = coalesce(data.coder_workspace_owner.me.full_name, data.coder_workspace_owner.me.name)
-    GIT_COMMITTER_EMAIL = data.coder_workspace_owner.me.email
-    SSH_PORT            = module.ssh.ssh_port
+  
+  git_author_name  = coalesce(data.coder_workspace_owner.me.full_name, data.coder_workspace_owner.me.name)
+  git_author_email = data.coder_workspace_owner.me.email
+  coder_access_url = "http://coder:7080"
+  
+  env_vars = {
+    SSH_PORT = module.ssh.ssh_port
   }
-
-  # Basic monitoring
-  metadata {
-    display_name = "CPU Usage"
-    key          = "cpu_usage"
-    script       = "coder stat cpu"
-    interval     = 10
-    timeout      = 1
-  }
-
-  metadata {
-    display_name = "RAM Usage"
-    key          = "ram_usage"
-    script       = "coder stat mem"
-    interval     = 10
-    timeout      = 1
-  }
-
-  metadata {
-    display_name = "Disk Usage"
-    key          = "home_disk"
-    script       = "coder stat disk --path $HOME"
-    interval     = 60
-    timeout      = 1
-  }
+  
+  metadata_blocks = module.metadata.metadata_blocks
 }
 
-# =============================================================================
-# VS Code App
-# =============================================================================
-
-resource "coder_app" "code-server" {
-  agent_id     = coder_agent.main.id
-  slug         = "code-server"
-  display_name = "VS Code"
-  url          = "http://localhost:13337/?folder=/home/coder/workspace"
-  icon         = "/icon/code.svg"
-  subdomain    = false
-  share        = "owner"
-
-  healthcheck {
-    url       = "http://localhost:13337/healthz"
-    interval  = 3
-    threshold = 10
-  }
+# Code Server
+module "code_server" {
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/code-server?ref=v0.1.0"
+  
+  agent_id              = module.agent.agent_id
+  workspace_start_count = data.coder_workspace.me.start_count
+  folder                = "/home/coder/workspace"
 }
 
 # =============================================================================
@@ -160,6 +133,23 @@ resource "docker_volume" "home_volume" {
   lifecycle {
     ignore_changes = all
   }
+  
+  labels {
+    label = "coder.owner"
+    value = data.coder_workspace_owner.me.name
+  }
+  labels {
+    label = "coder.owner_id"
+    value = data.coder_workspace_owner.me.id
+  }
+  labels {
+    label = "coder.workspace_id"
+    value = data.coder_workspace.me.id
+  }
+  labels {
+    label = "coder.workspace_name_at_creation"
+    value = data.coder_workspace.me.name
+  }
 }
 
 resource "docker_container" "workspace" {
@@ -167,47 +157,58 @@ resource "docker_container" "workspace" {
   image      = "codercom/enterprise-base:ubuntu"
   privileged = true
   
-  name     = "coder-${local.username}-${lower(data.coder_workspace.me.name)}"
+  name     = "coder-${data.coder_workspace_owner.me.name}-${lower(data.coder_workspace.me.name)}"
   hostname = data.coder_workspace.me.name
   
-  command = [
-    "sh", "-c",
-    <<-EOT
-    coder agent --agent-url http://coder:7080 --agent-token ${coder_agent.main.token}
-    EOT
+  entrypoint = [
+    "sh",
+    "-c",
+    replace(module.agent.agent_init_script, "http://localhost:7080", "http://coder:7080"),
   ]
-
+  
   env = [
-    "CODER_AGENT_TOKEN=${coder_agent.main.token}",
+    "CODER_AGENT_TOKEN=${module.agent.agent_token}",
+    "CODER_ACCESS_URL=http://coder:7080"
   ]
-
+  
   host {
     host = "host.docker.internal"
     ip   = "host-gateway"
   }
-
+  
+  networks_advanced {
+    name = "coder-network"
+  }
+  
   volumes {
     container_path = "/home/coder"
     volume_name    = docker_volume.home_volume.name
     read_only      = false
   }
 
-  # SSH port (if enabled)
+  labels {
+    label = "coder.owner"
+    value = data.coder_workspace_owner.me.name
+  }
+  labels {
+    label = "coder.owner_id"
+    value = data.coder_workspace_owner.me.id
+  }
+  labels {
+    label = "coder.workspace_id"
+    value = data.coder_workspace.me.id
+  }
+  labels {
+    label = "coder.workspace_name"
+    value = data.coder_workspace.me.name
+  }
+
   dynamic "ports" {
     for_each = module.ssh.ssh_enabled ? [1] : []
     content {
       internal = 2222
       external = tonumber(module.ssh.ssh_port)
+      protocol = "tcp"
     }
-  }
-
-  labels {
-    label = "coder.owner"
-    value = local.username
-  }
-  
-  labels {
-    label = "coder.workspace_name"
-    value = data.coder_workspace.me.name
   }
 }
