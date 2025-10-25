@@ -68,7 +68,7 @@ data "coder_parameter" "ssh_port" {
   type         = "string"
   default      = ""
   mutable      = true
-  count        = data.coder_parameter.ssh_enable.value ? (try(data.coder_parameter.ssh_port_mode[0].value, "auto") == "manual" ? 1 : 0) : 0
+  count        = data.coder_parameter.ssh_enable.value && try(data.coder_parameter.ssh_port_mode[0].value, "auto") == "manual" ? 1 : 0
   order        = 52
 }
 
