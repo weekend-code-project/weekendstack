@@ -68,7 +68,6 @@ resource "coder_app" "preview" {
   url          = "http://localhost:${element(var.exposed_ports_list, 0)}"
   subdomain    = false
   share        = "owner"
-  external     = true
   
   healthcheck {
     url       = "http://localhost:${element(var.exposed_ports_list, 0)}"
