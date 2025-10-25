@@ -106,6 +106,17 @@ module "docker" {
   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/docker-integration?ref=v0.1.0"
 }
 
+# Setup Server
+module "setup_server" {
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/setup-server?ref=v0.1.0"
+  
+  workspace_name     = data.coder_workspace.me.name
+  workspace_owner    = data.coder_workspace_owner.me.name
+  auto_generate_html = data.coder_parameter.auto_generate_html.value
+  exposed_ports_list = local.exposed_ports_list
+  startup_command    = try(data.coder_parameter.startup_command[0].value, "")
+}
+
 # Coder Agent
 module "agent" {
   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/coder-agent?ref=v0.1.0"
@@ -124,6 +135,7 @@ module "agent" {
     module.docker.docker_install_script,
     module.docker.docker_config_script,
     module.ssh.ssh_setup_script,
+    module.setup_server.setup_server_script,
     "",
     "echo '[WORKSPACE] ✅ Workspace ready!'",
   ])
