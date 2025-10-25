@@ -68,4 +68,10 @@ data "coder_parameter" "ssh_password" {
   mutable      = true
   count        = data.coder_parameter.ssh_enable.value ? 1 : 0
   order        = 53
+  
+  # Validate password strength when provided (empty is allowed for random password)
+  validation {
+    regex = "^$|^.{8,}$"
+    error = "SSH password must be empty (for random) or at least 8 characters long"
+  }
 }
