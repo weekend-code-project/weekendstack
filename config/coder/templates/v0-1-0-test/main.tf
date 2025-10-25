@@ -40,7 +40,7 @@ data "coder_parameter" "ssh_enable" {
   order        = 50
 }
 
-# Only show SSH Port Mode when SSH is enabled
+# Show SSH Port Mode when SSH is enabled (no count - always visible if SSH enabled)
 data "coder_parameter" "ssh_port_mode" {
   name         = "ssh_port_mode"
   display_name = "SSH Port Mode"
@@ -56,11 +56,10 @@ data "coder_parameter" "ssh_port_mode" {
     name  = "manual"
     value = "manual"
   }
-  count = data.coder_parameter.ssh_enable.value ? 1 : 0
   order = 51
 }
 
-# Only show the SSH port field when SSH is enabled AND the port mode is set to manual
+# Show SSH port field only when SSH enabled and mode is manual
 data "coder_parameter" "ssh_port" {
   name         = "ssh_port"
   display_name = "SSH Port"
@@ -68,7 +67,7 @@ data "coder_parameter" "ssh_port" {
   type         = "string"
   default      = ""
   mutable      = true
-  count        = data.coder_parameter.ssh_enable.value && try(data.coder_parameter.ssh_port_mode[0].value, "auto") == "manual" ? 1 : 0
+  count        = data.coder_parameter.ssh_enable.value && data.coder_parameter.ssh_port_mode.value == "manual" ? 1 : 0
   order        = 52
 }
 
@@ -106,7 +105,7 @@ module "ssh" {
   workspace_id          = data.coder_workspace.me.id
   workspace_password    = random_password.workspace_secret.result
   ssh_enable_default    = data.coder_parameter.ssh_enable.value
-  ssh_port_mode_default = try(data.coder_parameter.ssh_port_mode[0].value, "auto")
+  ssh_port_mode_default = data.coder_parameter.ssh_port_mode.value
   ssh_port_default      = try(data.coder_parameter.ssh_port[0].value, "")
 }
 
