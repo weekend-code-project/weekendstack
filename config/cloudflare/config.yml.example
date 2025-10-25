@@ -1,0 +1,26 @@
+# =============================================================================
+# CLOUDFLARE TUNNEL CONFIGURATION TEMPLATE
+# =============================================================================
+# This is a template file. To use Cloudflare Tunnel:
+#
+# 1. Install cloudflared: https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/
+# 2. Authenticate: cloudflared tunnel login
+# 3. Create tunnel: cloudflared tunnel create <tunnel-name>
+# 4. Copy this file to config.yml and update with your tunnel details
+# 5. The credentials file will be created in config/cloudflare/.cloudflared/
+# 6. Update the credentials-file path below with your tunnel UUID
+#
+# Documentation: https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/
+
+tunnel: your-tunnel-name
+credentials-file: /etc/cloudflared/.cloudflared/YOUR-TUNNEL-UUID.json
+
+ingress:
+  # Route all subdomains to Traefik reverse proxy
+  - hostname: "*.example.com"
+    service: https://traefik:443
+    originRequest:
+      noTLSVerify: true
+  
+  # Catch-all rule (required as last rule)
+  - service: http_status:404

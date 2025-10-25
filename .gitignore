@@ -6,10 +6,11 @@
 !.env.example
 .env.backup
 
-# Cloudflare tunnel credentials
+# Cloudflare tunnel credentials and config
 config/cloudflare/.cloudflared/
 config/cloudflare/*.json
 config/cloudflare/*.pem
+config/cloudflare/config.yml
 
 # SSH keys and certificates
 *.key
