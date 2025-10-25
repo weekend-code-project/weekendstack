@@ -164,7 +164,7 @@ resource "docker_container" "workspace" {
   command = [
     "sh", "-c",
     <<-EOT
-      coder agent --agent-url ${coder_agent.main.access_url} --agent-token ${coder_agent.main.token}
+    coder agent --agent-url http://coder:7080 --agent-token ${coder_agent.main.token}
     EOT
   ]
 
