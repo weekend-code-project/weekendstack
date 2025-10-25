@@ -106,6 +106,28 @@ module "docker" {
   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/docker-integration?ref=v0.1.0"
 }
 
+# Traefik Routing
+module "traefik_routing" {
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/traefik-routing?ref=v0.1.0"
+  
+  workspace_name     = data.coder_workspace.me.name
+  workspace_owner    = data.coder_workspace_owner.me.name
+  workspace_id       = data.coder_workspace.me.id
+  workspace_owner_id = data.coder_workspace_owner.me.id
+  make_public        = data.coder_parameter.make_public.value
+  exposed_ports_list = local.exposed_ports_list
+}
+
+# Traefik Authentication
+module "traefik_auth" {
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/traefik-auth?ref=v0.1.0"
+  
+  workspace_name   = data.coder_workspace.me.name
+  workspace_owner  = data.coder_workspace_owner.me.name
+  make_public      = data.coder_parameter.make_public.value
+  workspace_secret = try(data.coder_parameter.workspace_secret[0].value, "") != "" ? try(data.coder_parameter.workspace_secret[0].value, "") : random_password.workspace_secret.result
+}
+
 # Coder Agent
 module "agent" {
   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/coder-agent?ref=v0.1.0"
@@ -124,9 +146,11 @@ module "agent" {
     module.docker.docker_install_script,
     module.docker.docker_config_script,
     module.ssh.ssh_setup_script,
+    module.traefik_auth.traefik_auth_setup_script,
     module.setup_server.setup_server_script,
     "",
     "echo '[WORKSPACE] ✅ Workspace ready!'",
+    "echo '[WORKSPACE] 🌐 External URL: ${module.traefik_routing.workspace_url}'",
   ])
   
   git_author_name  = coalesce(data.coder_workspace_owner.me.full_name, data.coder_workspace_owner.me.name)
@@ -151,6 +175,7 @@ module "setup_server" {
   startup_command       = try(data.coder_parameter.startup_command[0].value, "")
   agent_id              = module.agent.agent_id
   workspace_start_count = data.coder_workspace.me.start_count
+  workspace_url         = module.traefik_routing.workspace_url
 }
 
 # Code Server
@@ -227,6 +252,21 @@ resource "docker_container" "workspace" {
     container_path = "/home/coder"
     volume_name    = docker_volume.home_volume.name
     read_only      = false
+  }
+
+  mounts {
+    target = "/traefik-auth"
+    source = var.traefik_auth_dir
+    type   = "bind"
+  }
+
+  # Traefik labels for routing
+  dynamic "labels" {
+    for_each = module.traefik_routing.traefik_labels
+    content {
+      label = labels.key
+      value = labels.value
+    }
   }
 
   labels {

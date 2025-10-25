@@ -49,6 +49,12 @@ variable "workspace_start_count" {
   type        = number
 }
 
+variable "workspace_url" {
+  description = "External Traefik URL for the workspace"
+  type        = string
+  default     = ""
+}
+
 # =============================================================================
 # Preview App
 # =============================================================================
@@ -60,8 +66,9 @@ resource "coder_app" "preview" {
   display_name = "Preview"
   icon         = "/icon/code.svg"
   url          = "http://localhost:${element(var.exposed_ports_list, 0)}"
-  subdomain    = true
+  subdomain    = false
   share        = "owner"
+  external     = true
   
   healthcheck {
     url       = "http://localhost:${element(var.exposed_ports_list, 0)}"
