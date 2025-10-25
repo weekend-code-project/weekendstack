@@ -17,6 +17,18 @@
 #   - ssh_parameters: Coder parameter definitions for SSH configuration
 # =============================================================================
 
+terraform {
+  required_providers {
+    coder = {
+      source  = "coder/coder"
+      version = ">=2.4.0"
+    }
+    random = {
+      source = "hashicorp/random"
+    }
+  }
+}
+
 # SSH Parameters
 resource "coder_parameter" "ssh_enable" {
   name         = "ssh_enable"
