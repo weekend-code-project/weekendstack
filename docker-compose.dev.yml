@@ -1,0 +1,265 @@
+networks:
+  coder-network:
+    name: coder-network
+    driver: bridge
+    external: false
+
+services:
+  # =============================================================================
+  # CODER DATABASE
+  # =============================================================================
+  database:
+    image: postgres:16
+    container_name: coder-database
+    restart: unless-stopped
+    networks:
+      - coder-network
+      - shared-network
+    profiles:
+      - all
+      - dev
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - type: volume
+        source: coder-db-data
+        target: /var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          memory: ${POSTGRES_MEMORY_LIMIT:-512m}
+
+  # =============================================================================
+  # GITEA DATABASE
+  # =============================================================================
+  gitea-db:
+    image: postgres:16
+    container_name: gitea-database
+    restart: unless-stopped
+    networks:
+      - coder-network
+      - shared-network
+    profiles:
+      - all
+      - development
+    environment:
+      POSTGRES_USER: ${GITEA_DBUSER}
+      POSTGRES_PASSWORD: ${GITEA_DBPASS}
+      POSTGRES_DB: ${GITEA_DBNAME}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${GITEA_DBUSER} -d ${GITEA_DBNAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - type: volume
+        source: gitea-db-data
+        target: /var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  # =============================================================================
+  # DOCKER SOCKET PROXY
+  # =============================================================================
+  socat:
+    image: alpine/socat
+    container_name: coder-socat
+    command: "tcp-listen:2375,fork,reuseaddr unix-connect:/var/run/docker.sock"
+    networks:
+      - coder-network
+      - shared-network
+    profiles:
+      - all
+      - dev
+    user: root
+    restart: unless-stopped
+    volumes:
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+
+  # Init container to ensure directories exist with correct permissions
+  coder-init:
+    image: alpine:latest
+    container_name: coder-init
+    profiles:
+      - all
+      - dev
+    volumes:
+      - type: bind
+        source: ${WORKSPACE_DIR:-/mnt/workspace/wcp-coder/files/coder/workspace}
+        target: /workspace
+      - type: bind
+        source: ${TRAEFIK_AUTH_DIR}
+        target: /traefik-auth
+      - type: bind
+        source: ${CODER_TEMPLATE_DIR}
+        target: /templates
+    command: >
+      sh -c "
+        echo 'Initializing Coder directories...' &&
+        mkdir -p /workspace /traefik-auth /templates &&
+        chmod 777 /traefik-auth &&
+        echo 'Traefik auth directory: /traefik-auth (777)' &&
+        echo 'Directories initialized successfully'
+      "
+
+  coder:
+    image: ghcr.io/coder/coder:latest
+    container_name: coder
+    networks:
+      - coder-network
+      - shared-network
+    restart: unless-stopped
+    profiles:
+      - all
+      - dev
+    environment:
+      CODER_ACCESS_URL: ${CODER_ACCESS_URL}
+      CODER_PG_CONNECTION_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database/${POSTGRES_DB}?sslmode=disable"
+      CODER_HTTP_ADDRESS: ${CODER_HTTP_ADDRESS}
+      DOCKER_HOST: "tcp://socat:2375"
+      CODER_TEMPLATE_PATHS: "/templates"
+      COMPUTER_NAME: ${COMPUTER_NAME:-workstation}
+      BASE_DOMAIN: ${BASE_DOMAIN:-localhost}
+      DATA_BASE_DIR: ${DATA_BASE_DIR}
+      TF_VAR_workspace_dir: ${WORKSPACE_DIR:-/mnt/workspace/wcp-coder/files/coder/workspace}
+      TF_VAR_traefik_auth_dir: ${TRAEFIK_AUTH_DIR}
+      TF_VAR_ssh_key_dir: ${SSH_KEY_DIR}
+    ports:
+      - "${CODER_HTTP_PORT:-7080}:7080"
+    depends_on:
+      coder-init:
+        condition: service_completed_successfully
+      socat:
+        condition: service_started
+      database:
+        condition: service_healthy
+    volumes:
+      - type: bind
+        source: ${WORKSPACE_DIR:-/mnt/workspace/wcp-coder/files/coder/workspace}
+        target: /workspace
+      - type: bind
+        source: ${CODER_TEMPLATE_DIR}
+        target: /templates
+      - type: bind
+        source: ${SSH_KEY_DIR}
+        target: /mnt/host-ssh
+      - type: bind
+        source: ${TRAEFIK_AUTH_DIR}
+        target: /traefik-auth
+    deploy:
+      resources:
+        limits:
+          memory: ${CODER_MEMORY_LIMIT:-1g}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.coder.entrypoints=web,websecure
+      - traefik.http.routers.coder.rule=Host(`${CODER_DOMAIN:-coder-${COMPUTER_NAME}.${BASE_DOMAIN}}`)
+      - traefik.http.routers.coder.tls=true
+      - traefik.http.services.coder.loadbalancer.server.port=7080
+      - traefik.docker.network=shared-network
+
+  # =============================================================================
+  # GITEA GIT REPOSITORY HOSTING WITH CI/CD
+  # =============================================================================
+  gitea:
+    image: gitea/gitea:1.21
+    container_name: gitea
+    restart: unless-stopped
+    networks:
+      - coder-network
+      - shared-network
+    profiles:
+      - all
+      - development
+    environment:
+      USER_UID: "1000"
+      USER_GID: "1000"
+      GITEA__database__DB_TYPE: postgres
+      GITEA__database__HOST: gitea-db:5432
+      GITEA__database__NAME: ${GITEA_DBNAME}
+      GITEA__database__USER: ${GITEA_DBUSER}
+      GITEA__database__PASSWD: ${GITEA_DBPASS}
+      GITEA__server__DOMAIN: ${BASE_DOMAIN}
+      GITEA__server__HTTP_PORT: "3000"
+      GITEA__server__ROOT_URL: "http://${BASE_DOMAIN}:${GITEA_PORT}/"
+      GITEA__server__DISABLE_SSH: "true"
+      GITEA__server__SSH_PORT: ${GITEA_SSH_PORT}
+      GITEA__server__SSH_LISTEN_PORT: 22
+      GITEA__server__START_SSH_SERVER: "false"
+      GITEA__actions__ENABLED: ${GITEA_ACTIONS_ENABLED}
+      GITEA__security__SECRET_KEY: ${GITEA_SECRET_KEY}
+      GITEA__security__INTERNAL_TOKEN: ${GITEA_INTERNAL_TOKEN}
+      GITEA__oauth2__JWT_SECRET: ${GITEA_JWT_SECRET}
+      GITEA__log__MODE: console
+      GITEA__log__LEVEL: Info
+    ports:
+      - "${GITEA_PORT}:3000"
+      - "${GITEA_SSH_PORT}:22"
+    depends_on:
+      - gitea-db
+    volumes:
+      - type: bind
+        source: ${GITEA_DATA_DIR}
+        target: /data
+      - type: bind
+        source: /etc/timezone
+        target: /etc/timezone
+        read_only: true
+      - type: bind
+        source: /etc/localtime
+        target: /etc/localtime
+        read_only: true
+    deploy:
+      resources:
+        limits:
+          memory: ${GITEA_MEMORY_LIMIT:-2g}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.gitea.entrypoints=web,websecure
+      - traefik.http.routers.gitea.rule=Host(`${GITEA_DOMAIN:-git-${COMPUTER_NAME}.${BASE_DOMAIN}}`)
+      - traefik.http.routers.gitea.tls=true
+      - traefik.http.services.gitea.loadbalancer.server.port=3000
+      - traefik.docker.network=shared-network
+
+  registry-cache:
+    image: registry:2
+    container_name: coder-registry
+    restart: unless-stopped
+    networks:
+      - coder-network
+      - shared-network
+    profiles:
+      - all
+      - dev-tools
+    environment:
+      REGISTRY_PROXY_REMOTEURL: https://registry-1.docker.io
+    ports:
+      - "${REGISTRY_PORT:-5000}:5000"
+    volumes:
+      - type: bind
+        source: ${REGISTRY_DATA_DIR}
+        target: /var/lib/registry
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.registry.rule=Host(`${REGISTRY_DOMAIN:-registry-${COMPUTER_NAME}.${BASE_DOMAIN}}`)
+      - traefik.http.services.registry.loadbalancer.server.port=5000
+
+volumes:
+  coder-db-data:
+  gitea-db-data:
+
+
+
+
+

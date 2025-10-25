@@ -1,0 +1,43 @@
+# =============================================================================
+# CODER DEVELOPMENT PLATFORM - MODULAR DOCKER COMPOSE CONFIGURATION
+# =============================================================================
+# This is the main orchestration file that includes all service modules
+# 
+# Usage:
+#   Run everything (default): docker compose up -d
+#   Only Coder stack: docker compose --profile dev up -d
+#   Add proxy services: docker compose --profile dev --profile proxy up -d
+#
+# Available profiles:
+#   - all: Default profile that includes every service
+#   - dev: Coder platform + socat proxy
+#   - proxy: Traefik reverse proxy + Cloudflare tunnel
+#   - dev-tools: Docker registry cache
+#   - ai: AI services (chat, search, image generation)
+#   - productivity: NocoDB, Paperless-ngx, N8N
+#   - development: Gitea with Actions
+#   - monitoring: Uptime Kuma
+# =============================================================================
+
+# Set default profiles to include 'all' and 'gpu' if not specified
+# This makes `docker compose up` include GPU services by default.
+x-default-profile: &default-profile
+  - all
+  - gpu
+
+include:
+  - docker-compose.core.yml
+  - docker-compose.ai.yml
+  - docker-compose.dev.yml
+  - docker-compose.productivity.yml
+  - docker-compose.traefik.yml
+  - docker-compose.traefik.yml
+  # - docker-compose.automation.yml       # Currently no automation services
+  # - docker-compose.development.yml      # Will be created in Phase 5
+  # - docker-compose.monitoring.yml       # Will be created in Phase 6
+
+# Shared network for inter-service communication
+networks:
+  shared-network:
+    driver: bridge
+    name: shared-network

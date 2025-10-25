@@ -1,0 +1,21 @@
+# =============================================================================
+# CORE AI DEV STACK - BASE CONFIGURATION  
+# =============================================================================
+# This file contains the essential infrastructure services
+# Additional services are defined in separate compose files
+
+networks:
+  core-network:
+    name: core-network
+    driver: bridge
+    external: false
+
+# Global volumes for database storage (managed by Docker)
+volumes:
+  # Core service databases
+  coder-db-data:
+  gitea-db-data:
+
+services: {}
+
+

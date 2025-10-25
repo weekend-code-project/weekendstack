@@ -1,0 +1,111 @@
+# =============================================================================
+# SECURITY - CREDENTIALS & SECRETS
+# =============================================================================
+.env
+*.env
+!.env.example
+.env.backup
+
+# Cloudflare tunnel credentials
+config/cloudflare/.cloudflared/
+config/cloudflare/*.json
+config/cloudflare/*.pem
+
+# SSH keys and certificates
+*.key
+*.pem
+*.crt
+*.p12
+*.pfx
+
+# =============================================================================
+# APPLICATION DATA & CONFIGURATIONS
+# =============================================================================
+
+# Service data and runtime files (entire files directory)
+files/
+
+# Traefik configurations and auth
+config/traefik/config.yml  # Generated from template
+config/traefik/auth/
+traefik-auth/
+
+# Let's Encrypt certificates
+letsencrypt/
+
+# Database data
+postgres_data/
+config/postgres_data/
+
+# Docker service data directories (each service has its own folder with data subdirectory)
+**/data
+
+# AI Service Data
+open-webui/cache/
+open-webui/vector_db/
+open-webui/webui.db
+ollama/models/
+stable-diffusion/models/
+stable-diffusion/data/
+perplexica/data/
+perplexica/uploads/
+
+# Search engine configurations and backups
+searxng/settings.yml.backup
+searxng/settings.yml.new
+
+# Development tools data
+registry/
+config/registry/
+docker-run/
+
+# =============================================================================
+# DOCKER & RUNTIME
+# =============================================================================
+.config/
+
+# =============================================================================
+# SYSTEM & EDITOR FILES
+# =============================================================================
+.DS_Store
+*.swp
+*.swo
+*.log
+.vscode/
+.idea/
+
+# Trash and temporary files
+_trash/
+*.tmp
+*.bak
+*.backupdata/
+
+# SMB/Network share temporary files
+.smbdelete*
+
+# =============================================================================
+# CODER TEMPLATE SYSTEM - VENDORED MODULES & BUILD ARTIFACTS
+# =============================================================================
+
+# Vendored modules (ephemeral build artifacts - never commit these)
+config/coder/templates/*/modules/
+
+# Staging directories for template builds
+config/coder/.staging/
+config/coder/staging/
+config/coder/**/staging/
+
+# Build artifacts and lock files
+config/coder/templates/*/*.lock.tmp
+config/coder/templates/*/modules_manifest.*.json
+config/coder/scripts/.template_version
+
+# Backup temp directories
+config/coder/.backup-temp/
+config/coder/backup-temp/
+
+# Terraform state files (should not be in templates)
+config/coder/templates/**/.terraform/
+config/coder/templates/**/*.tfstate
+config/coder/templates/**/*.tfstate.backup
+config/coder/templates/**/.terraform.lock.hcl

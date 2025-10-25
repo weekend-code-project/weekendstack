@@ -1,0 +1,139 @@
+# =============================================================================
+# AI SERVICES - CHAT, AUTOMATION, AND ML TOOLS
+# =============================================================================
+# This file contains AI-related services that can be enabled/disabled via .env file
+# Use AI_SERVICES variable to enable specific services: AI_SERVICES="chat,automation,search"
+
+services:
+  # =============================================================================
+  # OPEN WEBUI - AI Chat Interface (connects to native Ollama)
+  # =============================================================================
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+    restart: unless-stopped
+    networks:
+      - ai-network
+      - shared-network
+    profiles:
+      - all
+      - ai
+    ports:
+      - "${OPENWEBUI_PORT:-3000}:8080"
+    volumes:
+      - type: bind
+        source: ${FILES_BASE_DIR:-./files}/open-webui
+        target: /app/backend/data
+    environment:
+      - OLLAMA_BASE_URL=${OLLAMA_HOST:-http://host.docker.internal:11434}
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY:-secret-key-change-me}
+      - WEBUI_NAME=AI Chat - ${COMPUTER_NAME}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    deploy:
+      resources:
+        limits:
+          memory: ${OPENWEBUI_MEMORY_LIMIT:-2g}
+    labels:
+      - traefik.enable=true
+      - "traefik.http.routers.openwebui.rule=Host(`${OPENWEBUI_DOMAIN:-chat-${COMPUTER_NAME}.${BASE_DOMAIN}}`)"
+      - traefik.http.routers.openwebui.entrypoints=web,websecure
+      - traefik.http.routers.openwebui.tls=true
+      - traefik.http.services.openwebui.loadbalancer.server.port=8080
+      - traefik.docker.network=shared-network
+
+  # =============================================================================
+  # SEARXNG - PRIVACY-FOCUSED SEARCH ENGINE
+  # =============================================================================
+  searxng:
+    image: docker.io/searxng/searxng:latest
+    container_name: searxng
+    restart: unless-stopped
+    networks:
+      - ai-network
+      - shared-network
+    profiles:
+      - all
+      - ai
+    ports:
+      - "${SEARXNG_PORT:-4000}:8080"
+    environment:
+      - SEARXNG_BASE_URL=${SEARXNG_PROTOCOL:-https}://${SEARXNG_DOMAIN:-search-${COMPUTER_NAME}.${BASE_DOMAIN}}/
+      - SEARXNG_PORT=8080
+      - SEARXNG_BIND_ADDRESS=0.0.0.0
+      - SEARXNG_SECRET=${SEARXNG_SECRET:-searxng-secret-key-change-me-2024}
+    volumes:
+      - type: bind
+        source: ${FILES_BASE_DIR:-./files}/searxng
+        target: /etc/searxng
+        bind:
+          create_host_path: true
+    deploy:
+      resources:
+        limits:
+          memory: ${SEARXNG_MEMORY_LIMIT:-1g}
+    labels:
+      - traefik.enable=true
+      - "traefik.http.routers.searxng.rule=Host(`${SEARXNG_DOMAIN:-search-${COMPUTER_NAME}.${BASE_DOMAIN}}`)"
+      - traefik.http.routers.searxng.entrypoints=web,websecure
+      - traefik.http.routers.searxng.tls=true
+      - traefik.http.services.searxng.loadbalancer.server.port=8080
+      - traefik.docker.network=shared-network
+      - traefik.http.routers.searxng.middlewares=searxng-auth@file
+
+  # =============================================================================
+  # STABLE DIFFUSION - IMAGE GENERATION (GPU Required)
+  # =============================================================================
+  stable-diffusion-webui:
+    image: ghcr.io/jemeyer/stable-diffusion-webui:latest
+    container_name: stable-diffusion-webui
+    restart: unless-stopped
+    networks:
+      - ai-network
+      - shared-network
+    profiles:
+      - gpu
+      - ai
+    ports:
+      - "${STABLE_DIFFUSION_PORT:-7861}:7860"
+    environment:
+      - COMMANDLINE_ARGS=${STABLE_DIFFUSION_ARGS:---listen --port 7860 --allow-code --medvram --xformers --enable-insecure-extension-access}
+      - WEBUI_SECRET_KEY=${STABLE_DIFFUSION_SECRET:-stable-diffusion-secret}
+    volumes:
+      - type: volume
+        source: stable-diffusion-models
+        target: /stable-diffusion-webui/models
+      - type: volume
+        source: stable-diffusion-data
+        target: /stable-diffusion-webui/data
+      - type: bind
+        source: ${FILES_BASE_DIR:-./files}/stable-diffusion/outputs
+        target: /stable-diffusion-webui/outputs
+    deploy:
+      resources:
+        limits:
+          memory: ${STABLE_DIFFUSION_MEMORY_LIMIT:-6g}
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    labels:
+      - "traefik.enable=${STABLE_DIFFUSION_TRAEFIK_ENABLE:-true}"
+      - "traefik.http.routers.sdwebui.rule=Host(`${STABLE_DIFFUSION_DOMAIN:-sd-${COMPUTER_NAME}.${BASE_DOMAIN}}`)"
+      - "traefik.http.routers.sdwebui.tls=${TRAEFIK_TLS_ENABLE:-true}"
+      - "traefik.http.routers.sdwebui.tls.certresolver=${TRAEFIK_CERT_RESOLVER:-letsencrypt}"
+      - "traefik.http.services.sdwebui.loadbalancer.server.port=7860"
+
+# =============================================================================
+# VOLUMES AND NETWORKS
+# =============================================================================
+volumes:
+  stable-diffusion-models:
+  stable-diffusion-data:
+
+networks:
+  ai-network:
+    name: ai-network
+    driver: bridge
+    external: false
