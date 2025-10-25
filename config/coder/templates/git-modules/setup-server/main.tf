@@ -39,6 +39,41 @@ variable "startup_command" {
   default     = ""
 }
 
+variable "agent_id" {
+  description = "Coder agent ID for the preview app"
+  type        = string
+}
+
+variable "workspace_start_count" {
+  description = "Workspace start count for conditional creation"
+  type        = number
+}
+
+# =============================================================================
+# Preview App
+# =============================================================================
+
+resource "coder_app" "preview" {
+  count        = var.workspace_start_count
+  agent_id     = var.agent_id
+  slug         = "preview"
+  display_name = "Preview"
+  icon         = "/icon/code.svg"
+  url          = "http://localhost:${element(var.exposed_ports_list, 0)}"
+  subdomain    = true
+  share        = "owner"
+  
+  healthcheck {
+    url       = "http://localhost:${element(var.exposed_ports_list, 0)}"
+    interval  = 5
+    threshold = 6
+  }
+}
+
+# =============================================================================
+# Setup Script
+# =============================================================================
+
 # Setup server script
 output "setup_server_script" {
   value = <<-EOT
