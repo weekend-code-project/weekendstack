@@ -78,10 +78,10 @@ resource "random_integer" "ssh_auto_port" {
 }
 
 locals {
-  ssh_port_manual     = try(tonumber(trimspace(coder_parameter.ssh_port.value)), 0)
+  ssh_port_manual     = try(tonumber(trimspace(data.coder_parameter.ssh_port.value)), 0)
   ssh_port_auto_value = random_integer.ssh_auto_port.result
   resolved_ssh_port   = tostring(
-    coder_parameter.ssh_port_mode.value == "auto" ? local.ssh_port_auto_value : local.ssh_port_manual
+    data.coder_parameter.ssh_port_mode.value == "auto" ? local.ssh_port_auto_value : local.ssh_port_manual
   )
 }
 
@@ -113,7 +113,7 @@ output "ssh_copy_script" {
 output "ssh_setup_script" {
   description = "Script to configure and start SSH server"
   value       = <<-EOT
-    if [ "${coder_parameter.ssh_enable.value}" = "true" ]; then
+  if [ "${data.coder_parameter.ssh_enable.value}" = "true" ]; then
       export SSH_PORT="${local.resolved_ssh_port}"
       
       if ! command -v sshd >/dev/null 2>&1; then
@@ -180,12 +180,12 @@ fi
 PROF
 
       echo ""
-      echo "====================================="
-      echo "SSH is enabled for this workspace."
-      echo "User: coder"
-      echo "Port: ${local.resolved_ssh_port}"
-      echo "Password: [workspace secret]"
-      echo "====================================="
+  echo "====================================="
+  echo "SSH is enabled for this workspace."
+  echo "User: coder"
+  echo "Port: ${local.resolved_ssh_port}"
+  echo "Password: [workspace secret]"
+  echo "====================================="
       echo ""
     fi
   EOT
