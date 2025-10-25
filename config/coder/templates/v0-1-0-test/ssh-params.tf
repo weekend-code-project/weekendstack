@@ -62,7 +62,7 @@ data "coder_parameter" "ssh_port" {
 data "coder_parameter" "ssh_password" {
   name         = "ssh_password"
   display_name = "SSH Password"
-  description  = "Password for SSH access (leave empty to use random password, e.g., '${random_password.workspace_secret.result}')"
+  description  = "Password for SSH access cannot be empty."
   type         = "string"
   default      = ""
   mutable      = true
