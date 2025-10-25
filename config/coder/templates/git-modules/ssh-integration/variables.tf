@@ -28,5 +28,5 @@ variable "ssh_port_default" {
 variable "ssh_port_mode_default" {
   description = "Default SSH port mode (manual or auto)"
   type        = string
-  default     = "manual"
+  default     = "auto"
 }

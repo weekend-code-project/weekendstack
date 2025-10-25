@@ -113,6 +113,49 @@ data "coder_parameter" "container_memory" {
   }
 }
 
+# -----------------------------------------------------------------------------
+# SSH Parameters (show when SSH enabled; port shown only for manual mode)
+# -----------------------------------------------------------------------------
+data "coder_parameter" "ssh_enable" {
+  name         = "ssh_enable"
+  display_name = "Enable SSH Server"
+  description  = "Start an SSH server inside the workspace for direct SSH access."
+  type         = "bool"
+  default      = false
+  mutable      = true
+  order        = 50
+}
+
+data "coder_parameter" "ssh_port_mode" {
+  name         = "ssh_port_mode"
+  display_name = "SSH Port Mode"
+  description  = "Choose 'manual' to specify a port, or 'auto' to pick a stable open port automatically."
+  type         = "string"
+  default      = "auto"
+  mutable      = true
+  option {
+    name  = "auto"
+    value = "auto"
+  }
+  option {
+    name  = "manual"
+    value = "manual"
+  }
+  order = 51
+}
+
+# Only show the SSH port field when SSH is enabled AND the port mode is set to manual
+data "coder_parameter" "ssh_port" {
+  name         = "ssh_port"
+  display_name = "SSH Port"
+  description  = "Container port to run sshd on (also published on the router as needed)."
+  type         = "string"
+  default      = ""
+  mutable      = true
+  count        = data.coder_parameter.ssh_enable.value ? (data.coder_parameter.ssh_port_mode.value == "manual" ? 1 : 0) : 0
+  order        = 52
+}
+
 # =============================================================================
 # Module Reference via Git (THE KEY PART OF THIS POC)
 # =============================================================================

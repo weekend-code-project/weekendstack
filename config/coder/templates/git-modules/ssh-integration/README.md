@@ -42,7 +42,7 @@ resource "docker_container" "workspace" {
 | workspace_password | SSH password | string | yes | - |
 | ssh_enable_default | SSH enable default | bool | no | false |
 | ssh_port_default | SSH port default | string | no | "" |
-| ssh_port_mode_default | Port mode default | string | no | "manual" |
+| ssh_port_mode_default | Port mode default | string | no | "auto" |
 
 ## Outputs
 

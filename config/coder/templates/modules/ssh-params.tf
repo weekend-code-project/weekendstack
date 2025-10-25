@@ -19,6 +19,8 @@ data "coder_parameter" "ssh_port" {
   type         = "string"
   default      = ""
   mutable      = true
+  # Only show the SSH port field when SSH is enabled AND the port mode is set to manual
+  count = data.coder_parameter.ssh_enable.value ? (data.coder_parameter.ssh_port_mode.value == "manual" ? 1 : 0) : 0
   order        = 51
 }
 
@@ -27,15 +29,16 @@ data "coder_parameter" "ssh_port_mode" {
   display_name = "SSH Port Mode"
   description  = "Choose 'manual' to specify a port, or 'auto' to pick a stable open port automatically."
   type         = "string"
-  default      = "manual"
+  # Make 'auto' the default and list it first in the UI
+  default      = "auto"
   mutable      = true
-  option {
-    name  = "manual"
-    value = "manual"
-  }
   option {
     name  = "auto"
     value = "auto"
+  }
+  option {
+    name  = "manual"
+    value = "manual"
   }
   order = 52
 }
@@ -50,7 +53,8 @@ resource "random_integer" "ssh_auto_port" {
 }
 
 locals {
-  ssh_port_manual     = try(tonumber(trimspace(data.coder_parameter.ssh_port.value)), 0)
+  # When ssh_port is hidden (count = 0) the data source becomes an empty list; use try(..., "")
+  ssh_port_manual     = try(tonumber(trimspace(try(data.coder_parameter.ssh_port[0].value, ""))), 0)
   ssh_port_auto_value = random_integer.ssh_auto_port.result
   resolved_ssh_port   = tostring(
     data.coder_parameter.ssh_port_mode.value == "auto" ? local.ssh_port_auto_value : local.ssh_port_manual
