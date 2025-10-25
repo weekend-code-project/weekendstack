@@ -30,7 +30,7 @@ terraform {
 }
 
 # SSH Parameters
-resource "coder_parameter" "ssh_enable" {
+data "coder_parameter" "ssh_enable" {
   name         = "ssh_enable"
   display_name = "Enable SSH Server"
   description  = "Start an SSH server inside the workspace for direct SSH access."
@@ -40,7 +40,7 @@ resource "coder_parameter" "ssh_enable" {
   order        = 50
 }
 
-resource "coder_parameter" "ssh_port" {
+data "coder_parameter" "ssh_port" {
   name         = "ssh_port"
   display_name = "SSH Port"
   description  = "Container port to run sshd on (also published on the router as needed)."
@@ -50,7 +50,7 @@ resource "coder_parameter" "ssh_port" {
   order        = 51
 }
 
-resource "coder_parameter" "ssh_port_mode" {
+data "coder_parameter" "ssh_port_mode" {
   name         = "ssh_port_mode"
   display_name = "SSH Port Mode"
   description  = "Choose 'manual' to specify a port, or 'auto' to pick a stable open port automatically."
