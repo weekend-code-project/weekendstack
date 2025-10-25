@@ -26,6 +26,51 @@ locals {
 }
 
 # =============================================================================
+# Parameters
+# =============================================================================
+
+# SSH Parameters (show when SSH enabled; port shown only for manual mode)
+data "coder_parameter" "ssh_enable" {
+  name         = "ssh_enable"
+  display_name = "Enable SSH Server"
+  description  = "Start an SSH server inside the workspace for direct SSH access."
+  type         = "bool"
+  default      = false
+  mutable      = true
+  order        = 50
+}
+
+data "coder_parameter" "ssh_port_mode" {
+  name         = "ssh_port_mode"
+  display_name = "SSH Port Mode"
+  description  = "Choose 'manual' to specify a port, or 'auto' to pick a stable open port automatically."
+  type         = "string"
+  default      = "auto"
+  mutable      = true
+  option {
+    name  = "auto"
+    value = "auto"
+  }
+  option {
+    name  = "manual"
+    value = "manual"
+  }
+  order = 51
+}
+
+# Only show the SSH port field when SSH is enabled AND the port mode is set to manual
+data "coder_parameter" "ssh_port" {
+  name         = "ssh_port"
+  display_name = "SSH Port"
+  description  = "Container port to run sshd on (also published on the router as needed)."
+  type         = "string"
+  default      = ""
+  mutable      = true
+  count        = data.coder_parameter.ssh_enable.value ? (data.coder_parameter.ssh_port_mode.value == "manual" ? 1 : 0) : 0
+  order        = 52
+}
+
+# =============================================================================
 # Workspace Secret
 # =============================================================================
 
@@ -56,8 +101,11 @@ module "git_identity" {
 module "ssh" {
   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/ssh-integration?ref=v0.1.0"
   
-  workspace_id       = data.coder_workspace.me.id
-  workspace_password = random_password.workspace_secret.result
+  workspace_id          = data.coder_workspace.me.id
+  workspace_password    = random_password.workspace_secret.result
+  ssh_enable_default    = data.coder_parameter.ssh_enable.value
+  ssh_port_mode_default = data.coder_parameter.ssh_port_mode.value
+  ssh_port_default      = try(data.coder_parameter.ssh_port[0].value, "")
 }
 
 # =============================================================================
