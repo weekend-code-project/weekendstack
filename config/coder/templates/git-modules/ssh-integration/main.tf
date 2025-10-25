@@ -199,5 +199,5 @@ output "ssh_port" {
 
 output "ssh_enabled" {
   description = "Whether SSH is enabled"
-  value       = coder_parameter.ssh_enable.value
+  value       = data.coder_parameter.ssh_enable.value
 }
