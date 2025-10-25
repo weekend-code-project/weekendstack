@@ -120,7 +120,7 @@ data "coder_parameter" "container_memory" {
 module "workspace" {
   # Git source format: git::<repo_url>//<path_to_module>?ref=<branch>
   # NOTE: Update the branch name to match your current branch
-  source = "git::https://github.com/jessefreeman/wcp-coder.git//config/coder/templates/modules/docker-workspace-git?ref=work/cleanup-templates-20251025"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/test-modules/docker-workspace?ref=v0.1.0"
   
   # Workspace identification (from Coder data sources)
   workspace_name     = data.coder_workspace.me.name
