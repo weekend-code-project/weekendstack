@@ -187,6 +187,17 @@ module "code_server" {
   folder                = "/home/coder/workspace"
 }
 
+# Preview Link (external Traefik URL)
+module "preview_link" {
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/preview-link?ref=v0.1.0"
+  
+  agent_id              = module.agent.agent_id
+  workspace_url         = module.traefik_routing.workspace_url
+  workspace_start_count = data.coder_workspace.me.start_count
+  use_custom_url        = data.coder_parameter.use_custom_preview_url.value
+  custom_url            = try(data.coder_parameter.custom_preview_url[0].value, "")
+}
+
 # =============================================================================
 # Docker Resources
 # =============================================================================
