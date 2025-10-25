@@ -62,7 +62,7 @@ data "coder_parameter" "ssh_port" {
 data "coder_parameter" "ssh_password" {
   name         = "ssh_password"
   display_name = "SSH Password"
-  description  = "Password for SSH access (leave empty to use workspace secret)"
+  description  = "Password for SSH access (leave empty to use random password, e.g., 'aB3dE6fG8hJ1kL2m')"
   type         = "string"
   default      = ""
   mutable      = true
@@ -72,6 +72,6 @@ data "coder_parameter" "ssh_password" {
   # Validate password strength when provided (empty is allowed for random password)
   validation {
     regex = "^$|^.{8,}$"
-    error = "SSH password must be empty (for random) or at least 8 characters long"
+    error = "SSH password must be empty (for random, e.g., 'aB3dE6fG8hJ1kL2m') or at least 8 characters long"
   }
 }
