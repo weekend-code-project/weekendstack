@@ -57,3 +57,15 @@ data "coder_parameter" "ssh_port" {
     error = "SSH port must be a valid port number between 1 and 65535"
   }
 }
+
+# SSH Password - Required when SSH is enabled
+data "coder_parameter" "ssh_password" {
+  name         = "ssh_password"
+  display_name = "SSH Password"
+  description  = "Password for SSH access (leave empty to use workspace secret)"
+  type         = "string"
+  default      = ""
+  mutable      = true
+  count        = data.coder_parameter.ssh_enable.value ? 1 : 0
+  order        = 53
+}

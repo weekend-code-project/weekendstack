@@ -95,7 +95,7 @@ module "ssh" {
   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/ssh-integration?ref=v0.1.0"
   
   workspace_id          = data.coder_workspace.me.id
-  workspace_password    = random_password.workspace_secret.result
+  workspace_password    = try(data.coder_parameter.ssh_password[0].value, "") != "" ? try(data.coder_parameter.ssh_password[0].value, "") : random_password.workspace_secret.result
   ssh_enable_default    = data.coder_parameter.ssh_enable.value
   ssh_port_mode_default = try(data.coder_parameter.ssh_port_mode[0].value, "auto")
   ssh_port_default      = try(data.coder_parameter.ssh_port[0].value, "")

@@ -146,7 +146,7 @@ PROF
   echo "SSH is enabled for this workspace."
   echo "User: coder"
   echo "Port: ${local.resolved_ssh_port}"
-  echo "Password: [workspace secret]"
+  echo "Password: ${var.workspace_password}"
   echo "====================================="
       echo ""
     fi

@@ -60,16 +60,34 @@ data "coder_parameter" "ssh_port" {
     error = "SSH port must be a valid port number between 1 and 65535"
   }
 }
+
+data "coder_parameter" "ssh_password" {
+  name         = "ssh_password"
+  display_name = "SSH Password"
+  description  = "Password for SSH access (leave empty to use random workspace secret)"
+  type         = "string"
+  default      = ""
+  mutable      = true
+  count        = data.coder_parameter.ssh_enable.value ? 1 : 0
+  order        = 53
+}
 ```
 
 ## Usage
 
 ```hcl
+# Generate random password as fallback
+resource "random_password" "workspace_secret" {
+  length  = 16
+  special = false
+}
+
 module "ssh" {
   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/ssh-integration?ref=v0.1.0"
   
   workspace_id          = data.coder_workspace.me.id
-  workspace_password    = random_password.workspace_secret.result
+  # Use custom password if provided, otherwise use random password
+  workspace_password    = try(data.coder_parameter.ssh_password[0].value, "") != "" ? try(data.coder_parameter.ssh_password[0].value, "") : random_password.workspace_secret.result
   ssh_enable_default    = data.coder_parameter.ssh_enable.value
   ssh_port_mode_default = try(data.coder_parameter.ssh_port_mode[0].value, "auto")
   ssh_port_default      = try(data.coder_parameter.ssh_port[0].value, "")
