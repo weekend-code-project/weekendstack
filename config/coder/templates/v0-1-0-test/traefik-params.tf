@@ -34,3 +34,4 @@ data "coder_parameter" "workspace_secret" {
     error = "Suggested random password: ${random_password.workspace_secret.result}"
   }
 }
+
