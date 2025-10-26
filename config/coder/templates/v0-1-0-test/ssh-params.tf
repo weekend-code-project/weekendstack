@@ -10,6 +10,7 @@ data "coder_parameter" "ssh_enable" {
   display_name = "Enable SSH Server"
   description  = "Start an SSH server inside the workspace for direct SSH access."
   type         = "bool"
+  form_type    = "switch"
   default      = false
   mutable      = true
   order        = 50

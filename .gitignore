@@ -104,9 +104,3 @@ config/coder/scripts/.template_version
 # Backup temp directories
 config/coder/.backup-temp/
 config/coder/backup-temp/
-
-# Terraform state files (should not be in templates)
-config/coder/templates/**/.terraform/
-config/coder/templates/**/*.tfstate
-config/coder/templates/**/*.tfstate.backup
-config/coder/templates/**/.terraform.lock.hcl
