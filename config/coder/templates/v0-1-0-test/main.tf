@@ -106,9 +106,9 @@ module "ssh" {
 #   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/docker-integration?ref=v0.1.0"
 # }
 
-# Traefik Routing - Testing module declaration only
-module "traefik_routing" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/traefik-routing?ref=v0.1.0"
+# Routing Labels Test - Testing if module name matters
+module "routing_labels_test" {
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/routing-labels-test?ref=v0.1.0"
   
   workspace_name     = data.coder_workspace.me.name
   workspace_owner    = data.coder_workspace_owner.me.name
@@ -117,6 +117,25 @@ module "traefik_routing" {
   make_public        = data.coder_parameter.make_public.value
   exposed_ports_list = local.exposed_ports_list
 }
+
+# Traefik Routing Test - Minimal module to debug validation issue
+# module "traefik_routing_test" {
+#   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/traefik-routing-test?ref=v0.1.0"
+#   
+#   workspace_name = data.coder_workspace.me.name
+# }
+
+# Traefik Routing - COMMENTED OUT FOR TESTING
+# module "traefik_routing" {
+#   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/traefik-routing?ref=v0.1.0"
+#   
+#   workspace_name     = data.coder_workspace.me.name
+#   workspace_owner    = data.coder_workspace_owner.me.name
+#   workspace_id       = data.coder_workspace.me.id
+#   workspace_owner_id = data.coder_workspace_owner.me.id
+#   make_public        = data.coder_parameter.make_public.value
+#   exposed_ports_list = local.exposed_ports_list
+# }
 
 # Traefik Authentication - COMMENTED OUT FOR TESTING
 # module "traefik_auth" {
