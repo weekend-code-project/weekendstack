@@ -1,30 +1,57 @@
-terraform {
+# Minimal traefik-auth module for testingterraform {
+
   required_providers {
-    coder = {
-      source = "coder/coder"
-    }
+
+variable "workspace_name" {    coder = {
+
+  type = string      source = "coder/coder"
+
+}    }
+
     random = {
-      source = "hashicorp/random"
-    }
-  }
-}
 
-# =============================================================================
-# Traefik Authentication Module
-# =============================================================================
-# Configures Traefik basic authentication for workspace access.
+variable "workspace_owner" {      source = "hashicorp/random"
 
-variable "workspace_name" {
-  description = "Name of the workspace"
-  type        = string
-}
+  type = string    }
 
-variable "workspace_owner" {
-  description = "Owner username"
-  type        = string
+}  }
+
 }
 
 variable "make_public" {
+
+  type = bool# =============================================================================
+
+}# Traefik Authentication Module
+
+# =============================================================================
+
+variable "workspace_secret" {# Configures Traefik basic authentication for workspace access.
+
+  type      = string
+
+  default   = ""variable "workspace_name" {
+
+  sensitive = true  description = "Name of the workspace"
+
+}  type        = string
+
+}
+
+output "traefik_auth_enabled" {
+
+  value = !var.make_publicvariable "workspace_owner" {
+
+}  description = "Owner username"
+
+  type        = string
+
+output "traefik_auth_setup_script" {}
+
+  value = "echo 'traefik auth setup'"
+
+}variable "make_public" {
+
   description = "Whether workspace is public (no auth)"
   type        = bool
 }
