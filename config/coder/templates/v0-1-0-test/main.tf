@@ -166,10 +166,10 @@ module "agent" {
     # module.docker.docker_config_script,
     module.ssh.ssh_setup_script,
     # module.traefik_auth.traefik_auth_setup_script,
-    # module.setup_server.setup_server_script,
+    module.setup_server.setup_server_script,
     "",
     "echo '[WORKSPACE] ✅ Workspace ready!'",
-    # "echo '[WORKSPACE] 🌐 External URL: ${module.traefik_routing.workspace_url}'",
+    "echo '[WORKSPACE] 🌐 External URL: ${module.routing_labels_test.workspace_url}'",
   ])
   
   git_author_name  = coalesce(data.coder_workspace_owner.me.full_name, data.coder_workspace_owner.me.name)
