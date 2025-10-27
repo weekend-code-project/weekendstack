@@ -138,9 +138,9 @@ module "routing_labels_test" {
 # }
 
 
-# Workspace Authentication (renamed to avoid Coder UI bug with "traefik")
-module "workspace_auth" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/workspace-auth?ref=v0.1.0"
+# Password Protection (formerly workspace-auth, renamed to avoid Coder UI bug)
+module "password_protection" {
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/password-protection?ref=v0.1.0"
   
   workspace_name   = data.coder_workspace.me.name
   workspace_owner  = data.coder_workspace_owner.me.name
@@ -166,7 +166,7 @@ module "agent" {
     # module.docker.docker_install_script,
     # module.docker.docker_config_script,
     module.ssh.ssh_setup_script,
-    module.workspace_auth.traefik_auth_setup_script,
+    module.password_protection.traefik_auth_setup_script,
     module.setup_server.setup_server_script,
     "",
     "echo '[WORKSPACE] ✅ Workspace ready!'",
