@@ -8,47 +8,47 @@ locals {
   metadata_block_opts = [
     {
       name        = "CPU Usage"
-      value       = jsonencode(["cpu"])
+      value       = "cpu"
       description = "Show real-time CPU usage percentage"
     },
     {
       name        = "RAM Usage"
-      value       = jsonencode(["ram"])
+      value       = "ram"
       description = "Show memory consumption and available RAM"
     },
     {
       name        = "Disk Usage"
-      value       = jsonencode(["disk"])
+      value       = "disk"
       description = "Show disk space used and available in home directory"
     },
     {
       name        = "Architecture"
-      value       = jsonencode(["arch"])
+      value       = "arch"
       description = "Display system architecture (e.g., x86_64, arm64)"
     },
     {
       name        = "Exposed Ports"
-      value       = jsonencode(["ports"])
+      value       = "ports"
       description = "Show list of ports exposed by the workspace"
     },
     {
       name        = "SSH Port"
-      value       = jsonencode(["ssh_port"])
+      value       = "ssh_port"
       description = "Display the SSH port number for remote connections"
     },
     {
       name        = "Validation Status"
-      value       = jsonencode(["validation"])
+      value       = "validation"
       description = "Show workspace validation checks and health status"
     },
     {
       name        = "Load Average"
-      value       = jsonencode(["load_avg"])
+      value       = "load_avg"
       description = "Display system load average (1, 5, 15 minute intervals)"
     },
     {
       name        = "Uptime"
-      value       = jsonencode(["uptime"])
+      value       = "uptime"
       description = "Show how long the workspace has been running"
     }
   ]
