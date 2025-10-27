@@ -166,10 +166,10 @@ module "agent" {
     # module.docker.docker_config_script,
     module.ssh.ssh_setup_script,
     # module.traefik_auth.traefik_auth_setup_script,
-    # module.setup_server.setup_server_script,
+    module.setup_server.setup_server_script,
     "",
     "echo '[WORKSPACE] ✅ Workspace ready!'",
-    # "echo '[WORKSPACE] 🌐 External URL: ${module.traefik_routing.workspace_url}'",
+    "echo '[WORKSPACE] 🌐 Server URL: http://localhost:8080'",
   ])
   
   git_author_name  = coalesce(data.coder_workspace_owner.me.full_name, data.coder_workspace_owner.me.name)
@@ -183,19 +183,19 @@ module "agent" {
   metadata_blocks = module.metadata.metadata_blocks
 }
 
-# Setup Server (after agent for preview app) - COMMENTED OUT FOR TESTING
-# module "setup_server" {
-#   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/setup-server?ref=v0.1.0"
-#   
-#   workspace_name        = data.coder_workspace.me.name
-#   workspace_owner       = data.coder_workspace_owner.me.name
-#   auto_generate_html    = data.coder_parameter.auto_generate_html.value
-#   exposed_ports_list    = local.exposed_ports_list
-#   startup_command       = try(data.coder_parameter.startup_command[0].value, "")
-#   agent_id              = module.agent.agent_id
-#   workspace_start_count = data.coder_workspace.me.start_count
-#   workspace_url         = "http://placeholder.url"
-# }
+# Setup Server (starts the static site server and runs startup command)
+module "setup_server" {
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/setup-server?ref=v0.1.0"
+  
+  workspace_name        = data.coder_workspace.me.name
+  workspace_owner       = data.coder_workspace_owner.me.name
+  auto_generate_html    = data.coder_parameter.auto_generate_html.value
+  exposed_ports_list    = local.exposed_ports_list
+  startup_command       = try(data.coder_parameter.startup_command[0].value, "")
+  agent_id              = module.agent.agent_id
+  workspace_start_count = data.coder_workspace.me.start_count
+  workspace_url         = "http://localhost:8080"
+}
 
 # Code Server - COMMENTED OUT FOR TESTING
 # module "code_server" {
