@@ -63,15 +63,12 @@ data "coder_parameter" "ssh_port" {
 data "coder_parameter" "ssh_password" {
   name         = "ssh_password"
   display_name = "SSH Password"
-  description  = "Password for SSH access cannot be empty."
+  description  = "Password for SSH access. Leave empty to use auto-generated password."
   type         = "string"
   default      = ""
   mutable      = true
   count        = data.coder_parameter.ssh_enable.value ? 1 : 0
   order        = 53
   
-  validation {
-    regex = "^.+$"
-    error = "SSH password cannot be empty (e.g., use '${random_password.workspace_secret.result}')"
-  }
+  # No validation - empty is allowed, will use random_password.workspace_secret.result
 }
