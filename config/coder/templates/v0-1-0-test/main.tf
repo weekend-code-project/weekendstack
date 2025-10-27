@@ -166,7 +166,7 @@ module "agent" {
     # module.docker.docker_install_script,
     # module.docker.docker_config_script,
     module.ssh.ssh_setup_script,
-    module.workspace_auth.workspace_auth_setup_script,
+    module.workspace_auth.traefik_auth_setup_script,
     module.setup_server.setup_server_script,
     "",
     "echo '[WORKSPACE] ✅ Workspace ready!'",
