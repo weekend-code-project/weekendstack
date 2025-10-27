@@ -72,19 +72,19 @@ resource "random_password" "workspace_secret" {
 
 # Metadata configuration
 module "metadata" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/metadata?ref=v0.1.0"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//git-modules/metadata?ref=v0.1.0"
   
   enabled_blocks = split(",", data.coder_parameter.metadata_blocks.value)
 }
 
 # Init Shell - COMMENTED OUT FOR TESTING
 # module "init_shell" {
-#   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/init-shell?ref=v0.1.0"
+#   source = "git::https://github.com/weekend-code-project/weekendstack.git//git-modules/init-shell?ref=v0.1.0"
 # }
 
 # Git Identity - COMMENTED OUT FOR TESTING
 # module "git_identity" {
-#   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/git-identity?ref=v0.1.0"
+#   source = "git::https://github.com/weekend-code-project/weekendstack.git//git-modules/git-identity?ref=v0.1.0"
 #   
 #   git_author_name  = coalesce(data.coder_workspace_owner.me.full_name, data.coder_workspace_owner.me.name)
 #   git_author_email = data.coder_workspace_owner.me.email
@@ -92,7 +92,7 @@ module "metadata" {
 
 # SSH Integration
 module "ssh" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/ssh-integration?ref=v0.1.0"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//git-modules/ssh-integration?ref=v0.1.0"
   
   workspace_id          = data.coder_workspace.me.id
   workspace_password    = try(data.coder_parameter.ssh_password[0].value, "") != "" ? try(data.coder_parameter.ssh_password[0].value, "") : random_password.workspace_secret.result
@@ -103,12 +103,12 @@ module "ssh" {
 
 # Docker Scripts (install + config only) - COMMENTED OUT FOR TESTING
 # module "docker" {
-#   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/docker-integration?ref=v0.1.0"
+#   source = "git::https://github.com/weekend-code-project/weekendstack.git//git-modules/docker-integration?ref=v0.1.0"
 # }
 
 # Routing Labels Test - Testing if module name matters
 module "routing_labels_test" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/routing-labels-test?ref=v0.1.0"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//git-modules/routing-labels-test?ref=v0.1.0"
   
   workspace_name     = data.coder_workspace.me.name
   workspace_owner    = data.coder_workspace_owner.me.name
@@ -120,14 +120,14 @@ module "routing_labels_test" {
 
 # Traefik Routing Test - Minimal module to debug validation issue
 # module "traefik_routing_test" {
-#   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/traefik-routing-test?ref=v0.1.0"
+#   source = "git::https://github.com/weekend-code-project/weekendstack.git//git-modules/traefik-routing-test?ref=v0.1.0"
 #   
 #   workspace_name = data.coder_workspace.me.name
 # }
 
 # Traefik Routing - COMMENTED OUT FOR TESTING
 # module "traefik_routing" {
-#   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/traefik-routing?ref=v0.1.0"
+#   source = "git::https://github.com/weekend-code-project/weekendstack.git//git-modules/traefik-routing?ref=v0.1.0"
 #   
 #   workspace_name     = data.coder_workspace.me.name
 #   workspace_owner    = data.coder_workspace_owner.me.name
@@ -140,7 +140,7 @@ module "routing_labels_test" {
 
 # Password Protection (formerly workspace-auth, renamed to avoid Coder UI bug)
 module "password_protection" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/password-protection?ref=v0.1.0"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//git-modules/password-protection?ref=v0.1.0"
   
   workspace_name   = data.coder_workspace.me.name
   workspace_owner  = data.coder_workspace_owner.me.name
@@ -150,7 +150,7 @@ module "password_protection" {
 
 # Coder Agent
 module "agent" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/coder-agent?ref=v0.1.0"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//git-modules/coder-agent?ref=v0.1.0"
   
   arch       = data.coder_provisioner.me.arch
   os         = "linux"
@@ -186,7 +186,7 @@ module "agent" {
 
 # Setup Server (starts the static site server and runs startup command)
 module "setup_server" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/setup-server?ref=v0.1.0"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//git-modules/setup-server?ref=v0.1.0"
   
   workspace_name        = data.coder_workspace.me.name
   workspace_owner       = data.coder_workspace_owner.me.name
@@ -200,7 +200,7 @@ module "setup_server" {
 
 # Code Server - COMMENTED OUT FOR TESTING
 # module "code_server" {
-#   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/code-server?ref=v0.1.0"
+#   source = "git::https://github.com/weekend-code-project/weekendstack.git//git-modules/code-server?ref=v0.1.0"
 #   
 #   agent_id              = module.agent.agent_id
 #   workspace_start_count = data.coder_workspace.me.start_count
@@ -209,7 +209,7 @@ module "setup_server" {
 
 # Preview Link (external Traefik URL)
 module "preview_link" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/preview-link?ref=v0.1.0"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//git-modules/preview-link?ref=v0.1.0"
   
   agent_id              = module.agent.agent_id
   workspace_url         = module.routing_labels_test.workspace_url
