@@ -60,9 +60,9 @@ data "coder_parameter" "metadata_blocks" {
   display_name = "Metadata Blocks"
   description  = "Select which resource metrics to display in the workspace dashboard"
   type         = "list(string)"
+  form_type    = "multi-select"
   mutable      = true
   order        = 100
-  default      = jsonencode([["cpu"], ["ram"], ["disk"]])
 
   dynamic "option" {
     for_each = local.metadata_block_opts

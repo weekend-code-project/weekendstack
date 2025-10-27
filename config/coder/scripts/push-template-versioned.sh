@@ -83,21 +83,39 @@ log "Copying template to Coder container..."
 docker cp "$TEMP_DIR/$TEMPLATE_NAME" coder:/tmp/
 
 log "Pushing template..."
-if docker exec coder coder templates push "$TEMPLATE_NAME" \
-    --directory "/tmp/$TEMPLATE_NAME" \
-    --name "$VERSION_NAME" \
-    --yes; then
-    
-    log "✅ Successfully pushed $TEMPLATE_NAME ($VERSION_NAME)"
-    save_version "$TEMPLATE_NAME" "$VERSION_NUM"
-    
-    # Cleanup
-    rm -rf "$TEMP_DIR"
-    docker exec coder rm -rf "/tmp/$TEMPLATE_NAME"
-    
-    log "🎉 Complete! Template available as: $TEMPLATE_NAME ($VERSION_NAME)"
-else
-    log_error "❌ Failed to push template"
-    rm -rf "$TEMP_DIR"
-    exit 1
-fi
+MAX_RETRIES=5
+RETRY_COUNT=0
+
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+    if docker exec coder coder templates push "$TEMPLATE_NAME" \
+        --directory "/tmp/$TEMPLATE_NAME" \
+        --name "$VERSION_NAME" \
+        --yes 2>&1 | tee /tmp/push-output.txt; then
+        
+        log "✅ Successfully pushed $TEMPLATE_NAME ($VERSION_NAME)"
+        save_version "$TEMPLATE_NAME" "$VERSION_NUM"
+        
+        # Cleanup
+        rm -rf "$TEMP_DIR"
+        docker exec coder rm -rf "/tmp/$TEMPLATE_NAME"
+        
+        log "🎉 Complete! Template available as: $TEMPLATE_NAME ($VERSION_NAME)"
+        exit 0
+    else
+        # Check if it's a duplicate version error
+        if grep -q "already exists" /tmp/push-output.txt; then
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            VERSION_NUM=$((VERSION_NUM + 1))
+            VERSION_NAME="v${VERSION_NUM}"
+            log_warn "Version already exists, retrying with $VERSION_NAME (attempt $RETRY_COUNT/$MAX_RETRIES)"
+        else
+            log_error "❌ Failed to push template (non-version error)"
+            rm -rf "$TEMP_DIR"
+            exit 1
+        fi
+    fi
+done
+
+log_error "❌ Failed to push template after $MAX_RETRIES attempts"
+rm -rf "$TEMP_DIR"
+exit 1
