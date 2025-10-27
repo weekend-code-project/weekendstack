@@ -137,16 +137,15 @@ module "routing_labels_test" {
 #   exposed_ports_list = local.exposed_ports_list
 # }
 
-
-# Workspace Authentication (renamed to avoid Coder UI bug with "traefik")
-module "workspace_auth" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/workspace-auth?ref=v0.1.0"
-  
-  workspace_name   = data.coder_workspace.me.name
-  workspace_owner  = data.coder_workspace_owner.me.name
-  make_public      = data.coder_parameter.make_public.value
-  workspace_secret = try(data.coder_parameter.workspace_secret[0].value, "") != "" ? try(data.coder_parameter.workspace_secret[0].value, "") : random_password.workspace_secret.result
-}
+# Traefik Authentication - COMMENTED OUT FOR TESTING
+# module "traefik_auth" {
+#   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/traefik-auth?ref=v0.1.0"
+#   
+#   workspace_name   = data.coder_workspace.me.name
+#   workspace_owner  = data.coder_workspace_owner.me.name
+#   make_public      = data.coder_parameter.make_public.value
+#   workspace_secret = try(data.coder_parameter.workspace_secret[0].value, "") != "" ? try(data.coder_parameter.workspace_secret[0].value, "") : random_password.workspace_secret.result
+# }
 
 # Coder Agent
 module "agent" {
@@ -166,11 +165,11 @@ module "agent" {
     # module.docker.docker_install_script,
     # module.docker.docker_config_script,
     module.ssh.ssh_setup_script,
-    module.workspace_auth.traefik_auth_setup_script,
-    module.setup_server.setup_server_script,
+    # module.traefik_auth.traefik_auth_setup_script,
+    # module.setup_server.setup_server_script,
     "",
     "echo '[WORKSPACE] ✅ Workspace ready!'",
-    "echo '[WORKSPACE] 🌐 External URL: ${module.routing_labels_test.workspace_url}'",
+    # "echo '[WORKSPACE] 🌐 External URL: ${module.traefik_routing.workspace_url}'",
   ])
   
   git_author_name  = coalesce(data.coder_workspace_owner.me.full_name, data.coder_workspace_owner.me.name)
@@ -184,19 +183,19 @@ module "agent" {
   metadata_blocks = module.metadata.metadata_blocks
 }
 
-# Setup Server (starts the static site server and runs startup command)
-module "setup_server" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/setup-server?ref=v0.1.0"
-  
-  workspace_name        = data.coder_workspace.me.name
-  workspace_owner       = data.coder_workspace_owner.me.name
-  auto_generate_html    = data.coder_parameter.auto_generate_html.value
-  exposed_ports_list    = local.exposed_ports_list
-  startup_command       = try(data.coder_parameter.startup_command[0].value, "")
-  agent_id              = module.agent.agent_id
-  workspace_start_count = data.coder_workspace.me.start_count
-  workspace_url         = module.routing_labels_test.workspace_url
-}
+# Setup Server (after agent for preview app) - COMMENTED OUT FOR TESTING
+# module "setup_server" {
+#   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/setup-server?ref=v0.1.0"
+#   
+#   workspace_name        = data.coder_workspace.me.name
+#   workspace_owner       = data.coder_workspace_owner.me.name
+#   auto_generate_html    = data.coder_parameter.auto_generate_html.value
+#   exposed_ports_list    = local.exposed_ports_list
+#   startup_command       = try(data.coder_parameter.startup_command[0].value, "")
+#   agent_id              = module.agent.agent_id
+#   workspace_start_count = data.coder_workspace.me.start_count
+#   workspace_url         = "http://placeholder.url"
+# }
 
 # Code Server - COMMENTED OUT FOR TESTING
 # module "code_server" {
@@ -207,16 +206,16 @@ module "setup_server" {
 #   folder                = "/home/coder/workspace"
 # }
 
-# Preview Link (external Traefik URL)
-module "preview_link" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/preview-link?ref=v0.1.0"
-  
-  agent_id              = module.agent.agent_id
-  workspace_url         = module.routing_labels_test.workspace_url
-  workspace_start_count = data.coder_workspace.me.start_count
-  use_custom_url        = data.coder_parameter.use_custom_preview_url.value
-  custom_url            = try(data.coder_parameter.custom_preview_url[0].value, "")
-}
+# Preview Link (external Traefik URL) - COMMENTED OUT FOR TESTING
+# module "preview_link" {
+#   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/preview-link?ref=v0.1.0"
+#   
+#   agent_id              = module.agent.agent_id
+#   workspace_url         = "http://placeholder.url"
+#   workspace_start_count = data.coder_workspace.me.start_count
+#   use_custom_url        = data.coder_parameter.use_custom_preview_url.value
+#   custom_url            = try(data.coder_parameter.custom_preview_url[0].value, "")
+# }
 
 # =============================================================================
 # Docker Resources
@@ -291,14 +290,14 @@ resource "docker_container" "workspace" {
     type   = "bind"
   }
 
-  # Apply Traefik routing labels from the routing_labels_test module
-  dynamic "labels" {
-    for_each = module.routing_labels_test.traefik_labels
-    content {
-      label = labels.key
-      value = labels.value
-    }
-  }
+  # Traefik labels for routing - COMMENTED OUT FOR TESTING
+  # dynamic "labels" {
+  #   for_each = module.traefik_routing.traefik_labels
+  #   content {
+  #     label = labels.key
+  #     value = labels.value
+  #   }
+  # }
 
   labels {
     label = "coder.owner"
