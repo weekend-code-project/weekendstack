@@ -4,42 +4,72 @@
 # Required by git-modules/metadata module
 # Copy this file to use metadata monitoring in your template
 
-# Metadata Blocks Selection - Choose which metrics to display
+locals {
+  metadata_block_opts = [
+    {
+      name        = "CPU Usage"
+      value       = jsonencode(["cpu"])
+      description = "Show real-time CPU usage percentage"
+    },
+    {
+      name        = "RAM Usage"
+      value       = jsonencode(["ram"])
+      description = "Show memory consumption and available RAM"
+    },
+    {
+      name        = "Disk Usage"
+      value       = jsonencode(["disk"])
+      description = "Show disk space used and available in home directory"
+    },
+    {
+      name        = "Architecture"
+      value       = jsonencode(["arch"])
+      description = "Display system architecture (e.g., x86_64, arm64)"
+    },
+    {
+      name        = "Exposed Ports"
+      value       = jsonencode(["ports"])
+      description = "Show list of ports exposed by the workspace"
+    },
+    {
+      name        = "SSH Port"
+      value       = jsonencode(["ssh_port"])
+      description = "Display the SSH port number for remote connections"
+    },
+    {
+      name        = "Validation Status"
+      value       = jsonencode(["validation"])
+      description = "Show workspace validation checks and health status"
+    },
+    {
+      name        = "Load Average"
+      value       = jsonencode(["load_avg"])
+      description = "Display system load average (1, 5, 15 minute intervals)"
+    },
+    {
+      name        = "Uptime"
+      value       = jsonencode(["uptime"])
+      description = "Show how long the workspace has been running"
+    }
+  ]
+}
+
+# Metadata Blocks Multi-Select
 data "coder_parameter" "metadata_blocks" {
   name         = "metadata_blocks"
   display_name = "Metadata Blocks"
   description  = "Select which resource metrics to display in the workspace dashboard"
-  type         = "string"
-  default      = "cpu,ram,disk,arch,ssh_port,validation"
+  type         = "list(string)"
   mutable      = true
   order        = 100
+  default      = jsonencode([["cpu"], ["ram"], ["disk"]])
 
-  option {
-    name  = "All Metrics"
-    value = "cpu,ram,disk,arch,ports,ssh_port,validation,load_avg,uptime"
-  }
-  option {
-    name  = "Essential Only (CPU, RAM, Disk)"
-    value = "cpu,ram,disk"
-  }
-  option {
-    name  = "Development (CPU, RAM, Ports, Validation)"
-    value = "cpu,ram,ports,validation"
-  }
-  option {
-    name  = "SSH Workspace (CPU, RAM, SSH Port, Arch)"
-    value = "cpu,ram,ssh_port,arch"
-  }
-  option {
-    name  = "Minimal (CPU, RAM)"
-    value = "cpu,ram"
-  }
-  option {
-    name  = "Custom: Default"
-    value = "cpu,ram,disk,arch,ssh_port,validation"
-  }
-  option {
-    name  = "No Monitoring"
-    value = ""
+  dynamic "option" {
+    for_each = local.metadata_block_opts
+    content {
+      name        = option.value.name
+      value       = option.value.value
+      description = option.value.description
+    }
   }
 }

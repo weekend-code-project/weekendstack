@@ -74,7 +74,9 @@ resource "random_password" "workspace_secret" {
 module "metadata" {
   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/metadata?ref=v0.1.0"
   
-  enabled_blocks = split(",", data.coder_parameter.metadata_blocks.value)
+  # Multi-select with list(string) returns nested arrays: [["cpu"], ["ram"]] 
+  # Flatten to get simple array: ["cpu", "ram"]
+  enabled_blocks = flatten(jsondecode(data.coder_parameter.metadata_blocks.value))
 }
 
 # Init Shell - COMMENTED OUT FOR TESTING
