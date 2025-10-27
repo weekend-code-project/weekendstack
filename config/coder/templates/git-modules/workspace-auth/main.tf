@@ -1,16 +1,5 @@
-terraform {
-  required_providers {
-    coder = {
-      source = "coder/coder"
-    }
-    random = {
-      source = "hashicorp/random"
-    }
-  }
-}
-
 # =============================================================================
-# Traefik Authentication Module
+# Workspace Authentication Module (renamed to avoid Coder UI bug with "traefik")
 # =============================================================================
 # Configures Traefik basic authentication for workspace access.
 

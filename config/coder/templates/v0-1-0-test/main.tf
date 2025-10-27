@@ -137,15 +137,16 @@ module "routing_labels_test" {
 #   exposed_ports_list = local.exposed_ports_list
 # }
 
-# Traefik Authentication - COMMENTED OUT FOR TESTING
-# module "traefik_auth" {
-#   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/traefik-auth?ref=v0.1.0"
-#   
-#   workspace_name   = data.coder_workspace.me.name
-#   workspace_owner  = data.coder_workspace_owner.me.name
-#   make_public      = data.coder_parameter.make_public.value
-#   workspace_secret = try(data.coder_parameter.workspace_secret[0].value, "") != "" ? try(data.coder_parameter.workspace_secret[0].value, "") : random_password.workspace_secret.result
-# }
+
+# Workspace Authentication (renamed to avoid Coder UI bug with "traefik")
+module "workspace_auth" {
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/workspace-auth?ref=v0.1.0"
+  
+  workspace_name   = data.coder_workspace.me.name
+  workspace_owner  = data.coder_workspace_owner.me.name
+  make_public      = data.coder_parameter.make_public.value
+  workspace_secret = try(data.coder_parameter.workspace_secret[0].value, "") != "" ? try(data.coder_parameter.workspace_secret[0].value, "") : random_password.workspace_secret.result
+}
 
 # Coder Agent
 module "agent" {
@@ -165,7 +166,7 @@ module "agent" {
     # module.docker.docker_install_script,
     # module.docker.docker_config_script,
     module.ssh.ssh_setup_script,
-    # module.traefik_auth.traefik_auth_setup_script,
+    module.workspace_auth.traefik_auth_setup_script,
     module.setup_server.setup_server_script,
     "",
     "echo '[WORKSPACE] ✅ Workspace ready!'",
