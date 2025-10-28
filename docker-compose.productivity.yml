@@ -447,6 +447,130 @@ services:
       - "com.docker.compose.project=${COMPOSE_PROJECT_NAME:-coder}"
       - "description=Activepieces - Open Source Workflow Automation"
 
+  # =============================================================================
+  # POSTIZ - SELF-HOSTED SOCIAL MEDIA MANAGEMENT
+  # =============================================================================
+
+  postiz-db:
+    image: postgres:15-alpine
+    container_name: postiz-db
+    environment:
+      POSTGRES_DB: ${POSTIZ_DBNAME:-postiz}
+      POSTGRES_USER: ${POSTIZ_DBUSER:-postiz}
+      POSTGRES_PASSWORD: ${POSTIZ_DBPASS:-postiz_password_2024}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTIZ_DBUSER:-postiz} -d ${POSTIZ_DBNAME:-postiz}"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - type: volume
+        source: postiz-db-data
+        target: /var/lib/postgresql/data
+    networks:
+      - productivity-network
+      - shared-network
+    restart: unless-stopped
+    profiles:
+      - all
+      - productivity
+
+  postiz-redis:
+    image: redis:7-alpine
+    container_name: postiz-redis
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - type: volume
+        source: postiz-redis-data
+        target: /data
+    networks:
+      - productivity-network
+      - shared-network
+    restart: unless-stopped
+    profiles:
+      - all
+      - productivity
+
+  postiz:
+    image: ghcr.io/gitroomhq/postiz-app:latest
+    container_name: postiz
+    depends_on:
+      postiz-db:
+        condition: service_healthy
+      postiz-redis:
+        condition: service_healthy
+    environment:
+      # Database Configuration
+      DATABASE_URL: postgres://${POSTIZ_DBUSER:-postiz}:${POSTIZ_DBPASS:-postiz_password_2024}@postiz-db:5432/${POSTIZ_DBNAME:-postiz}
+      
+      # Redis Configuration
+      REDIS_URL: redis://postiz-redis:6379
+      
+      # Application Configuration
+      MAIN_URL: ${POSTIZ_PROTOCOL:-https}://${POSTIZ_DOMAIN:-postiz-${COMPUTER_NAME}.${BASE_DOMAIN}}
+      FRONTEND_URL: ${POSTIZ_PROTOCOL:-https}://${POSTIZ_DOMAIN:-postiz-${COMPUTER_NAME}.${BASE_DOMAIN}}
+      NEXT_PUBLIC_BACKEND_URL: ${POSTIZ_PROTOCOL:-https}://${POSTIZ_DOMAIN:-postiz-${COMPUTER_NAME}.${BASE_DOMAIN}}/api
+      BACKEND_INTERNAL_URL: http://localhost:3000
+      NEXTAUTH_URL: ${POSTIZ_PROTOCOL:-https}://${POSTIZ_DOMAIN:-postiz-${COMPUTER_NAME}.${BASE_DOMAIN}}
+      NEXTAUTH_SECRET: ${POSTIZ_NEXTAUTH_SECRET:-postiz-nextauth-secret-change-me-2024}
+      JWT_SECRET: ${POSTIZ_JWT_SECRET:-postiz-jwt-secret-change-me-2024}
+      BASE_URL: ${POSTIZ_PROTOCOL:-https}://${POSTIZ_DOMAIN:-postiz-${COMPUTER_NAME}.${BASE_DOMAIN}}
+      
+      # Storage Configuration
+      STORAGE_PROVIDER: local
+      UPLOAD_DIRECTORY: /app/public/uploads
+      
+      # Admin Configuration
+      ADMIN_EMAIL: ${POSTIZ_ADMIN_EMAIL:-admin@example.com}
+      ADMIN_PASSWORD: ${POSTIZ_ADMIN_PASSWORD:-secure_postiz_password_2024}
+      
+      # Environment
+      NODE_ENV: production
+      TZ: ${TIMEZONE:-UTC}
+      
+    ports:
+      - "${POSTIZ_PORT:-8095}:5000"
+    volumes:
+      - type: bind
+        source: ${FILES_BASE_DIR:-./files}/postiz/uploads
+        target: /app/public/uploads
+    networks:
+      - productivity-network
+      - shared-network
+    restart: unless-stopped
+    profiles:
+      - all
+      - productivity
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:5000/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: ${POSTIZ_MEMORY_LIMIT:-2g}
+    labels:
+      # Traefik Configuration for external access
+      - traefik.enable=true
+      - traefik.http.routers.postiz.rule=Host(`${POSTIZ_DOMAIN:-postiz-${COMPUTER_NAME}.${BASE_DOMAIN}}`)
+      - traefik.http.routers.postiz.entrypoints=web,websecure
+      - traefik.http.routers.postiz.tls=true
+      - traefik.http.services.postiz.loadbalancer.server.port=5000
+      - traefik.docker.network=shared-network
+      
+      # Additional labels for documentation
+      - "com.docker.compose.service=postiz"
+      - "com.docker.compose.project=${COMPOSE_PROJECT_NAME:-coder}"
+      - "description=Postiz - Self-hosted Social Media Scheduler"
+
 volumes:
   nocodb-db-data:
   n8n-db-data:
@@ -456,4 +580,6 @@ volumes:
   activepieces-redis-data:
   activepieces-data:
   paperless-data:
+  postiz-db-data:
+  postiz-redis-data:
 
