@@ -101,6 +101,9 @@ config/coder/templates/*/*.lock.tmp
 config/coder/templates/*/modules_manifest.*.json
 config/coder/scripts/.template_version
 
+# Template version tracking (per-template, auto-generated)
+config/coder/templates/*/.template_versions.json
+
 # Backup temp directories
 config/coder/.backup-temp/
 config/coder/backup-temp/
