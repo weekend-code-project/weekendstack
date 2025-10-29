@@ -156,6 +156,10 @@ module "agent" {
   arch       = data.coder_provisioner.me.arch
   os         = "linux"
   
+  depends_on = [
+    null_resource.ensure_workspace_folder
+  ]
+  
   startup_script = join("\n", [
     "#!/bin/bash",
     "set -e",
@@ -223,29 +227,20 @@ module "setup_server" {
 # Docker Resources
 # =============================================================================
 
-resource "docker_volume" "home_volume" {
-  name = "coder-${data.coder_workspace.me.id}-home"
-  
-  lifecycle {
-    ignore_changes = all
+# Create workspace directory inside Coder's /workspace mount
+resource "null_resource" "ensure_workspace_folder" {
+  provisioner "local-exec" {
+    command = "mkdir -p /workspace/${data.coder_workspace.me.name}"
   }
   
-  labels {
-    label = "coder.owner"
-    value = data.coder_workspace_owner.me.name
+  triggers = {
+    workspace_id = data.coder_workspace.me.id
   }
-  labels {
-    label = "coder.owner_id"
-    value = data.coder_workspace_owner.me.id
-  }
-  labels {
-    label = "coder.workspace_id"
-    value = data.coder_workspace.me.id
-  }
-  labels {
-    label = "coder.workspace_name_at_creation"
-    value = data.coder_workspace.me.name
-  }
+}
+
+# Local variable for workspace home directory path
+locals {
+  workspace_home_dir = "${var.workspace_dir}/${data.coder_workspace.me.name}"
 }
 
 resource "docker_container" "workspace" {
@@ -280,10 +275,13 @@ resource "docker_container" "workspace" {
     name = "coder-network"
   }
   
-  volumes {
-    container_path = "/home/coder"
-    volume_name    = docker_volume.home_volume.name
-    read_only      = false
+  # Bind mount workspace directory from host
+  # Each workspace gets its own folder: /workspace/${workspace_name} (inside Coder container)
+  # which maps to files/coder/workspace/${workspace_name} on the host
+  mounts {
+    target = "/home/coder/workspace"
+    source = local.workspace_home_dir
+    type   = "bind"
   }
 
   mounts {
