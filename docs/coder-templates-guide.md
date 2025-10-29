@@ -442,9 +442,24 @@ module "my_module" {
 }
 ```
 
-### Step 3: Test Locally
+### Step 3: Push and Test
 
-Comment out the module initially to test without enabling:
+Push the template to Coder (it will validate Terraform automatically):
+
+```bash
+cd /mnt/workspace/wcp-coder
+./config/coder/scripts/push-template-versioned.sh docker-template
+```
+
+The push script will:
+- Copy template to Coder container
+- Run Terraform validation automatically
+- Report any syntax or configuration errors
+- Create new template version if successful
+
+Then test by creating a workspace in the Coder UI.
+
+**Optional:** Comment out the module initially if you want to test incrementally:
 
 ```hcl
 # module "my_module" {
@@ -455,20 +470,13 @@ Comment out the module initially to test without enabling:
 # }
 ```
 
-### Step 4: Push Template
-
-```bash
-cd /mnt/workspace/wcp-coder
-./config/coder/scripts/push-template-versioned.sh v0-1-0-test
-```
-
 ---
 
 ## Push Script Usage
 
 ### push-template-versioned.sh
 
-This script automatically handles version management and conflict resolution.
+This script automatically handles version management, conflict resolution, and triggers Coder's built-in Terraform validation.
 
 **Location:** `config/coder/scripts/push-template-versioned.sh`
 
@@ -477,6 +485,7 @@ This script automatically handles version management and conflict resolution.
 - Retries up to 5 times
 - Updates `.template_versions.json`
 - Prevents manual version conflicts
+- Coder automatically validates Terraform during push
 
 **Usage:**
 
@@ -704,22 +713,36 @@ locals {
 
 ### Local Testing
 
-1. **Check Terraform syntax:**
+> **Note:** You do **NOT** need to run `terraform fmt` or `terraform validate` manually. 
+> Coder automatically validates and processes all Terraform files when you push a template.
+> The push command will fail with clear error messages if there are any Terraform syntax errors.
+
+**Testing Workflow:**
+
+1. **Push template:**
 ```bash
-cd config/coder/templates/v0-1-0-test
-terraform fmt
-terraform validate
+./config/coder/scripts/push-template-versioned.sh docker-template
 ```
 
-2. **Push template:**
-```bash
-./config/coder/scripts/push-template-versioned.sh v0-1-0-test
-```
+2. **Monitor push output:**
+   - Coder will automatically validate Terraform syntax
+   - Check for any errors in the output
+   - If successful, template is immediately available
 
 3. **Create test workspace:**
-- Go to Coder UI: http://coder:7080
-- Create new workspace from template
-- Monitor startup logs
+   - Go to Coder UI: http://coder:7080
+   - Create new workspace from template
+   - Monitor startup logs in the Coder UI
+
+**Optional: Local Terraform validation** (only if you want to check syntax before pushing):
+```bash
+cd config/coder/templates/docker-template
+terraform fmt    # Format files
+terraform init   # Initialize (downloads providers)
+terraform validate  # Validate syntax
+```
+
+However, this requires Terraform installed locally and is **not necessary** for normal development.
 
 ### Debugging Tips
 
@@ -923,14 +946,32 @@ module "MODULE_NAME" {
 
 ### Push Template
 ```bash
-./config/coder/scripts/push-template-versioned.sh v0-1-0-test
+# Coder automatically validates Terraform when pushing
+./config/coder/scripts/push-template-versioned.sh docker-template
 ```
 
 ### Test Workspace
 1. Open Coder UI: http://coder:7080
-2. Create new workspace
-3. Monitor startup logs
+2. Create new workspace from template
+3. Monitor startup logs in Coder UI
 4. Verify functionality
+
+### Common Workflow
+```bash
+# 1. Make changes to template or modules
+vim config/coder/templates/docker-template/main.tf
+
+# 2. Commit changes to git
+git add .
+git commit -m "feat: enable init-shell module"
+git push origin v0.1.0
+
+# 3. Push to Coder (validates Terraform automatically)
+./config/coder/scripts/push-template-versioned.sh docker-template
+
+# 4. Test in Coder UI
+# No local Terraform commands needed!
+```
 
 ---
 

@@ -94,8 +94,7 @@ output "setup_server_script" {
     echo "[SETUP-SERVER] Configuring workspace server..."
     echo "[SETUP-SERVER] Port: $PORT"
     
-    # Navigate to workspace directory (create if it doesn't exist)
-    mkdir -p /home/coder/workspace
+    # Navigate to workspace directory (should be created by init-shell module)
     cd /home/coder/workspace
     
     AUTO_HTML="${var.auto_generate_html}"

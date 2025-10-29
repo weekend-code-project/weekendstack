@@ -79,10 +79,10 @@ module "metadata" {
   enabled_blocks = data.coder_parameter.metadata_blocks.value != "" ? jsondecode(data.coder_parameter.metadata_blocks.value) : []
 }
 
-# Init Shell - COMMENTED OUT FOR TESTING
-# module "init_shell" {
-#   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/init-shell?ref=v0.1.0"
-# }
+# Init Shell
+module "init_shell" {
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/init-shell?ref=v0.1.0"
+}
 
 # Git Identity - COMMENTED OUT FOR TESTING
 # module "git_identity" {
@@ -161,7 +161,7 @@ module "agent" {
     "set -e",
     "echo '[WORKSPACE] 🚀 Starting workspace ${data.coder_workspace.me.name}'",
     "",
-    # module.init_shell.setup_script,
+    module.init_shell.setup_script,
     # module.git_identity.setup_script,
     module.ssh.ssh_copy_script,
     # module.docker.docker_install_script,
