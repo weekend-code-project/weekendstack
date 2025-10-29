@@ -873,6 +873,64 @@ module "my_module" {
 }
 ```
 
+### Module Execution Order
+
+**Critical:** The order that modules run in the workspace startup is determined by **the order you concatenate their scripts** in the agent's `startup_script`, NOT by Terraform dependencies.
+
+**How it works:**
+
+```hcl
+module "agent" {
+  source = "..."
+  
+  startup_script = join("\n", [
+    "#!/bin/bash",
+    "set -e",
+    module.init_shell.setup_script,    # ← Runs FIRST
+    module.git_identity.setup_script,  # ← Runs SECOND
+    module.docker.setup_script,        # ← Runs THIRD
+    module.ssh.setup_script,           # ← Runs FOURTH
+  ])
+}
+```
+
+This creates a **single bash script** that executes sequentially from top to bottom.
+
+**Best practices:**
+
+1. **init_shell MUST be first** - Creates workspace directories that other modules need
+2. **git_identity before git_integration** - Sets up Git config before cloning repos
+3. **docker setup before docker-dependent modules** - Installs Docker before trying to use it
+4. **ssh setup near the end** - SSH server doesn't need to block other initialization
+
+**What NOT to do:**
+
+```hcl
+# ❌ BAD - Using coder_script resources in modules
+resource "coder_script" "my_script" {
+  agent_id     = var.agent_id
+  run_on_start = true
+  script       = "..."  # These run in PARALLEL with no guaranteed order!
+}
+```
+
+**Why Terraform dependencies don't control runtime order:**
+
+- `depends_on` ensures Terraform evaluates modules in order at **plan time**
+- It does NOT control when bash scripts run at **workspace startup**
+- The startup script is one long bash file that runs sequentially
+
+**Verification:**
+
+To check execution order in a running workspace:
+```bash
+# View the actual startup script
+cat /tmp/coder-startup-script.log
+
+# Or check the agent logs
+journalctl -u coder-agent
+```
+
 ### Version Control
 
 1. **Commit module changes first:**
