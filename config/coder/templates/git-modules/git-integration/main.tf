@@ -1,7 +1,8 @@
 # =============================================================================
 # MODULE: Git Integration
 # =============================================================================
-# Provides Git repository cloning functionality with user parameters.
+# Provides Git repository cloning functionality with user parameters and SSH
+# key generation for GitHub/GitLab access.
 
 # Coder Parameter for GitHub repository
 resource "coder_parameter" "github_repo" {
@@ -12,6 +13,38 @@ resource "coder_parameter" "github_repo" {
   default      = var.github_repo_default
   mutable      = true
   order        = 10
+}
+
+# SSH Key Setup Script
+output "ssh_key_setup_script" {
+  description = "Script to generate SSH key if not present"
+  value       = <<-EOT
+    echo "[GIT] Setting up SSH key for Git operations..."
+    SSH_KEY_PATH="$HOME/.ssh/id_ed25519"
+    
+    if [ -f "$SSH_KEY_PATH" ]; then
+      echo "[GIT] SSH key already exists at $SSH_KEY_PATH"
+    else
+      echo "[GIT] Generating new SSH key..."
+      mkdir -p "$HOME/.ssh"
+      ssh-keygen -t ed25519 -f "$SSH_KEY_PATH" -N "" -C "coder-workspace"
+      chmod 600 "$SSH_KEY_PATH"
+      chmod 644 "$SSH_KEY_PATH.pub"
+      echo "[GIT] ✅ SSH key generated at $SSH_KEY_PATH"
+    fi
+    
+    # Ensure GitHub is in known_hosts
+    if ! grep -q "github.com" "$HOME/.ssh/known_hosts" 2>/dev/null; then
+      mkdir -p "$HOME/.ssh"
+      ssh-keyscan github.com >> "$HOME/.ssh/known_hosts" 2>/dev/null
+      echo "[GIT] Added github.com to known_hosts"
+    fi
+    
+    echo "[GIT] Public key:"
+    cat "$SSH_KEY_PATH.pub"
+    echo ""
+    echo "[GIT] Add this key to GitHub: https://github.com/settings/keys"
+  EOT
 }
 
 # Git Clone Script
@@ -65,7 +98,22 @@ output "clone_script" {
   EOT
 }
 
+
 output "repo_url" {
   description = "The configured repository URL"
   value       = coder_parameter.github_repo.value
+}
+
+# Metadata for SSH public key
+output "ssh_key_metadata" {
+  description = "Metadata block showing SSH public key"
+  value       = <<-EOT
+    {
+      "key": "git_ssh_public_key",
+      "display_name": "Git SSH Public Key",
+      "value": "$(cat ~/.ssh/id_ed25519.pub 2>/dev/null || echo 'Not yet generated - restart workspace')",
+      "icon": "/icon/git.svg",
+      "sensitive": false
+    }
+  EOT
 }

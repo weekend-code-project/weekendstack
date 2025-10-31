@@ -92,6 +92,13 @@ module "git_identity" {
   git_author_email = data.coder_workspace_owner.me.email
 }
 
+# Git Integration (repository cloning)
+module "git_integration" {
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/git-integration?ref=v0.1.0"
+  
+  github_repo_default = ""
+}
+
 # SSH Integration
 module "ssh" {
   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/ssh-integration?ref=v0.1.0"
@@ -167,6 +174,8 @@ module "agent" {
     "",
     module.init_shell.setup_script,
     module.git_identity.setup_script,
+    module.git_integration.ssh_key_setup_script,
+    module.git_integration.clone_script,
     module.ssh.ssh_copy_script,
     # module.docker.docker_install_script,
     # module.docker.docker_config_script,
