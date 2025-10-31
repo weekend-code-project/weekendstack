@@ -203,14 +203,14 @@ module "setup_server" {
   workspace_url         = "http://localhost:8080"
 }
 
-# Code Server - COMMENTED OUT FOR TESTING
-# module "code_server" {
-#   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/code-server?ref=v0.1.0"
-#   
-#   agent_id              = module.agent.agent_id
-#   workspace_start_count = data.coder_workspace.me.start_count
-#   folder                = "/home/coder/workspace"
-# }
+# Code Server (VS Code in browser)
+module "code_server" {
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/code-server?ref=v0.1.0"
+  
+  agent_id              = module.agent.agent_id
+  workspace_start_count = data.coder_workspace.me.start_count
+  folder                = "/home/coder/workspace"
+}
 
 # Preview Link (external Traefik URL) - COMMENTED OUT FOR TESTING
 # module "preview_link" {
