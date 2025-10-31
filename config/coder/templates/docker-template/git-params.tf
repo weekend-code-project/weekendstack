@@ -23,3 +23,15 @@ data "coder_parameter" "github_repo" {
   mutable      = false
   order        = 15
 }
+
+data "coder_parameter" "install_github_cli" {
+  count        = data.coder_parameter.clone_repo.value ? 1 : 0
+  name         = "install_github_cli"
+  display_name = "Install GitHub CLI"
+  description  = "Install the GitHub CLI (gh) tool in the workspace."
+  type         = "bool"
+  form_type    = "switch"
+  default      = true
+  mutable      = false
+  order        = 16
+}

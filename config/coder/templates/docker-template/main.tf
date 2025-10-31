@@ -99,6 +99,11 @@ module "git_integration" {
   github_repo_url = data.coder_parameter.clone_repo.value ? data.coder_parameter.github_repo[0].value : ""
 }
 
+# GitHub CLI Installation
+module "github_cli" {
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/github-cli?ref=v0.1.0"
+}
+
 # SSH Integration
 module "ssh" {
   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/ssh-integration?ref=v0.1.0"
@@ -176,6 +181,7 @@ module "agent" {
     module.git_identity.setup_script,
     module.ssh.ssh_copy_script,
     module.git_integration.clone_script,
+    (data.coder_parameter.clone_repo.value && try(data.coder_parameter.install_github_cli[0].value, false)) ? module.github_cli.install_script : "",
     # module.docker.docker_install_script,
     # module.docker.docker_config_script,
     module.ssh.ssh_setup_script,
