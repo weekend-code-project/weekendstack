@@ -1,7 +1,10 @@
 # =============================================================================
-# Git Parameters
+# MODULE: Git Identity & Integration
+# =============================================================================
+# Configures Git user identity and handles repository cloning
 # =============================================================================
 
+# Parameters
 data "coder_parameter" "clone_repo" {
   name         = "clone_repo"
   display_name = "Clone Repository"
@@ -34,4 +37,22 @@ data "coder_parameter" "install_github_cli" {
   default      = true
   mutable      = false
   order        = 16
+}
+
+# Modules
+module "git_identity" {
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/git-identity?ref=v0.1.0"
+  
+  git_author_name  = coalesce(data.coder_workspace_owner.me.full_name, data.coder_workspace_owner.me.name)
+  git_author_email = data.coder_workspace_owner.me.email
+}
+
+module "git_integration" {
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/git-integration?ref=v0.1.0"
+  
+  github_repo_url = data.coder_parameter.clone_repo.value ? data.coder_parameter.github_repo[0].value : ""
+}
+
+module "github_cli" {
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/github-cli?ref=v0.1.0"
 }

@@ -1,10 +1,10 @@
 # =============================================================================
-# Setup Server Parameters
+# MODULE: Setup Server
 # =============================================================================
-# Required by git-modules/setup-server module
-# Copy this file to use setup server integration in your template
+# Configures and starts the workspace server (static site or custom)
+# =============================================================================
 
-# Parameter: Auto-generate HTML
+# Parameters
 data "coder_parameter" "auto_generate_html" {
   name         = "auto_generate_html"
   display_name = "Serve Static Site"
@@ -16,7 +16,6 @@ data "coder_parameter" "auto_generate_html" {
   order        = 20
 }
 
-# Parameter: Expose custom ports (only when running your own server)
 data "coder_parameter" "exposed_ports" {
   count        = data.coder_parameter.auto_generate_html.value ? 0 : 1
   name         = "exposed_ports"
@@ -29,7 +28,6 @@ data "coder_parameter" "exposed_ports" {
   order        = 21
 }
 
-# Parameter: Startup Command
 data "coder_parameter" "startup_command" {
   count        = data.coder_parameter.auto_generate_html.value ? 0 : 1
   name         = "startup_command"
@@ -41,18 +39,30 @@ data "coder_parameter" "startup_command" {
   order        = 22
 }
 
-# Compute exposed ports list (needed for the module)
+# Locals
 locals {
-  # Determine exposed ports even when the parameter is hidden (auto-generate HTML)
   exposed_ports_raw = try(
     data.coder_parameter.exposed_ports[0].value,
     jsonencode(["8080"])
   )
 
-  # Robustly derive a list of ports regardless of how the provider returns the value
   exposed_ports_list = try(
     jsondecode(local.exposed_ports_raw),
     tolist(local.exposed_ports_raw),
     [tostring(local.exposed_ports_raw)]
   )
+}
+
+# Module
+module "setup_server" {
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/setup-server?ref=v0.1.0"
+  
+  workspace_name        = data.coder_workspace.me.name
+  workspace_owner       = data.coder_workspace_owner.me.name
+  auto_generate_html    = data.coder_parameter.auto_generate_html.value
+  exposed_ports_list    = local.exposed_ports_list
+  startup_command       = try(data.coder_parameter.startup_command[0].value, "")
+  agent_id              = module.agent.agent_id
+  workspace_start_count = data.coder_workspace.me.start_count
+  workspace_url         = "http://localhost:8080"
 }

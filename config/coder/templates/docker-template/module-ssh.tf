@@ -1,10 +1,10 @@
 # =============================================================================
-# SSH Parameters
+# MODULE: SSH Integration
 # =============================================================================
-# Required by git-modules/ssh-integration module
-# Copy this file to use SSH integration in your template
+# Provides SSH server access to workspaces
+# =============================================================================
 
-# SSH Enable Toggle - Always visible
+# Parameters
 data "coder_parameter" "ssh_enable" {
   name         = "ssh_enable"
   display_name = "Enable SSH Server"
@@ -16,7 +16,6 @@ data "coder_parameter" "ssh_enable" {
   order        = 50
 }
 
-# SSH Port Mode - Only show when SSH is enabled
 data "coder_parameter" "ssh_port_mode" {
   name         = "ssh_port_mode"
   display_name = "SSH Port Mode"
@@ -36,7 +35,6 @@ data "coder_parameter" "ssh_port_mode" {
   order = 51
 }
 
-# SSH Port - Show when SSH enabled, disable when in auto mode
 data "coder_parameter" "ssh_port" {
   name         = "ssh_port"
   display_name = "SSH Port"
@@ -47,19 +45,16 @@ data "coder_parameter" "ssh_port" {
   count        = data.coder_parameter.ssh_enable.value ? 1 : 0
   order        = 52
   
-  # Disable the field when in auto mode using styling
   styling = jsonencode({
     disabled = try(data.coder_parameter.ssh_port_mode[0].value, "auto") == "auto"
   })
   
-  # Validate it's a valid port number
   validation {
     regex = "^([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
     error = "SSH port must be a valid port number between 1 and 65535"
   }
 }
 
-# SSH Password - Required when SSH is enabled
 data "coder_parameter" "ssh_password" {
   name         = "ssh_password"
   display_name = "SSH Password"
@@ -69,6 +64,15 @@ data "coder_parameter" "ssh_password" {
   mutable      = true
   count        = data.coder_parameter.ssh_enable.value ? 1 : 0
   order        = 53
+}
+
+# Module
+module "ssh" {
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/ssh-integration?ref=v0.1.0"
   
-  # No validation - empty is allowed, will use random_password.workspace_secret.result
+  workspace_id          = data.coder_workspace.me.id
+  workspace_password    = try(data.coder_parameter.ssh_password[0].value, "") != "" ? try(data.coder_parameter.ssh_password[0].value, "") : random_password.workspace_secret.result
+  ssh_enable_default    = data.coder_parameter.ssh_enable.value
+  ssh_port_mode_default = try(data.coder_parameter.ssh_port_mode[0].value, "auto")
+  ssh_port_default      = try(data.coder_parameter.ssh_port[0].value, "")
 }
