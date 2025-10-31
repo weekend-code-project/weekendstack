@@ -10,29 +10,30 @@ data "coder_parameter" "metadata_blocks" {
   display_name = "Metadata Blocks"
   description  = "Select which metadata blocks to display in the workspace dashboard."
   type         = "list(string)"
+  form_type    = "multi-select"
   default      = jsonencode(["cpu", "ram", "disk"])
   mutable      = true
   order        = 50
 
   option {
     name  = "CPU Usage"
-    value = "cpu"
+    value = jsonencode(["cpu"])
   }
   option {
     name  = "RAM Usage"
-    value = "ram"
+    value = jsonencode(["ram"])
   }
   option {
     name  = "Disk Usage"
-    value = "disk"
+    value = jsonencode(["disk"])
   }
   option {
     name  = "Home Directory"
-    value = "home_dir"
+    value = jsonencode(["home_dir"])
   }
   option {
     name  = "Container Image"
-    value = "image"
+    value = jsonencode(["image"])
   }
 }
 
