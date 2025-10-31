@@ -292,6 +292,14 @@ resource "docker_container" "workspace" {
     type   = "bind"
   }
 
+  # Mount SSH keys from host (read-only)
+  mounts {
+    target    = "/mnt/host-ssh"
+    source    = var.ssh_key_dir
+    type      = "bind"
+    read_only = true
+  }
+
   mounts {
     target = "/traefik-auth"
     source = var.traefik_auth_dir
