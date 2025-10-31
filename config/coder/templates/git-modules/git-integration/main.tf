@@ -28,16 +28,23 @@ output "clone_script" {
       MIR="/tmp/repo-mirror"; WRK="/tmp/repo-work"
       rm -rf "$MIR" "$WRK"
 
+      # Configure Git to use SSH and skip host key checking for first-time connections
+      export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/home/coder/.ssh/known_hosts"
+      
       # Try a mirror clone for speed/reliability, fall back to direct clone
-      if git clone --mirror "$REPO" "$MIR" >/dev/null 2>&1; then
-        if ! git clone "$MIR" "$WRK" >/dev/null 2>&1; then
+      if git clone --mirror "$REPO" "$MIR" 2>&1 | grep -v "Cloning into"; then
+        if ! git clone "$MIR" "$WRK" 2>&1 | grep -v "Cloning into"; then
           echo "[GIT] Mirror present but working clone failed; trying direct clone"
           rm -rf "$WRK"
-          git clone "$REPO" "$WRK" >/dev/null 2>&1 || true
+          if ! git clone "$REPO" "$WRK" 2>&1 | grep -v "Cloning into"; then
+            echo "[GIT] ❌ Clone failed - check repository URL and access permissions"
+          fi
         fi
       else
         echo "[GIT] Mirror clone failed; trying direct clone"
-        git clone "$REPO" "$WRK" >/dev/null 2>&1 || true
+        if ! git clone "$REPO" "$WRK" 2>&1 | grep -v "Cloning into"; then
+          echo "[GIT] ❌ Clone failed - check repository URL and access permissions"
+        fi
       fi
 
       if [ -d "$WRK/.git" ]; then
