@@ -1,23 +1,21 @@
 # =============================================================================
 # MODULE: Git Integration
 # =============================================================================
-# Provides Git repository cloning functionality with user parameters and SSH
-# key generation for GitHub/GitLab access.
-
-# Coder Parameter for GitHub repository
-resource "coder_parameter" "github_repo" {
-  name         = "github_repo"
-  display_name = "GitHub Repository"
-  description  = "Git repository URL to clone (e.g., git@github.com:user/repo.git). Leave empty to skip cloning."
-  type         = "string"
-  default      = var.github_repo_default
-  mutable      = true
-  order        = 10
-}
+# DESCRIPTION:
+#   Provides Git repository cloning functionality and SSH key setup.
+#
+# USAGE:
+#   This module outputs shell scripts that should be included in the
+#   coder_agent startup_script.
+#
+# OUTPUTS:
+#   - ssh_key_setup_script: Shell script to generate SSH key if not present
+#   - clone_script: Shell script to clone repository into workspace
+# =============================================================================
 
 # SSH Key Setup Script
 output "ssh_key_setup_script" {
-  description = "Script to generate SSH key if not present"
+  description = "Shell script to generate SSH key if not present"
   value       = <<-EOT
     echo "[GIT] Setting up SSH key for Git operations..."
     SSH_KEY_PATH="$HOME/.ssh/id_ed25519"
@@ -51,7 +49,7 @@ output "ssh_key_setup_script" {
 output "clone_script" {
   description = "Script to clone repository into workspace"
   value       = <<-EOT
-    REPO="${coder_parameter.github_repo.value}"
+    REPO="${var.github_repo_url}"
     WSDIR="/home/coder/workspace"
     if [ -z "$REPO" ]; then
       echo "[GIT] No repo configured; skipping clone."
@@ -95,25 +93,5 @@ output "clone_script" {
         echo "[GIT] Clone failed; skipping"
       fi
     fi
-  EOT
-}
-
-
-output "repo_url" {
-  description = "The configured repository URL"
-  value       = coder_parameter.github_repo.value
-}
-
-# Metadata for SSH public key
-output "ssh_key_metadata" {
-  description = "Metadata block showing SSH public key"
-  value       = <<-EOT
-    {
-      "key": "git_ssh_public_key",
-      "display_name": "Git SSH Public Key",
-      "value": "$(cat ~/.ssh/id_ed25519.pub 2>/dev/null || echo 'Not yet generated - restart workspace')",
-      "icon": "/icon/git.svg",
-      "sensitive": false
-    }
   EOT
 }

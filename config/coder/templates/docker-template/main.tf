@@ -96,7 +96,7 @@ module "git_identity" {
 module "git_integration" {
   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/git-integration?ref=v0.1.0"
   
-  github_repo_default = ""
+  github_repo_url = ""
 }
 
 # SSH Integration
