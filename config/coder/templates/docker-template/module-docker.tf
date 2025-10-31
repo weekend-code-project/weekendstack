@@ -1,7 +1,25 @@
 # =============================================================================
-# MODULE: Docker Integration
+# MODULE: Docker-in-Docker Integration
 # =============================================================================
-# Provides Docker-in-Docker capability for running containers inside workspaces
+# DESCRIPTION:
+#   Provides Docker-in-Docker capability for running containers inside workspaces.
+#   Installs Docker Engine, configures daemon, and creates isolated network.
+#
+# FEATURES:
+#   - Full Docker Engine installation via get.docker.com
+#   - Registry mirror configuration for faster pulls
+#   - Isolated coder-net network for workspace containers
+#   - Graceful failure (doesn't break workspace if Docker setup fails)
+#
+# USAGE:
+#   - Set enable_docker=true to install Docker
+#   - Docker daemon runs in background with /tmp/dockerd.log
+#   - Access via standard 'docker' commands in workspace terminal
+#
+# IMPORTANT:
+#   Module is always loaded (no count) to avoid git resolution errors.
+#   Execution is conditional via startup script (see module-agent.tf).
+#   This pattern is required for git-based Terraform modules.
 # =============================================================================
 
 # Parameters

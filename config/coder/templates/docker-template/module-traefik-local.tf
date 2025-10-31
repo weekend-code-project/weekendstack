@@ -1,11 +1,33 @@
 # =============================================================================
-# MODULE: Traefik (Local Implementation)
+# MODULE: Traefik Routing & Authentication (Local Implementation)
 # =============================================================================
-# Handles Traefik routing labels and authentication setup without git modules
-# This avoids the git module resolution issues in Coder UI
+# DESCRIPTION:
+#   Provides Traefik routing labels and authentication setup for workspaces.
+#   Local implementation avoids git module resolution issues in Coder UI.
+#
+# FEATURES:
+#   - Dynamic Docker labels for Traefik routing
+#   - Conditional authentication (public vs private workspaces)
+#   - Automatic htpasswd file generation
+#   - Traefik middleware configuration
+#
+# USAGE:
+#   - Set make_public=true for public workspaces (no auth)
+#   - Set make_public=false for private workspaces (requires password)
+#   - Labels are automatically applied to docker_container in resources.tf
+#   - Auth setup runs conditionally in startup script
+#
+# WHY LOCAL:
+#   Git-based modules cause "Module not loaded" errors in Coder UI when
+#   Terraform tries to resolve them before workspace creation. Local
+#   implementation keeps all logic in the template itself.
 # =============================================================================
 
+# =============================================================================
 # Parameters
+# =============================================================================
+
+# Toggle: Make workspace publicly accessible
 data "coder_parameter" "make_public" {
   name         = "make_public"
   display_name = "Make Public"
@@ -17,6 +39,7 @@ data "coder_parameter" "make_public" {
   order        = 10
 }
 
+# Password for private workspaces (only shown when make_public=false)
 data "coder_parameter" "workspace_secret" {
   count        = data.coder_parameter.make_public.value ? 0 : 1
   name         = "workspace_secret"
@@ -35,43 +58,48 @@ data "coder_parameter" "workspace_secret" {
 }
 
 # =============================================================================
-# Traefik Routing Labels (Local)
+# Traefik Routing Labels
 # =============================================================================
+# Generates Docker labels that Traefik uses to route traffic to this workspace.
+# Labels include routing rules, service configuration, and optional authentication.
 
 locals {
+  # Domain configuration (customize for your environment)
   workspace_domain = "weekendcodeproject.dev"
   workspace_url    = "https://${lower(data.coder_workspace.me.name)}.${local.workspace_domain}"
   
-  # Base Traefik labels (always applied)
+  # Base Traefik labels (always applied to container)
   traefik_base_labels = {
+    # Coder metadata
     "coder.owner"          = data.coder_workspace_owner.me.name
     "coder.owner_id"       = data.coder_workspace_owner.me.id
     "coder.workspace_id"   = data.coder_workspace.me.id
     "coder.workspace_name" = data.coder_workspace.me.name
     
-    # Enable Traefik routing
+    # Enable Traefik routing for this container
     "traefik.enable"         = "true"
     "traefik.docker.network" = "coder-network"
     
-    # Router configuration
+    # Router configuration (HTTPS with workspace subdomain)
     "traefik.http.routers.${lower(data.coder_workspace.me.name)}.rule"        = "Host(`${lower(data.coder_workspace.me.name)}.${local.workspace_domain}`)"
     "traefik.http.routers.${lower(data.coder_workspace.me.name)}.entrypoints" = "websecure"
     "traefik.http.routers.${lower(data.coder_workspace.me.name)}.tls"         = "true"
     
-    # Service configuration (use first port from exposed_ports)
+    # Service configuration (routes to first exposed port)
     "traefik.http.services.${lower(data.coder_workspace.me.name)}.loadbalancer.server.port" = element(local.exposed_ports_list, 0)
   }
   
-  # Authentication labels (only when workspace is private)
+  # Authentication labels (only added when workspace is private)
   traefik_auth_labels = {
     # Attach auth middleware to router
     "traefik.http.routers.${lower(data.coder_workspace.me.name)}.middlewares" = "${lower(data.coder_workspace.me.name)}-auth"
     
-    # Middleware references the htpasswd file created by auth setup script
+    # Reference htpasswd file created by auth setup script
     "traefik.http.middlewares.${lower(data.coder_workspace.me.name)}-auth.basicauth.usersfile" = "/traefik-auth/hashed_password-${data.coder_workspace.me.name}"
   }
   
-  # Combined labels - conditionally include auth labels when NOT public
+  # Combine labels based on public/private setting
+  # If make_public=false, merge auth labels into base labels
   traefik_labels = !data.coder_parameter.make_public.value ? merge(
     local.traefik_base_labels,
     local.traefik_auth_labels
@@ -79,8 +107,23 @@ locals {
 }
 
 # =============================================================================
-# Traefik Authentication Setup Script (Local)
+# Traefik Authentication Setup Script
 # =============================================================================
+# Bash script that runs during workspace startup to configure authentication.
+# Creates htpasswd file and Traefik middleware config for private workspaces.
+#
+# REQUIREMENTS:
+#   - /traefik-auth directory must be mounted from host
+#   - apache2-utils package (provides htpasswd command)
+#
+# OUTPUT FILES:
+#   - /traefik-auth/hashed_password-{workspace}: bcrypt password hash
+#   - /traefik-auth/dynamic-{workspace}.yaml: Traefik middleware config
+#
+# BEHAVIOR:
+#   - If make_public=true: Removes any existing auth files (cleanup)
+#   - If make_public=false: Creates/updates auth files with new password
+#   - Non-blocking: Gracefully skips if /traefik-auth not mounted
 
 locals {
   traefik_auth_enabled = !data.coder_parameter.make_public.value

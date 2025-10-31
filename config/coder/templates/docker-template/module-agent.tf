@@ -1,7 +1,29 @@
 # =============================================================================
-# MODULE: Coder Agent
+# MODULE: Coder Agent (Startup Script Orchestrator)
 # =============================================================================
-# Core agent that runs inside the workspace container
+# DESCRIPTION:
+#   Configures the Coder agent that runs inside the workspace container.
+#   Orchestrates all startup scripts from feature modules in the correct order.
+#
+# STARTUP SEQUENCE:
+#   1. init_shell - Initialize home directory structure
+#   2. git_identity - Configure Git user.name and user.email
+#   3. ssh_copy - Copy SSH keys from host to workspace
+#   4. git_integration - Clone repository if configured
+#   5. github_cli - Install GitHub CLI if repository cloned
+#   6. docker - Install and configure Docker-in-Docker (conditional)
+#   7. ssh_setup - Configure and start SSH server (conditional)
+#   8. traefik_auth - Setup Traefik authentication (conditional)
+#   9. setup_server - Start static site server or custom command
+#
+# CONDITIONAL EXECUTION:
+#   - GitHub CLI: Only if clone_repo=true AND install_github_cli=true
+#   - Docker: Only if enable_docker=true
+#   - Traefik Auth: Only if make_public=false
+#
+# PATTERN:
+#   Git modules are always loaded (no count), but scripts execute conditionally
+#   using ternary operators: condition ? script : ""
 # =============================================================================
 
 module "agent" {
