@@ -50,13 +50,20 @@ output "clone_script" {
           # Prefer checking out the remote default branch if it exists
           git checkout -B "$DEFAULT_BRANCH" "origin/$DEFAULT_BRANCH" >/dev/null 2>&1 || git checkout -B "$DEFAULT_BRANCH" >/dev/null 2>&1 || true
           git submodule update --init --recursive >/dev/null 2>&1 || true
+          
+          # Fetch all remote branches and create local tracking branches
+          echo "[GIT] Fetching all remote branches..."
+          git fetch --all >/dev/null 2>&1 || true
+          for branch in $(git branch -r | grep -v '\->' | grep -v HEAD | sed 's/origin\///'); do
+            git branch --track "$branch" "origin/$branch" 2>/dev/null || true
+          done
         )
 
         # Create workspace dir and copy repo contents in, even if non-empty
         mkdir -p "$WSDIR"
         # Use tar streaming to avoid needing rsync; preserves dotfiles and perms
         tar -C "$WRK" -cf - . | tar -C "$WSDIR" -xf -
-        echo "[GIT] ✅ Repo synced to $WSDIR"
+        echo "[GIT] ✅ Repo synced to $WSDIR (all branches available locally)"
       else
         echo "[GIT] Clone failed; skipping"
       fi
