@@ -28,9 +28,9 @@ data "coder_parameter" "workspace_secret" {
   order        = 11
 }
 
-# Modules (COMMENTED OUT FOR TESTING)
-module "routing_labels_test" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/routing-labels-test?ref=v0.1.0"
+# Modules
+module "traefik_routing" {
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/traefik-routing?ref=v0.1.0"
   
   workspace_name     = data.coder_workspace.me.name
   workspace_owner    = data.coder_workspace_owner.me.name
@@ -40,22 +40,11 @@ module "routing_labels_test" {
   exposed_ports_list = local.exposed_ports_list
 }
 
-# module "traefik_routing" {
-#   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/traefik-routing?ref=v0.1.0"
-#   
-#   workspace_name     = data.coder_workspace.me.name
-#   workspace_owner    = data.coder_workspace_owner.me.name
-#   workspace_id       = data.coder_workspace.me.id
-#   workspace_owner_id = data.coder_workspace_owner.me.id
-#   make_public        = data.coder_parameter.make_public.value
-#   exposed_ports_list = local.exposed_ports_list
-# }
-
-# module "traefik_auth" {
-#   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/traefik-auth?ref=v0.1.0"
-#   
-#   workspace_name   = data.coder_workspace.me.name
-#   workspace_owner  = data.coder_workspace_owner.me.name
-#   make_public      = data.coder_parameter.make_public.value
-#   workspace_secret = try(data.coder_parameter.workspace_secret[0].value, "") != "" ? try(data.coder_parameter.workspace_secret[0].value, "") : random_password.workspace_secret.result
-# }
+module "traefik_auth" {
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/traefik-auth?ref=v0.1.0"
+  
+  workspace_name   = data.coder_workspace.me.name
+  workspace_owner  = data.coder_workspace_owner.me.name
+  make_public      = data.coder_parameter.make_public.value
+  workspace_secret = try(data.coder_parameter.workspace_secret[0].value, "") != "" ? try(data.coder_parameter.workspace_secret[0].value, "") : random_password.workspace_secret.result
+}

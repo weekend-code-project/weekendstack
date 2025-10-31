@@ -27,7 +27,7 @@ module "agent" {
     data.coder_parameter.enable_docker.value ? module.docker.docker_install_script : "",
     data.coder_parameter.enable_docker.value ? module.docker.docker_config_script : "",
     module.ssh.ssh_setup_script,
-    # module.traefik_auth.traefik_auth_setup_script,
+    !data.coder_parameter.make_public.value ? module.traefik_auth.traefik_auth_setup_script : "",
     module.setup_server.setup_server_script,
     "",
     "echo '[WORKSPACE] ✅ Workspace ready!'",

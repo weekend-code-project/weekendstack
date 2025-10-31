@@ -75,14 +75,14 @@ resource "docker_container" "workspace" {
     type   = "bind"
   }
 
-  # Traefik labels for routing - COMMENTED OUT FOR TESTING
-  # dynamic "labels" {
-  #   for_each = module.traefik_routing.traefik_labels
-  #   content {
-  #     label = labels.key
-  #     value = labels.value
-  #   }
-  # }
+  # Traefik labels for routing
+  dynamic "labels" {
+    for_each = module.traefik_routing.traefik_labels
+    content {
+      label = labels.key
+      value = labels.value
+    }
+  }
 
   labels {
     label = "coder.owner"
