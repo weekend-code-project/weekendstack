@@ -84,13 +84,13 @@ module "init_shell" {
   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/init-shell?ref=v0.1.0"
 }
 
-# Git Identity - COMMENTED OUT FOR TESTING
-# module "git_identity" {
-#   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/git-identity?ref=v0.1.0"
-#   
-#   git_author_name  = coalesce(data.coder_workspace_owner.me.full_name, data.coder_workspace_owner.me.name)
-#   git_author_email = data.coder_workspace_owner.me.email
-# }
+# Git Identity (automatic Git configuration)
+module "git_identity" {
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/git-identity?ref=v0.1.0"
+  
+  git_author_name  = coalesce(data.coder_workspace_owner.me.full_name, data.coder_workspace_owner.me.name)
+  git_author_email = data.coder_workspace_owner.me.email
+}
 
 # SSH Integration
 module "ssh" {
@@ -166,7 +166,7 @@ module "agent" {
     "echo '[WORKSPACE] 🚀 Starting workspace ${data.coder_workspace.me.name}'",
     "",
     module.init_shell.setup_script,
-    # module.git_identity.setup_script,
+    module.git_identity.setup_script,
     module.ssh.ssh_copy_script,
     # module.docker.docker_install_script,
     # module.docker.docker_config_script,
