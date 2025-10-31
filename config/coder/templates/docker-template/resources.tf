@@ -77,7 +77,7 @@ resource "docker_container" "workspace" {
 
   # Traefik labels for routing
   dynamic "labels" {
-    for_each = module.traefik_routing.traefik_labels
+    for_each = local.traefik_labels
     content {
       label = labels.key
       value = labels.value
