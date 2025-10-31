@@ -16,8 +16,7 @@ data "coder_parameter" "enable_docker" {
   order        = 30
 }
 
-# Module
+# Module (always loaded, but scripts only run if enabled)
 module "docker" {
-  count  = data.coder_parameter.enable_docker.value ? 1 : 0
   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/docker-integration?ref=v0.1.0"
 }
