@@ -17,23 +17,23 @@ data "coder_parameter" "metadata_blocks" {
 
   option {
     name  = "CPU Usage"
-    value = jsonencode(["cpu"])
+    value = "cpu"
   }
   option {
     name  = "RAM Usage"
-    value = jsonencode(["ram"])
+    value = "ram"
   }
   option {
     name  = "Disk Usage"
-    value = jsonencode(["disk"])
+    value = "disk"
   }
   option {
     name  = "Home Directory"
-    value = jsonencode(["home_dir"])
+    value = "home_dir"
   }
   option {
     name  = "Container Image"
-    value = jsonencode(["image"])
+    value = "image"
   }
 }
 
