@@ -30,7 +30,7 @@ data "coder_parameter" "workspace_secret" {
 
 # Modules
 module "traefik_routing" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/traefik-routing?ref=v0.1.0"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/routing-labels-test?ref=v0.1.0"
   
   workspace_name     = data.coder_workspace.me.name
   workspace_owner    = data.coder_workspace_owner.me.name
@@ -41,7 +41,7 @@ module "traefik_routing" {
 }
 
 module "traefik_auth" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/traefik-auth?ref=v0.1.0"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/workspace-auth?ref=v0.1.0"
   
   workspace_name   = data.coder_workspace.me.name
   workspace_owner  = data.coder_workspace_owner.me.name
