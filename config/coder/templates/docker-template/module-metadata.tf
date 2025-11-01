@@ -11,7 +11,7 @@ data "coder_parameter" "metadata_blocks" {
   description  = "Select which metadata blocks to display in the workspace dashboard."
   type         = "list(string)"
   form_type    = "multi-select"
-  default      = jsonencode(["cpu", "ram", "disk"])
+  default      = jsonencode(["cpu", "ram", "disk", "ports"])
   mutable      = true
   order        = 50
 
@@ -26,6 +26,16 @@ data "coder_parameter" "metadata_blocks" {
   option {
     name  = "Disk Usage"
     value = "disk"
+  }
+  option {
+    name  = "Ports"
+    value = "ports"
+    icon  = "/icon/network.svg"
+  }
+  option {
+    name  = "SSH Port"
+    value = "ssh_port"
+    icon  = "/icon/terminal.svg"
   }
   option {
     name  = "Home Directory"
