@@ -62,6 +62,8 @@ module "agent" {
   
   env_vars = {
     SSH_PORT = module.ssh.ssh_port
+    PORTS    = join(",", local.exposed_ports_list)
+    PORT     = element(local.exposed_ports_list, 0)
   }
   
   metadata_blocks = module.metadata.metadata_blocks
