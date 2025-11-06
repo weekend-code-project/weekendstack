@@ -19,6 +19,6 @@ variable "ssh_key_dir" {
 variable "traefik_auth_dir" {
   description = "Host directory for Traefik auth files"
   type        = string
-  default     = "/mnt/workspace/wcp-coder/config/traefik/auth"
+  default     = ""
   sensitive   = false
 }
