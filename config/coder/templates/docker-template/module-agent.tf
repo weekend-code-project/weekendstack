@@ -32,6 +32,10 @@ module "agent" {
   arch = data.coder_provisioner.me.arch
   os   = "linux"
   
+  depends_on = [
+    null_resource.ensure_workspace_folder
+  ]
+  
   startup_script = join("\n", [
     "#!/bin/bash",
     "set -e",

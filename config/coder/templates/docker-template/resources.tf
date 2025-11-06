@@ -8,9 +8,16 @@ resource "random_password" "workspace_secret" {
   special = false
 }
 
-# Note: Docker will automatically create the bind mount source directory
-# if it doesn't exist (${var.workspace_dir}/${workspace_name}).
-# No need for manual directory creation via local-exec.
+# Create workspace directory on host via Coder container's /workspace mount
+resource "null_resource" "ensure_workspace_folder" {
+  provisioner "local-exec" {
+    command = "mkdir -p /workspace/${data.coder_workspace.me.name}"
+  }
+  
+  triggers = {
+    workspace_id = data.coder_workspace.me.id
+  }
+}
 
 # Docker Container
 resource "docker_container" "workspace" {
@@ -46,8 +53,7 @@ resource "docker_container" "workspace" {
   }
   
   # Bind mount workspace directory from host
-  # Each workspace gets its own folder: /workspace/${workspace_name} (inside Coder container)
-  # which maps to files/coder/workspace/${workspace_name} on the host
+  # Directory is created via null_resource using Coder's /workspace mount
   mounts {
     target = "/home/coder/workspace"
     source = local.workspace_home_dir
