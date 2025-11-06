@@ -108,7 +108,10 @@ services:
       sh -c "
         echo 'Initializing Coder directories...' &&
         mkdir -p /workspace /traefik-auth /templates &&
+        chown -R 1000:1000 /workspace &&
+        chmod 755 /workspace &&
         chmod 777 /traefik-auth &&
+        echo 'Workspace directory: /workspace (owned by coder:coder)' &&
         echo 'Traefik auth directory: /traefik-auth (777)' &&
         echo 'Directories initialized successfully'
       "
