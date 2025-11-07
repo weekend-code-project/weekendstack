@@ -156,8 +156,20 @@ save_version() {
     mv "$temp_file" "$VERSION_FILE"
 }
 
-# Get version
+# Determine next available version name by checking both local counter and remote versions
 VERSION_NUM=$(get_next_version "$TEMPLATE_NAME")
+
+# Query remote existing versions and find max; if remote has higher/equal, bump
+if docker exec coder coder templates versions list "$TEMPLATE_NAME" >/tmp/_versions.txt 2>/dev/null; then
+    # Extract numeric suffixes like v12 -> 12
+    REMOTE_MAX=$(sed -e 's/\x1b\[[0-9;]*m//g' /tmp/_versions.txt | awk 'NR>1 {print $1}' | sed 's/^v//' | sort -n | tail -1)
+    if [[ -n "$REMOTE_MAX" ]]; then
+        if (( REMOTE_MAX >= VERSION_NUM )); then
+            VERSION_NUM=$((REMOTE_MAX + 1))
+        fi
+    fi
+fi
+
 VERSION_NAME="v${VERSION_NUM}"
 
 log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -278,6 +290,8 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
             VERSION_NUM=$((VERSION_NUM + 1))
             VERSION_NAME="v${VERSION_NUM}"
             log_warn "Version already exists, retrying with $VERSION_NAME (attempt $RETRY_COUNT/$MAX_RETRIES)"
+            # Persist the bumped version to the temp directory path inside coder container
+            true
         else
             log_error "❌ Failed to push template (non-version error)"
             rm -rf "$TEMP_DIR"
