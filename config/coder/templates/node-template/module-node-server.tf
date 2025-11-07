@@ -15,9 +15,18 @@ data "coder_parameter" "node_server_mode" {
   type         = "string"
   default      = "default"
   order        = 106
-    option { name = "Default" value = "default" }
-    option { name = "Static (index.html)" value = "static" }
-    option { name = "Custom Command" value = "custom" }
+  option {
+    name  = "Default"
+    value = "default"
+  }
+  option {
+    name  = "Static (index.html)"
+    value = "static"
+  }
+  option {
+    name  = "Custom Command"
+    value = "custom"
+  }
 }
 
 data "coder_parameter" "node_startup_command" {
