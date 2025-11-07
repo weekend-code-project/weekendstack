@@ -268,10 +268,19 @@ log "Pushing template..."
 MAX_RETRIES=5
 RETRY_COUNT=0
 
+# Detect optional icon
+ICON_FLAG=()
+if [[ -f "$TEMPLATE_DIR/icon.svg" ]]; then
+    ICON_FLAG=(--icon "/tmp/$TEMPLATE_NAME/icon.svg")
+    # Copy icon explicitly in case docker cp omits hidden or metadata
+    : # (Already included by directory copy)
+fi
+
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
     if docker exec coder coder templates push "$TEMPLATE_NAME" \
         --directory "/tmp/$TEMPLATE_NAME" \
         --name "$VERSION_NAME" \
+        "${ICON_FLAG[@]}" \
         --yes 2>&1 | tee /tmp/push-output.txt; then
         
         log "✅ Successfully pushed $TEMPLATE_NAME ($VERSION_NAME)"
