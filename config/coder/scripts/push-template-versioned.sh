@@ -5,7 +5,12 @@
 # Pushes a template with incremental version naming (v1, v2, v3...)
 #
 # Usage:
-#   ./push-template-versioned.sh <template-name>
+#   ./push-template-versioned.sh [--dry-run] [--ref <ref>] [--fallback <ref>] <template-name>
+#
+# Flags:
+#   --dry-run         Show resolved ref and intended substitutions; do not push
+#   --ref <ref>       Override auto-detected ref (e.g., v0.1.1, main, feature/x)
+#   --fallback <ref>  Fallback ref if detected ref not found on remote (default: main)
 #
 # Example:
 #   ./push-template-versioned.sh docker-workspace
@@ -23,8 +28,50 @@ log() { echo -e "${GREEN}[$(date +'%H:%M:%S')]${NC} $1"; }
 log_warn() { echo -e "${YELLOW}[$(date +'%H:%M:%S')] WARN:${NC} $1"; }
 log_error() { echo -e "${RED}[$(date +'%H:%M:%S')] ERROR:${NC} $1"; }
 
+# -----------------------------------------------------------------------------
+# Argument parsing & defaults
+# -----------------------------------------------------------------------------
+DRY_RUN=false
+REF_OVERRIDE="${REF_OVERRIDE:-}"
+FALLBACK_REF="${FALLBACK_REF:-main}"
+
+ARGS=()
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --dry-run)
+            DRY_RUN=true
+            shift
+            ;;
+        --ref)
+            REF_OVERRIDE="${2:-}"
+            shift 2
+            ;;
+        --fallback)
+            FALLBACK_REF="${2:-main}"
+            shift 2
+            ;;
+        -h|--help)
+            echo "Usage: $0 [--dry-run] [--ref <ref>] [--fallback <ref>] <template-name>"
+            exit 0
+            ;;
+        --)
+            shift; break
+            ;;
+        -*)
+            log_error "Unknown flag: $1"
+            exit 1
+            ;;
+        *)
+            ARGS+=("$1"); shift
+            ;;
+    esac
+done
+
+set +u
+TEMPLATE_NAME="${ARGS[0]}"
+set -u
+
 # Configuration
-TEMPLATE_NAME="${1:-}"
 TEMPLATES_DIR="$(dirname "$0")/../templates"
 VERSION_FILE="$(dirname "$0")/.template_versions.json"
 
@@ -41,6 +88,50 @@ if [[ ! -d "$TEMPLATE_DIR" ]]; then
     log_error "Template directory not found: $TEMPLATE_DIR"
     exit 1
 fi
+
+# -----------------------------------------------------------------------------
+# Git ref detection & validation
+# -----------------------------------------------------------------------------
+detect_git_ref() {
+    # Priority: explicit override > exact tag (v*) > main branch > current branch name
+    if [[ -n "${REF_OVERRIDE}" ]]; then
+        echo "${REF_OVERRIDE}"
+        return 0
+    fi
+
+    # Exact tag? prefer semver-like tags
+    if TAG=$(git describe --tags --exact-match 2>/dev/null); then
+        if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+.*$ ]]; then
+            echo "$TAG"; return 0
+        fi
+    fi
+
+    BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "HEAD")
+    if [[ "$BRANCH" == "main" ]]; then
+        echo "main"; return 0
+    fi
+
+    if [[ "$BRANCH" != "HEAD" ]]; then
+        echo "$BRANCH"; return 0
+    fi
+
+    # Detached HEAD without tag: fallback
+    echo "$FALLBACK_REF"
+}
+
+validate_remote_ref() {
+    local ref="$1"
+    if git ls-remote --exit-code origin "$ref" > /dev/null 2>&1; then
+        return 0
+    fi
+    return 1
+}
+
+url_encode_ref() {
+    # Minimal encode: replace '/' with '%2F' to keep query param valid
+    local ref="$1"
+    echo "${ref//\//%2F}"
+}
 
 # Initialize version file if it doesn't exist
 if [[ ! -f "$VERSION_FILE" ]]; then
@@ -71,12 +162,65 @@ VERSION_NAME="v${VERSION_NUM}"
 log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 log "📤 Pushing Template: $TEMPLATE_NAME"
 log "🔢 Version: $VERSION_NAME"
+
+# Resolve git ref
+RESOLVED_REF=$(detect_git_ref)
+if validate_remote_ref "$RESOLVED_REF"; then
+    log "🔗 Resolved git ref: $RESOLVED_REF (validated on origin)"
+else
+    log_warn "Ref '$RESOLVED_REF' not found on origin; using fallback '$FALLBACK_REF'"
+    if ! validate_remote_ref "$FALLBACK_REF"; then
+        log_error "Fallback ref '$FALLBACK_REF' not found on origin. Aborting."
+        exit 1
+    fi
+    RESOLVED_REF="$FALLBACK_REF"
+fi
+ENC_REF=$(url_encode_ref "$RESOLVED_REF")
+log "🔐 Encoded ref for URL: $ENC_REF"
 log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 # Copy template to temp directory
 TEMP_DIR="/tmp/coder-push-$$"
 mkdir -p "$TEMP_DIR"
 cp -r "$TEMPLATE_DIR" "$TEMP_DIR/$TEMPLATE_NAME"
+
+# Substitute ref in temp .tf files for this repository's git module sources
+substitute_ref_in_temp() {
+    local root="$1"
+    local -a files
+    # Limit to Terraform files referencing this repo
+    mapfile -t files < <(grep -RIl --include='*.tf' 'git::https://github.com/weekend-code-project/weekendstack.git' "$root" || true)
+    if [[ ${#files[@]} -eq 0 ]]; then
+        log_warn "No weekendstack git module sources found to rewrite in $root"
+        return 0
+    fi
+    for f in "${files[@]}"; do
+        # Replace existing ?ref= value with resolved ref
+        sed -E -i "s|(git::https://github.com/weekend-code-project/weekendstack.git//[^?]+\?ref=)[^\"'\s]+|\1${ENC_REF}|g" "$f"
+    done
+    log "✏️  Updated ref to '$RESOLVED_REF' in ${#files[@]} file(s)."
+}
+
+DRY_RUN_PREVIEW() {
+    local root="$1"
+    log "🔍 Dry run preview: showing lines with '?ref=' before substitution"
+    grep -Rn --include='*.tf' '\?ref=' "$root" || true
+}
+
+# If dry-run, preview before and after substitution and exit
+if $DRY_RUN; then
+    log "(dry-run) Template staging dir: $TEMP_DIR/$TEMPLATE_NAME"
+    DRY_RUN_PREVIEW "$TEMP_DIR/$TEMPLATE_NAME"
+    substitute_ref_in_temp "$TEMP_DIR/$TEMPLATE_NAME"
+    log "🔍 Dry run preview: showing lines with '?ref=' after substitution"
+    grep -Rn --include='*.tf' '\?ref=' "$TEMP_DIR/$TEMPLATE_NAME" || true
+    log "✅ Dry run complete. No changes pushed."
+    rm -rf "$TEMP_DIR"
+    exit 0
+fi
+
+# Perform substitution for actual push
+substitute_ref_in_temp "$TEMP_DIR/$TEMPLATE_NAME"
 
 # Push using docker exec
 log "Copying template to Coder container..."
@@ -95,7 +239,7 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
         log "✅ Successfully pushed $TEMPLATE_NAME ($VERSION_NAME)"
         save_version "$TEMPLATE_NAME" "$VERSION_NUM"
         
-        # Cleanup
+    # Cleanup
         rm -rf "$TEMP_DIR"
         docker exec coder rm -rf "/tmp/$TEMPLATE_NAME"
         
