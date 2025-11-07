@@ -17,16 +17,16 @@ module "agent" {
     module.ssh.ssh_copy_script,
     module.git_integration.clone_script,
     (data.coder_parameter.clone_repo.value && try(data.coder_parameter.install_github_cli[0].value, false)) ? module.github_cli.install_script : "",
-    data.coder_parameter.node_install_strategy.value != "system" || data.coder_parameter.node_version.value != "" ? module.node_version.node_setup_script : "",
-    module.node_tooling.tooling_install_script,
+  data.coder_parameter.node_install_strategy.value != "system" || data.coder_parameter.node_version.value != "" ? module.node_version.node_setup_script : "",
+  module.node_tooling.tooling_install_script,
     data.coder_parameter.enable_docker.value ? module.docker.docker_install_script : "",
     data.coder_parameter.enable_docker.value ? module.docker.docker_config_script : "",
     module.ssh.ssh_setup_script,
-    !data.coder_parameter.make_public.value ? local.traefik_auth_setup_script : "",
-    module.node_server.node_server_script,
+  !data.coder_parameter.make_public.value ? local.traefik_auth_setup_script : "",
+  local.setup_server_script,
     "",
     "echo '[WORKSPACE] ✅ Node workspace ready!'",
-    "echo '[WORKSPACE] 🌐 Server URL: http://localhost:${element(module.node_server.server_ports, 0)}'",
+    "echo '[WORKSPACE] 🌐 Server URL: http://localhost:${element(local.exposed_ports_list, 0)}'",
   ])
 
   git_author_name  = coalesce(data.coder_workspace_owner.me.full_name, data.coder_workspace_owner.me.name)
@@ -35,8 +35,8 @@ module "agent" {
 
   env_vars = {
     SSH_PORT = module.ssh.ssh_port
-    PORTS    = join(",", module.node_server.server_ports)
-    PORT     = element(module.node_server.server_ports, 0)
+    PORTS    = join(",", local.exposed_ports_list)
+    PORT     = element(local.exposed_ports_list, 0)
   }
 
   metadata_blocks = module.metadata.metadata_blocks

@@ -17,7 +17,6 @@ node-template/
 ├── module-traefik-local.tf     # Traefik routing & authentication
 ├── module-node-version.tf      # Node version & installer strategy
 ├── module-node-tooling.tf      # Global tooling (TS/ESLint), pm setup
-├── module-node-server.tf       # Bootstrap minimal Node server/preview
 ├── module-code-server.tf       # VS Code in browser
 └── module-metadata.tf          # Workspace info display
 ```
@@ -73,7 +72,7 @@ module "feature" {
 
 ### Development Tools
 - VS Code Server (browser IDE)
-- Static site server with auto-generated HTML
+- Static site server with auto-generated HTML (Express-based, same UX as shared setup module)
 - Custom startup command support
 - Workspace validation
 
