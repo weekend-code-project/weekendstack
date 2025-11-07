@@ -56,9 +56,9 @@ const http = require('http');
 const port = process.env.PORT || ${element(var.exposed_ports, 0)};
 const server = http.createServer((req, res) => {
   res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
-  res.end(`<h1>Welcome to your Node Workspace</h1><p>Listening on port ${'$'}{port}</p>`);
+  res.end('<h1>Welcome to your Node Workspace</h1><p>Listening on port ' + port + '</p>');
 });
-server.listen(port, '0.0.0.0', () => console.log(`Server running on http://localhost:${'$'}{port}`));
+server.listen(port, '0.0.0.0', () => console.log('Server running on http://localhost:' + port));
 JS
       # Add start script
       node -e "const fs=require('fs'); const pkg=JSON.parse(fs.readFileSync('package.json')); pkg.scripts=pkg.scripts||{}; pkg.scripts.start='node server.js'; fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));"
