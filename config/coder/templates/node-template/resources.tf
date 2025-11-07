@@ -40,9 +40,7 @@ resource "docker_container" "workspace" {
   
   env = [
     "CODER_AGENT_TOKEN=${module.agent.agent_token}",
-    "CODER_ACCESS_URL=http://coder:7080",
-      "PORT=${element(local.exposed_ports_list, 0)}",
-      "PORTS=${join(",", local.exposed_ports_list)}"
+    "CODER_ACCESS_URL=http://coder:7080"
   ]
   
   host {
@@ -112,13 +110,4 @@ resource "docker_container" "workspace" {
       protocol = "tcp"
     }
   }
-    dynamic "ports" {
-      for_each = local.exposed_ports_list
-      content {
-        internal = tonumber(ports.value)
-        external = tonumber(ports.value)
-        protocol = "tcp"
-      }
-    }
-  # Expose selected app ports (from shared-like parameters)
 }

@@ -38,7 +38,7 @@ locals {
 }
 
 module "setup_server" {
-	source                = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/setup-server?ref=v0.1.0"
+	source                = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/setup-server?ref=v0.1.1"
 	workspace_name        = data.coder_workspace.me.name
 	workspace_owner       = data.coder_workspace_owner.me.name
 	auto_generate_html    = data.coder_parameter.auto_generate_html.value

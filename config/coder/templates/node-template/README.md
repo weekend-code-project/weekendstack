@@ -72,8 +72,15 @@ module "feature" {
 
 ### Development Tools
 - VS Code Server (browser IDE)
-- Static site server with auto-generated HTML (Express-based, same UX as shared setup module)
-- Custom startup command support
+- Setup Server (Express-based) — identical UX to shared static module. Options:
+  - Serve Static Site (auto-generate welcome page)
+  - Exposed Ports (list; first port used for preview)
+  - Startup Command (runs detached, logs to /tmp/custom-startup.log)
+- Preview Link Modes:
+  - Local (Server IP): http://<server_host>:<port> — set Server IP/Host parameter
+  - Traefik (External Subdomain): https://<workspace>.<domain>
+  - Custom URL: arbitrary http(s) URL
+- Logs: /tmp/express-server.log, PID: /tmp/express-server.pid
 - Workspace validation
 
 ## Git Module Pattern (IMPORTANT)
@@ -140,7 +147,7 @@ From `module-agent.tf`:
 6. `docker` - Install Docker (conditional)
 7. `ssh_setup` - Configure SSH server (conditional)
 8. `traefik_auth` - Setup auth (conditional)
-9. `setup_server` - Start server/app
+9. `setup_server` - Start Express server and/or custom app (detached with nohup)
 
 ## Environment Variables
 

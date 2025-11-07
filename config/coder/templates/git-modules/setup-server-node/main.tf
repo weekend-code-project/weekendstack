@@ -50,19 +50,13 @@ variable "workspace_start_count" {
 }
 
 variable "workspace_url" {
-  description = "External Traefik URL for the workspace"
-  type        = string
-  default     = ""
-}
-
-variable "preview_url" {
-  description = "Preview URL to register in coder_app (local/traefik/custom)"
+  description = "External Traefik URL for the workspace (subdomain form)"
   type        = string
   default     = ""
 }
 
 # =============================================================================
-# Preview App (identical to shared)
+# Preview App
 # =============================================================================
 
 resource "coder_app" "preview" {
@@ -71,12 +65,12 @@ resource "coder_app" "preview" {
   slug         = "preview"
   display_name = "Preview"
   icon         = "/icon/code.svg"
-  url          = coalesce(var.preview_url, "http://localhost:${element(var.exposed_ports_list, 0)}")
+  url          = var.workspace_url
   subdomain    = false
   share        = "owner"
 
   healthcheck {
-    url       = coalesce(var.preview_url, "http://localhost:${element(var.exposed_ports_list, 0)}")
+    url       = "http://localhost:${element(var.exposed_ports_list, 0)}"
     interval  = 5
     threshold = 6
   }
@@ -125,8 +119,8 @@ output "setup_server_script" {
         a:hover { text-decoration: underline; }
         .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 14px; }
     </style>
-    <meta http-equiv="refresh" content="0; url=http://localhost:$PORT" />
-    <meta name="coder-preview-url" content="http://localhost:$PORT" />
+  <meta http-equiv="refresh" content="0; url=http://localhost:$PORT" />
+  <meta name="coder-preview-url" content="http://localhost:$PORT" />
     <meta name="coder-workspace" content="${var.workspace_name}" />
     <meta name="coder-owner" content="${var.workspace_owner}" />
     <meta name="coder-ports" content="$PORTS" />
@@ -152,7 +146,7 @@ output "setup_server_script" {
     <div class="info">
       <strong>Access URLs:</strong>
       <ul>
-        <li>Local Preview: <a href="http://localhost:$PORT">http://localhost:$PORT</a></li>
+        <li>External: <a href="${var.workspace_url}">${var.workspace_url}</a></li>
       </ul>
     </div>
     <h2>Getting Started</h2>
