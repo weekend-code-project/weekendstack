@@ -174,12 +174,19 @@ HTML
       fi
     fi
 
+    # Helper: ensure a process isn't already running on this port
+    is_port_in_use() {
+      ss -ltn 2>/dev/null | awk '{print $4}' | grep -q ":$PORT$" || netstat -ltn 2>/dev/null | awk '{print $4}' | grep -q ":$PORT$"
+    }
+
     # If custom command provided, run it; otherwise start Express for AUTO_HTML
     if [ -n "$STARTUP_CMD" ]; then
       echo "[SETUP-SERVER] Running custom startup command..."
       echo "[SETUP-SERVER] Command: $STARTUP_CMD"
-      eval "$STARTUP_CMD" &
-      echo "[SETUP-SERVER] ✓ Custom command started"
+      # Redirect output and fully detach to avoid keeping stdout/stderr pipes open
+      nohup bash -lc "$STARTUP_CMD" > /tmp/custom-startup.log 2>&1 &
+      echo $! > /tmp/custom-startup.pid
+      echo "[SETUP-SERVER] ✓ Custom command started (PID: $(cat /tmp/custom-startup.pid))"
     elif [ "$AUTO_HTML" = "true" ]; then
       # Ensure package.json and install express once
       if [ ! -f package.json ]; then npm init -y >/dev/null 2>&1 || true; fi
@@ -202,7 +209,14 @@ app.listen(port, '0.0.0.0', () => console.log('[Express] listening on http://loc
 JS
       node -e "const fs=require('fs');const p='package.json';const pkg=fs.existsSync(p)?JSON.parse(fs.readFileSync(p)):{};pkg.scripts=pkg.scripts||{};pkg.scripts.start=pkg.scripts.start||'node server.js';fs.writeFileSync(p, JSON.stringify(pkg, null, 2));"
       echo "[SETUP-SERVER] Starting Express server on $PORT"
-      npm run start --if-present &
+      # Avoid duplicate listener if already active
+      if is_port_in_use; then
+        echo "[SETUP-SERVER] Port $PORT already in use; assuming server is running."
+      else
+        nohup npm run start --if-present > /tmp/express-server.log 2>&1 &
+        echo $! > /tmp/express-server.pid
+        echo "[SETUP-SERVER] ✓ Express started (PID: $(cat /tmp/express-server.pid))"
+      fi
     else
       echo "[SETUP-SERVER] Auto HTML disabled and no startup command provided; not starting a server."
     fi
