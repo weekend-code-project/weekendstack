@@ -5,10 +5,22 @@ data "coder_parameter" "node_install_strategy" {
   type         = "string"
   default      = "system"
   order        = 100
-    option { name = "System (image)" value = "system" }
-    option { name = "Volta" value = "volta" }
-    option { name = "FNM" value = "fnm" }
-    option { name = "n" value = "n" }
+  option {
+    name  = "System (image)"
+    value = "system"
+  }
+  option {
+    name  = "Volta"
+    value = "volta"
+  }
+  option {
+    name  = "FNM"
+    value = "fnm"
+  }
+  option {
+    name  = "n"
+    value = "n"
+  }
 }
 
 data "coder_parameter" "node_version" {
@@ -16,13 +28,28 @@ data "coder_parameter" "node_version" {
   display_name = "Node Version"
   description  = "Select a Node version (e.g., 22, 20, 18, lts)"
   type         = "string"
-  default      = "20"
+  default      = "lts"
   order        = 101
-    option { name = "Latest LTS" value = "lts" }
-    option { name = "22.x" value = "22" }
-    option { name = "20.x" value = "20" }
-    option { name = "18.x" value = "18" }
-    option { name = "16.x" value = "16" }
+  option {
+    name  = "Latest LTS"
+    value = "lts"
+  }
+  option {
+    name  = "22.x"
+    value = "22"
+  }
+  option {
+    name  = "20.x"
+    value = "20"
+  }
+  option {
+    name  = "18.x"
+    value = "18"
+  }
+  option {
+    name  = "16.x"
+    value = "16"
+  }
 }
 
 data "coder_parameter" "node_package_manager" {
@@ -32,9 +59,18 @@ data "coder_parameter" "node_package_manager" {
   type         = "string"
   default      = "npm"
   order        = 102
-    option { name = "npm" value = "npm" }
-    option { name = "pnpm" value = "pnpm" }
-    option { name = "yarn" value = "yarn" }
+  option {
+    name  = "npm"
+    value = "npm"
+  }
+  option {
+    name  = "pnpm"
+    value = "pnpm"
+  }
+  option {
+    name  = "yarn"
+    value = "yarn"
+  }
 }
 
 data "coder_parameter" "enable_typescript" {
