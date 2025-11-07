@@ -15,7 +15,9 @@ node-template/
 ├── module-ssh.tf               # SSH server with dynamic ports
 ├── module-docker.tf            # Docker-in-Docker integration
 ├── module-traefik-local.tf     # Traefik routing & authentication
-├── module-setup-server.tf      # Static site or custom server
+├── module-node-version.tf      # Node version & installer strategy
+├── module-node-tooling.tf      # Global tooling (TS/ESLint), pm setup
+├── module-node-server.tf       # Bootstrap minimal Node server/preview
 ├── module-code-server.tf       # VS Code in browser
 └── module-metadata.tf          # Workspace info display
 ```
@@ -114,9 +116,13 @@ Parameters are ordered for logical UI flow:
 ```
 Order 10: make_public (Traefik)
 Order 11: workspace_secret (Traefik, conditional)
-Order 20: auto_generate_html (Server)
-Order 21: exposed_ports (Server, conditional)
-Order 22: startup_command (Server, conditional)
+Order 100+: Node-specific parameters
+  100: node_install_strategy (system|volta|fnm|n)
+  101: node_version (lts|22|20|18|16)
+  102: node_package_manager (npm|pnpm|yarn)
+  103: enable_typescript
+  104: enable_eslint
+  105: node_ports
 Order 30: enable_docker (Docker)
 Order 40-49: Git parameters
 Order 50-59: SSH parameters

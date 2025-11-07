@@ -5,9 +5,9 @@
 # Workspace Secret
 resource "random_password" "workspace_secret" {
   length  = 16
-  special = false
-}
-
+  SSH_PORT = module.ssh.ssh_port
+  PORTS    = join(",", module.node_server.server_ports)
+  PORT     = element(module.node_server.server_ports, 0)
 # Create workspace directory on host via Coder container's /workspace mount
 resource "null_resource" "ensure_workspace_folder" {
   provisioner "local-exec" {
@@ -21,6 +21,14 @@ resource "null_resource" "ensure_workspace_folder" {
 
 # Docker Container
 resource "docker_container" "workspace" {
+  dynamic "ports" {
+    for_each = module.node_server.server_ports
+    content {
+      internal = tonumber(ports.value)
+      external = tonumber(ports.value)
+      protocol = "tcp"
+    }
+  }
   count      = data.coder_workspace.me.start_count
   image      = "node:20-bullseye"
   privileged = true
