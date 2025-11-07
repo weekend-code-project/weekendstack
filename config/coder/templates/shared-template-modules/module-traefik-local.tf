@@ -1,6 +1,52 @@
-data "coder_parameter" "make_public" { name = "make_public" display_name = "Make Public" description = "Make workspace URL publicly accessible." type = "bool" form_type = "switch" default = true mutable = true order = 10 }
-data "coder_parameter" "workspace_secret" { count = data.coder_parameter.make_public.value ? 0 : 1 name = "workspace_secret" display_name = "Private Password" description = "Enter a password to protect the workspace URL." type = "string" default = "" mutable = true form_type = "input" order = 11 validation { regex = "^.+$" error = "Suggested random password: ${random_password.workspace_secret.result}" } }
-locals { workspace_domain = "weekendcodeproject.dev" workspace_url = "https://${lower(data.coder_workspace.me.name)}.${local.workspace_domain}" traefik_base_labels = { "coder.owner" = data.coder_workspace_owner.me.name "coder.owner_id" = data.coder_workspace_owner.me.id "coder.workspace_id" = data.coder_workspace.me.id "coder.workspace_name" = data.coder_workspace.me.name "traefik.enable" = "true" "traefik.docker.network" = "coder-network" "traefik.http.routers.${lower(data.coder_workspace.me.name)}.rule" = "Host(`${lower(data.coder_workspace.me.name)}.${local.workspace_domain}`)" "traefik.http.routers.${lower(data.coder_workspace.me.name)}.entrypoints" = "websecure" "traefik.http.routers.${lower(data.coder_workspace.me.name)}.tls" = "true" "traefik.http.services.${lower(data.coder_workspace.me.name)}.loadbalancer.server.port" = element(local.exposed_ports_list, 0) } traefik_auth_labels = { "traefik.http.routers.${lower(data.coder_workspace.me.name)}.middlewares" = "${lower(data.coder_workspace.me.name)}-auth" "traefik.http.middlewares.${lower(data.coder_workspace.me.name)}-auth.basicauth.usersfile" = "/traefik-auth/hashed_password-${data.coder_workspace.me.name}" } traefik_labels = !data.coder_parameter.make_public.value ? merge(traefik_base_labels, traefik_auth_labels) : traefik_base_labels traefik_auth_enabled = !data.coder_parameter.make_public.value traefik_auth_setup_script = <<-EOT
+data "coder_parameter" "make_public" {
+  name         = "make_public"
+  display_name = "Make Public"
+  description  = "Make workspace URL publicly accessible."
+  type         = "bool"
+  form_type    = "switch"
+  default      = true
+  mutable      = true
+  order        = 10
+}
+
+data "coder_parameter" "workspace_secret" {
+  count        = data.coder_parameter.make_public.value ? 0 : 1
+  name         = "workspace_secret"
+  display_name = "Private Password"
+  description  = "Enter a password to protect the workspace URL."
+  type         = "string"
+  default      = ""
+  mutable      = true
+  form_type    = "input"
+  order        = 11
+  validation { regex = "^.+$" error = "Suggested random password: ${random_password.workspace_secret.result}" }
+}
+
+locals {
+  workspace_domain = "weekendcodeproject.dev"
+  workspace_url    = "https://${lower(data.coder_workspace.me.name)}.${local.workspace_domain}"
+
+  traefik_base_labels = {
+    "coder.owner"          = data.coder_workspace_owner.me.name
+    "coder.owner_id"       = data.coder_workspace_owner.me.id
+    "coder.workspace_id"   = data.coder_workspace.me.id
+    "coder.workspace_name" = data.coder_workspace.me.name
+    "traefik.enable"         = "true"
+    "traefik.docker.network" = "coder-network"
+    "traefik.http.routers.${lower(data.coder_workspace.me.name)}.rule"        = "Host(`${lower(data.coder_workspace.me.name)}.${local.workspace_domain}`)"
+    "traefik.http.routers.${lower(data.coder_workspace.me.name)}.entrypoints" = "websecure"
+    "traefik.http.routers.${lower(data.coder_workspace.me.name)}.tls"         = "true"
+    "traefik.http.services.${lower(data.coder_workspace.me.name)}.loadbalancer.server.port" = element(local.exposed_ports_list, 0)
+  }
+
+  traefik_auth_labels = {
+    "traefik.http.routers.${lower(data.coder_workspace.me.name)}.middlewares" = "${lower(data.coder_workspace.me.name)}-auth"
+    "traefik.http.middlewares.${lower(data.coder_workspace.me.name)}-auth.basicauth.usersfile" = "/traefik-auth/hashed_password-${data.coder_workspace.me.name}"
+  }
+
+  traefik_labels         = !data.coder_parameter.make_public.value ? merge(traefik_base_labels, traefik_auth_labels) : traefik_base_labels
+  traefik_auth_enabled   = !data.coder_parameter.make_public.value
+  traefik_auth_setup_script = <<-EOT
 #!/bin/bash
 set -e
 WORKSPACE_NAME="${data.coder_workspace.me.name}"
@@ -10,7 +56,7 @@ if [ ! -d "/traefik-auth" ]; then echo "[TRAEFIK-AUTH] /traefik-auth not mounted
 if [ "$AUTH_ENABLED" = "true" ]; then
   if ! command -v htpasswd >/dev/null 2>&1; then sudo apt-get update -qq >/dev/null 2>&1; sudo apt-get install -y -qq apache2-utils >/dev/null 2>&1; fi
   sudo chown -R coder:coder /traefik-auth 2>/dev/null || true
-  SECRET_VALUE="${try(data.coder_parameter.workspace_secret[0].value, "")}"
+  SECRET_VALUE="${try(data.coder_parameter.workspace_secret[0].value, "")}" 
   if [ -z "$SECRET_VALUE" ]; then echo "Password required"; exit 1; fi
   htpasswd -nbB "$USERNAME" "$SECRET_VALUE" | sudo tee "/traefik-auth/hashed_password-$WORKSPACE_NAME" >/dev/null
   sudo chmod 600 "/traefik-auth/hashed_password-$WORKSPACE_NAME"
@@ -25,4 +71,5 @@ EOF
 else
   sudo rm -f "/traefik-auth/hashed_password-$WORKSPACE_NAME" "/traefik-auth/dynamic-$WORKSPACE_NAME.yaml" 2>/dev/null || true
 fi
-EOT }
+EOT
+}
