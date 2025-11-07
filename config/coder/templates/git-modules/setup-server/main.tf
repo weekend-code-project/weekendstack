@@ -68,12 +68,14 @@ resource "coder_app" "preview" {
   url          = var.workspace_url != "" ? var.workspace_url : "http://localhost:${element(var.exposed_ports_list, 0)}"
   subdomain    = var.workspace_url != "" ? true : false
   share        = "owner"
-  external     = var.workspace_url != "" ? true : false
   
-  healthcheck {
-    url       = "http://localhost:${element(var.exposed_ports_list, 0)}"
-    interval  = 5
-    threshold = 6
+  dynamic "healthcheck" {
+    for_each = var.workspace_url == "" ? [1] : []
+    content {
+      url       = "http://localhost:${element(var.exposed_ports_list, 0)}"
+      interval  = 5
+      threshold = 6
+    }
   }
 }
 
