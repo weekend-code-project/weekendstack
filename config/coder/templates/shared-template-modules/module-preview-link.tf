@@ -7,7 +7,7 @@ data "coder_parameter" "preview_link_mode" {
 	mutable      = true
 	order        = 23
 		option {
-			name  = "Internal (Coder Proxy)"
+			name  = "Local (Server IP)"
 			value = "internal"
 			icon  = "/icon/coder.svg"
 		}
@@ -23,6 +23,18 @@ data "coder_parameter" "preview_link_mode" {
 		}
 }
 
+data "coder_parameter" "server_host" {
+	count        = data.coder_parameter.preview_link_mode.value == "internal" ? 1 : 0
+	name         = "server_host"
+	display_name = "Server IP/Host"
+	description  = "Hostname or IP of the server where this workspace runs (e.g. 192.168.1.10)."
+	type         = "string"
+	default      = ""
+	mutable      = true
+	form_type    = "input"
+	order        = 24
+}
+
 data "coder_parameter" "custom_preview_url" {
 	count        = data.coder_parameter.preview_link_mode.value == "custom" ? 1 : 0
 	name         = "custom_preview_url"
@@ -32,7 +44,7 @@ data "coder_parameter" "custom_preview_url" {
 	default      = ""
 	mutable      = true
 	form_type    = "input"
-	order        = 24
+	order        = 25
 		validation {
 			regex = "^https?://.+"
 			error = "URL must start with http:// or https://"
@@ -43,6 +55,9 @@ locals {
 	preview_url = (
 		data.coder_parameter.preview_link_mode.value == "traefik" ? local.workspace_url :
 		data.coder_parameter.preview_link_mode.value == "custom" ? try(data.coder_parameter.custom_preview_url[0].value, "") :
-		"http://localhost:${element(local.exposed_ports_list, 0)}"
+		format("http://%s:%s",
+			trimspace(try(data.coder_parameter.server_host[0].value, "localhost")),
+			element(local.exposed_ports_list, 0)
+		)
 	)
 }

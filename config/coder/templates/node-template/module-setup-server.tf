@@ -42,11 +42,18 @@ data "coder_parameter" "startup_command" {
 locals {
   exposed_ports_raw  = try(data.coder_parameter.exposed_ports[0].value, jsonencode(["8080"]))
   exposed_ports_list = try(jsondecode(local.exposed_ports_raw), tolist(local.exposed_ports_raw), [tostring(local.exposed_ports_raw)])
+  workspace_domain   = try(local.workspace_domain, "")
+  workspace_url      = try(local.workspace_url, "")
+  preview_url        = (
+    data.coder_parameter.preview_link_mode.value == "traefik" ? local.workspace_url :
+    data.coder_parameter.preview_link_mode.value == "custom" ? try(data.coder_parameter.custom_preview_url[0].value, "") :
+    "http://localhost:${element(local.exposed_ports_list, 0)}"
+  )
 }
 
 # Preview app matching the first exposed port
 module "setup_server_node" {
-  source                = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/setup-server-node?ref=v0.1.4"
+  source                = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/setup-server-node?ref=v0.1.1"
   workspace_name        = data.coder_workspace.me.name
   workspace_owner       = data.coder_workspace_owner.me.name
   auto_generate_html    = data.coder_parameter.auto_generate_html.value
@@ -54,7 +61,8 @@ module "setup_server_node" {
   startup_command       = try(data.coder_parameter.startup_command[0].value, "")
   agent_id              = module.agent.agent_id
   workspace_start_count = data.coder_workspace.me.start_count
-  workspace_url         = "http://localhost:${element(local.exposed_ports_list, 0)}"
+  workspace_url         = local.preview_url
+  preview_url           = local.preview_url
 }
 
 # Node-based setup server script

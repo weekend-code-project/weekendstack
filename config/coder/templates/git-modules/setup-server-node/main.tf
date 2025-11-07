@@ -55,6 +55,12 @@ variable "workspace_url" {
   default     = ""
 }
 
+variable "preview_url" {
+  description = "Preview URL to register in coder_app (local/traefik/custom)"
+  type        = string
+  default     = ""
+}
+
 # =============================================================================
 # Preview App (identical to shared)
 # =============================================================================
@@ -65,12 +71,12 @@ resource "coder_app" "preview" {
   slug         = "preview"
   display_name = "Preview"
   icon         = "/icon/code.svg"
-  url          = "http://localhost:${element(var.exposed_ports_list, 0)}"
+  url          = coalesce(var.preview_url, "http://localhost:${element(var.exposed_ports_list, 0)}")
   subdomain    = false
   share        = "owner"
 
   healthcheck {
-    url       = "http://localhost:${element(var.exposed_ports_list, 0)}"
+    url       = coalesce(var.preview_url, "http://localhost:${element(var.exposed_ports_list, 0)}")
     interval  = 5
     threshold = 6
   }
