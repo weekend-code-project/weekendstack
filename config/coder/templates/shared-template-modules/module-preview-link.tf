@@ -3,7 +3,7 @@ data "coder_parameter" "preview_link_mode" {
 	display_name = "Preview Link Mode"
 	description  = "Choose how the preview app URL is generated."
 	type         = "string"
-	default      = "internal"
+	default      = "traefik"
 	mutable      = true
 	order        = 23
 		option {
