@@ -51,18 +51,22 @@ locals {
 output "ssh_copy_script" {
   description = "Script to setup SSH keys from host mount"
   value       = <<-EOT
-    if [ -d "/mnt/host-ssh" ]; then
-      echo "[SSH] Setting up SSH keys from /mnt/host-ssh..."
-      
-      # Remove default .ssh if it exists and symlink to mounted host SSH
-      rm -rf ~/.ssh
-      ln -sf /mnt/host-ssh ~/.ssh
-      
-      # Ensure known_hosts exists and add GitHub
-      touch ~/.ssh/known_hosts 2>/dev/null || true
-      ssh-keyscan -H github.com >> ~/.ssh/known_hosts 2>/dev/null || true
-      
-      echo "[SSH] ✅ SSH keys ready (using host keys directly)"
+    echo "[SSH] Setting up SSH keys from /mnt/host-ssh..."
+    
+    # Symlink to mounted SSH directory (read-only)
+    # If empty, keys can be generated and will persist in files/ssh/
+    rm -rf ~/.ssh
+    ln -sf /mnt/host-ssh ~/.ssh
+    
+    # Ensure known_hosts exists (if directory is writable, otherwise ignore)
+    touch ~/.ssh/known_hosts 2>/dev/null || true
+    ssh-keyscan -H github.com >> ~/.ssh/known_hosts 2>/dev/null || true
+    
+    if [ -n "$(ls -A /mnt/host-ssh 2>/dev/null)" ]; then
+      echo "[SSH] ✅ SSH keys ready (using mounted keys)"
+    else
+      echo "[SSH] ℹ️  No SSH keys found - generate with: ssh-keygen -t ed25519"
+      echo "[SSH] ℹ️  Keys will be saved to files/ssh/ and persist across restarts"
     fi
   EOT
 }

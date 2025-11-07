@@ -155,8 +155,9 @@ services:
         source: ${CODER_TEMPLATE_DIR}
         target: /templates
       - type: bind
-        source: ${SSH_KEY_DIR}
+        source: ${SSH_KEY_DIR:-./files/ssh}
         target: /mnt/host-ssh
+        read_only: true
       - type: bind
         source: ${TRAEFIK_AUTH_DIR}
         target: /traefik-auth

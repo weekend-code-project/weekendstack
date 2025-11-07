@@ -61,6 +61,8 @@ resource "docker_container" "workspace" {
   }
 
   # Mount SSH keys from host (read-only)
+  # Default: ./files/ssh (project directory)
+  # Override in .env: SSH_KEY_DIR=/path/to/.ssh
   mounts {
     target    = "/mnt/host-ssh"
     source    = var.ssh_key_dir

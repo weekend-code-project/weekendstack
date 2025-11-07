@@ -24,6 +24,7 @@ config/cloudflare/config.yml
 # =============================================================================
 
 # Service data and runtime files (entire files directory)
+# Includes SSH keys, database data, uploads, etc.
 files/
 
 # Traefik configurations and auth
