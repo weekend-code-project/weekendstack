@@ -47,26 +47,22 @@ locals {
   )
 }
 
-# SSH Key Copy Script
+# SSH Key Setup Script
 output "ssh_copy_script" {
-  description = "Script to copy SSH keys from host mount"
+  description = "Script to setup SSH keys from host mount"
   value       = <<-EOT
     if [ -d "/mnt/host-ssh" ]; then
-      echo "[SSH COPY] Installing SSH keys from /mnt/host-ssh..."
-      mkdir -p ~/.ssh
-      chmod 700 ~/.ssh
-      if [ -f "/mnt/host-ssh/id_ed25519" ]; then
-        cp /mnt/host-ssh/id_ed25519 ~/.ssh/id_ed25519
-        chmod 600 ~/.ssh/id_ed25519
-      fi
-      if [ -f "/mnt/host-ssh/id_ed25519.pub" ]; then
-        cp /mnt/host-ssh/id_ed25519.pub ~/.ssh/id_ed25519.pub
-        chmod 644 ~/.ssh/id_ed25519.pub
-      fi
-      touch ~/.ssh/known_hosts
-      chmod 644 ~/.ssh/known_hosts
+      echo "[SSH] Setting up SSH keys from /mnt/host-ssh..."
+      
+      # Remove default .ssh if it exists and symlink to mounted host SSH
+      rm -rf ~/.ssh
+      ln -sf /mnt/host-ssh ~/.ssh
+      
+      # Ensure known_hosts exists and add GitHub
+      touch ~/.ssh/known_hosts 2>/dev/null || true
       ssh-keyscan -H github.com >> ~/.ssh/known_hosts 2>/dev/null || true
-      echo "[SSH COPY] ✅ Keys installed."
+      
+      echo "[SSH] ✅ SSH keys ready (using host keys directly)"
     fi
   EOT
 }
