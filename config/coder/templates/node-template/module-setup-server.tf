@@ -42,7 +42,6 @@ data "coder_parameter" "startup_command" {
 locals {
   exposed_ports_raw  = try(data.coder_parameter.exposed_ports[0].value, jsonencode(["8080"]))
   exposed_ports_list = try(jsondecode(local.exposed_ports_raw), tolist(local.exposed_ports_raw), [tostring(local.exposed_ports_raw)])
-  preview_url        = "http://localhost:${element(local.exposed_ports_list, 0)}"
 }
 
 # Preview app matching the first exposed port
@@ -55,7 +54,7 @@ module "setup_server_node" {
   startup_command       = try(data.coder_parameter.startup_command[0].value, "")
   agent_id              = module.agent.agent_id
   workspace_start_count = data.coder_workspace.me.start_count
-  workspace_url         = local.preview_url
+  workspace_url         = "http://localhost:${element(local.exposed_ports_list, 0)}"
 }
 
 # Node-based setup server script
