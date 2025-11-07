@@ -50,9 +50,13 @@ locals {
     "traefik.http.middlewares.${lower(data.coder_workspace.me.name)}-auth.basicauth.usersfile" = "/traefik-auth/hashed_password-${data.coder_workspace.me.name}"
   }
 
+  # Normalize make_public value to a boolean
+  make_public_value = try(data.coder_parameter.make_public.value, true)
+  is_public         = tostring(local.make_public_value) == "true"
+
   # Decide final labels based on whether the workspace is public. If not public, merge auth labels.
-  traefik_labels = data.coder_parameter.make_public.value ? traefik_base_labels : merge(traefik_base_labels, traefik_auth_labels)
-  traefik_auth_enabled   = data.coder_parameter.make_public.value ? false : true
+  traefik_labels       = local.is_public ? traefik_base_labels : merge(traefik_base_labels, traefik_auth_labels)
+  traefik_auth_enabled = local.is_public ? false : true
   traefik_auth_setup_script = <<-EOT
 #!/bin/bash
 set -e
