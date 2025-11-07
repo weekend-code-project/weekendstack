@@ -55,7 +55,7 @@ locals {
   is_public         = tostring(local.make_public_value) == "true"
 
   # Decide final labels based on whether the workspace is public. If not public, merge auth labels.
-  traefik_labels       = local.is_public ? traefik_base_labels : merge(traefik_base_labels, traefik_auth_labels)
+  traefik_labels       = local.is_public ? local.traefik_base_labels : merge(local.traefik_base_labels, local.traefik_auth_labels)
   traefik_auth_enabled = local.is_public ? false : true
   traefik_auth_setup_script = <<-EOT
 #!/bin/bash
