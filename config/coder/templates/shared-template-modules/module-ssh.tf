@@ -16,8 +16,14 @@ data "coder_parameter" "ssh_port_mode" {
 	type         = "string"
 	default      = "auto"
 	mutable      = true
-	option { name = "auto" value = "auto" }
-	option { name = "manual" value = "manual" }
+	option {
+		name  = "auto"
+		value = "auto"
+	}
+	option {
+		name  = "manual"
+		value = "manual"
+	}
 	count = data.coder_parameter.ssh_enable.value ? 1 : 0
 	order = 51
 }
