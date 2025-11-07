@@ -121,7 +121,6 @@ Order 100+: Node-specific parameters
   102: node_package_manager (npm|pnpm|yarn)
   103: enable_typescript
   104: enable_eslint
-  105: node_ports
 Order 30: enable_docker (Docker)
 Order 40-49: Git parameters
 Order 50-59: SSH parameters
