@@ -6,9 +6,21 @@ data "coder_parameter" "preview_link_mode" {
 	default      = "internal"
 	mutable      = true
 	order        = 23
-	option { name = "Internal (Coder Proxy)" value = "internal" icon = "/icon/coder.svg" }
-	option { name = "Traefik (External Subdomain)" value = "traefik" icon = "/icon/globe.svg" }
-	option { name = "Custom URL" value = "custom" icon = "/icon/link.svg" }
+		option {
+			name  = "Internal (Coder Proxy)"
+			value = "internal"
+			icon  = "/icon/coder.svg"
+		}
+		option {
+			name  = "Traefik (External Subdomain)"
+			value = "traefik"
+			icon  = "/icon/globe.svg"
+		}
+		option {
+			name  = "Custom URL"
+			value = "custom"
+			icon  = "/icon/link.svg"
+		}
 }
 
 data "coder_parameter" "custom_preview_url" {
@@ -21,7 +33,10 @@ data "coder_parameter" "custom_preview_url" {
 	mutable      = true
 	form_type    = "input"
 	order        = 24
-	validation { regex = "^https?://.+" error = "URL must start with http:// or https://" }
+		validation {
+			regex = "^https?://.+"
+			error = "URL must start with http:// or https://"
+		}
 }
 
 locals {

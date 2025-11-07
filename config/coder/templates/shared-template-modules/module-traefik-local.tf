@@ -19,7 +19,10 @@ data "coder_parameter" "workspace_secret" {
   mutable      = true
   form_type    = "input"
   order        = 11
-  validation { regex = "^.+$" error = "Suggested random password: ${random_password.workspace_secret.result}" }
+  validation {
+    regex = "^.+$"
+    error = "Suggested random password: ${random_password.workspace_secret.result}"
+  }
 }
 
 locals {

@@ -32,7 +32,10 @@ data "coder_parameter" "ssh_port" {
 	count        = data.coder_parameter.ssh_enable.value ? 1 : 0
 	order        = 52
 	styling = jsonencode({ disabled = try(data.coder_parameter.ssh_port_mode[0].value, "auto") == "auto" })
-	validation { regex = "^([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$" error = "SSH port must be valid" }
+		validation {
+			regex = "^([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+			error = "SSH port must be valid"
+		}
 }
 
 data "coder_parameter" "ssh_password" {

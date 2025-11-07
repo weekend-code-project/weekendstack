@@ -8,13 +8,42 @@ data "coder_parameter" "metadata_blocks" {
   mutable      = true
   order        = 50
 
-  option { name = "CPU Usage"  value = "cpu" }
-  option { name = "RAM Usage"  value = "ram" }
-  option { name = "Disk Usage" value = "disk" }
-  option { name = "Ports"      value = "ports" icon = "/icon/network.svg" }
-  option { name = "SSH Port"   value = "ssh_port" icon = "/icon/terminal.svg" }
-  option { name = "Home Directory" value = "home_dir" }
-  option { name = "Container Image" value = "image" }
+  option {
+    name  = "CPU Usage"
+    value = "cpu"
+  }
+
+  option {
+    name  = "RAM Usage"
+    value = "ram"
+  }
+
+  option {
+    name  = "Disk Usage"
+    value = "disk"
+  }
+
+  option {
+    name  = "Ports"
+    value = "ports"
+    icon  = "/icon/network.svg"
+  }
+
+  option {
+    name  = "SSH Port"
+    value = "ssh_port"
+    icon  = "/icon/terminal.svg"
+  }
+
+  option {
+    name  = "Home Directory"
+    value = "home_dir"
+  }
+
+  option {
+    name  = "Container Image"
+    value = "image"
+  }
 }
 
 module "metadata" {
