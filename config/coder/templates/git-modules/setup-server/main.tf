@@ -65,7 +65,7 @@ resource "coder_app" "preview" {
   slug         = "preview"
   display_name = "Preview"
   icon         = "/icon/code.svg"
-  url          = "http://localhost:${element(var.exposed_ports_list, 0)}"
+  url          = var.workspace_url != "" ? var.workspace_url : "http://localhost:${element(var.exposed_ports_list, 0)}"
   subdomain    = false
   share        = "owner"
   
