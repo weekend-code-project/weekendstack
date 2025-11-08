@@ -26,11 +26,10 @@ variable "traefik_auth_dir" {
 }
 
 variable "base_domain" {
-  description = "Base domain for workspace URLs (provided via TF_VAR_base_domain)"
+  description = "Base domain for workspace URLs (injected from BASE_DOMAIN env var during template push)"
   type        = string
-  # Since TF_VAR_ doesn't work in Coder provisioner, set your domain here
-  # TODO: Find a way to dynamically set this from docker-compose .env
-  default     = "weekendcodeproject.dev"
+  # This value is automatically replaced by push-template-versioned.sh from .env BASE_DOMAIN
+  default     = "localhost"
   nullable    = false
   sensitive   = false
 }

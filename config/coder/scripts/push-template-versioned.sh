@@ -239,6 +239,30 @@ substitute_ref_in_temp() {
     log "✏️  Updated ref to '$RESOLVED_REF' in ${#files[@]} file(s)."
 }
 
+# Substitute base_domain default value in variables.tf
+substitute_base_domain() {
+    local root="$1"
+    local domain="${BASE_DOMAIN:-weekendcodeproject.dev}"
+    
+    # Find variables.tf files that have base_domain variable
+    local -a files
+    mapfile -t files < <(grep -l 'variable "base_domain"' "$root"/*.tf 2>/dev/null || true)
+    
+    if [[ ${#files[@]} -eq 0 ]]; then
+        log_warn "No base_domain variable found in $root"
+        return 0
+    fi
+    
+    for f in "${files[@]}"; do
+        # Replace the default value for base_domain variable
+        # Matches: default = "anything"
+        # Replaces with: default = "$domain"
+        sed -i "/variable \"base_domain\"/,/^}/ s|default[[:space:]]*=[[:space:]]*\"[^\"]*\"|default     = \"$domain\"|" "$f"
+    done
+    
+    log "✏️  Updated base_domain default to '$domain' in ${#files[@]} file(s)."
+}
+
 DRY_RUN_PREVIEW() {
     local root="$1"
     log "🔍 Dry run preview: showing lines with '?ref=' before substitution"
@@ -250,8 +274,11 @@ if $DRY_RUN; then
     log "(dry-run) Template staging dir: $TEMP_DIR/$TEMPLATE_NAME"
     DRY_RUN_PREVIEW "$TEMP_DIR/$TEMPLATE_NAME"
     substitute_ref_in_temp "$TEMP_DIR/$TEMPLATE_NAME"
+    substitute_base_domain "$TEMP_DIR/$TEMPLATE_NAME"
     log "🔍 Dry run preview: showing lines with '?ref=' after substitution"
     grep -Rn --include='*.tf' '\?ref=' "$TEMP_DIR/$TEMPLATE_NAME" || true
+    log "🔍 Dry run preview: showing base_domain after substitution"
+    grep -A2 'variable "base_domain"' "$TEMP_DIR/$TEMPLATE_NAME"/*.tf || true
     log "✅ Dry run complete. No changes pushed."
     rm -rf "$TEMP_DIR"
     exit 0
@@ -259,6 +286,7 @@ fi
 
 # Perform substitution for actual push
 substitute_ref_in_temp "$TEMP_DIR/$TEMPLATE_NAME"
+substitute_base_domain "$TEMP_DIR/$TEMPLATE_NAME"
 
 # Push using docker exec
 log "Copying template to Coder container..."
