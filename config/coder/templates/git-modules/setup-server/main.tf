@@ -93,12 +93,7 @@ resource "coder_app" "preview_traefik" {
   url          = var.workspace_url
   subdomain    = false
   share        = "owner"
-  
-  healthcheck {
-    url       = "http://localhost:${element(var.exposed_ports_list, 0)}"
-    interval  = 5
-    threshold = 6
-  }
+  external     = true
 }
 
 # 3. Custom URL - User-specified URL
@@ -111,12 +106,7 @@ resource "coder_app" "preview_custom" {
   url          = var.custom_preview_url
   subdomain    = false
   share        = "owner"
-  
-  healthcheck {
-    url       = "http://localhost:${element(var.exposed_ports_list, 0)}"
-    interval  = 5
-    threshold = 6
-  }
+  external     = true
 }
 
 # =============================================================================
