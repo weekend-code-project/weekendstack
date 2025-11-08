@@ -11,6 +11,9 @@ terraform {
 # =============================================================================
 # Prepares the workspace for serving content by setting up PORT environment
 # variable and optionally auto-generating a default index.html file.
+# 
+# This module ONLY handles server setup - preview link logic is decoupled
+# to the preview-link module.
 
 variable "workspace_name" {
   description = "Name of the workspace"
@@ -39,87 +42,6 @@ variable "startup_command" {
   default     = ""
 }
 
-variable "agent_id" {
-  description = "Coder agent ID for the preview app"
-  type        = string
-}
-
-variable "workspace_start_count" {
-  description = "Workspace start count for conditional creation"
-  type        = number
-}
-
-variable "workspace_url" {
-  description = "External Traefik URL for the workspace"
-  type        = string
-  default     = ""
-}
-
-variable "custom_preview_url" {
-  description = "Custom preview URL (optional)"
-  type        = string
-  default     = ""
-}
-
-variable "preview_mode" {
-  description = "Selected preview mode (internal, traefik, custom)"
-  type        = string
-  default     = "traefik"
-}
-
-locals {
-  selected_preview_mode = var.preview_mode
-  resolved_preview_url = coalesce(
-    local.selected_preview_mode == "traefik" && var.workspace_url != "" ? var.workspace_url : null,
-    local.selected_preview_mode == "custom" && var.custom_preview_url != "" ? var.custom_preview_url : null,
-    "http://localhost:${element(var.exposed_ports_list, 0)}"
-  )
-}
-
-# =============================================================================
-# Preview Apps (3 variants for testing)
-# =============================================================================
-
-# 1. Coder Proxy (Internal) - Uses localhost, proxied through Coder
-resource "coder_app" "preview_internal" {
-  count        = local.selected_preview_mode == "internal" ? var.workspace_start_count : 0
-  agent_id     = var.agent_id
-  slug         = "preview-internal"
-  display_name = "Preview (Coder Proxy)"
-  icon         = "/icon/coder.svg"
-  url          = "http://localhost:${element(var.exposed_ports_list, 0)}"
-  subdomain    = false
-  share        = "owner"
-  
-  healthcheck {
-    url       = "http://localhost:${element(var.exposed_ports_list, 0)}"
-    interval  = 5
-    threshold = 6
-  }
-}
-
-# 2. Traefik External URL - Direct external access
-resource "coder_app" "preview_traefik" {
-  count        = local.selected_preview_mode == "traefik" && var.workspace_url != "" ? var.workspace_start_count : 0
-  agent_id     = var.agent_id
-  slug         = "preview-traefik"
-  display_name = "Preview (Traefik External)"
-  icon         = "/icon/globe.svg"
-  url          = var.workspace_url
-  external     = true
-}
-
-# 3. Custom URL - User-specified URL
-resource "coder_app" "preview_custom" {
-  count        = local.selected_preview_mode == "custom" && var.custom_preview_url != "" ? var.workspace_start_count : 0
-  agent_id     = var.agent_id
-  slug         = "preview-custom"
-  display_name = "Preview (Custom URL)"
-  icon         = "/icon/link.svg"
-  url          = var.custom_preview_url
-  external     = true
-}
-
 # =============================================================================
 # Setup Script
 # =============================================================================
@@ -137,7 +59,6 @@ output "setup_server_script" {
     
     echo "[SETUP-SERVER] Configuring workspace server..."
     echo "[SETUP-SERVER] Port: $PORT"
-    echo "[SETUP-SERVER] Primary URL: ${local.resolved_preview_url}"
     
     # Navigate to workspace directory (should be created by init-shell module)
     cd /home/coder/workspace
@@ -209,13 +130,6 @@ output "setup_server_script" {
         
     <div class="status">
       <strong>Status:</strong> Workspace is running!
-    </div>
-        
-    <div class="info">
-      <strong>Access URL:</strong><br>
-      <ul>
-        <li><a href="${local.resolved_preview_url}">${local.resolved_preview_url}</a></li>
-      </ul>
     </div>
         
     <h2>Getting Started</h2>

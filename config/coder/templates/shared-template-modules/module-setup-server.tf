@@ -1,3 +1,9 @@
+# =============================================================================
+# Setup Server - Shared Template Module
+# =============================================================================
+# This module wires up the setup-server git module with parameters from the
+# template. It only handles server setup - preview links are in module-preview-link.tf
+
 data "coder_parameter" "auto_generate_html" {
 	name         = "auto_generate_html"
 	display_name = "Serve Static Site"
@@ -37,16 +43,14 @@ locals {
 	exposed_ports_list = try(jsondecode(local.exposed_ports_raw), tolist(local.exposed_ports_raw), [tostring(local.exposed_ports_raw)])
 }
 
+# Call the setup-server git module
 module "setup_server" {
-	source                = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/setup-server?ref=v0.1.1"
-	workspace_name        = data.coder_workspace.me.name
-	workspace_owner       = data.coder_workspace_owner.me.name
-	auto_generate_html    = data.coder_parameter.auto_generate_html.value
-	exposed_ports_list    = local.exposed_ports_list
-	startup_command       = try(data.coder_parameter.startup_command[0].value, "")
-	agent_id              = module.agent.agent_id
-	workspace_start_count = data.coder_workspace.me.start_count
-	workspace_url         = local.workspace_url
-	custom_preview_url    = try(data.coder_parameter.custom_preview_url[0].value, "")
-	preview_mode          = try(data.coder_parameter.preview_link_mode.value, "traefik")
+	source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/setup-server?ref=v0.1.1"
+	
+	workspace_name     = data.coder_workspace.me.name
+	workspace_owner    = data.coder_workspace_owner.me.name
+	auto_generate_html = data.coder_parameter.auto_generate_html.value
+	exposed_ports_list = local.exposed_ports_list
+	startup_command    = try(data.coder_parameter.startup_command[0].value, "")
 }
+
