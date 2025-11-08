@@ -264,7 +264,7 @@ substitute_ref_in_temp() {
 # Substitute base_domain default value in variables.tf
 substitute_base_domain() {
     local root="$1"
-    local domain="${BASE_DOMAIN:-weekendcodeproject.dev}"
+    local domain="${BASE_DOMAIN:-localhost}"
     
     # Find variables.tf files that have base_domain variable
     local -a files
@@ -341,8 +341,8 @@ RETRY_COUNT=0
 # (Coder CLI version does not support --icon flag; icon.svg retained for future use)
 
 # Pass BASE_DOMAIN as TF_VAR to the template push
-PUSH_ENV_VARS="-e TF_VAR_base_domain=${BASE_DOMAIN:-weekendcodeproject.dev}"
-log "Setting TF_VAR_base_domain=${BASE_DOMAIN:-weekendcodeproject.dev} for template push"
+PUSH_ENV_VARS="-e TF_VAR_base_domain=${BASE_DOMAIN:-localhost}"
+log "Setting TF_VAR_base_domain=${BASE_DOMAIN:-localhost} for template push"
 
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
     if docker exec $PUSH_ENV_VARS coder coder templates push "$TEMPLATE_NAME" \

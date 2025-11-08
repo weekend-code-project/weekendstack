@@ -32,7 +32,7 @@ variable "workspace_owner" {
 }
 
 variable "base_domain" {
-  description = "Base domain for Traefik routing (e.g., weekendcodeproject.dev)"
+  description = "Base domain for Traefik routing (e.g., example.com)"
   type        = string
   default     = "localhost"
 }
