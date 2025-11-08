@@ -30,4 +30,5 @@ variable "base_domain" {
   type        = string
   default     = "localhost"
   sensitive   = false
+  ephemeral   = true
 }
