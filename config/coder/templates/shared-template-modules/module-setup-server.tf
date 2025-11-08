@@ -1,8 +1,9 @@
 # =============================================================================
-# Setup Server - Shared Template Module
+# Setup Server - Shared Template Module (Parameters Only)
 # =============================================================================
-# This module wires up the setup-server git module with parameters from the
-# template. It only handles server setup - preview links are in module-preview-link.tf
+# This module only defines the parameters for server setup. Each template
+# implements its own server setup logic in a local module-setup-server.tf file.
+# The local module should define: local.setup_server_script
 
 data "coder_parameter" "auto_generate_html" {
 	name         = "auto_generate_html"
@@ -43,14 +44,7 @@ locals {
 	exposed_ports_list = try(jsondecode(local.exposed_ports_raw), tolist(local.exposed_ports_raw), [tostring(local.exposed_ports_raw)])
 }
 
-# Call the setup-server git module
-module "setup_server" {
-	source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/setup-server?ref=v0.1.1"
-	
-	workspace_name     = data.coder_workspace.me.name
-	workspace_owner    = data.coder_workspace_owner.me.name
-	auto_generate_html = data.coder_parameter.auto_generate_html.value
-	exposed_ports_list = local.exposed_ports_list
-	startup_command    = try(data.coder_parameter.startup_command[0].value, "")
-}
+# NOTE: Templates must implement their own local.setup_server_script
+# See module-setup-server.tf in docker-template or node-template for examples
+
 

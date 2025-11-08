@@ -1,61 +1,20 @@
-terraform {
-  required_providers {
-    coder = {
-      source = "coder/coder"
-    }
-  }
-}
-
 # =============================================================================
-# Setup Server Module
+# Setup Server Module (Python) - Local to Docker Template
 # =============================================================================
-# Prepares the workspace for serving content by setting up PORT environment
-# variable and optionally auto-generating a default index.html file.
-# 
-# This module ONLY handles server setup - preview link logic is decoupled
-# to the preview-link module.
+# This module handles server setup for the Docker template using Python's
+# built-in HTTP server. Parameters are defined in shared-template-modules
+# but the implementation is template-specific.
 
-variable "workspace_name" {
-  description = "Name of the workspace"
-  type        = string
-}
-
-variable "workspace_owner" {
-  description = "Owner of the workspace"
-  type        = string
-}
-
-variable "auto_generate_html" {
-  description = "Whether to auto-generate default index.html"
-  type        = bool
-  default     = true
-}
-
-variable "exposed_ports_list" {
-  description = "List of exposed ports"
-  type        = list(string)
-}
-
-variable "startup_command" {
-  description = "Optional startup command"
-  type        = string
-  default     = ""
-}
-
-# =============================================================================
-# Setup Script
-# =============================================================================
-
-# Setup server script
-output "setup_server_script" {
-  value = <<-EOT
+# Setup server script output
+locals {
+  setup_server_script = <<-EOT
     #!/bin/bash
     # Setup Server
     set -e
     
     # Export ports computed by Terraform
-    export PORTS="${join(",", var.exposed_ports_list)}"
-    export PORT="${element(var.exposed_ports_list, 0)}"
+    export PORTS="${join(",", local.exposed_ports_list)}"
+    export PORT="${element(local.exposed_ports_list, 0)}"
     
     echo "[SETUP-SERVER] Configuring workspace server..."
     echo "[SETUP-SERVER] Port: $PORT"
@@ -63,7 +22,7 @@ output "setup_server_script" {
     # Navigate to workspace directory (should be created by init-shell module)
     cd /home/coder/workspace
     
-    AUTO_HTML="${var.auto_generate_html}"
+    AUTO_HTML="${data.coder_parameter.auto_generate_html.value}"
 
     # Auto-generate HTML if enabled
     if [ "$AUTO_HTML" = "true" ]; then
@@ -76,7 +35,7 @@ output "setup_server_script" {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Coder Workspace - ${var.workspace_name}</title>
+    <title>Coder Workspace - ${data.coder_workspace.me.name}</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -126,7 +85,7 @@ output "setup_server_script" {
 </head>
 <body>
     <div class="container">
-    <h1>Workspace: ${var.workspace_name}</h1>
+    <h1>Workspace: ${data.coder_workspace.me.name}</h1>
         
     <div class="status">
       <strong>Status:</strong> Workspace is running!
@@ -146,7 +105,7 @@ npm start</code></pre>
         
     <h2>Workspace Info</h2>
     <ul>
-      <li><strong>Owner:</strong> ${var.workspace_owner}</li>
+      <li><strong>Owner:</strong> ${data.coder_workspace_owner.me.name}</li>
       <li><strong>Port:</strong> $PORT</li>
     </ul>
         
@@ -165,7 +124,7 @@ HTML
     fi
     
     # Check if custom startup command is provided
-    STARTUP_CMD="${var.startup_command}" 
+    STARTUP_CMD="${try(data.coder_parameter.startup_command[0].value, "")}" 
     if [ -n "$STARTUP_CMD" ] && [ "$STARTUP_CMD" != "" ]; then
       echo "[SETUP-SERVER] Running custom startup command..."
       echo "[SETUP-SERVER] Command: $STARTUP_CMD"
