@@ -46,5 +46,6 @@ module "setup_server" {
 	startup_command       = try(data.coder_parameter.startup_command[0].value, "")
 	agent_id              = module.agent.agent_id
 	workspace_start_count = data.coder_workspace.me.start_count
-	workspace_url         = local.preview_url
+	workspace_url         = local.workspace_url
+	custom_preview_url    = try(data.coder_parameter.custom_preview_url[0].value, "")
 }

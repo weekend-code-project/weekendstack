@@ -55,27 +55,67 @@ variable "workspace_url" {
   default     = ""
 }
 
+variable "custom_preview_url" {
+  description = "Custom preview URL (optional)"
+  type        = string
+  default     = ""
+}
+
 # =============================================================================
-# Preview App
+# Preview Apps (3 variants for testing)
 # =============================================================================
 
-resource "coder_app" "preview" {
+# 1. Coder Proxy (Internal) - Uses localhost, proxied through Coder
+resource "coder_app" "preview_internal" {
   count        = var.workspace_start_count
   agent_id     = var.agent_id
-  slug         = "preview"
-  display_name = "Preview"
-  icon         = "/icon/code.svg"
-  url          = var.workspace_url != "" ? var.workspace_url : "http://localhost:${element(var.exposed_ports_list, 0)}"
-  subdomain    = var.workspace_url != "" ? true : false
+  slug         = "preview-internal"
+  display_name = "Preview (Coder Proxy)"
+  icon         = "/icon/coder.svg"
+  url          = "http://localhost:${element(var.exposed_ports_list, 0)}"
+  subdomain    = false
   share        = "owner"
   
-  dynamic "healthcheck" {
-    for_each = var.workspace_url == "" ? [1] : []
-    content {
-      url       = "http://localhost:${element(var.exposed_ports_list, 0)}"
-      interval  = 5
-      threshold = 6
-    }
+  healthcheck {
+    url       = "http://localhost:${element(var.exposed_ports_list, 0)}"
+    interval  = 5
+    threshold = 6
+  }
+}
+
+# 2. Traefik External URL - Direct external access
+resource "coder_app" "preview_traefik" {
+  count        = var.workspace_url != "" ? var.workspace_start_count : 0
+  agent_id     = var.agent_id
+  slug         = "preview-traefik"
+  display_name = "Preview (Traefik External)"
+  icon         = "/icon/globe.svg"
+  url          = var.workspace_url
+  subdomain    = false
+  share        = "owner"
+  
+  healthcheck {
+    url       = "http://localhost:${element(var.exposed_ports_list, 0)}"
+    interval  = 5
+    threshold = 6
+  }
+}
+
+# 3. Custom URL - User-specified URL
+resource "coder_app" "preview_custom" {
+  count        = var.custom_preview_url != "" ? var.workspace_start_count : 0
+  agent_id     = var.agent_id
+  slug         = "preview-custom"
+  display_name = "Preview (Custom URL)"
+  icon         = "/icon/link.svg"
+  url          = var.custom_preview_url
+  subdomain    = false
+  share        = "owner"
+  
+  healthcheck {
+    url       = "http://localhost:${element(var.exposed_ports_list, 0)}"
+    interval  = 5
+    threshold = 6
   }
 }
 
