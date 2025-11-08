@@ -28,7 +28,9 @@ variable "traefik_auth_dir" {
 variable "base_domain" {
   description = "Base domain for workspace URLs (provided via TF_VAR_base_domain)"
   type        = string
-  default     = ""
+  # Environment variable TF_VAR_base_domain should be set by Coder provisioner
+  # Fallback to localhost if not set
+  default     = "localhost"
   nullable    = false
   sensitive   = false
 }
