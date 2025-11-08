@@ -1,7 +1,7 @@
 data "coder_parameter" "clone_repo" {
 	name         = "clone_repo"
 	display_name = "Clone Repository"
-	description  = "Enable to clone a Git repository into the workspace on first startup."
+	description  = "Clone a Git repository into workspace."
 	type         = "bool"
 	default      = false
 	mutable      = false
@@ -11,7 +11,7 @@ data "coder_parameter" "clone_repo" {
 data "coder_parameter" "github_repo" {
 	name         = "github_repo"
 	display_name = "Repository URL"
-	description  = "Git repository URL to clone (only used if Clone Repository is enabled)."
+	description  = "Git repository URL to clone."
 	type         = "string"
 	default      = ""
 	mutable      = false
@@ -21,7 +21,7 @@ data "coder_parameter" "github_repo" {
 data "coder_parameter" "install_github_cli" {
 	name         = "install_github_cli"
 	display_name = "Install GitHub CLI"
-	description  = "Install the GitHub CLI (gh) tool."
+	description  = "Install GitHub CLI tool."
 	type         = "bool"
 	default      = true
 	mutable      = false

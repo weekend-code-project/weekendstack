@@ -8,7 +8,7 @@
 data "coder_parameter" "auto_generate_html" {
 	name         = "auto_generate_html"
 	display_name = "Serve Static Site"
-	description  = "Toggle on to scaffold a static welcome page."
+	description  = "Scaffold a static welcome page."
 	type         = "bool"
 	default      = true
 	mutable      = true
@@ -18,7 +18,7 @@ data "coder_parameter" "auto_generate_html" {
 data "coder_parameter" "exposed_ports" {
 	name         = "exposed_ports"
 	display_name = "Exposed Ports"
-	description  = "Ports to expose (only used if Serve Static Site is disabled)."
+	description  = "Ports to expose."
 	type         = "list(string)"
 	default      = jsonencode(["8080"])
 	mutable      = true
@@ -28,7 +28,7 @@ data "coder_parameter" "exposed_ports" {
 data "coder_parameter" "startup_command" {
 	name         = "startup_command"
 	display_name = "Startup Command"
-	description  = "Command to run at startup (only used if Serve Static Site is disabled)."
+	description  = "Command to run at startup."
 	type         = "string"
 	default      = ""
 	mutable      = true
