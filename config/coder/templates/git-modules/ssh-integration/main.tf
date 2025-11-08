@@ -53,21 +53,25 @@ output "ssh_copy_script" {
   value       = <<-EOT
     echo "[SSH] Setting up SSH keys from /mnt/host-ssh..."
     
-    # Symlink to mounted SSH directory (read-only)
-    # If empty, keys can be generated and will persist in files/ssh/
-    rm -rf ~/.ssh
-    ln -sf /mnt/host-ssh ~/.ssh
+    # Create .ssh directory with proper permissions
+    mkdir -p ~/.ssh
+    chmod 700 ~/.ssh
     
-    # Ensure known_hosts exists (if directory is writable, otherwise ignore)
-    touch ~/.ssh/known_hosts 2>/dev/null || true
-    ssh-keyscan -H github.com >> ~/.ssh/known_hosts 2>/dev/null || true
-    
+    # Copy SSH keys from mounted directory (if any exist)
     if [ -n "$(ls -A /mnt/host-ssh 2>/dev/null)" ]; then
-      echo "[SSH] ✅ SSH keys ready (using mounted keys)"
+      cp -r /mnt/host-ssh/* ~/.ssh/ 2>/dev/null || true
+      chmod 600 ~/.ssh/id_* 2>/dev/null || true
+      chmod 644 ~/.ssh/id_*.pub 2>/dev/null || true
+      chmod 600 ~/.ssh/config 2>/dev/null || true
+      echo "[SSH] ✅ SSH keys copied from host"
     else
       echo "[SSH] ℹ️  No SSH keys found - generate with: ssh-keygen -t ed25519"
-      echo "[SSH] ℹ️  Keys will be saved to files/ssh/ and persist across restarts"
     fi
+    
+    # Create known_hosts and add GitHub
+    touch ~/.ssh/known_hosts
+    chmod 644 ~/.ssh/known_hosts
+    ssh-keyscan -H github.com >> ~/.ssh/known_hosts 2>/dev/null || true
   EOT
 }
 
