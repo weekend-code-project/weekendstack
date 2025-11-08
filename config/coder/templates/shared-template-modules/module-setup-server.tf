@@ -48,4 +48,5 @@ module "setup_server" {
 	workspace_start_count = data.coder_workspace.me.start_count
 	workspace_url         = local.workspace_url
 	custom_preview_url    = try(data.coder_parameter.custom_preview_url[0].value, "")
+	preview_mode          = try(data.coder_parameter.preview_link_mode.value, "traefik")
 }

@@ -136,6 +136,7 @@ services:
       COMPUTER_NAME: ${COMPUTER_NAME:-workstation}
       BASE_DOMAIN: ${BASE_DOMAIN:-localhost}
       DATA_BASE_DIR: ${DATA_BASE_DIR}
+      TF_VAR_base_domain: ${BASE_DOMAIN:-localhost}
       TF_VAR_workspace_dir: ${WORKSPACE_DIR:-/mnt/workspace/wcp-coder/files/coder/workspace}
       TF_VAR_traefik_auth_dir: ${TRAEFIK_AUTH_DIR}
       TF_VAR_ssh_key_dir: ${SSH_KEY_DIR}

@@ -24,3 +24,11 @@ variable "traefik_auth_dir" {
   default     = ""
   sensitive   = false
 }
+
+variable "base_domain" {
+  description = "Base domain for workspace URLs (provided via TF_VAR_base_domain)"
+  type        = string
+  default     = ""
+  nullable    = false
+  sensitive   = false
+}

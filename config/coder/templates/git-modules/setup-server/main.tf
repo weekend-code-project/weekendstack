@@ -61,13 +61,28 @@ variable "custom_preview_url" {
   default     = ""
 }
 
+variable "preview_mode" {
+  description = "Selected preview mode (internal, traefik, custom)"
+  type        = string
+  default     = "traefik"
+}
+
+locals {
+  selected_preview_mode = var.preview_mode
+  resolved_preview_url = coalesce(
+    local.selected_preview_mode == "traefik" && var.workspace_url != "" ? var.workspace_url : null,
+    local.selected_preview_mode == "custom" && var.custom_preview_url != "" ? var.custom_preview_url : null,
+    "http://localhost:${element(var.exposed_ports_list, 0)}"
+  )
+}
+
 # =============================================================================
 # Preview Apps (3 variants for testing)
 # =============================================================================
 
 # 1. Coder Proxy (Internal) - Uses localhost, proxied through Coder
 resource "coder_app" "preview_internal" {
-  count        = var.workspace_start_count
+  count        = local.selected_preview_mode == "internal" ? var.workspace_start_count : 0
   agent_id     = var.agent_id
   slug         = "preview-internal"
   display_name = "Preview (Coder Proxy)"
@@ -85,7 +100,7 @@ resource "coder_app" "preview_internal" {
 
 # 2. Traefik External URL - Direct external access
 resource "coder_app" "preview_traefik" {
-  count        = var.workspace_url != "" ? var.workspace_start_count : 0
+  count        = local.selected_preview_mode == "traefik" && var.workspace_url != "" ? var.workspace_start_count : 0
   agent_id     = var.agent_id
   slug         = "preview-traefik"
   display_name = "Preview (Traefik External)"
@@ -96,7 +111,7 @@ resource "coder_app" "preview_traefik" {
 
 # 3. Custom URL - User-specified URL
 resource "coder_app" "preview_custom" {
-  count        = var.custom_preview_url != "" ? var.workspace_start_count : 0
+  count        = local.selected_preview_mode == "custom" && var.custom_preview_url != "" ? var.workspace_start_count : 0
   agent_id     = var.agent_id
   slug         = "preview-custom"
   display_name = "Preview (Custom URL)"
@@ -122,6 +137,7 @@ output "setup_server_script" {
     
     echo "[SETUP-SERVER] Configuring workspace server..."
     echo "[SETUP-SERVER] Port: $PORT"
+    echo "[SETUP-SERVER] Primary URL: ${local.resolved_preview_url}"
     
     # Navigate to workspace directory (should be created by init-shell module)
     cd /home/coder/workspace
@@ -196,9 +212,9 @@ output "setup_server_script" {
     </div>
         
     <div class="info">
-      <strong>Access URLs:</strong><br>
+      <strong>Access URL:</strong><br>
       <ul>
-        <li>External: <a href="https://${lower(var.workspace_name)}.weekendcodeproject.dev">https://${lower(var.workspace_name)}.weekendcodeproject.dev</a></li>
+        <li><a href="${local.resolved_preview_url}">${local.resolved_preview_url}</a></li>
       </ul>
     </div>
         

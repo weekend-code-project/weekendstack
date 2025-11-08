@@ -30,10 +30,10 @@ module "agent" {
     data.coder_parameter.enable_docker.value ? module.docker.docker_config_script : "",
     module.ssh.ssh_setup_script,
     !data.coder_parameter.make_public.value ? local.traefik_auth_setup_script : "",
-    module.setup_server.setup_server_script,
-    "",
-    "echo '[WORKSPACE] ✅ Workspace ready!'",
-    "echo '[WORKSPACE] 🌐 Server URL: http://localhost:8080'",
+  module.setup_server.setup_server_script,
+  "",
+  "echo '[WORKSPACE] ✅ Workspace ready!'",
+  "echo '[WORKSPACE] 🌐 Server URL: http://localhost:8080'",
   ])
   
   git_author_name  = coalesce(data.coder_workspace_owner.me.full_name, data.coder_workspace_owner.me.name)
