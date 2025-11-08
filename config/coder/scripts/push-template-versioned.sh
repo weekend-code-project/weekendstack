@@ -276,10 +276,17 @@ substitute_base_domain() {
     fi
     
     for f in "${files[@]}"; do
+        log "  📝 Updating base_domain in: $(basename "$f")"
         # Replace the default value for base_domain variable
         # Matches: default = "anything"
         # Replaces with: default = "$domain"
         sed -i "/variable \"base_domain\"/,/^}/ s|default[[:space:]]*=[[:space:]]*\"[^\"]*\"|default     = \"$domain\"|" "$f"
+        # Verify the change
+        if grep -q "default.*=.*\"$domain\"" "$f"; then
+            log "  ✓ Verified: $domain set in $(basename "$f")"
+        else
+            log_warn "  ✗ Warning: substitution may have failed in $(basename "$f")"
+        fi
     done
     
     log "✏️  Updated base_domain default to '$domain' in ${#files[@]} file(s)."
@@ -310,9 +317,22 @@ fi
 substitute_ref_in_temp "$TEMP_DIR/$TEMPLATE_NAME"
 substitute_base_domain "$TEMP_DIR/$TEMPLATE_NAME"
 
+# Verify substitution before push
+log "🔍 Final verification before push:"
+if [[ -f "$TEMP_DIR/$TEMPLATE_NAME/variables.tf" ]]; then
+    BASE_DOMAIN_VALUE=$(grep -A5 'variable "base_domain"' "$TEMP_DIR/$TEMPLATE_NAME/variables.tf" | grep 'default' | head -1 | sed -E 's/.*"(.*)".*/\1/')
+    log "  base_domain in variables.tf: '$BASE_DOMAIN_VALUE'"
+else
+    log_warn "  variables.tf not found!"
+fi
+
 # Push using docker exec
 log "Copying template to Coder container..."
 docker cp "$TEMP_DIR/$TEMPLATE_NAME" coder:/tmp/
+
+# Verify after copy to container
+log "🔍 Verifying in Coder container after copy:"
+docker exec coder sh -c "grep -A3 'variable \"base_domain\"' /tmp/$TEMPLATE_NAME/variables.tf | grep 'default'" || log_warn "Could not verify in container"
 
 log "Pushing template..."
 MAX_RETRIES=5
@@ -320,8 +340,12 @@ RETRY_COUNT=0
 
 # (Coder CLI version does not support --icon flag; icon.svg retained for future use)
 
+# Pass BASE_DOMAIN as TF_VAR to the template push
+PUSH_ENV_VARS="-e TF_VAR_base_domain=${BASE_DOMAIN:-weekendcodeproject.dev}"
+log "Setting TF_VAR_base_domain=${BASE_DOMAIN:-weekendcodeproject.dev} for template push"
+
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    if docker exec coder coder templates push "$TEMPLATE_NAME" \
+    if docker exec $PUSH_ENV_VARS coder coder templates push "$TEMPLATE_NAME" \
         --directory "/tmp/$TEMPLATE_NAME" \
         --name "$VERSION_NAME" \
         --yes 2>&1 | tee /tmp/push-output.txt; then

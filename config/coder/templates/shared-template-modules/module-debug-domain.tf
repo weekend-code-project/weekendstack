@@ -6,18 +6,15 @@
 
 data "coder_parameter" "debug_base_domain" {
   name         = "debug_base_domain"
-  display_name = "🔍 Debug: Base Domain"
+  display_name = "Base Domain Override"
   description  = <<-DESC
-    DEBUG INFO:
-    - Template var.base_domain: ${var.base_domain}
-    - TF_VAR not accessible in Coder provisioner
-    - Using template's default or manual override
+    The base domain for workspace URLs is: **${var.base_domain}**
     
-    Current domain will be used for:
-    - Traefik URLs: https://workspace-name.DOMAIN
-    - Preview links: https://workspace-name.DOMAIN
+    Leave this field as-is to use the configured domain, or override it manually if needed.
     
-    **Change this to weekendcodeproject.dev manually**
+    This will be used for:
+    - Traefik URLs: `https://${data.coder_workspace.me.name}.${var.base_domain}`
+    - Preview links: `https://${data.coder_workspace.me.name}.${var.base_domain}`
   DESC
   type         = "string"
   default      = var.base_domain
