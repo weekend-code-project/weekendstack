@@ -4,8 +4,7 @@
 # This parameter is for debugging only - shows the actual value of var.base_domain
 # and allows manual override if needed.
 
-# Get base_domain from Coder provisioner tags (set via CODER_PROVISIONER_TAGS)
-data "coder_provisioner" "me" {}
+# Note: data.coder_provisioner.me is already declared in main.tf
 
 locals {
   # Try to get base_domain from provisioner tags, fallback to var.base_domain
