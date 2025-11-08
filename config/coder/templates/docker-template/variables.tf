@@ -31,5 +31,4 @@ variable "base_domain" {
   default     = ""
   nullable    = false
   sensitive   = false
-  ephemeral   = true
 }
