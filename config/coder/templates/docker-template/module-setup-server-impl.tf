@@ -1,171 +1,57 @@
 # =============================================================================
 # Setup Server Module (Python) - Local to Docker Template
 # =============================================================================
-# This module handles server setup for the Docker template using Python's
-# built-in HTTP server. Parameters are defined in shared-template-modules
-# but the implementation is template-specific.
+# This module configures the shared setup-server git module with Python-specific
+# parameters. The actual server logic is in the shared git module.
 
-# Setup server script output
+# Resolve startup command at Terraform time
 locals {
-  # Resolve startup command at Terraform time
   startup_cmd_value = try(data.coder_parameter.startup_command[0].value, "")
+}
+
+# Call the shared setup-server git module with Python-specific configuration
+module "setup_server" {
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/setup-server?ref=v0.1.1"
   
-  setup_server_script = <<-EOT
-    #!/bin/bash
-    # Setup Server
-    set -e
+  # Port configuration
+  exposed_ports_list = local.exposed_ports_list
+  
+  # Python-specific configuration
+  default_server_command = "python3 -m http.server $PORT --bind 0.0.0.0"
+  server_name            = "Python 3 HTTP Server"
+  server_log_file        = "/tmp/http-server.log"
+  server_pid_file        = "/tmp/http-server.pid"
+  
+  # HTML content for static site
+  html_status_message = "Python HTTP server is running!"
+  html_server_info    = "Python 3 HTTP server on port $PORT"
+  html_instructions   = <<-INSTRUCTIONS
+    # Edit the current page
+    vi index.html
     
-    # Export ports computed by Terraform
-    export PORTS="${join(",", local.exposed_ports_list)}"
-    export PORT="${element(local.exposed_ports_list, 0)}"
+    # Or create your own site
+    mkdir -p mysite
+    cd mysite
+    echo "<h1>Hello World</h1>" > index.html
     
-    echo "[SETUP-SERVER] Configuring workspace server..."
-    echo "[SETUP-SERVER] Port: $PORT"
-    
-    # Navigate to workspace directory (should be created by init-shell module)
-    cd /home/coder/workspace
-    
-    AUTO_HTML="${data.coder_parameter.auto_generate_html.value}"
+    # Restart the server
+    pkill -f "python3 -m http.server"
+    python3 -m http.server $PORT
+  INSTRUCTIONS
+  
+  # No pre-setup needed for Python (it's already installed)
+  pre_server_setup = ""
+  
+  # Workspace metadata
+  workspace_name  = data.coder_workspace.me.name
+  workspace_owner = data.coder_workspace_owner.me.name
+  
+  # Parameters from shared template modules
+  auto_generate_html = data.coder_parameter.auto_generate_html.value
+  startup_command    = local.startup_cmd_value
+}
 
-    # Auto-generate HTML if enabled
-    if [ "$AUTO_HTML" = "true" ]; then
-      if [ ! -f index.html ]; then
-  echo "[SETUP-SERVER] Creating default index.html..."
-  # Use an unquoted heredoc so shell variables like $PORT expand
-  cat <<-HTML > index.html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Coder Workspace - ${data.coder_workspace.me.name}</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            max-width: 800px;
-            margin: 50px auto;
-            padding: 20px;
-            line-height: 1.6;
-            background: #f5f5f5;
-        }
-        .container {
-            background: white;
-            padding: 40px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        h1 { color: #333; margin-top: 0; }
-        .status { 
-            background: #e8f5e9;
-            padding: 15px;
-            border-radius: 4px;
-            border-left: 4px solid #4caf50;
-            margin: 20px 0;
-        }
-        .info {
-            background: #e3f2fd;
-            padding: 15px;
-            border-radius: 4px;
-            border-left: 4px solid #2196f3;
-            margin: 20px 0;
-        }
-        code {
-            background: #f5f5f5;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-family: 'Monaco', 'Courier New', monospace;
-        }
-        a { color: #1976d2; text-decoration: none; }
-        a:hover { text-decoration: underline; }
-        .footer {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid #eee;
-            color: #666;
-            font-size: 14px;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-    <h1>Workspace: ${data.coder_workspace.me.name}</h1>
-        
-    <div class="status">
-      <strong>Status:</strong> Python HTTP server is running!
-    </div>
-        
-    <div class="info">
-      <strong>Currently Serving:</strong><br>
-      Python 3 HTTP server on port $PORT
-    </div>
-        
-    <h2>Getting Started</h2>
-        <p>This workspace is running a Python HTTP server. Replace <code>index.html</code> with your own content:</p>
-        
-        <pre><code># Edit the current page
-vi index.html
-
-# Or create your own site
-mkdir -p mysite
-cd mysite
-echo "&lt;h1&gt;Hello World&lt;/h1&gt;" &gt; index.html
-
-# Restart the server
-pkill -f "python3 -m http.server"
-python3 -m http.server $PORT</code></pre>
-        
-    <h2>Workspace Info</h2>
-    <ul>
-      <li><strong>Owner:</strong> ${data.coder_workspace_owner.me.name}</li>
-      <li><strong>Port:</strong> $PORT</li>
-      <li><strong>Server:</strong> Python 3 HTTP Server</li>
-    </ul>
-        
-        <div class="footer">
-            <!-- auto-generated by Coder -->
-            <em>This page was auto-generated. Disable in workspace settings if not needed.</em>
-        </div>
-    </div>
-</body>
-</html>
-HTML
-  echo "[SETUP-SERVER] ✓ index.html created"
-      else
-        echo "[SETUP-SERVER] ✓ index.html already exists (leaving as-is)"
-      fi
-    fi
-    
-    # Check if custom startup command is provided
-    STARTUP_CMD="${local.startup_cmd_value}"
-    if [ -n "$STARTUP_CMD" ] && [ "$STARTUP_CMD" != "" ]; then
-      echo "[SETUP-SERVER] Running custom startup command..."
-      echo "[SETUP-SERVER] Command: $STARTUP_CMD"
-      nohup bash -c "$STARTUP_CMD" > /tmp/custom-server.log 2>&1 &
-      echo $! > /tmp/custom-server.pid
-      sleep 1
-      if ps -p $(cat /tmp/custom-server.pid) > /dev/null 2>&1; then
-        echo "[SETUP-SERVER] ✓ Custom command started (PID: $(cat /tmp/custom-server.pid))"
-      else
-        echo "[SETUP-SERVER] ⚠ Custom command may have failed to start"
-        echo "[SETUP-SERVER] Check logs: tail /tmp/custom-server.log"
-      fi
-    elif [ "$AUTO_HTML" = "true" ]; then
-      # Start default Python HTTP server in background
-      echo "[SETUP-SERVER] Starting default HTTP server..."
-      echo "[SETUP-SERVER] Server will be available at http://localhost:$PORT"
-      nohup python3 -m http.server $PORT --bind 0.0.0.0 > /tmp/http-server.log 2>&1 &
-      echo $! > /tmp/http-server.pid
-      sleep 2
-      if ps -p $(cat /tmp/http-server.pid) > /dev/null 2>&1; then
-        echo "[SETUP-SERVER] ✓ HTTP server started (PID: $(cat /tmp/http-server.pid))"
-      else
-        echo "[SETUP-SERVER] ⚠ HTTP server may have failed to start"
-        echo "[SETUP-SERVER] Check logs: tail /tmp/http-server.log"
-      fi
-    else
-      echo "[SETUP-SERVER] Auto HTML disabled and no startup command provided; not starting a server."
-    fi
-    
-    echo ""
-  EOT
+# Export the script for use in agent module
+locals {
+  setup_server_script = module.setup_server.setup_server_script
 }
