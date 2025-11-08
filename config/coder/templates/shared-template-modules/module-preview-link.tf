@@ -7,11 +7,7 @@
 data "coder_parameter" "preview_link_mode" {
 	name         = "preview_link_mode"
 	display_name = "Preview Link Mode"
-	description  = <<-DESC
-	Choose how the preview app URL is generated.
-	
-	**Traefik mode** will use: `https://${data.coder_workspace.me.name}.${var.base_domain}`
-	DESC
+	description  = "Choose how the preview app URL is generated."
 	type         = "string"
 	default      = "traefik"
 	mutable      = true
@@ -34,6 +30,18 @@ data "coder_parameter" "preview_link_mode" {
 	}
 }
 
+data "coder_parameter" "traefik_base_domain" {
+	count        = data.coder_parameter.preview_link_mode.value == "traefik" ? 1 : 0
+	name         = "traefik_base_domain"
+	display_name = "Base Domain"
+	description  = "Base domain for Traefik URLs (workspace will be accessible at https://workspace-name.DOMAIN)"
+	type         = "string"
+	default      = var.base_domain
+	mutable      = true
+	form_type    = "input"
+	order        = 24
+}
+
 data "coder_parameter" "custom_preview_url" {
 	count        = data.coder_parameter.preview_link_mode.value == "custom" ? 1 : 0
 	name         = "custom_preview_url"
@@ -43,7 +51,7 @@ data "coder_parameter" "custom_preview_url" {
 	default      = ""
 	mutable      = true
 	form_type    = "input"
-	order        = 24
+	order        = 25
 	
 	validation {
 		regex = "^https?://.+"
@@ -58,7 +66,7 @@ module "preview_link" {
 	agent_id              = module.agent.agent_id
 	workspace_name        = data.coder_workspace.me.name
 	workspace_owner       = data.coder_workspace_owner.me.name
-	base_domain           = local.actual_base_domain
+	base_domain           = try(data.coder_parameter.traefik_base_domain[0].value, local.actual_base_domain)
 	exposed_port          = element(local.exposed_ports_list, 0)
 	workspace_start_count = data.coder_workspace.me.start_count
 	preview_mode          = data.coder_parameter.preview_link_mode.value
