@@ -28,9 +28,9 @@ variable "traefik_auth_dir" {
 variable "base_domain" {
   description = "Base domain for workspace URLs (provided via TF_VAR_base_domain)"
   type        = string
-  # Environment variable TF_VAR_base_domain should be set by Coder provisioner
-  # Fallback to localhost if not set
-  default     = "localhost"
+  # Since TF_VAR_ doesn't work in Coder provisioner, set your domain here
+  # TODO: Find a way to dynamically set this from docker-compose .env
+  default     = "weekendcodeproject.dev"
   nullable    = false
   sensitive   = false
 }
