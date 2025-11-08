@@ -7,7 +7,11 @@
 data "coder_parameter" "preview_link_mode" {
 	name         = "preview_link_mode"
 	display_name = "Preview Link Mode"
-	description  = "Choose how the preview app URL is generated."
+	description  = <<-DESC
+	Choose how the preview app URL is generated.
+	
+	**Traefik mode** will use: `https://${data.coder_workspace.me.name}.${var.base_domain}`
+	DESC
 	type         = "string"
 	default      = "traefik"
 	mutable      = true
