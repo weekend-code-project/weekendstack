@@ -69,11 +69,11 @@ output "init_script" {
     # Unmount if already mounted (for restart scenarios)
     if mountpoint -q "$${TARGET}" 2>/dev/null; then
       echo "[NODE-MODULES] Unmounting existing mount at $${TARGET}"
-      umount "$${TARGET}" 2>/dev/null || true
+      sudo umount "$${TARGET}" 2>/dev/null || true
     fi
     
     # Bind mount the persistent directory
-    mount --bind "$${PERSIST_PATH}" "$${TARGET}"
+    sudo mount --bind "$${PERSIST_PATH}" "$${TARGET}"
     echo "[NODE-MODULES] ✅ Mounted $${TARGET} -> $${PERSIST_PATH}"
     
     # Detect the package directory (parent of node_modules)

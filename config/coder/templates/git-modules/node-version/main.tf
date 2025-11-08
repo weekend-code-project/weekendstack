@@ -115,7 +115,7 @@ locals {
 
     if command -v corepack >/dev/null 2>&1; then
       echo "[NODE] Enabling corepack"
-      corepack enable || true
+      sudo corepack enable || true
       # Pre-prepare selected manager to avoid first-run latency
       case "${var.package_manager}" in
         pnpm)
