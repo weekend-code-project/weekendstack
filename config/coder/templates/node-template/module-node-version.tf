@@ -91,6 +91,16 @@ data "coder_parameter" "enable_eslint" {
   order        = 104
 }
 
+data "coder_parameter" "node_modules_paths" {
+  name         = "node_modules_paths"
+  display_name = "Node Modules Paths"
+  description  = "Comma-separated paths (relative to workspace folder). Example: node_modules,backend/node_modules,frontend/node_modules"
+  type         = "string"
+  default      = "node_modules"
+  mutable      = true
+  order        = 105
+}
+
 module "node_version" {
   source           = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/node-version?ref=v0.1.0"
   install_strategy = data.coder_parameter.node_install_strategy.value

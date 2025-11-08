@@ -19,6 +19,7 @@ module "agent" {
     (data.coder_parameter.clone_repo.value && try(data.coder_parameter.install_github_cli[0].value, false)) ? module.github_cli.install_script : "",
   data.coder_parameter.node_install_strategy.value != "system" || data.coder_parameter.node_version.value != "" ? module.node_version.node_setup_script : "",
   module.node_tooling.tooling_install_script,
+    module.node_modules_persistence.init_script,
     data.coder_parameter.enable_docker.value ? module.docker.docker_install_script : "",
     data.coder_parameter.enable_docker.value ? module.docker.docker_config_script : "",
     module.ssh.ssh_setup_script,
@@ -33,11 +34,14 @@ module "agent" {
   git_author_email = data.coder_workspace_owner.me.email
   coder_access_url = "http://coder:7080"
 
-  env_vars = {
-    SSH_PORT = module.ssh.ssh_port
-    PORTS    = join(",", local.exposed_ports_list)
-    PORT     = element(local.exposed_ports_list, 0)
-  }
+  env_vars = merge(
+    module.node_modules_persistence.env,
+    {
+      SSH_PORT = module.ssh.ssh_port
+      PORTS    = join(",", local.exposed_ports_list)
+      PORT     = element(local.exposed_ports_list, 0)
+    }
+  )
 
   metadata_blocks = module.metadata.metadata_blocks
 }
