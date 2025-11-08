@@ -91,7 +91,6 @@ resource "coder_app" "preview_traefik" {
   display_name = "Preview (Traefik External)"
   icon         = "/icon/globe.svg"
   url          = var.workspace_url
-  subdomain    = false
   share        = "owner"
   external     = true
 }
@@ -104,7 +103,6 @@ resource "coder_app" "preview_custom" {
   display_name = "Preview (Custom URL)"
   icon         = "/icon/link.svg"
   url          = var.custom_preview_url
-  subdomain    = false
   share        = "owner"
   external     = true
 }
