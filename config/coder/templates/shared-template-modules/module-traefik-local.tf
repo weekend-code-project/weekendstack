@@ -26,12 +26,10 @@ data "coder_parameter" "workspace_secret" {
 }
 
 locals {
-  # Prefer TF_VAR_base_domain; if unset, fall back to localhost so previews still render
-  base_domain_from_var = trimspace(var.base_domain)
-  workspace_domain     = coalesce(
-    length(local.base_domain_from_var) > 0 ? local.base_domain_from_var : null,
-    "localhost"
-  )
+  # Use hardcoded base domain for now
+  # TODO: Make this configurable via parameter when needed
+  workspace_domain = "weekendcodeproject.dev"
+  
   # Construct a workspace-specific URL using the workspace name. The data sources
   # coder_workspace.me and coder_workspace_owner.me are provided by the Coder provider.
   workspace_url    = "https://${lower(data.coder_workspace.me.name)}.${local.workspace_domain}"
