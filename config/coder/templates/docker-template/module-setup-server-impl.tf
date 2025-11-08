@@ -140,8 +140,15 @@ HTML
     if [ -n "$STARTUP_CMD" ] && [ "$STARTUP_CMD" != "" ]; then
       echo "[SETUP-SERVER] Running custom startup command..."
       echo "[SETUP-SERVER] Command: $STARTUP_CMD"
-      eval "$STARTUP_CMD" &
-      echo "[SETUP-SERVER] ✓ Custom command started in background"
+      nohup bash -c "$STARTUP_CMD" > /tmp/custom-server.log 2>&1 &
+      echo $! > /tmp/custom-server.pid
+      sleep 1
+      if ps -p $(cat /tmp/custom-server.pid) > /dev/null 2>&1; then
+        echo "[SETUP-SERVER] ✓ Custom command started (PID: $(cat /tmp/custom-server.pid))"
+      else
+        echo "[SETUP-SERVER] ⚠ Custom command may have failed to start"
+        echo "[SETUP-SERVER] Check logs: tail /tmp/custom-server.log"
+      fi
     elif [ "$AUTO_HTML" = "true" ]; then
       # Start default Python HTTP server in background
       echo "[SETUP-SERVER] Starting default HTTP server..."
