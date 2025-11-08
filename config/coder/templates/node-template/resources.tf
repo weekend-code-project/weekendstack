@@ -22,7 +22,7 @@ resource "null_resource" "ensure_workspace_folder" {
 # Docker Container
 resource "docker_container" "workspace" {
   count      = data.coder_workspace.me.start_count
-  image      = "node:20-bullseye"
+  image      = "codercom/enterprise-base:ubuntu"
   privileged = true
   
   name     = "coder-${data.coder_workspace_owner.me.name}-${lower(data.coder_workspace.me.name)}"

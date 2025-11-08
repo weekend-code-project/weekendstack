@@ -49,7 +49,20 @@ locals {
 
     case "${var.install_strategy}" in
       system)
-        echo "[NODE] Using system Node. Skipping installation."
+        echo "[NODE] Installing Node.js v${local.resolved_version} via NodeSource..."
+        if ! command -v node >/dev/null 2>&1; then
+          # Convert lts to a specific version number (20 is current LTS)
+          VERSION="${local.resolved_version}"
+          if [ "$VERSION" = "lts" ]; then
+            VERSION="20"
+          fi
+          curl -fsSL https://deb.nodesource.com/setup_$${VERSION}.x | sudo -E bash -
+          sudo apt-get install -y nodejs
+          echo "[NODE] ✅ Node version: $(node -v)"
+          echo "[NODE] ✅ NPM version: $(npm -v)"
+        else
+          echo "[NODE] Node already installed: $(node -v)"
+        fi
         ;;
       volta)
         if ! command -v volta >/dev/null 2>&1; then
