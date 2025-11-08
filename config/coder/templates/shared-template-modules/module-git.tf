@@ -10,18 +10,16 @@ data "coder_parameter" "clone_repo" {
 }
 
 data "coder_parameter" "github_repo" {
-	count        = data.coder_parameter.clone_repo.value ? 1 : 0
 	name         = "github_repo"
 	display_name = "Repository URL"
-	description  = "Git repository URL to clone."
+	description  = "Git repository URL to clone (only used if Clone Repository is enabled)."
 	type         = "string"
 	default      = ""
-	mutable      = true
+	mutable      = false
 	order        = 15
 }
 
 data "coder_parameter" "install_github_cli" {
-	count        = data.coder_parameter.clone_repo.value ? 1 : 0
 	name         = "install_github_cli"
 	display_name = "Install GitHub CLI"
 	description  = "Install the GitHub CLI (gh) tool."
@@ -42,7 +40,7 @@ module "git_identity" {
 module "git_integration" {
 	source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/git-integration?ref=v0.1.0"
   
-	github_repo_url = data.coder_parameter.clone_repo.value ? data.coder_parameter.github_repo[0].value : ""
+	github_repo_url = data.coder_parameter.clone_repo.value ? data.coder_parameter.github_repo.value : ""
 }
 
 module "github_cli" {

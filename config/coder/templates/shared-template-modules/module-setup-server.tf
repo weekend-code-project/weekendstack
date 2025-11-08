@@ -17,10 +17,9 @@ data "coder_parameter" "auto_generate_html" {
 }
 
 data "coder_parameter" "exposed_ports" {
-	count        = data.coder_parameter.auto_generate_html.value ? 0 : 1
 	name         = "exposed_ports"
 	display_name = "Exposed Ports"
-	description  = "Ports to expose."
+	description  = "Ports to expose (only used if Serve Static Site is disabled)."
 	type         = "list(string)"
 	form_type    = "tag-select"
 	default      = jsonencode(["8080"])
@@ -29,10 +28,9 @@ data "coder_parameter" "exposed_ports" {
 }
 
 data "coder_parameter" "startup_command" {
-	count        = data.coder_parameter.auto_generate_html.value ? 0 : 1
 	name         = "startup_command"
 	display_name = "Startup Command"
-	description  = "Command to run at startup."
+	description  = "Command to run at startup (only used if Serve Static Site is disabled)."
 	type         = "string"
 	default      = ""
 	mutable      = true
@@ -40,7 +38,7 @@ data "coder_parameter" "startup_command" {
 }
 
 locals {
-	exposed_ports_raw  = try(data.coder_parameter.exposed_ports[0].value, jsonencode(["8080"]))
+	exposed_ports_raw  = try(data.coder_parameter.exposed_ports.value, jsonencode(["8080"]))
 	exposed_ports_list = try(jsondecode(local.exposed_ports_raw), tolist(local.exposed_ports_raw), [tostring(local.exposed_ports_raw)])
 }
 
