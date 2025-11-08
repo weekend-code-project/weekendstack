@@ -23,7 +23,7 @@ module "agent" {
     data.coder_parameter.enable_docker.value ? module.docker.docker_config_script : "",
     module.ssh.ssh_setup_script,
   !data.coder_parameter.make_public.value ? local.traefik_auth_setup_script : "",
-  module.setup_server.setup_server_script,
+  local.setup_server_script,
     "",
     "echo '[WORKSPACE] ✅ Node workspace ready!'",
     "echo '[WORKSPACE] 🌐 Server URL: http://localhost:${element(local.exposed_ports_list, 0)}'",
