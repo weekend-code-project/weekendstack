@@ -91,25 +91,34 @@ locals {
     <h1>Workspace: ${data.coder_workspace.me.name}</h1>
         
     <div class="status">
-      <strong>Status:</strong> Workspace is running!
+      <strong>Status:</strong> Python HTTP server is running!
+    </div>
+        
+    <div class="info">
+      <strong>Currently Serving:</strong><br>
+      Python 3 HTTP server on port $PORT
     </div>
         
     <h2>Getting Started</h2>
-        <p>This is a default page. Replace <code>index.html</code> with your own content, or start your application:</p>
+        <p>This workspace is running a Python HTTP server. Replace <code>index.html</code> with your own content:</p>
         
-        <pre><code># Python
-python3 -m http.server $PORT
+        <pre><code># Edit the current page
+vi index.html
 
-# Node.js
-npx http-server -p $PORT
+# Or create your own site
+mkdir -p mysite
+cd mysite
+echo "&lt;h1&gt;Hello World&lt;/h1&gt;" &gt; index.html
 
-# Your custom app
-npm start</code></pre>
+# Restart the server
+pkill -f "python3 -m http.server"
+python3 -m http.server $PORT</code></pre>
         
     <h2>Workspace Info</h2>
     <ul>
       <li><strong>Owner:</strong> ${data.coder_workspace_owner.me.name}</li>
       <li><strong>Port:</strong> $PORT</li>
+      <li><strong>Server:</strong> Python 3 HTTP Server</li>
     </ul>
         
         <div class="footer">
