@@ -476,7 +476,7 @@ Then test by creating a workspace in the Coder UI.
 
 ### push-template-versioned.sh
 
-This script automatically handles version management, conflict resolution, and triggers Coder's built-in Terraform validation.
+This script automatically handles version management, conflict resolution, environment variable injection, and triggers Coder's built-in Terraform validation.
 
 **Location:** `config/coder/scripts/push-template-versioned.sh`
 
@@ -485,20 +485,76 @@ This script automatically handles version management, conflict resolution, and t
 - Retries up to 5 times
 - Updates `.template_versions.json`
 - Prevents manual version conflicts
+- **Injects BASE_DOMAIN from .env into templates** (via sed)
+- **Passes TF_VAR_base_domain to Terraform** (for parameter descriptions)
 - Coder automatically validates Terraform during push
+
+**How BASE_DOMAIN Works:**
+
+The script uses a two-step approach to make templates portable:
+
+1. **Build-time injection (sed)**: Replaces `default = "localhost"` in `variables.tf` with actual domain from `.env`
+2. **Runtime environment (TF_VAR)**: Passes domain to Terraform for string interpolation in parameter descriptions
+
+This allows the same template code to work on any domain without hardcoded values.
 
 **Usage:**
 
 ```bash
-# Basic usage
-./config/coder/scripts/push-template-versioned.sh v0-1-0-test
+# Basic usage - automatically injects BASE_DOMAIN from .env
+./config/coder/scripts/push-template-versioned.sh docker-template
 
 # What it does:
-# 1. Reads current version from .template_versions.json
-# 2. Pushes template with that version
-# 3. If "already exists" error, increments and retries
-# 4. Updates .template_versions.json on success
+# 1. Loads .env file to get BASE_DOMAIN
+# 2. Reads current version from .template_versions.json
+# 3. Copies template to temp directory
+# 4. Overlays shared-template-modules into template
+# 5. Runs sed to replace base_domain default with actual domain
+# 6. Copies modified template to Coder container
+# 7. Passes -e TF_VAR_base_domain to docker exec for Terraform interpolation
+# 8. Pushes template with that version
+# 9. If "already exists" error, increments and retries
+# 10. Updates .template_versions.json on success
 ```
+
+**Environment Variable Loading:**
+
+The script safely loads variables from `.env`:
+
+```bash
+# Skips comments and blank lines
+# Only exports valid variable assignments (KEY=VALUE)
+# Handles complex values with special characters
+while IFS= read -r line; do
+    [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+    if [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
+        export "$line"
+    fi
+done < "$ENV_FILE"
+```
+
+**BASE_DOMAIN Injection:**
+
+```bash
+# Function that runs during template staging
+substitute_base_domain() {
+    local domain="${BASE_DOMAIN:-localhost}"
+    # Find variables.tf with base_domain variable
+    # Replace: default = "localhost" → default = "weekendcodeproject.dev"
+    sed -i "/variable \"base_domain\"/,/^}/ s|default[[:space:]]*=[[:space:]]*\"[^\"]*\"|default = \"$domain\"|" "$file"
+}
+
+# Passed to Terraform during template push
+docker exec -e TF_VAR_base_domain=${BASE_DOMAIN:-localhost} coder ...
+```
+
+**Why Both sed AND TF_VAR?**
+
+- **sed substitution**: Changes the default value in git-committed files → Users see correct domain in UI
+- **TF_VAR environment**: Allows `${var.base_domain}` interpolation in parameter descriptions → Shows actual domain in help text
+- **docker exec doesn't inherit**: Container environment variables don't pass to `docker exec` commands, must be explicit
+
+**Important:** The git repository stores `default = "localhost"` as a placeholder. The actual domain is injected during every push from your `.env` file.
 
 **How it works:**
 
@@ -553,6 +609,123 @@ exit 1
 ```
 
 This tracks the next version to use for each template.
+
+---
+
+## Shared Template Modules
+
+### Overview
+
+Shared template modules are Terraform files that get copied into every template during the push process. They provide common functionality without duplicating code.
+
+**Location:** `config/coder/templates/shared-template-modules/`
+
+**Pattern:** Files named `module-*.tf` are automatically overlaid into templates.
+
+### How It Works
+
+```bash
+# During template push:
+overlay_shared_modules() {
+    # Copy module-*.tf files from shared-template-modules/
+    # Into the template directory
+    # Template-specific files take precedence (not overwritten)
+}
+```
+
+### Shared Modules Available
+
+- **module-debug-domain.tf**: Exports `local.actual_base_domain` for other modules
+- **module-preview-link.tf**: Preview link mode selection and base domain input
+- **module-traefik-local.tf**: Traefik routing labels and authentication
+- **module-code-server.tf**: VS Code Server integration
+- **module-git.tf**: Git identity, cloning, and GitHub CLI
+- **module-ssh.tf**: SSH server with dynamic ports
+- **module-docker.tf**: Docker-in-Docker integration
+- **module-metadata.tf**: Workspace information display
+- **module-agent.tf**: Startup script orchestration
+- **module-init-shell.tf**: Home directory initialization
+
+### Base Domain System
+
+The base domain system makes templates portable across different installations:
+
+**In Git (placeholder):**
+```hcl
+# templates/docker-template/variables.tf
+variable "base_domain" {
+  type    = string
+  default = "localhost"  # Placeholder - replaced during push
+}
+```
+
+**During Push (injected):**
+```bash
+# .env file
+BASE_DOMAIN=weekendcodeproject.dev
+
+# Push script replaces placeholder
+sed -i 's/default = "localhost"/default = "weekendcodeproject.dev"/'
+```
+
+**In UI (user sees):**
+```hcl
+# Shared module creates conditional parameter
+data "coder_parameter" "traefik_base_domain" {
+  count   = preview_mode == "traefik" ? 1 : 0
+  name    = "traefik_base_domain"
+  default = var.base_domain  # Shows weekendcodeproject.dev
+}
+```
+
+**Why This Approach:**
+
+1. **No hardcoded domains** - Works on any installation
+2. **Single source of truth** - Change `.env`, re-push templates
+3. **User override** - Optional parameter lets users customize per-workspace
+4. **Git-friendly** - No domain-specific values committed to git
+
+### Conditional Parameters
+
+Show parameters only when relevant:
+
+```hcl
+# Show base domain input only when Traefik mode selected
+data "coder_parameter" "traefik_base_domain" {
+  count        = data.coder_parameter.preview_link_mode.value == "traefik" ? 1 : 0
+  display_name = "Base Domain"
+  default      = var.base_domain
+  order        = 24
+}
+
+# Show custom URL input only when Custom mode selected  
+data "coder_parameter" "custom_preview_url" {
+  count = data.coder_parameter.preview_link_mode.value == "custom" ? 1 : 0
+  order = 25
+}
+```
+
+Access conditional parameters safely:
+
+```hcl
+module "preview_link" {
+  base_domain = try(
+    data.coder_parameter.traefik_base_domain[0].value,  # User override
+    local.actual_base_domain                             # Default from template
+  )
+}
+```
+
+### Template-Specific Overrides
+
+If a template needs custom behavior:
+
+```bash
+# Create module-preview-link.tf in template directory
+# It will NOT be overwritten by shared version
+```
+
+This allows per-template customization while keeping most logic shared.
 
 ---
 
@@ -823,6 +996,46 @@ Error: version v35 already exists
 **Solution:** 
 - Use push-template-versioned.sh (auto-handles this)
 - Or manually increment version in command
+
+**Issue: Base domain showing "localhost" instead of actual domain**
+```
+Parameter shows: localhost
+Expected: weekendcodeproject.dev
+```
+**Solution:**
+- Check `.env` file has `BASE_DOMAIN=your-domain.com`
+- Verify push script is loading .env (check logs for "Loading environment")
+- Delete old workspaces and create new ones from latest template version
+- Old workspaces cache parameter values - use `coder delete workspace --orphan` for broken old versions
+
+**Issue: Can't delete old workspace - Terraform errors**
+```
+Error: Missing required argument
+Error: Unsupported argument
+```
+**Solution:**
+- Template structure changed between versions
+- Use `--orphan` flag to skip Terraform: `coder delete workspace --yes --orphan`
+- This deletes workspace metadata without running Terraform plan
+
+**Issue: TF_VAR environment variables not working**
+```
+Parameter shows default value instead of TF_VAR value
+```
+**Solution:**
+- `docker exec` doesn't inherit container environment variables
+- Must explicitly pass: `docker exec -e TF_VAR_name=value`
+- Push script handles this automatically for `TF_VAR_base_domain`
+
+**Issue: Parameter description shows `${var.base_domain}` literally**
+```
+Description text: "Domain is: ${var.base_domain}"
+Expected: "Domain is: weekendcodeproject.dev"
+```
+**Solution:**
+- TF_VAR must be passed during template push for Terraform interpolation
+- Check push script passes `-e TF_VAR_base_domain=${BASE_DOMAIN}`
+- Terraform evaluates `${}` expressions at template parse time, not workspace create time
 
 ---
 
