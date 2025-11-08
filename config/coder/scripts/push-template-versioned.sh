@@ -76,6 +76,28 @@ TEMPLATES_DIR="$(dirname "$0")/../templates"
 VERSION_FILE="$(dirname "$0")/.template_versions.json"
 SHARED_MODULES_DIR="$(dirname "$0")/../templates/shared-template-modules"
 
+# Source .env file for BASE_DOMAIN and other configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WORKSPACE_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+ENV_FILE="$WORKSPACE_ROOT/.env"
+
+if [[ -f "$ENV_FILE" ]]; then
+    log "Loading environment from $ENV_FILE"
+    # Use export to safely load only variable assignments, skip comments and blank lines
+    set -a  # automatically export all variables
+    while IFS= read -r line; do
+        # Skip comments and blank lines
+        [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+        # Export valid variable assignments
+        if [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
+            export "$line"
+        fi
+    done < "$ENV_FILE"
+    set +a
+else
+    log_warn ".env file not found at $ENV_FILE - using defaults"
+fi
+
 if [[ -z "$TEMPLATE_NAME" ]]; then
     log_error "Usage: $0 <template-name>"
     log_error "Available templates:"
@@ -278,7 +300,7 @@ if $DRY_RUN; then
     log "🔍 Dry run preview: showing lines with '?ref=' after substitution"
     grep -Rn --include='*.tf' '\?ref=' "$TEMP_DIR/$TEMPLATE_NAME" || true
     log "🔍 Dry run preview: showing base_domain after substitution"
-    grep -A2 'variable "base_domain"' "$TEMP_DIR/$TEMPLATE_NAME"/*.tf || true
+    grep -A4 'variable "base_domain"' "$TEMP_DIR/$TEMPLATE_NAME"/*.tf || true
     log "✅ Dry run complete. No changes pushed."
     rm -rf "$TEMP_DIR"
     exit 0
