@@ -16,7 +16,7 @@ data "coder_parameter" "github_repo" {
 	description  = "Git repository URL to clone."
 	type         = "string"
 	default      = ""
-	mutable      = false
+	mutable      = true
 	order        = 15
 }
 
