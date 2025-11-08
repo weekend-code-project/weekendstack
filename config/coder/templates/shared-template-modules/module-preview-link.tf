@@ -54,7 +54,7 @@ module "preview_link" {
 	agent_id              = module.agent.agent_id
 	workspace_name        = data.coder_workspace.me.name
 	workspace_owner       = data.coder_workspace_owner.me.name
-	base_domain           = var.base_domain
+	base_domain           = local.actual_base_domain
 	exposed_port          = element(local.exposed_ports_list, 0)
 	workspace_start_count = data.coder_workspace.me.start_count
 	preview_mode          = data.coder_parameter.preview_link_mode.value

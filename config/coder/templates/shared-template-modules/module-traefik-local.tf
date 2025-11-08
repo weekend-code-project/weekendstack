@@ -26,8 +26,8 @@ data "coder_parameter" "workspace_secret" {
 }
 
 locals {
-  # Use dynamic base_domain from template variable (set via TF_VAR_base_domain in docker-compose)
-  workspace_domain = var.base_domain
+  # Use dynamic base_domain from debug parameter (allows override and shows current value)
+  workspace_domain = local.actual_base_domain
   
   # Construct a workspace-specific URL using the workspace name. The data sources
   # coder_workspace.me and coder_workspace_owner.me are provided by the Coder provider.
