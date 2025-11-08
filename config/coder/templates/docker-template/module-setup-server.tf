@@ -7,6 +7,9 @@
 
 # Setup server script output
 locals {
+  # Resolve startup command at Terraform time
+  startup_cmd_value = try(data.coder_parameter.startup_command[0].value, "")
+  
   setup_server_script = <<-EOT
     #!/bin/bash
     # Setup Server
@@ -124,7 +127,7 @@ HTML
     fi
     
     # Check if custom startup command is provided
-    STARTUP_CMD="${try(data.coder_parameter.startup_command[0].value, "")}" 
+    STARTUP_CMD="${local.startup_cmd_value}"
     if [ -n "$STARTUP_CMD" ] && [ "$STARTUP_CMD" != "" ]; then
       echo "[SETUP-SERVER] Running custom startup command..."
       echo "[SETUP-SERVER] Command: $STARTUP_CMD"

@@ -7,6 +7,9 @@
 
 # Setup server script output
 locals {
+  # Resolve startup command at Terraform time
+  startup_cmd_value = try(data.coder_parameter.startup_command[0].value, "")
+  
   setup_server_script = <<-EOT
     #!/bin/bash
     set -e
@@ -20,7 +23,7 @@ locals {
     cd /home/coder/workspace
 
     AUTO_HTML="${data.coder_parameter.auto_generate_html.value}"
-    STARTUP_CMD="${try(data.coder_parameter.startup_command[0].value, "")}"
+    STARTUP_CMD="${local.startup_cmd_value}"
 
     # Optionally create an index.html
     if [ "$AUTO_HTML" = "true" ]; then
