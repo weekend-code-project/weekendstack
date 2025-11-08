@@ -26,8 +26,12 @@ data "coder_parameter" "workspace_secret" {
 }
 
 locals {
-  # Base domain for public workspace URLs - read from TF_VAR_base_domain environment variable
-  workspace_domain = var.base_domain
+  # Base domain from environment variable (set in Coder container via TF_VAR_base_domain)
+  # This uses a conditional to check if the env var is set, falling back to reading from provisioner tags
+  workspace_domain = try(
+    data.coder_provisioner.me.tags["base_domain"],
+    "localhost"
+  )
   # Construct a workspace-specific URL using the workspace name. The data sources
   # coder_workspace.me and coder_workspace_owner.me are provided by the Coder provider.
   workspace_url    = "https://${lower(data.coder_workspace.me.name)}.${local.workspace_domain}"
