@@ -34,7 +34,7 @@ variable "workspace_owner" {
 variable "base_domain" {
   description = "Base domain for Traefik routing (e.g., weekendcodeproject.dev)"
   type        = string
-  default     = "weekendcodeproject.dev"
+  default     = "localhost"
 }
 
 variable "exposed_port" {

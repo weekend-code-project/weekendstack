@@ -26,9 +26,8 @@ data "coder_parameter" "workspace_secret" {
 }
 
 locals {
-  # Use hardcoded base domain for now
-  # TODO: Make this configurable via parameter when needed
-  workspace_domain = "weekendcodeproject.dev"
+  # Use dynamic base_domain from template variable (set via TF_VAR_base_domain in docker-compose)
+  workspace_domain = var.base_domain
   
   # Construct a workspace-specific URL using the workspace name. The data sources
   # coder_workspace.me and coder_workspace_owner.me are provided by the Coder provider.

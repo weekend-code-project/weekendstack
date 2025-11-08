@@ -36,7 +36,7 @@ variable "exposed_ports_list" {
 variable "domain" {
   description = "Domain for workspace URL"
   type        = string
-  default     = "weekendcodeproject.dev"
+  default     = "localhost"
 }
 
 # Workspace URL
