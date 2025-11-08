@@ -26,8 +26,8 @@ data "coder_parameter" "workspace_secret" {
 }
 
 locals {
-  # Base domain for public workspace URLs (could be parameterized later)
-  workspace_domain = "weekendcodeproject.dev"
+  # Base domain for public workspace URLs - read from TF_VAR_base_domain environment variable
+  workspace_domain = var.base_domain
   # Construct a workspace-specific URL using the workspace name. The data sources
   # coder_workspace.me and coder_workspace_owner.me are provided by the Coder provider.
   workspace_url    = "https://${lower(data.coder_workspace.me.name)}.${local.workspace_domain}"

@@ -24,3 +24,10 @@ variable "traefik_auth_dir" {
   default     = ""
   sensitive   = false
 }
+
+variable "base_domain" {
+  description = "Base domain for workspace URLs (e.g., weekendcodeproject.dev)"
+  type        = string
+  default     = "localhost"
+  sensitive   = false
+}
