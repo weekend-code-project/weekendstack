@@ -3,7 +3,6 @@ data "coder_parameter" "clone_repo" {
 	display_name = "Clone Repository"
 	description  = "Enable to clone a Git repository into the workspace on first startup."
 	type         = "bool"
-	form_type    = "switch"
 	default      = false
 	mutable      = false
 	order        = 14
@@ -24,7 +23,6 @@ data "coder_parameter" "install_github_cli" {
 	display_name = "Install GitHub CLI"
 	description  = "Install the GitHub CLI (gh) tool."
 	type         = "bool"
-	form_type    = "switch"
 	default      = true
 	mutable      = false
 	order        = 16

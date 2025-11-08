@@ -10,7 +10,6 @@ data "coder_parameter" "auto_generate_html" {
 	display_name = "Serve Static Site"
 	description  = "Toggle on to scaffold a static welcome page."
 	type         = "bool"
-	form_type    = "switch"
 	default      = true
 	mutable      = true
 	order        = 20
@@ -21,7 +20,6 @@ data "coder_parameter" "exposed_ports" {
 	display_name = "Exposed Ports"
 	description  = "Ports to expose (only used if Serve Static Site is disabled)."
 	type         = "list(string)"
-	form_type    = "tag-select"
 	default      = jsonencode(["8080"])
 	mutable      = true
 	order        = 21
