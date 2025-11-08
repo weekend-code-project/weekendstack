@@ -26,9 +26,7 @@ variable "traefik_auth_dir" {
 }
 
 variable "base_domain" {
-  description = "Base domain for workspace URLs (e.g., weekendcodeproject.dev)"
+  description = "Base domain for workspace URLs (read from TF_VAR_base_domain environment variable)"
   type        = string
-  default     = "localhost"
   sensitive   = false
-  ephemeral   = true
 }
