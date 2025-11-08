@@ -274,6 +274,7 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
     if docker exec coder coder templates push "$TEMPLATE_NAME" \
         --directory "/tmp/$TEMPLATE_NAME" \
         --name "$VERSION_NAME" \
+        --provisioner-tag="base_domain=${BASE_DOMAIN:-weekendcodeproject.dev}" \
         --yes 2>&1 | tee /tmp/push-output.txt; then
         
         log "✅ Successfully pushed $TEMPLATE_NAME ($VERSION_NAME)"
