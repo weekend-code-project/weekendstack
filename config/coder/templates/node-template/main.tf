@@ -54,6 +54,26 @@ data "coder_workspace" "me" {}
 data "coder_workspace_owner" "me" {}
 
 # =============================================================================
+# Parameters
+# =============================================================================
+
+data "coder_parameter" "startup_command" {
+  name        = "Startup Command"
+  description = "Command to run at the end of startup."
+  type        = "string"
+  default     = "npm run dev -- --port $PORT --host 0.0.0.0"
+  mutable     = true
+}
+
+data "coder_parameter" "auto_generate_html" {
+  name        = "Auto-generate HTML"
+  description = "Automatically generate index.html if it doesn't exist"
+  type        = "bool"
+  default     = true
+  mutable     = false
+}
+
+# =============================================================================
 # Locals
 # =============================================================================
 
