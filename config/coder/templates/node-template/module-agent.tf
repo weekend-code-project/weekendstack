@@ -16,7 +16,7 @@ module "agent" {
     module.git_identity.setup_script,
     module.ssh.ssh_copy_script,
     module.git_integration.clone_script,
-    (data.coder_parameter.clone_repo.value && try(data.coder_parameter.install_github_cli[0].value, false)) ? module.github_cli.install_script : "",
+    (data.coder_parameter.clone_repo.value && data.coder_parameter.install_github_cli.value) ? module.github_cli.install_script : "",
   data.coder_parameter.node_install_strategy.value != "system" || data.coder_parameter.node_version.value != "" ? module.node_version.node_setup_script : "",
   module.node_tooling.tooling_install_script,
     module.node_modules_persistence.init_script,
