@@ -25,7 +25,7 @@ module "agent" {
     module.git_identity.setup_script,
     module.ssh.ssh_copy_script,
     module.git_integration.clone_script,
-    (data.coder_parameter.clone_repo.value && try(data.coder_parameter.install_github_cli[0].value, false)) ? module.github_cli.install_script : "",
+    (data.coder_parameter.clone_repo.value && try(data.coder_parameter.install_github_cli.value, false)) ? module.github_cli.install_script : "",
     data.coder_parameter.enable_docker.value ? module.docker.docker_install_script : "",
     data.coder_parameter.enable_docker.value ? module.docker.docker_config_script : "",
     module.ssh.ssh_setup_script,
