@@ -38,7 +38,8 @@ module "git_identity" {
 module "git_integration" {
 	source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/git-integration?ref=v0.1.0"
   
-	github_repo_url = data.coder_parameter.clone_repo.value ? data.coder_parameter.github_repo.value : ""
+	# FIX: Always pass the URL, let the git module handle empty string
+	github_repo_url = data.coder_parameter.github_repo.value
 }
 
 module "github_cli" {
