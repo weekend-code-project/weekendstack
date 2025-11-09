@@ -5,35 +5,35 @@
 # implements its own server setup logic in a local module-setup-server.tf file.
 # The local module should define: local.setup_server_script
 
-data "coder_parameter" "auto_generate_html" {
-	name         = "auto_generate_html"
-	display_name = "Serve Static Site"
-	description  = "Scaffold a static welcome page."
-	type         = "bool"
-	default      = true
-	mutable      = true
-	order        = 20
-}
+# data "coder_parameter" "auto_generate_html" {
+# 	name         = "auto_generate_html"
+# 	display_name = "Serve Static Site"
+# 	description  = "Scaffold a static welcome page."
+# 	type         = "bool"
+# 	default      = true
+# 	mutable      = true
+# 	order        = 20
+# }
 
-data "coder_parameter" "exposed_ports" {
-	name         = "exposed_ports"
-	display_name = "Exposed Ports"
-	description  = "Ports to expose."
-	type         = "list(string)"
-	default      = jsonencode(["8080"])
-	mutable      = true
-	order        = 21
-}
+# data "coder_parameter" "exposed_ports" {
+# 	name         = "exposed_ports"
+# 	display_name = "Exposed Ports"
+# 	description  = "Ports to expose."
+# 	type         = "list(string)"
+# 	default      = jsonencode(["8080"])
+# 	mutable      = true
+# 	order        = 21
+# }
 
-data "coder_parameter" "startup_command" {
-	name         = "startup_command"
-	display_name = "Startup Command"
-	description  = "Command to run at startup."
-	type         = "string"
-	default      = ""
-	mutable      = true
-	order        = 22
-}
+# data "coder_parameter" "startup_command" {
+# 	name         = "startup_command"
+# 	display_name = "Startup Command"
+# 	description  = "Command to run at startup."
+# 	type         = "string"
+# 	default      = ""
+# 	mutable      = true
+# 	order        = 22
+# }
 
 locals {
 	exposed_ports_raw  = try(data.coder_parameter.exposed_ports.value, jsonencode(["8080"]))

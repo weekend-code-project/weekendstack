@@ -1,29 +1,29 @@
-data "coder_parameter" "make_public" {
-  name         = "make_public"
-  display_name = "Make Public"
-  description  = "Make workspace URL publicly accessible."
-  type         = "bool"
-  form_type    = "switch"
-  default      = true
-  mutable      = true
-  order        = 10
-}
+# data "coder_parameter" "make_public" {
+#   name         = "make_public"
+#   display_name = "Make Public"
+#   description  = "Make workspace URL publicly accessible."
+#   type         = "bool"
+#   form_type    = "switch"
+#   default      = true
+#   mutable      = true
+#   order        = 10
+# }
 
-data "coder_parameter" "workspace_secret" {
-  count        = data.coder_parameter.make_public.value ? 0 : 1
-  name         = "workspace_secret"
-  display_name = "Private Password"
-  description  = "Enter a password to protect the workspace URL."
-  type         = "string"
-  default      = ""
-  mutable      = true
-  form_type    = "input"
-  order        = 11
-  validation {
-    regex = "^.+$"
-    error = "Suggested random password: ${random_password.workspace_secret.result}"
-  }
-}
+# data "coder_parameter" "workspace_secret" {
+#   count        = data.coder_parameter.make_public.value ? 0 : 1
+#   name         = "workspace_secret"
+#   display_name = "Private Password"
+#   description  = "Enter a password to protect the workspace URL."
+#   type         = "string"
+#   default      = ""
+#   mutable      = true
+#   form_type    = "input"
+#   order        = 11
+#   validation {
+#     regex = "^.+$"
+#     error = "Suggested random password: ${random_password.workspace_secret.result}"
+#   }
+# }
 
 locals {
   # Use dynamic base_domain from debug parameter (allows override and shows current value)
