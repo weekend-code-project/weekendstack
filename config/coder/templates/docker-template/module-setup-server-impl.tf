@@ -6,7 +6,7 @@
 
 # Resolve startup command at Terraform time
 locals {
-  startup_cmd_value = try(data.coder_parameter.startup_command[0].value, "")
+  startup_cmd_value = try(data.coder_parameter.startup_command.value, "")
 }
 
 # Call the shared setup-server git module with Python-specific configuration
