@@ -13,6 +13,7 @@ terraform {
 # Workspace metadata
 data "coder_workspace" "me" {}
 data "coder_workspace_owner" "me" {}
+data "coder_provisioner" "me" {}
 
 # Docker provider configuration
 provider "docker" {}
