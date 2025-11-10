@@ -120,6 +120,87 @@ JSON
 }
 
 # =============================================================================
+# Docker Validation/Test Script
+# =============================================================================
+
+locals {
+  docker_test_script = <<-EOT
+    #!/bin/bash
+    set -e
+    
+    echo "[DOCKER-TEST] Running Docker validation tests..."
+    
+    # Test 1: Docker CLI version
+    if docker --version >/dev/null 2>&1; then
+      echo "[DOCKER-TEST] PASS - Docker CLI: $(docker --version)"
+    else
+      echo "[DOCKER-TEST] FAIL - Docker CLI not found"
+      exit 1
+    fi
+    
+    # Test 2: Docker daemon info
+    if docker info >/dev/null 2>&1; then
+      echo "[DOCKER-TEST] PASS - Docker daemon responding"
+      echo "[DOCKER-TEST]   Server Version: $(docker version --format '{{.Server.Version}}' 2>/dev/null || echo 'unknown')"
+    else
+      echo "[DOCKER-TEST] FAIL - Docker daemon not responding"
+      exit 1
+    fi
+    
+    # Test 3: List containers (should not fail even if empty)
+    if docker ps >/dev/null 2>&1; then
+      CONTAINER_COUNT=$(docker ps -q | wc -l)
+      echo "[DOCKER-TEST] PASS - Docker ps command works (${CONTAINER_COUNT} containers running)"
+    else
+      echo "[DOCKER-TEST] FAIL - Cannot list containers"
+      exit 1
+    fi
+    
+    # Test 4: List images
+    if docker images >/dev/null 2>&1; then
+      IMAGE_COUNT=$(docker images -q | wc -l)
+      echo "[DOCKER-TEST] PASS - Docker images command works (${IMAGE_COUNT} images cached)"
+    else
+      echo "[DOCKER-TEST] FAIL - Cannot list images"
+      exit 1
+    fi
+    
+    # Test 5: Pull and run hello-world
+    echo "[DOCKER-TEST] Running hello-world container test..."
+    if docker run --rm hello-world >/tmp/docker-test-hello.log 2>&1; then
+      if grep -q "Hello from Docker!" /tmp/docker-test-hello.log; then
+        echo "[DOCKER-TEST] PASS - Hello-world container executed successfully"
+      else
+        echo "[DOCKER-TEST] WARN - Hello-world ran but unexpected output"
+        cat /tmp/docker-test-hello.log
+      fi
+    else
+      echo "[DOCKER-TEST] FAIL - Hello-world container failed"
+      cat /tmp/docker-test-hello.log
+      exit 1
+    fi
+    
+    # Test 6: Network creation/inspection
+    if docker network inspect coder-net >/dev/null 2>&1; then
+      echo "[DOCKER-TEST] PASS - coder-net network exists"
+    else
+      echo "[DOCKER-TEST] FAIL - coder-net network not found"
+      exit 1
+    fi
+    
+    # Test 7: User in docker group (for host Docker)
+    if groups | grep -q docker; then
+      echo "[DOCKER-TEST] PASS - User is in docker group"
+    else
+      echo "[DOCKER-TEST] WARN - User not in docker group (may need logout/login)"
+    fi
+    
+    echo "[DOCKER-TEST] All validation tests passed!"
+    echo ""
+  EOT
+}
+
+# =============================================================================
 # Outputs
 # =============================================================================
 
@@ -131,5 +212,10 @@ output "docker_install_script" {
 output "docker_config_script" {
   description = "Script to configure Docker daemon"
   value       = local.docker_config_script
+}
+
+output "docker_test_script" {
+  description = "Script to validate Docker installation"
+  value       = local.docker_test_script
 }
 

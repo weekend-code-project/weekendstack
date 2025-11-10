@@ -115,3 +115,27 @@ module "code_server" {
   workspace_start_count = data.coder_workspace.me.start_count
   folder                = "/home/coder/workspace"
 }
+
+# =============================================================================
+# Phase 3 Modules: Simple UI Parameters (Boolean Toggles)
+# =============================================================================
+
+# Module: docker
+# Issue #26 - Docker-in-Docker (1 param: enable_docker boolean)
+# First module with a UI parameter - tests simple boolean toggle pattern
+# Using count on module call to conditionally enable Docker installation
+data "coder_parameter" "enable_docker" {
+  name         = "enable_docker"
+  display_name = "Enable Docker-in-Docker"
+  description  = "Install and run Docker daemon inside the workspace for container development."
+  type         = "bool"
+  form_type    = "switch"
+  default      = false
+  mutable      = false
+  order        = 30
+}
+
+module "docker" {
+  count  = data.coder_parameter.enable_docker.value ? 1 : 0
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/docker-integration?ref=v0.1.0"
+}

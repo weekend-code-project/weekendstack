@@ -27,11 +27,16 @@ module "agent" {
   startup_script = <<-EOT
     #!/bin/bash
     set -e
-    echo '[WORKSPACE] 🚀 Starting workspace ${data.coder_workspace.me.name}'
+    echo '[WORKSPACE] Starting workspace ${data.coder_workspace.me.name}'
     
     # Phase 1 Module: init-shell (Issue #23)
     ${module.init_shell.setup_script}
     
-    echo '[WORKSPACE] ✅ Workspace ready!'
+    # Phase 3 Module: docker (Issue #26) - Conditional based on toggle
+    ${data.coder_parameter.enable_docker.value ? module.docker[0].docker_install_script : ""}
+    ${data.coder_parameter.enable_docker.value ? module.docker[0].docker_config_script : ""}
+    ${data.coder_parameter.enable_docker.value ? module.docker[0].docker_test_script : ""}
+    
+    echo '[WORKSPACE] Workspace ready!'
   EOT
 }
