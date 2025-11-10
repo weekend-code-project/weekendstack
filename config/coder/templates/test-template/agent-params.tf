@@ -4,7 +4,7 @@
 # This creates the Coder agent that runs inside the workspace container.
 
 module "agent" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/coder-agent?ref=v0.1.2-test-base"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/coder-agent?ref=PLACEHOLDER"
   
   # Required architecture info
   arch = data.coder_provisioner.me.arch

@@ -256,7 +256,7 @@ substitute_ref_in_temp() {
     fi
     for f in "${files[@]}"; do
         # Replace existing ?ref= value with resolved ref
-        sed -E -i "s|(git::https://github.com/weekend-code-project/weekendstack.git//[^?]+\?ref=)[^\"]+ |\1${ENC_REF}|g" "$f"
+        sed -E -i "s|(git::https://github.com/weekend-code-project/weekendstack.git//[^?]+\?ref=)[^\"]+|\1${ENC_REF}|g" "$f"
     done
     log "✏️  Updated ref to '$RESOLVED_REF' in ${#files[@]} file(s)."
 }

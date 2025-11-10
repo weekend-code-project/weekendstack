@@ -141,7 +141,7 @@ locals {
     # Test 2: Docker daemon responding
     if docker ps >/dev/null 2>&1; then
       CONTAINER_COUNT=$(docker ps -q | wc -l)
-      echo "[DOCKER-TEST] PASS - Docker daemon responding (${CONTAINER_COUNT} containers running)"
+      echo "[DOCKER-TEST] PASS - Docker daemon responding ($${CONTAINER_COUNT} containers running)"
     else
       echo "[DOCKER-TEST] FAIL - Docker daemon not responding"
       exit 1
