@@ -3,6 +3,17 @@
 # =============================================================================
 # This creates the Coder agent that runs inside the workspace container.
 
+# Collect custom metadata blocks from modules
+# This local is referenced by the overlaid metadata-params.tf
+locals {
+  docker_metadata = try(module.docker[0].metadata_blocks, [])
+  
+  # Combine all module metadata - add more as modules are added
+  all_custom_metadata = concat(
+    local.docker_metadata
+  )
+}
+
 module "agent" {
   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/coder-agent?ref=PLACEHOLDER"
   
@@ -21,6 +32,7 @@ module "agent" {
   env_vars = {}
   
   # Metadata blocks from metadata module (Issue #27)
+  # Now includes custom blocks dynamically contributed by loaded modules
   metadata_blocks = module.metadata.metadata_blocks
   
   # Minimal startup script - just bash basics

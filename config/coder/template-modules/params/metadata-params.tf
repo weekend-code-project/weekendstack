@@ -30,7 +30,7 @@ data "coder_parameter" "metadata_blocks" {
   description  = "Select metadata blocks to display."
   type         = "list(string)"
   form_type    = "multi-select"
-  default      = jsonencode(["cpu", "ram", "disk", "ports"])
+  default      = jsonencode(["cpu", "ram", "disk", "arch"])
   mutable      = true
   order        = 50
 
@@ -50,25 +50,23 @@ data "coder_parameter" "metadata_blocks" {
   }
 
   option {
-    name  = "Ports"
-    value = "ports"
-    icon  = "/icon/network.svg"
+    name  = "Architecture"
+    value = "arch"
   }
 
   option {
-    name  = "SSH Port"
-    value = "ssh_port"
-    icon  = "/icon/terminal.svg"
+    name  = "Validation"
+    value = "validation"
   }
 
   option {
-    name  = "Home Directory"
-    value = "home_dir"
+    name  = "Load Average"
+    value = "load_avg"
   }
 
   option {
-    name  = "Container Image"
-    value = "image"
+    name  = "Uptime"
+    value = "uptime"
   }
 }
 
@@ -76,4 +74,7 @@ data "coder_parameter" "metadata_blocks" {
 module "metadata" {
   source         = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/metadata?ref=PLACEHOLDER"
   enabled_blocks = data.coder_parameter.metadata_blocks.value != "" ? jsondecode(data.coder_parameter.metadata_blocks.value) : []
+  
+  # Accept custom blocks from other modules (defined in template's agent-params.tf)
+  custom_blocks = try(local.all_custom_metadata, [])
 }

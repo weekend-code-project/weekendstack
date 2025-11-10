@@ -20,9 +20,9 @@
 # =============================================================================
 
 variable "enabled_blocks" {
-  description = "List of metadata block names to enable (cpu, ram, disk, arch, ports, ssh_port, validation, load_avg, uptime)"
+  description = "List of metadata block names to enable (cpu, ram, disk, arch, validation, load_avg, uptime)"
   type        = list(string)
-  default     = ["cpu", "ram", "disk", "arch", "ports", "ssh_port", "validation"]
+  default     = ["cpu", "ram", "disk", "arch", "validation"]
 }
 
 variable "custom_blocks" {
@@ -67,18 +67,6 @@ locals {
       interval     = 60
       timeout      = 5
     }
-    ports = {
-      display_name = "Ports"
-      script       = "echo $${PORTS:-N/A}"
-      interval     = 60
-      timeout      = 1
-    }
-    ssh_port = {
-      display_name = "SSH Port"
-      script       = "echo $${SSH_PORT:-N/A}"
-      interval     = 60
-      timeout      = 1
-    }
     validation = {
       display_name = "Validation"
       script       = "test -f /var/tmp/validation_summary.txt && cat /var/tmp/validation_summary.txt || echo 'PENDING'"
@@ -94,18 +82,6 @@ locals {
     uptime = {
       display_name = "Uptime"
       script       = "uptime -p"
-      interval     = 60
-      timeout      = 1
-    }
-    home_dir = {
-      display_name = "Home Directory"
-      script       = "echo $${HOME}"
-      interval     = 60
-      timeout      = 1
-    }
-    image = {
-      display_name = "Container Image"
-      script       = "echo $${CONTAINER_IMAGE:-N/A}"
       interval     = 60
       timeout      = 1
     }

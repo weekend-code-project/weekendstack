@@ -171,3 +171,14 @@ output "docker_test_script" {
   value       = local.docker_test_script
 }
 
+output "metadata_blocks" {
+  description = "Metadata blocks contributed by this module"
+  value = [
+    {
+      display_name = "Docker Status"
+      script       = "docker info --format '{{.ServerVersion}} ({{.Containers}} containers)' 2>/dev/null || echo 'Not running'"
+      interval     = 30
+      timeout      = 2
+    }
+  ]
+}
