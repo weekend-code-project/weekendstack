@@ -28,6 +28,10 @@ module "agent" {
     #!/bin/bash
     set -e
     echo '[WORKSPACE] 🚀 Starting workspace ${data.coder_workspace.me.name}'
+    
+    # Phase 1 Module: init-shell (Issue #23)
+    ${module.init_shell.setup_script}
+    
     echo '[WORKSPACE] ✅ Workspace ready!'
   EOT
 }

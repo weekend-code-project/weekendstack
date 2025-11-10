@@ -82,3 +82,21 @@ resource "docker_volume" "home_volume" {
     value = data.coder_workspace.me.name
   }
 }
+
+# =============================================================================
+# Phase 1 Modules: Zero Coder Dependencies (No UI Parameters)
+# =============================================================================
+
+# Module: init-shell
+# Issue #23 - Simplest baseline module (0 params, no deps)
+# Pure git module call with zero parameters and no Coder dependencies
+module "init_shell" {
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/init-shell?ref=v0.1.0"
+}
+
+# Module: debug-domain (base domain local)
+# Issue #25 - Base domain config (0 params, uses var.base_domain)
+# Pure local variable definition with zero Coder dependencies
+locals {
+  actual_base_domain = var.base_domain
+}
