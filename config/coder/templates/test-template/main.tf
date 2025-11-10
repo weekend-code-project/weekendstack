@@ -38,9 +38,9 @@ resource "docker_container" "workspace" {
   hostname = data.coder_workspace.me.name
   
   # Use the docker gateway if the access URL is 127.0.0.1
-  entrypoint = ["sh", "-c", replace(module.agent.init_script, "/localhost|127\\.0\\.0\\.1/", "host.docker.internal")]
+  entrypoint = ["sh", "-c", replace(module.agent.agent_init_script, "/localhost|127\\.0\\.0\\.1/", "host.docker.internal")]
   
-  env = ["CODER_AGENT_TOKEN=${module.agent.token}"]
+  env = ["CODER_AGENT_TOKEN=${module.agent.agent_token}"]
   
   host {
     host = "host.docker.internal"
