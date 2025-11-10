@@ -24,23 +24,19 @@ module "agent" {
   metadata_blocks = []
   
   # Minimal startup script - just bash basics
-  startup_script = join("\n", concat([
+  startup_script = join("\n", [
     "#!/bin/bash",
     "set -e",
     "echo '[WORKSPACE] Starting workspace ${data.coder_workspace.me.name}'",
     "",
     "# Phase 1 Module: init-shell (Issue #23)",
     module.init_shell.setup_script,
-    ""
-  ],
-  # Phase 3 Module: docker (Issue #26) - Only include if enabled
-  data.coder_parameter.enable_docker.value ? [
-    module.docker[0].docker_install_script,
-    module.docker[0].docker_config_script,
-    module.docker[0].docker_test_script
-  ] : [],
-  [
+    "",
+    "# Phase 3 Module: docker (Issue #26) - Conditional",
+    try(module.docker[0].docker_install_script, "# Docker disabled"),
+    try(module.docker[0].docker_config_script, ""),
+    try(module.docker[0].docker_test_script, ""),
     "",
     "echo '[WORKSPACE] Workspace ready!'"
-  ]))
+  ])
 }
