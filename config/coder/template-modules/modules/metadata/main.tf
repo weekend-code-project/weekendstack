@@ -69,13 +69,13 @@ locals {
     }
     ports = {
       display_name = "Ports"
-      script       = "echo $PORTS"
+      script       = "echo $${PORTS:-N/A}"
       interval     = 60
       timeout      = 1
     }
     ssh_port = {
       display_name = "SSH Port"
-      script       = "echo $${SSH_PORT}"
+      script       = "echo $${SSH_PORT:-N/A}"
       interval     = 60
       timeout      = 1
     }
@@ -94,6 +94,18 @@ locals {
     uptime = {
       display_name = "Uptime"
       script       = "uptime -p"
+      interval     = 60
+      timeout      = 1
+    }
+    home_dir = {
+      display_name = "Home Directory"
+      script       = "echo $${HOME}"
+      interval     = 60
+      timeout      = 1
+    }
+    image = {
+      display_name = "Container Image"
+      script       = "echo $${CONTAINER_IMAGE:-N/A}"
       interval     = 60
       timeout      = 1
     }
