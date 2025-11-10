@@ -4,7 +4,7 @@
 # This creates the Coder agent that runs inside the workspace container.
 
 module "agent" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/coder-agent?ref=v0.1.2-test-base"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/coder-agent?ref=v0.1.2-test-base"
   
   # Required architecture info
   arch = data.coder_provisioner.me.arch
@@ -15,7 +15,7 @@ module "agent" {
   git_author_email = data.coder_workspace_owner.me.email
   
   # Access URL for agent connection
-  coder_access_url = data.coder_workspace.me.access_url
+  coder_access_url = "http://host.docker.internal:7080"
   
   # No additional environment variables
   env_vars = {}

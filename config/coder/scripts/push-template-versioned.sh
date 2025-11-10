@@ -74,7 +74,7 @@ set -u
 # Configuration
 TEMPLATES_DIR="$(dirname "$0")/../templates"
 VERSION_FILE="$(dirname "$0")/.template_versions.json"
-SHARED_MODULES_DIR="$(dirname "$0")/../templates/shared-template-modules"
+SHARED_PARAMS_DIR="$(dirname "$0")/../template-modules/params"
 
 # Source .env file for BASE_DOMAIN and other configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -219,16 +219,16 @@ TEMP_DIR="/tmp/coder-push-$$"
 mkdir -p "$TEMP_DIR"
 cp -r "$TEMPLATE_DIR" "$TEMP_DIR/$TEMPLATE_NAME"
 
-# Overlay shared modules (do not override if file already exists in template)
-overlay_shared_modules() {
+# Overlay shared params (do not override if file already exists in template)
+overlay_shared_params() {
     local shared_dir="$1"
     local dest_dir="$2"
     if [[ ! -d "$shared_dir" ]]; then
-        log_warn "Shared modules dir not found: $shared_dir (skipping overlay)"
+        log_warn "Shared params dir not found: $shared_dir (skipping overlay)"
         return 0
     fi
     local count=0
-    for f in "$shared_dir"/module-*.tf; do
+    for f in "$shared_dir"/*-params.tf; do
         [[ -e "$f" ]] || continue
         local base
         base=$(basename "$f")
@@ -239,10 +239,10 @@ overlay_shared_modules() {
         cp "$f" "$dest_dir/$base"
         count=$((count+1))
     done
-    log "📦 Overlay applied: $count shared module file(s) copied"
+    log "📦 Overlay applied: $count shared param file(s) copied"
 }
 
-overlay_shared_modules "$SHARED_MODULES_DIR" "$TEMP_DIR/$TEMPLATE_NAME"
+overlay_shared_params "$SHARED_PARAMS_DIR" "$TEMP_DIR/$TEMPLATE_NAME"
 
 # Substitute ref in temp .tf files for this repository's git module sources
 substitute_ref_in_temp() {

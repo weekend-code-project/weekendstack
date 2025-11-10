@@ -26,7 +26,7 @@ Set in `.env` file:
 ```bash
 # Coder configuration
 CODER_VERSION=2.27.0
-CODER_ACCESS_URL=http://localhost:7080
+CODER_ACCESS_URL=http://host.docker.internal:7080  # Use host.docker.internal for workspace connectivity
 
 # Directory paths (passed to templates via TF_VAR_*)
 WORKSPACE_DIR=${FILES_BASE_DIR}/coder/workspace
@@ -458,6 +458,54 @@ environment:
 This makes templates portable across different installations.
 
 ## Troubleshooting
+
+### Error: Workspace agent fails to connect (DNS resolution failure)
+
+**Symptoms**: 
+- Workspace creation succeeds but agent never connects
+- Container logs show: `curl: (6) Could not resolve host: coder`
+- Error message: `failed to download coder agent`
+
+**Cause**: `CODER_ACCESS_URL` is set to `http://coder:7080` but workspace containers can't resolve the hostname `coder`
+
+**Why this happens**: 
+- Workspace containers run on the default Docker `bridge` network
+- The `coder` hostname only resolves on the `coder-network` or `shared-network`
+- The agent init script tries to download the Coder binary from `CODER_ACCESS_URL`
+- DNS resolution fails because `coder` is not reachable from bridge network
+
+**Fix**: 
+
+1. Update `CODER_ACCESS_URL` in `.env`:
+   ```bash
+   # Change from:
+   CODER_ACCESS_URL=http://coder:7080
+   
+   # To:
+   CODER_ACCESS_URL=http://host.docker.internal:7080
+   ```
+
+2. Recreate the Coder container to apply the change:
+   ```bash
+   cd /opt/stacks/weekendstack
+   docker rm -f coder-init coder
+   docker compose up -d coder
+   ```
+
+3. Verify the new URL is set:
+   ```bash
+   docker exec coder printenv CODER_ACCESS_URL
+   # Should output: http://host.docker.internal:7080
+   ```
+
+4. Delete and recreate any affected workspaces (updating won't fix existing containers)
+
+**How it works**: 
+- `host.docker.internal` is automatically configured in Docker containers to point to the host machine
+- The Coder server listens on `0.0.0.0:7080`, accessible from both container networks and the host
+- Workspace containers can reach Coder via `http://host.docker.internal:7080`
+
+**Note**: This is the **server-side** `CODER_ACCESS_URL` that Coder uses to generate agent download URLs. This is different from the `coder_access_url` parameter in templates, which sets the `CODER_ACCESS_URL` environment variable inside workspace containers.
 
 ### Error: "invalid mount path: '~/.ssh' mount path must be absolute"
 

@@ -37,6 +37,9 @@ resource "docker_container" "workspace" {
   
   hostname = data.coder_workspace.me.name
   
+  # Required for Docker-in-Docker
+  privileged = true
+  
   # Use the docker gateway if the access URL is 127.0.0.1
   entrypoint = ["sh", "-c", replace(module.agent.agent_init_script, "/localhost|127\\.0\\.0\\.1/", "host.docker.internal")]
   
@@ -91,7 +94,7 @@ resource "docker_volume" "home_volume" {
 # Issue #23 - Simplest baseline module (0 params, no deps)
 # Pure git module call with zero parameters and no Coder dependencies
 module "init_shell" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/init-shell?ref=v0.1.0"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/init-shell?ref=v0.1.0"
 }
 
 # Module: debug-domain (base domain local)
@@ -109,7 +112,7 @@ locals {
 # Issue #24 - VS Code web IDE (0 params, depends on agent)
 # Uses Coder data sources but no UI parameters - tests data source integration
 module "code_server" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/code-server?ref=v0.1.0"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/code-server?ref=v0.1.0"
   
   agent_id              = module.agent.agent_id
   workspace_start_count = data.coder_workspace.me.start_count
@@ -120,22 +123,6 @@ module "code_server" {
 # Phase 3 Modules: Simple UI Parameters (Boolean Toggles)
 # =============================================================================
 
-# Module: docker
-# Issue #26 - Docker-in-Docker (1 param: enable_docker boolean)
-# First module with a UI parameter - tests simple boolean toggle pattern
-# Using count on module call to conditionally enable Docker installation
-data "coder_parameter" "enable_docker" {
-  name         = "enable_docker"
-  display_name = "Enable Docker-in-Docker"
-  description  = "Install and run Docker daemon inside the workspace for container development."
-  type         = "bool"
-  form_type    = "switch"
-  default      = false
-  mutable      = false
-  order        = 30
-}
-
-module "docker" {
-  count  = data.coder_parameter.enable_docker.value ? 1 : 0
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/docker-integration?ref=v0.1.0"
-}
+# Module: docker (Issue #26)
+# Overlaid from shared-template-modules/module-docker.tf
+# Provides Docker-in-Docker with enable_docker boolean parameter
