@@ -124,5 +124,13 @@ module "code_server" {
 # =============================================================================
 
 # Module: docker (Issue #26)
-# Overlaid from shared-template-modules/module-docker.tf
+# Overlaid from docker-params.tf
 # Provides Docker-in-Docker with enable_docker boolean parameter
+
+# =============================================================================
+# Phase 4 Modules: Multi-Select Parameters
+# =============================================================================
+
+# Module: metadata (Issue #27)
+# Overlaid from metadata-params.tf
+# Provides resource monitoring metadata blocks (CPU, RAM, disk, etc.)
