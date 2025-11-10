@@ -20,8 +20,8 @@ module "agent" {
   # No additional environment variables
   env_vars = {}
   
-  # No additional metadata blocks
-  metadata_blocks = []
+  # Metadata blocks from metadata module (Issue #27)
+  metadata_blocks = module.metadata.metadata_blocks
   
   # Minimal startup script - just bash basics
   startup_script = join("\n", [
