@@ -1,13 +1,42 @@
 # Coder Template Modularization & Auto-Ref Plan (v0.1.1 Workstream)
 
 ## 1. Goals
+
+**Original v0.1.1 Goals** (deferred until flickering issue resolved):
 - Centralize reusable per-template Terraform module glue (`module-*.tf` files currently in `config/coder/templates/docker-template/`) into a shared location so multiple specialized templates can consume them without duplication.
 - Preserve existing git-based reusable modules in `config/coder/templates/git-modules/` (unchanged).
 - Introduce automatic Git ref resolution for git module sources (tag > main > current branch) during push, without committing moving refs.
 - Maintain existing template versioning semantics (incremental v1, v2...) while enabling branch-aware module sourcing.
 - Enable iterative development on a new branch `v0.1.1` and merge back to `main` when complete.
 
+**Current Immediate Goals** (test-params-incrementally branch):
+- **Identify and fix UI flickering** in Coder workspace templates (checkboxes toggling, fields disappearing during updates)
+- Test modules incrementally starting from zero-parameter baseline to isolate flickering root cause
+- Document findings for each module in GitHub issues (#23-#42)
+- Fix identified bugs (unused parameters, unnecessary conditionals, ternary operators)
+- Establish best practices for Terraform patterns that prevent UI flickering
+
 ## 2. Scope
+
+**Current Scope** (test-params-incrementally branch):
+
+In Scope:
+- Incremental testing of all 17 modules to identify UI flickering patterns
+- Creating comprehensive GitHub issues (#23-#42) documenting each module with full ASCII parameter dependency diagrams
+- Testing modules one-by-one from simplest (0 params) to most complex (5 ternary operators)
+- Fixing bugs: unused parameters, missing module inputs, conditional logic that causes re-evaluation
+- Documenting flickering risk factors: ternary operators, conditional count, mutable parameters
+- Establishing clean test-template baseline (v1 with zero parameters)
+
+Out of Scope (for current flickering investigation):
+- Full modularization architecture (deferred to v0.1.1 workstream)
+- Automatic Git ref resolution
+- Shared module overlay system
+- Refactoring git modules themselves
+- Changing Coder resource semantics
+
+**Original v0.1.1 Scope** (deferred):
+
 In Scope:
 - Creating new shared folder for template-level Terraform composition files (the `module-*.tf` group) separate from any single template.
 - Adjusting push workflow to inject or overlay these shared files into each template prior to pushing.
@@ -15,12 +44,40 @@ In Scope:
 - Documentation updates (this plan, plus updates to `docs/coder-templates-guide.md`).
 - Non-breaking incremental branch-based rollout.
 
-Out of Scope (for this workstream):
+Out of Scope (for v0.1.1 workstream):
 - Refactoring the git modules themselves.
 - Changing Coder resource semantics (e.g., `coder_agent`, `docker_container`).
 - Introducing complex templating engines beyond simple variable substitution.
 
 ## 3. Current State Summary
+
+**As of November 10, 2025** (test-params-incrementally branch):
+
+- All 17 modules moved to `_trash/shared-template-modules/` for controlled re-addition
+- Test-template v1 created with zero parameters (clean baseline, compiles successfully)
+- 17 comprehensive GitHub issues created (#23-#34 shared, #37-#42 node) with full ASCII diagrams
+- Each issue documents: parameters, dependencies, flickering risk, recommendations, testing priority
+- Module-refactoring-checklist.md committed tracking all issues (17/17 complete)
+- Git state: Branch test-params-incrementally, commit 516bebe
+- Push script sed bug fixed (line 259: `[^\"]+ ` pattern)
+- Agent module interface fixed (env_vars type, output names)
+- Ready to begin incremental module testing
+
+**Module Locations**:
+- Reusable git modules: `config/coder/templates/git-modules/` (referenced with `?ref=v0.1.0`)
+- Shared template modules: Currently in `_trash/shared-template-modules/` (11 files)
+- Node-specific modules: `config/coder/templates/node-template/` (6 files documented in issues)
+- Test template: `config/coder/templates/test-template/` (minimal baseline, zero parameters)
+- Docker template: `config/coder/templates/docker-template/` (stable at v82)
+
+**Known Issues**:
+- UI flickering during workspace updates (checkboxes toggle, fields disappear)
+- "Clone Repo" checkbox in module-git.tf known to flicker
+- Multiple modules define parameters but don't use them (bugs documented in issues)
+- Ternary operators in module calls likely cause Terraform re-evaluation
+- Conditional count on parameters causes visibility toggling (very high flickering risk)
+
+**Original State** (before flickering investigation):
 - Reusable git modules live under `config/coder/templates/git-modules/` and are referenced with a hard-coded `?ref=v0.1.0`.
 - Template-specific composition glue (e.g., `module-agent.tf`, `module-traefik-local.tf`, etc.) resides inside the `docker-template` directory.
 - Push script (`config/coder/scripts/push-template-versioned.sh`) copies a single template folder to the Coder container and pushes with incremental versions (v1, v2...).
@@ -90,7 +147,64 @@ Add the following responsibilities to `push-template-versioned.sh`:
 - Provide a dry-run mode (`--dry-run`) to show planned ref and file list without pushing.
 - Logging improvements: show chosen ref, fallback actions, count of shared modules applied.
 
-## 7. Task Breakdown
+## 7. Task Breakdown - Incremental Module Addition (test-params-incrementally branch)
+
+**Current Status**: All 17 modules moved to `_trash/shared-template-modules/` with comprehensive GitHub issues created. Test template v1 pushed successfully with zero parameters (clean baseline). Ready for incremental testing.
+
+**Strategy**: Add modules one-by-one from `_trash/` back to `shared-template-modules/`, testing for UI flickering after each addition.
+
+### Module Addition Order (by Testing Priority)
+
+| Priority | Module File | Issue | Params | Dependencies | Flickering Risk | Notes |
+|----------|-------------|-------|--------|--------------|-----------------|-------|
+| 1 | module-init-shell.tf | #23 | 0 | None | LOW | Simplest baseline, no UI |
+| 1 | module-debug-domain.tf | #25 | 0 | None | LOW | Local only, no parameters |
+| 2 | module-code-server.tf | #24 | 0 | agent | LOW | Needs agent module, no params |
+| 3 | module-docker.tf | #26 | 1 | None | MEDIUM | First boolean switch test, unused param bug |
+| 4 | module-metadata.tf | #27 | 1 | None | MEDIUM-HIGH | Multi-select, mutable param |
+| 5 | module-setup-server.tf | #32 | 3 | None | MEDIUM | String/list params, mutable |
+| 6 | module-preview-link.tf | #31 | 3 | agent, traefik | HIGH | Conditional params (count-based) |
+| 7 | module-ssh.tf | #33 | 4 | None | VERY HIGH | Heavy conditionals, count-based visibility |
+| 8 | module-traefik-local.tf | #30 | 2 | None | VERY HIGH | Conditional count on workspace_secret |
+| 9 | (node modules) | #37-42 | varies | varies | varies | Test after shared modules stable |
+| 10 | module-git.tf | #29 | 3 | None | **CRITICAL** | **KNOWN FLICKERING MODULE** - Clone Repo checkbox |
+| 11 | module-agent.tf | #34 | 0 | ALL (12 deps) | **MAXIMUM** | Central orchestrator, 5 ternary ops - test LAST |
+
+### Incremental Testing Workflow
+
+For each module (in priority order):
+
+1. **Copy from _trash**: `cp _trash/shared-template-modules/module-X.tf config/coder/templates/test-template/`
+2. **Update template**: Ensure module is called/integrated in `main.tf` or `module-agent.tf`
+3. **Push to Coder**: `./push-template-versioned.sh test-template`
+4. **Test workspace**: 
+   - Create new workspace OR update existing workspace
+   - **Observe for flickering**: Watch for checkboxes toggling, fields disappearing, form re-rendering
+   - Test parameter interactions (change values, observe behavior)
+5. **Document results**: Add findings to GitHub issue
+6. **Commit progress**: `git commit -am "test-template: Added module-X (Issue #N) - [PASS/FAIL flickering test]"`
+
+### Known Issues to Fix During Migration
+
+| Module | Issue # | Bug | Fix Required |
+|--------|---------|-----|--------------|
+| module-docker.tf | #26 | `enable_docker` param defined but not used | Actually use parameter or remove it |
+| module-git.tf | #29 | `install_github_cli` param defined but not used | Pass to module or remove param |
+| module-node-version.tf | #37 | 3 params not passed to module (typescript, eslint, node_modules_paths) | Pass to module or remove params |
+| module-agent.tf (shared) | #34 | 5 ternary operators in startup_script | Consider refactoring to reduce re-evaluation |
+| module-agent.tf (node) | #42 | 5 ternary operators in startup_script | Consider refactoring to reduce re-evaluation |
+
+### Success Criteria
+
+- [ ] All 11 shared modules added incrementally without introducing flickering
+- [ ] Flickering root cause identified (specific parameter pattern or module)
+- [ ] Unused parameters fixed or removed
+- [ ] Ternary operators refactored if identified as flickering cause
+- [ ] Test-template reaches feature parity with docker-template
+- [ ] Documentation updated with flickering prevention best practices
+
+### Original Task Breakdown (v0.1.1 workstream - deferred)
+
 | ID | Task | Description | Acceptance Criteria |
 |----|------|-------------|---------------------|
 | 1 | Create branch | Create `v0.1.1` branch for workstream | Branch exists locally & remotely |
