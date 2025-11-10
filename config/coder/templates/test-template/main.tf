@@ -100,3 +100,18 @@ module "init_shell" {
 locals {
   actual_base_domain = var.base_domain
 }
+
+# =============================================================================
+# Phase 2 Modules: Coder Data Sources Only (No UI Parameters)
+# =============================================================================
+
+# Module: code-server
+# Issue #24 - VS Code web IDE (0 params, depends on agent)
+# Uses Coder data sources but no UI parameters - tests data source integration
+module "code_server" {
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/code-server?ref=v0.1.0"
+  
+  agent_id              = module.agent.agent_id
+  workspace_start_count = data.coder_workspace.me.start_count
+  folder                = "/home/coder/workspace"
+}
