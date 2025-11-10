@@ -18,7 +18,7 @@ module "agent" {
   coder_access_url = data.coder_workspace.me.access_url
   
   # No additional environment variables
-  env_vars = []
+  env_vars = {}
   
   # No additional metadata blocks
   metadata_blocks = []
