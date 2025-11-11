@@ -18,15 +18,57 @@ data "coder_parameter" "auto_generate_html" {
   order        = 20
 }
 
-data "coder_parameter" "exposed_ports" {
+data "coder_parameter" "num_ports" {
   count        = !data.coder_parameter.auto_generate_html.value ? 1 : 0
-  name         = "exposed_ports"
-  display_name = "Exposed Ports"
-  description  = "Comma-separated ports to expose (e.g., 8080,3000,5000)"
-  type         = "string"
-  default      = "8080"
+  name         = "num_ports"
+  display_name = "Number of Ports"
+  description  = "Number of ports to expose (each gets auto-assigned external port)"
+  type         = "number"
+  form_type    = "slider"
+  default      = 1
   mutable      = true
   order        = 21
+  
+  option {
+    name  = "1 Port"
+    value = 1
+  }
+  option {
+    name  = "2 Ports"
+    value = 2
+  }
+  option {
+    name  = "3 Ports"
+    value = 3
+  }
+  option {
+    name  = "4 Ports"
+    value = 4
+  }
+  option {
+    name  = "5 Ports"
+    value = 5
+  }
+  option {
+    name  = "6 Ports"
+    value = 6
+  }
+  option {
+    name  = "7 Ports"
+    value = 7
+  }
+  option {
+    name  = "8 Ports"
+    value = 8
+  }
+  option {
+    name  = "9 Ports"
+    value = 9
+  }
+  option {
+    name  = "10 Ports"
+    value = 10
+  }
 }
 
 data "coder_parameter" "startup_command" {
@@ -45,11 +87,14 @@ data "coder_parameter" "startup_command" {
 # =============================================================================
 
 locals {
-  # Parse exposed ports from comma-separated string to list
-  # When auto_generate_html is true, use default port 8080
-  # When false, use the conditional parameter value
-  exposed_ports_input = data.coder_parameter.auto_generate_html.value ? "8080" : try(data.coder_parameter.exposed_ports[0].value, "8080")
-  exposed_ports_list  = [for p in split(",", local.exposed_ports_input) : trimspace(p)]
+  # When auto_generate_html is true, use single port 8080
+  # When false, generate ports based on num_ports parameter (starting at 8080)
+  num_ports_value = data.coder_parameter.auto_generate_html.value ? 1 : try(data.coder_parameter.num_ports[0].value, 1)
+  
+  # Generate list of internal ports: [8080, 8081, 8082, ...]
+  exposed_ports_list = [
+    for i in range(local.num_ports_value) : tostring(8080 + i)
+  ]
   
   # Determine if we should set up the server
   auto_generate_html = data.coder_parameter.auto_generate_html.value
