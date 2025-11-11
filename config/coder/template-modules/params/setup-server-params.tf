@@ -24,7 +24,7 @@ data "coder_parameter" "num_ports" {
   }
 }
 
-# Auto Start Server toggle - when OFF, allows custom startup command
+# Auto Start Server toggle - when ON, disables custom startup command
 data "coder_parameter" "auto_generate_html" {
   name         = "auto_generate_html"
   display_name = "Auto Start Server"
@@ -36,7 +36,7 @@ data "coder_parameter" "auto_generate_html" {
   order        = 21
 }
 
-# Startup command - disabled when Auto Start Server is OFF (like SSH password pattern)
+# Startup command - disabled when Auto Start Server is ON (it's one or the other)
 data "coder_parameter" "startup_command" {
   name         = "startup_command"
   display_name = "Startup Command"
@@ -47,7 +47,7 @@ data "coder_parameter" "startup_command" {
   order        = 22
   
   styling = jsonencode({
-    disabled = !data.coder_parameter.auto_generate_html.value
+    disabled = data.coder_parameter.auto_generate_html.value
   })
 }
 
