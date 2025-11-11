@@ -88,29 +88,11 @@ module "setup_server" {
   server_log_file        = "/tmp/http-server.log"
   server_pid_file        = "/tmp/http-server.pid"
   
-  # HTML content for static site
-  html_status_message = "Development server is running!"
-  html_server_info    = "Python HTTP server on port $PORT"
-  html_instructions   = <<-INSTRUCTIONS
-    # Edit the current page
-    vi index.html
-    
-    # Or create your own site
-    mkdir mysite
-    cd mysite
-    echo "<h1>Hello World</h1>" > index.html
-    
-    # Restart the server to serve from a different directory
-    pkill -f "python3 -m http.server"
-    python3 -m http.server $PORT
-  INSTRUCTIONS
-  
   # Python is pre-installed in base image, no setup needed
   pre_server_setup = ""
   
   # Workspace metadata
   workspace_name  = data.coder_workspace.me.name
-  workspace_owner = data.coder_workspace_owner.me.name
   host_ip         = var.host_ip
   
   # Parameters from above
