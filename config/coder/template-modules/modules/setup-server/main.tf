@@ -130,9 +130,8 @@ output "setup_server_script" {
     
     AUTO_HTML="${var.auto_generate_html}"
 
-    # Auto-generate HTML if enabled
+    # Auto-generate HTML if enabled (always regenerate to reflect current settings)
     if [ "$AUTO_HTML" = "true" ]; then
-      if [ ! -f index.html ]; then
   # Use an unquoted heredoc so shell variables like $PORT expand
   cat <<-HTML > index.html 2>/dev/null
 <!DOCTYPE html>
@@ -194,6 +193,25 @@ output "setup_server_script" {
             overflow-x: auto;
             text-align: left;
         }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            background: #f5f5f5;
+            font-weight: 600;
+            color: #666;
+        }
+        tr:hover {
+            background: #fafafa;
+        }
         .footer {
             margin-top: 40px;
             padding-top: 20px;
@@ -215,6 +233,27 @@ output "setup_server_script" {
             <div style="margin-bottom: 10px;">Access your server at:</div>
             <div class="url">${local.access_url}</div>
         </div>
+        ${local.num_ports > 1 ? <<-PORTS
+
+        <h3>Port Mapping</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Internal Port</th>
+                    <th>External Port (Network Access)</th>
+                </tr>
+            </thead>
+            <tbody>
+%{for mapping in local.port_mappings~}
+                <tr>
+                    <td>${mapping.internal}</td>
+                    <td>${mapping.external}</td>
+                </tr>
+%{endfor~}
+            </tbody>
+        </table>
+PORTS
+ : ""}
         
         <h3>Manage Server</h3>
         <pre><code># Stop the server
@@ -230,10 +269,7 @@ python3 -m http.server ${local.primary_internal_port}</code></pre>
 </body>
 </html>
 HTML
-  echo "[SETUP-SERVER] ✅ Created index.html"
-      else
-        echo "[SETUP-SERVER] ✅ Using existing index.html"
-      fi
+  echo "[SETUP-SERVER] ✅ Generated index.html with current port mappings"
     fi
     
     # Run pre-server setup if provided
