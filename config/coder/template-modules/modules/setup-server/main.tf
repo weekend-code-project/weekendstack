@@ -286,11 +286,13 @@ HTML
     NUM_PORTS=${local.num_ports}
     if [ "$NUM_PORTS" = "1" ]; then
       echo "[SETUP-SERVER] 🌐 Access: ${local.access_url}"
-      echo "[SETUP-SERVER] 💡 Use \$PORT for internal port (bind to this)"
+      echo "[SETUP-SERVER] 💡 Port: \$PORT=${element(var.exposed_ports_list, 0)} (internal) → ${local.primary_external_port} (network)"
     else
       echo "[SETUP-SERVER] 🌐 Access: ${local.access_url} (${local.num_ports} ports)"
-      echo "[SETUP-SERVER] 📋 Port mapping: Internal ${element(var.exposed_ports_list, 0)}-${element(var.exposed_ports_list, local.num_ports - 1)} → External ${local.port_display}"
-      echo "[SETUP-SERVER] 💡 Use \$PORT, \$PORT2, \$PORT3, ... (see HTML table for mappings)"
+      echo "[SETUP-SERVER] 📋 Port Mappings:"
+%{for idx, mapping in local.port_mappings~}
+      echo "  • \$PORT${idx == 0 ? "" : idx + 1}=${mapping.internal} (internal) → ${mapping.external} (network)"
+%{endfor~}
     fi
     
     # Check if custom startup command is provided
