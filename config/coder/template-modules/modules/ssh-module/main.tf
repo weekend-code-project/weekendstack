@@ -185,3 +185,11 @@ output "metadata_blocks" {
     }
   ]
 }
+
+output "docker_ports" {
+  description = "Docker port mappings for SSH (internal 2222 -> external resolved_ssh_port)"
+  value = {
+    internal = 2222
+    external = tonumber(local.resolved_ssh_port)
+  }
+}

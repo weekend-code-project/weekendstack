@@ -55,6 +55,16 @@ resource "docker_container" "workspace" {
     volume_name    = docker_volume.home_volume.name
     read_only      = false
   }
+  
+  # SSH port mapping (conditional - only when SSH is enabled)
+  dynamic "ports" {
+    for_each = try(module.ssh[0].docker_ports, null) != null ? [module.ssh[0].docker_ports] : []
+    content {
+      internal = ports.value.internal
+      external = ports.value.external
+      protocol = "tcp"
+    }
+  }
 }
 
 # Home volume
