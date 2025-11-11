@@ -18,11 +18,11 @@ data "coder_parameter" "auto_generate_html" {
   order        = 20
 }
 
-# Always visible - ignored when Static Site is enabled
+# Disabled when Static Site is enabled
 data "coder_parameter" "num_ports" {
   name         = "num_ports"
   display_name = "Number of Ports"
-  description  = "⚠️ Ignored when 'Serve Static Site' is enabled. Number of ports to expose when disabled."
+  description  = "Number of ports to expose (only used when Static Site is disabled)"
   type         = "number"
   form_type    = "slider"
   default      = 1
@@ -33,17 +33,25 @@ data "coder_parameter" "num_ports" {
     min = 1
     max = 10
   }
+  
+  styling = jsonencode({
+    disabled = data.coder_parameter.auto_generate_html.value
+  })
 }
 
-# Always visible - ignored when Static Site is enabled
+# Disabled when Static Site is enabled
 data "coder_parameter" "startup_command" {
   name         = "startup_command"
   display_name = "Startup Command"
-  description  = "⚠️ Ignored when 'Serve Static Site' is enabled. Custom command to run at startup (leave empty for default)."
+  description  = "Custom command to run at startup (leave empty for default server)"
   type         = "string"
   default      = ""
   mutable      = true
   order        = 22
+  
+  styling = jsonencode({
+    disabled = data.coder_parameter.auto_generate_html.value
+  })
 }
 
 # =============================================================================
