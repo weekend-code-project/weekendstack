@@ -8,42 +8,37 @@
 # Parameters
 # =============================================================================
 
-data "coder_parameter" "auto_generate_html" {
-  name         = "auto_generate_html"
-  display_name = "Serve Static Site"
-  description  = "Automatically create and serve a welcome page"
-  type         = "bool"
-  default      = true
-  mutable      = true
-  order        = 20
-}
-
-# Disabled when Static Site is enabled
 data "coder_parameter" "num_ports" {
   name         = "num_ports"
   display_name = "Number of Ports"
-  description  = "Number of ports to expose (only used when Static Site is disabled)"
+  description  = "Number of ports to expose (each gets auto-assigned external port)"
   type         = "number"
   form_type    = "slider"
   default      = 1
   mutable      = true
-  order        = 21
+  order        = 20
   
   validation {
     min = 1
     max = 10
   }
-  
-  styling = jsonencode({
-    disabled = data.coder_parameter.auto_generate_html.value
-  })
 }
 
-# Disabled when Static Site is enabled
+data "coder_parameter" "auto_generate_html" {
+  name         = "auto_generate_html"
+  display_name = "Auto Start Server"
+  description  = "Automatically start a default server (serves static HTML page)"
+  type         = "bool"
+  default      = true
+  mutable      = true
+  order        = 21
+}
+
+# Disabled when auto server is enabled
 data "coder_parameter" "startup_command" {
   name         = "startup_command"
   display_name = "Startup Command"
-  description  = "Custom command to run at startup (leave empty for default server)"
+  description  = "Custom command to run at startup (leave empty for no command)"
   type         = "string"
   default      = ""
   mutable      = true
@@ -59,9 +54,8 @@ data "coder_parameter" "startup_command" {
 # =============================================================================
 
 locals {
-  # When auto_generate_html is true, use single port 8080
-  # When false, generate ports based on num_ports parameter (starting at 8080)
-  num_ports_value = data.coder_parameter.auto_generate_html.value ? 1 : data.coder_parameter.num_ports.value
+  # Always use the user-specified number of ports
+  num_ports_value = data.coder_parameter.num_ports.value
   
   # Generate list of internal ports: [8080, 8081, 8082, ...]
   exposed_ports_list = [
