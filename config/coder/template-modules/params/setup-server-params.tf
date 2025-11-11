@@ -19,6 +19,7 @@ data "coder_parameter" "auto_generate_html" {
 }
 
 data "coder_parameter" "exposed_ports" {
+  count        = !data.coder_parameter.auto_generate_html.value ? 1 : 0
   name         = "exposed_ports"
   display_name = "Exposed Ports"
   description  = "Comma-separated ports to expose (e.g., 8080,3000,5000)"
@@ -29,6 +30,7 @@ data "coder_parameter" "exposed_ports" {
 }
 
 data "coder_parameter" "startup_command" {
+  count        = !data.coder_parameter.auto_generate_html.value ? 1 : 0
   name         = "startup_command"
   display_name = "Startup Command"
   description  = "Optional command to run at startup (leave empty for default server)"
@@ -44,12 +46,14 @@ data "coder_parameter" "startup_command" {
 
 locals {
   # Parse exposed ports from comma-separated string to list
-  exposed_ports_input = try(data.coder_parameter.exposed_ports.value, "8080")
+  # When auto_generate_html is true, use default port 8080
+  # When false, use the conditional parameter value
+  exposed_ports_input = data.coder_parameter.auto_generate_html.value ? "8080" : try(data.coder_parameter.exposed_ports[0].value, "8080")
   exposed_ports_list  = [for p in split(",", local.exposed_ports_input) : trimspace(p)]
   
   # Determine if we should set up the server
   auto_generate_html = data.coder_parameter.auto_generate_html.value
-  startup_command    = data.coder_parameter.startup_command.value
+  startup_command    = try(data.coder_parameter.startup_command[0].value, "")
   has_server_config  = local.auto_generate_html || local.startup_command != ""
 }
 
