@@ -189,12 +189,6 @@ output "metadata_blocks" {
       script       = "echo ${local.resolved_ssh_port}"
       interval     = 60
       timeout      = 1
-    },
-    {
-      display_name = "SSH Status"
-      script       = "pgrep sshd >/dev/null && echo 'Running (port ${local.resolved_ssh_port})' || echo 'Not running'"
-      interval     = 30
-      timeout      = 2
     }
   ]
 }
