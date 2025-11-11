@@ -54,9 +54,9 @@ data "coder_parameter" "ssh_password" {
   display_name = "SSH Password"
   description  = "Optional custom password. Leave empty to use auto-generated workspace password."
   type         = "string"
+  form_type    = "password"
   default      = ""
   mutable      = true
-  ephemeral    = true
   order        = 51
 }
 
