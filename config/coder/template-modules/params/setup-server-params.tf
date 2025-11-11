@@ -30,7 +30,7 @@ data "coder_parameter" "auto_generate_html" {
   description  = "Automatically start a default server (serves static HTML page)"
   type         = "bool"
   form_type    = "switch"
-  default      = true
+  default      = "true"
   mutable      = true
   order        = 21
 }
