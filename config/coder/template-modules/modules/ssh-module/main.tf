@@ -119,10 +119,18 @@ PROF
       # Start SSH daemon
       sudo /usr/sbin/sshd -f /etc/ssh/sshd_config 2>/dev/null
       
-      # Verify it started
+      # Verify it started and display connection info
       sleep 1
       if pgrep sshd >/dev/null; then
-        echo "[SSH] ✅ Enabled: ssh -p ${local.resolved_ssh_port} coder@${var.host_ip}"
+        echo "[SSH] ✅ SSH Server Started"
+        echo "[SSH] 📋 Connection Information:"
+        echo "┌──────────────┬─────────────────────────────────────────────┐"
+        echo "│ Command      │ ssh -p ${local.resolved_ssh_port} coder@${var.host_ip}              │"
+        echo "├──────────────┼─────────────────────────────────────────────┤"
+        printf "│ %-12s │ %-43s │\n" "Password" "${var.workspace_password}"
+        echo "├──────────────┼─────────────────────────────────────────────┤"
+        printf "│ %-12s │ %-43s │\n" "Port" "${local.resolved_ssh_port}"
+        echo "└──────────────┴─────────────────────────────────────────────┘"
       else
         echo "[SSH] ❌ Failed to start SSH daemon"
       fi
