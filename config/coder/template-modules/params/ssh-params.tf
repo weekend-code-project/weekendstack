@@ -56,7 +56,6 @@ data "coder_parameter" "ssh_password" {
   type         = "string"
   default      = ""
   mutable      = true
-  mask_input   = true
   order        = 51
 }
 
