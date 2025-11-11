@@ -86,9 +86,6 @@ output "setup_server_script" {
     export PORTS="${join(",", var.exposed_ports_list)}"
     export PORT="${element(var.exposed_ports_list, 0)}"
     
-    echo "[SETUP-SERVER] Configuring workspace server..."
-    echo "[SETUP-SERVER] Port: $PORT"
-    
     # Navigate to workspace directory (should be created by init-shell module)
     cd /home/coder/workspace
     
@@ -97,9 +94,8 @@ output "setup_server_script" {
     # Auto-generate HTML if enabled
     if [ "$AUTO_HTML" = "true" ]; then
       if [ ! -f index.html ]; then
-  echo "[SETUP-SERVER] Creating default index.html..."
   # Use an unquoted heredoc so shell variables like $PORT expand
-  cat <<-HTML > index.html
+  cat <<-HTML > index.html 2>/dev/null
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -192,46 +188,37 @@ output "setup_server_script" {
 </body>
 </html>
 HTML
-  echo "[SETUP-SERVER] ✓ index.html created"
+  echo "[SETUP-SERVER] ✅ Created index.html"
       else
-        echo "[SETUP-SERVER] ✓ index.html already exists (leaving as-is)"
+        echo "[SETUP-SERVER] ✅ Using existing index.html"
       fi
     fi
     
     # Run pre-server setup if provided
-    ${var.pre_server_setup != "" ? "echo \"[SETUP-SERVER] Running pre-server setup...\"\n${var.pre_server_setup}" : ""}
+    ${var.pre_server_setup != "" ? "${var.pre_server_setup} >/dev/null 2>&1" : ""}
     
     # Check if custom startup command is provided
     STARTUP_CMD="${var.startup_command}"
     if [ -n "$STARTUP_CMD" ] && [ "$STARTUP_CMD" != "" ]; then
-      echo "[SETUP-SERVER] Running custom startup command..."
-      echo "[SETUP-SERVER] Command: $STARTUP_CMD"
       nohup bash -c "$STARTUP_CMD" > /tmp/custom-server.log 2>&1 &
       echo $! > /tmp/custom-server.pid
       sleep 1
-      if ps -p $(cat /tmp/custom-server.pid) > /dev/null 2>&1; then
-        echo "[SETUP-SERVER] ✓ Custom command started (PID: $(cat /tmp/custom-server.pid))"
+      if ps -p $(cat /tmp/custom-server.pid) >/dev/null 2>&1; then
+        echo "[SETUP-SERVER] ✅ Custom command: $STARTUP_CMD (PID: $(cat /tmp/custom-server.pid))"
       else
-        echo "[SETUP-SERVER] ⚠ Custom command may have failed to start"
-        echo "[SETUP-SERVER] Check logs: tail /tmp/custom-server.log"
+        echo "[SETUP-SERVER] ❌ Custom command failed - check: tail /tmp/custom-server.log"
       fi
     elif [ "$AUTO_HTML" = "true" ]; then
       # Start default server in background
-      echo "[SETUP-SERVER] Starting ${var.server_name}..."
-      echo "[SETUP-SERVER] Server will be available at http://localhost:$PORT"
       nohup bash -c "${var.default_server_command}" > ${var.server_log_file} 2>&1 &
       echo $! > ${var.server_pid_file}
       sleep 2
-      if ps -p $(cat ${var.server_pid_file}) > /dev/null 2>&1; then
-        echo "[SETUP-SERVER] ✓ ${var.server_name} started (PID: $(cat ${var.server_pid_file}))"
+      if ps -p $(cat ${var.server_pid_file}) >/dev/null 2>&1; then
+        echo "[SETUP-SERVER] ✅ ${var.server_name} running on port $PORT (PID: $(cat ${var.server_pid_file}))"
       else
-        echo "[SETUP-SERVER] ⚠ ${var.server_name} may have failed to start"
-        echo "[SETUP-SERVER] Check logs: tail ${var.server_log_file}"
+        echo "[SETUP-SERVER] ❌ ${var.server_name} failed to start - check: tail ${var.server_log_file}"
       fi
-    else
-      echo "[SETUP-SERVER] Auto HTML disabled and no startup command provided; not starting a server."
     fi
 
-    echo ""
   EOT
 }
