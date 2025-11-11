@@ -21,11 +21,26 @@ output "clone_script" {
     WSDIR="/home/coder/workspace"
     
     if [ -z "$REPO" ]; then
-      echo "[GIT] No repo configured; skipping clone."
+      echo "[GIT] No repository URL provided; skipping clone."
     elif [ -d "$WSDIR/.git" ]; then
-      echo "[GIT] ✓ Existing repo detected at $WSDIR; skipping clone."
+      echo "[GIT] ✓ Existing repository detected at $WSDIR; skipping clone."
     else
-      echo "[GIT] Cloning $REPO into $WSDIR..."
+      echo "[GIT] Repository: $REPO"
+      
+      # Detect repository hosting service for CLI info
+      if echo "$REPO" | grep -qiE "github\.com"; then
+        echo "[GIT] ℹ️  Detected GitHub repository - GitHub CLI (gh) will be installed"
+      elif echo "$REPO" | grep -qiE "gitea|git\.weekendcodeproject\.dev"; then
+        echo "[GIT] ℹ️  Detected Gitea repository - Gitea CLI (tea) will be installed"
+      elif echo "$REPO" | grep -qiE "gitlab\.com"; then
+        echo "[GIT] ℹ️  Detected GitLab repository - no CLI auto-installation (not supported yet)"
+      elif echo "$REPO" | grep -qiE "bitbucket\.org"; then
+        echo "[GIT] ℹ️  Detected Bitbucket repository - no CLI auto-installation (not supported yet)"
+      else
+        echo "[GIT] ℹ️  Unknown repository hosting service - no CLI will be installed"
+      fi
+      
+      echo "[GIT] Cloning into $WSDIR..."
       
       # Configure Git to use SSH and skip host key checking for first-time connections
       export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/home/coder/.ssh/known_hosts"

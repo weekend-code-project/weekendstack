@@ -2,14 +2,12 @@
 # Git Module
 # =============================================================================
 # DESCRIPTION:
-#   Provides Git repository cloning and auto-detected CLI installation.
+#   Provides Git repository cloning with auto-detected CLI installation.
 #   Auto-detects whether to install GitHub CLI or Gitea CLI based on repo domain.
-#   Includes git identity configuration for all workspaces.
+#   If repository is provided, automatically clones and installs appropriate CLI.
 #
 # PARAMETERS:
-#   - clone_repo: Boolean toggle to enable repository cloning
-#   - github_repo: Repository URL (conditional on clone_repo)
-#   - install_git_cli: Auto-detected CLI installation (conditional on clone_repo)
+#   - github_repo: Repository URL (empty = no clone, SSH recommended)
 #
 # DEPENDENCIES:
 #   - template-modules/modules/git-identity: Git user configuration
@@ -18,10 +16,10 @@
 #   - template-modules/modules/gitea-cli: Gitea CLI installation
 #
 # OUTPUTS (via modules):
-#   - git_identity.setup_script: Git config script
-#   - git_integration.clone_script: Repository clone script
-#   - github_cli.install_script: GitHub CLI installation script (auto-detected)
-#   - gitea_cli.install_script: Gitea CLI installation script (auto-detected)
+#   - git_identity.setup_script: Git config script (always runs)
+#   - git_integration.clone_script: Repository clone script (if URL provided)
+#   - github_cli.install_script: GitHub CLI installation (auto-detected)
+#   - gitea_cli.install_script: Gitea CLI installation (auto-detected)
 #
 # USAGE IN AGENT:
 #   startup_script = join("\n", [
@@ -33,62 +31,41 @@
 #
 # NOTES:
 #   - Git identity is always configured (unconditional)
-#   - Repository cloning is conditional (count pattern)
-#   - CLI auto-detection based on repo domain (github.com → gh, gitea → tea)
+#   - If repo URL is empty, no clone or CLI installation occurs
+#   - CLI auto-detection: github.com → gh, gitea → tea, other → none
+#   - SSH URLs are recommended for private repositories
 # =============================================================================
 
-# Parameter: Enable Git Clone
-data "coder_parameter" "clone_repo" {
-  name         = "clone_repo"
-  display_name = "Clone Repository"
-  description  = "Clone a Git repository into the workspace on first start."
-  type         = "bool"
-  form_type    = "switch"
-  default      = "false"
-  mutable      = false
-  order        = 60
-}
-
-# Parameter: Repository URL (conditional on clone_repo)
+# Parameter: Repository URL (simple single field)
 data "coder_parameter" "github_repo" {
-  count        = data.coder_parameter.clone_repo.value ? 1 : 0
   name         = "github_repo"
   display_name = "Repository URL"
-  description  = "Git repository URL to clone (SSH or HTTPS)."
+  description  = "Git repository URL to clone (leave empty to skip). SSH recommended: git@github.com:user/repo.git"
   type         = "string"
   default      = ""
   mutable      = false
-  order        = 61
+  order        = 60
   
   validation {
-    regex = "^(https?://|git@).+$"
-    error = "Repository URL must start with https://, http://, or git@"
+    regex = "^(https?://|git@|ssh://|).*$"
+    error = "Repository URL must be empty or a valid git URL (https://, git@, or ssh://)"
   }
 }
 
-# Parameter: Install Git CLI (conditional on clone_repo)
-data "coder_parameter" "install_git_cli" {
-  count        = data.coder_parameter.clone_repo.value ? 1 : 0
-  name         = "install_git_cli"
-  display_name = "Install Git CLI"
-  description  = "Auto-install GitHub CLI (gh) or Gitea CLI (tea) based on repository domain."
-  type         = "bool"
-  form_type    = "switch"
-  default      = "true"
-  mutable      = false
-  order        = 62
-}
-
-# Auto-detect CLI based on repo domain
+# Auto-detect CLI and clone based on repo URL
 locals {
-  repo_url = try(data.coder_parameter.github_repo[0].value, "")
+  repo_url    = data.coder_parameter.github_repo.value
+  has_repo    = local.repo_url != ""
   
-  repo_domain = try(
+  # Extract domain from URL
+  repo_domain = local.has_repo ? try(
     regex("https?://([^/]+)/", local.repo_url)[0],
     regex("git@([^:]+):", local.repo_url)[0],
+    regex("ssh://git@([^/]+)/", local.repo_url)[0],
     ""
-  )
+  ) : ""
   
+  # Detect hosting service
   is_github = contains([
     "github.com",
     "github.enterprise.com"
@@ -100,10 +77,9 @@ locals {
     "git.weekendcodeproject.dev"
   ], local.repo_domain)
   
-  # Default to GitHub CLI if domain not recognized
-  install_cli   = try(data.coder_parameter.install_git_cli[0].value, false)
-  use_github_cli = local.is_github || (!local.is_gitea && local.install_cli)
-  use_gitea_cli  = local.is_gitea && local.install_cli
+  # Determine which CLI to install (if any)
+  use_github_cli = local.has_repo && local.is_github
+  use_gitea_cli  = local.has_repo && local.is_gitea
 }
 
 # Module: Git Identity (always loaded - sets up git config)
@@ -114,22 +90,22 @@ module "git_identity" {
   git_author_email = data.coder_workspace_owner.me.email
 }
 
-# Module: Git Integration (conditional - only loaded when clone_repo is true)
+# Module: Git Integration (conditional - only loaded when repo URL is provided)
 module "git_integration" {
-  count  = data.coder_parameter.clone_repo.value ? 1 : 0
+  count  = local.has_repo ? 1 : 0
   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/git-integration?ref=PLACEHOLDER"
   
-  github_repo_url = try(data.coder_parameter.github_repo[0].value, "")
+  github_repo_url = local.repo_url
 }
 
 # Module: GitHub CLI (conditional - auto-detected for GitHub repos)
 module "github_cli" {
-  count  = (data.coder_parameter.clone_repo.value && local.use_github_cli) ? 1 : 0
+  count  = local.use_github_cli ? 1 : 0
   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/github-cli?ref=PLACEHOLDER"
 }
 
 # Module: Gitea CLI (conditional - auto-detected for Gitea repos)
 module "gitea_cli" {
-  count  = (data.coder_parameter.clone_repo.value && local.use_gitea_cli) ? 1 : 0
+  count  = local.use_gitea_cli ? 1 : 0
   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/gitea-cli?ref=PLACEHOLDER"
 }
