@@ -62,7 +62,7 @@ locals {
   
   # Determine if we should set up the server
   auto_generate_html = data.coder_parameter.auto_generate_html.value
-  startup_command    = try(data.coder_parameter.startup_command[0].value, "")
+  startup_command    = data.coder_parameter.startup_command.value
   has_server_config  = local.auto_generate_html || local.startup_command != ""
 }
 
