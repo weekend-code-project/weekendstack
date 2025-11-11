@@ -30,6 +30,26 @@ output "clone_script" {
       # Configure Git to use SSH and skip host key checking for first-time connections
       export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/home/coder/.ssh/known_hosts"
       
+      # Verify SSH access if using SSH URL
+      if echo "$REPO" | grep -q "^git@"; then
+        # Extract domain from git@domain:user/repo.git
+        SSH_DOMAIN=$(echo "$REPO" | sed -n 's/git@\([^:]*\):.*/\1/p')
+        
+        echo "[GIT] Verifying SSH access to $SSH_DOMAIN..."
+        
+        # Test SSH connection (GitHub, GitLab, Bitbucket all support this)
+        if ssh -o StrictHostKeyChecking=accept-new -o BatchMode=yes -o ConnectTimeout=5 -T "git@$SSH_DOMAIN" 2>&1 | grep -qiE "successfully authenticated|welcome|hi"; then
+          echo "[GIT] ✅ SSH authentication successful"
+        else
+          echo "[GIT] ❌ SSH authentication failed - check your SSH keys"
+          echo "[GIT] SSH keys location: ~/.ssh/"
+          ls -la ~/.ssh/ 2>/dev/null || echo "[GIT] No SSH keys found!"
+          echo "[GIT] Host mount: /mnt/host-ssh/"
+          ls -la /mnt/host-ssh/ 2>/dev/null || echo "[GIT] No host SSH keys found!"
+          exit 0
+        fi
+      fi
+      
       # Create workspace directory if it doesn't exist
       mkdir -p "$WSDIR"
       

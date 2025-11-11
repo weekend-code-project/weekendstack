@@ -24,19 +24,31 @@ output "setup_script" {
     
     echo "[GIT-IDENTITY] Setting up SSH keys from /mnt/host-ssh..."
     
+    # Debug: Show what's available at mount point
+    if [ -d "/mnt/host-ssh" ]; then
+      echo "[GIT-IDENTITY] Mount point /mnt/host-ssh exists"
+      ls -la /mnt/host-ssh/ 2>&1 | head -20
+    else
+      echo "[GIT-IDENTITY] ⚠️  Mount point /mnt/host-ssh does NOT exist"
+    fi
+    
     # Create .ssh directory with proper permissions
     mkdir -p ~/.ssh
     chmod 700 ~/.ssh
     
     # Copy SSH keys from mounted directory (if any exist)
     if [ -n "$(ls -A /mnt/host-ssh 2>/dev/null)" ]; then
+      echo "[GIT-IDENTITY] Copying SSH keys..."
       cp -r /mnt/host-ssh/* ~/.ssh/ 2>/dev/null || true
       chmod 600 ~/.ssh/id_* 2>/dev/null || true
       chmod 644 ~/.ssh/id_*.pub 2>/dev/null || true
       chmod 600 ~/.ssh/config 2>/dev/null || true
       echo "[GIT-IDENTITY] ✅ SSH keys copied from host"
+      echo "[GIT-IDENTITY] Keys in ~/.ssh:"
+      ls -la ~/.ssh/ 2>&1 | grep -E "^-" | head -10
     else
-      echo "[GIT-IDENTITY] ℹ️  No SSH keys found at /mnt/host-ssh - generate with: ssh-keygen -t ed25519"
+      echo "[GIT-IDENTITY] ⚠️  No SSH keys found at /mnt/host-ssh"
+      echo "[GIT-IDENTITY] Generate SSH keys with: ssh-keygen -t ed25519 -C 'your_email@example.com'"
     fi
     
     # Create known_hosts and add common Git hosting services
