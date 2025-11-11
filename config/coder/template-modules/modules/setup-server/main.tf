@@ -4,6 +4,23 @@
 # This module handles server setup for any template type. Templates provide
 # their specific server command, HTML content, and optional pre-setup logic.
 
+terraform {
+  required_providers {
+    coder = {
+      source  = "coder/coder"
+      version = ">=2.4.0"
+    }
+    random = {
+      source = "hashicorp/random"
+    }
+  }
+}
+
+variable "workspace_id" {
+  description = "Workspace ID for deterministic port generation"
+  type        = string
+}
+
 variable "exposed_ports_list" {
   description = "List of ports to expose"
   type        = list(string)
@@ -65,6 +82,11 @@ variable "workspace_owner" {
   type        = string
 }
 
+variable "host_ip" {
+  description = "Host IP address for external access"
+  type        = string
+}
+
 variable "auto_generate_html" {
   description = "Whether to auto-generate index.html"
   type        = string
@@ -73,6 +95,39 @@ variable "auto_generate_html" {
 variable "startup_command" {
   description = "Custom startup command (if provided)"
   type        = string
+}
+
+# =============================================================================
+# Port Generation
+# =============================================================================
+# Generate deterministic external ports based on workspace ID
+# This ensures each workspace gets consistent ports across restarts
+
+# Generate external ports for each exposed port (range: 18000-18999)
+resource "random_integer" "external_ports" {
+  count = length(var.exposed_ports_list)
+  
+  min = 18000 + (count.index * 100)
+  max = 18000 + (count.index * 100) + 99
+  
+  keepers = {
+    workspace_id = var.workspace_id
+    port_index   = count.index
+  }
+}
+
+locals {
+  # Map internal ports to external ports
+  port_mappings = [
+    for idx, internal_port in var.exposed_ports_list : {
+      internal = tonumber(internal_port)
+      external = random_integer.external_ports[idx].result
+    }
+  ]
+  
+  # Primary port (first in list)
+  primary_internal_port = element(var.exposed_ports_list, 0)
+  primary_external_port = random_integer.external_ports[0].result
 }
 
 # Output the setup script
@@ -215,10 +270,37 @@ HTML
       sleep 2
       if ps -p $(cat ${var.server_pid_file}) >/dev/null 2>&1; then
         echo "[SETUP-SERVER] ✅ ${var.server_name} running on port $PORT (PID: $(cat ${var.server_pid_file}))"
+        echo "[SETUP-SERVER] 🌐 External access: http://${var.host_ip}:${local.primary_external_port}"
       else
         echo "[SETUP-SERVER] ❌ ${var.server_name} failed to start - check: tail ${var.server_log_file}"
       fi
     fi
 
   EOT
+}
+
+# =============================================================================
+# Outputs
+# =============================================================================
+
+output "docker_ports" {
+  description = "Docker port mappings for exposed server ports"
+  value       = local.port_mappings
+}
+
+output "primary_external_port" {
+  description = "Primary external port for accessing the server"
+  value       = local.primary_external_port
+}
+
+output "metadata_blocks" {
+  description = "Metadata blocks contributed by this module"
+  value = [
+    {
+      display_name = "Server Port"
+      script       = "echo ${local.primary_external_port}"
+      interval     = 60
+      timeout      = 1
+    }
+  ]
 }

@@ -73,6 +73,16 @@ resource "docker_container" "workspace" {
       protocol = "tcp"
     }
   }
+  
+  # Server port mappings (conditional - only when server is configured)
+  dynamic "ports" {
+    for_each = try(module.setup_server[0].docker_ports, [])
+    content {
+      internal = ports.value.internal
+      external = ports.value.external
+      protocol = "tcp"
+    }
+  }
 }
 
 # Home volume

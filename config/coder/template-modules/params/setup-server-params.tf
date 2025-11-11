@@ -67,6 +67,9 @@ module "setup_server" {
   
   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/setup-server?ref=PLACEHOLDER"
   
+  # Workspace identity for deterministic port generation
+  workspace_id = data.coder_workspace.me.id
+  
   # Port configuration
   exposed_ports_list = local.exposed_ports_list
   
@@ -99,6 +102,7 @@ module "setup_server" {
   # Workspace metadata
   workspace_name  = data.coder_workspace.me.name
   workspace_owner = data.coder_workspace_owner.me.name
+  host_ip         = var.host_ip
   
   # Parameters from above
   auto_generate_html = tostring(local.auto_generate_html)
