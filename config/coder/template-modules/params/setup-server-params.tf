@@ -18,11 +18,11 @@ data "coder_parameter" "auto_generate_html" {
   order        = 20
 }
 
-# Always visible - grayed out when not in use
+# Always visible - ignored when Static Site is enabled
 data "coder_parameter" "num_ports" {
   name         = "num_ports"
-  display_name = "Number of Ports ${data.coder_parameter.auto_generate_html.value ? "(disabled)" : ""}"
-  description  = "Number of ports to expose (only used when Static Site is disabled)"
+  display_name = "Number of Ports"
+  description  = "⚠️ Ignored when 'Serve Static Site' is enabled. Number of ports to expose when disabled."
   type         = "number"
   form_type    = "slider"
   default      = 1
@@ -35,11 +35,11 @@ data "coder_parameter" "num_ports" {
   }
 }
 
-# Always visible - grayed out when not in use
+# Always visible - ignored when Static Site is enabled
 data "coder_parameter" "startup_command" {
   name         = "startup_command"
-  display_name = "Startup Command ${data.coder_parameter.auto_generate_html.value ? "(disabled)" : ""}"
-  description  = "Custom command to run at startup (only used when Static Site is disabled, leave empty for default)"
+  display_name = "Startup Command"
+  description  = "⚠️ Ignored when 'Serve Static Site' is enabled. Custom command to run at startup (leave empty for default)."
   type         = "string"
   default      = ""
   mutable      = true

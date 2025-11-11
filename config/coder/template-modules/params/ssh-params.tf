@@ -47,11 +47,11 @@ data "coder_parameter" "ssh_enable" {
   order        = 50
 }
 
-# Parameter: SSH Password (always visible, grayed out when SSH not enabled)
+# Parameter: SSH Password (always visible - ignored when SSH disabled)
 data "coder_parameter" "ssh_password" {
   name         = "ssh_password"
-  display_name = "SSH Password ${data.coder_parameter.ssh_enable.value ? "" : "(disabled)"}"
-  description  = "Optional custom password (only used when SSH is enabled, leave empty for auto-generated)"
+  display_name = "SSH Password"
+  description  = "⚠️ Ignored when SSH is disabled. Optional custom password (leave empty for auto-generated)."
   type         = "string"
   default      = ""
   mutable      = true
