@@ -56,6 +56,7 @@ data "coder_parameter" "ssh_password" {
   type         = "string"
   default      = ""
   mutable      = true
+  ephemeral    = true
   order        = 51
 }
 
