@@ -8,11 +8,13 @@
 locals {
   docker_metadata = try(module.docker[0].metadata_blocks, [])
   ssh_metadata    = try(module.ssh[0].metadata_blocks, [])
+  git_metadata    = try(module.git_integration[0].metadata_blocks, [])
   
   # Combine all module metadata - add more as modules are added
   all_custom_metadata = concat(
     local.docker_metadata,
-    local.ssh_metadata
+    local.ssh_metadata,
+    local.git_metadata
   )
 }
 
@@ -45,6 +47,15 @@ module "agent" {
     "",
     "# Phase 1 Module: init-shell (Issue #23)",
     module.init_shell.setup_script,
+    "",
+    "# Git Module: git-identity (always runs)",
+    module.git_identity.setup_script,
+    "",
+    "# Git Module: git-integration (Issue #29) - Conditional clone",
+    try(module.git_integration[0].clone_script, "# Git clone disabled"),
+    "",
+    "# Git Module: github-cli (Issue #29) - Conditional GitHub CLI",
+    try(module.github_cli[0].install_script, "# GitHub CLI disabled"),
     "",
     "# Phase 3 Module: docker (Issue #26) - Conditional",
     try(module.docker[0].docker_install_script, "# Docker disabled"),
