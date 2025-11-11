@@ -29,45 +29,9 @@ data "coder_parameter" "num_ports" {
   mutable      = true
   order        = 21
   
-  option {
-    name  = "1 Port"
-    value = 1
-  }
-  option {
-    name  = "2 Ports"
-    value = 2
-  }
-  option {
-    name  = "3 Ports"
-    value = 3
-  }
-  option {
-    name  = "4 Ports"
-    value = 4
-  }
-  option {
-    name  = "5 Ports"
-    value = 5
-  }
-  option {
-    name  = "6 Ports"
-    value = 6
-  }
-  option {
-    name  = "7 Ports"
-    value = 7
-  }
-  option {
-    name  = "8 Ports"
-    value = 8
-  }
-  option {
-    name  = "9 Ports"
-    value = 9
-  }
-  option {
-    name  = "10 Ports"
-    value = 10
+  validation {
+    min = 1
+    max = 10
   }
 }
 
