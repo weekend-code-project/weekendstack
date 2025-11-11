@@ -18,11 +18,11 @@ data "coder_parameter" "auto_generate_html" {
   order        = 20
 }
 
+# Always visible - description indicates when it's used
 data "coder_parameter" "num_ports" {
-  count        = !data.coder_parameter.auto_generate_html.value ? 1 : 0
   name         = "num_ports"
   display_name = "Number of Ports"
-  description  = "Number of ports to expose (each gets auto-assigned external port)"
+  description  = "Number of ports to expose (only used when Static Site is disabled)"
   type         = "number"
   form_type    = "slider"
   default      = 1
@@ -35,11 +35,11 @@ data "coder_parameter" "num_ports" {
   }
 }
 
+# Always visible - description indicates when it's used
 data "coder_parameter" "startup_command" {
-  count        = !data.coder_parameter.auto_generate_html.value ? 1 : 0
   name         = "startup_command"
   display_name = "Startup Command"
-  description  = "Optional command to run at startup (leave empty for default server)"
+  description  = "Custom command to run at startup (only used when Static Site is disabled, leave empty for default)"
   type         = "string"
   default      = ""
   mutable      = true
@@ -53,7 +53,7 @@ data "coder_parameter" "startup_command" {
 locals {
   # When auto_generate_html is true, use single port 8080
   # When false, generate ports based on num_ports parameter (starting at 8080)
-  num_ports_value = data.coder_parameter.auto_generate_html.value ? 1 : try(data.coder_parameter.num_ports[0].value, 1)
+  num_ports_value = data.coder_parameter.auto_generate_html.value ? 1 : data.coder_parameter.num_ports.value
   
   # Generate list of internal ports: [8080, 8081, 8082, ...]
   exposed_ports_list = [

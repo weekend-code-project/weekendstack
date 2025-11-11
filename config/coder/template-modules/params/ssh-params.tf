@@ -47,12 +47,11 @@ data "coder_parameter" "ssh_enable" {
   order        = 50
 }
 
-# Parameter: SSH Password (conditional on ssh_enable)
+# Parameter: SSH Password (always visible, description indicates when used)
 data "coder_parameter" "ssh_password" {
-  count        = data.coder_parameter.ssh_enable.value ? 1 : 0
   name         = "ssh_password"
   display_name = "SSH Password"
-  description  = "Optional custom password. Leave empty to use auto-generated workspace password."
+  description  = "Optional custom password (only used when SSH is enabled, leave empty for auto-generated)"
   type         = "string"
   default      = ""
   mutable      = true
@@ -65,7 +64,7 @@ module "ssh" {
   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/ssh-module?ref=PLACEHOLDER"
   
   workspace_id       = data.coder_workspace.me.id
-  workspace_password = try(data.coder_parameter.ssh_password[0].value, "") != "" ? try(data.coder_parameter.ssh_password[0].value, "") : random_password.workspace_secret.result
+  workspace_password = data.coder_parameter.ssh_password.value != "" ? data.coder_parameter.ssh_password.value : random_password.workspace_secret.result
   ssh_enable_default = data.coder_parameter.ssh_enable.value
   host_ip            = var.host_ip
 }
