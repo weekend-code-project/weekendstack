@@ -284,15 +284,23 @@ HTML
     
     # Display port information (always shown)
     NUM_PORTS=${local.num_ports}
+    echo "[SETUP-SERVER] 🌐 Access: ${local.access_url}"
     if [ "$NUM_PORTS" = "1" ]; then
-      echo "[SETUP-SERVER] 🌐 Access: ${local.access_url}"
-      echo "[SETUP-SERVER] 💡 Port: \$PORT=${element(var.exposed_ports_list, 0)} (internal) → ${local.primary_external_port} (network)"
+      echo "[SETUP-SERVER] 📋 Port Mapping:"
+      echo "┌──────────┬──────────┬──────────┐"
+      echo "│ Variable │ Internal │ External │"
+      echo "├──────────┼──────────┼──────────┤"
+      printf "│ %-8s │ %-8s │ %-8s │\n" "\$PORT" "${element(var.exposed_ports_list, 0)}" "${local.primary_external_port}"
+      echo "└──────────┴──────────┴──────────┘"
     else
-      echo "[SETUP-SERVER] 🌐 Access: ${local.access_url} (${local.num_ports} ports)"
       echo "[SETUP-SERVER] 📋 Port Mappings:"
+      echo "┌──────────┬──────────┬──────────┐"
+      echo "│ Variable │ Internal │ External │"
+      echo "├──────────┼──────────┼──────────┤"
 %{for idx, mapping in local.port_mappings~}
-      echo "  • \$PORT${idx == 0 ? "" : idx + 1}=${mapping.internal} (internal) → ${mapping.external} (network)"
+      printf "│ %-8s │ %-8s │ %-8s │\n" "\$PORT${idx == 0 ? "" : idx + 1}" "${mapping.internal}" "${mapping.external}"
 %{endfor~}
+      echo "└──────────┴──────────┴──────────┘"
     fi
     
     # Check if custom startup command is provided
