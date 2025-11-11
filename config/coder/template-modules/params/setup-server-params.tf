@@ -18,7 +18,7 @@ data "coder_parameter" "auto_generate_html" {
   order        = 20
 }
 
-# Always visible - description indicates when it's used
+# Always visible - disabled when not in use
 data "coder_parameter" "num_ports" {
   name         = "num_ports"
   display_name = "Number of Ports"
@@ -33,9 +33,15 @@ data "coder_parameter" "num_ports" {
     min = 1
     max = 10
   }
+  
+  option {
+    name  = "Disabled when Static Site is enabled"
+    value = "0"
+    icon  = "/emojis/1f6ab.png"
+  }
 }
 
-# Always visible - description indicates when it's used
+# Always visible - disabled when not in use
 data "coder_parameter" "startup_command" {
   name         = "startup_command"
   display_name = "Startup Command"
@@ -44,6 +50,12 @@ data "coder_parameter" "startup_command" {
   default      = ""
   mutable      = true
   order        = 22
+  
+  option {
+    name  = "Disabled when Static Site is enabled"
+    value = ""
+    icon  = "/emojis/1f6ab.png"
+  }
 }
 
 # =============================================================================
