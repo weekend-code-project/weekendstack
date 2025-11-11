@@ -16,15 +16,10 @@
 output "install_script" {
   description = "Shell script to install GitHub CLI"
   value       = <<-EOT
-    #!/bin/bash
-    set -e
-    
     if command -v gh >/dev/null 2>&1; then
-      echo "[GITHUB-CLI] Already installed ($(gh --version | head -n1))"
+      echo "[GITHUB-CLI] ✓ Already installed"
     else
-      echo "[GITHUB-CLI] Installing GitHub CLI..."
-      
-      # Add GitHub CLI repository
+      echo "[GITHUB-CLI] Installing..."
       (
         type -p curl >/dev/null || (sudo apt update && sudo apt install curl -y)
         curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
@@ -35,9 +30,9 @@ output "install_script" {
       ) >/dev/null 2>&1
       
       if command -v gh >/dev/null 2>&1; then
-        echo "[GITHUB-CLI] ✅ Installed successfully ($(gh --version | head -n1))"
+        echo "[GITHUB-CLI] ✅ Installed"
       else
-        echo "[GITHUB-CLI] ⚠️  Installation failed"
+        echo "[GITHUB-CLI] ❌ Installation failed"
       fi
     fi
   EOT
