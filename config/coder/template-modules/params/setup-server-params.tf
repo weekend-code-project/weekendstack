@@ -24,31 +24,14 @@ data "coder_parameter" "num_ports" {
   }
 }
 
-# Auto Start Server toggle - when ON, disables custom startup command
-data "coder_parameter" "auto_generate_html" {
-  name         = "auto_generate_html"
-  display_name = "Auto Start Server"
-  description  = "Automatically start a default server (serves static HTML page)"
-  type         = "bool"
-  form_type    = "switch"
-  default      = "false"
-  mutable      = true
-  order        = 21
-}
-
-# Startup command - disabled when Auto Start Server is ON (it's one or the other)
 data "coder_parameter" "startup_command" {
   name         = "startup_command"
-  display_name = "Startup Command"
-  description  = "Custom command to run at startup (leave empty for no command)"
+  display_name = "Server Startup Command"
+  description  = "Command to run server at startup (default: Python HTTP server)"
   type         = "string"
-  default      = ""
+  default      = "python3 -m http.server 8080 --bind 0.0.0.0"
   mutable      = true
-  order        = 22
-  
-  styling = jsonencode({
-    disabled = data.coder_parameter.auto_generate_html.value
-  })
+  order        = 21
 }
 
 # =============================================================================
@@ -64,17 +47,16 @@ locals {
     for i in range(local.num_ports_value) : tostring(8080 + i)
   ]
   
-  # Determine if we should set up the server
-  auto_generate_html = data.coder_parameter.auto_generate_html.value
-  startup_command    = data.coder_parameter.startup_command.value
-  has_server_config  = local.auto_generate_html || local.startup_command != ""
+  # Get startup command (will have default Python server command)
+  startup_command   = data.coder_parameter.startup_command.value
+  has_server_config = local.startup_command != ""
 }
 
 # =============================================================================
 # Module Integration
 # =============================================================================
 
-# Call the setup-server module with test-template specific defaults
+# Call the setup-server module - always enabled if startup command is set
 module "setup_server" {
   count = local.has_server_config ? 1 : 0
   
@@ -86,11 +68,11 @@ module "setup_server" {
   # Port configuration
   exposed_ports_list = local.exposed_ports_list
   
-  # Test template uses Python as default server
-  default_server_command = "python3 -m http.server $PORT --bind 0.0.0.0"
-  server_name            = "Python HTTP Server"
-  server_log_file        = "/tmp/http-server.log"
-  server_pid_file        = "/tmp/http-server.pid"
+  # Use whatever command the user specified (defaults to Python server)
+  default_server_command = local.startup_command
+  server_name            = "Static Server"
+  server_log_file        = "/tmp/server.log"
+  server_pid_file        = "/tmp/server.pid"
   
   # Python is pre-installed in base image, no setup needed
   pre_server_setup = ""
@@ -99,7 +81,7 @@ module "setup_server" {
   workspace_name  = data.coder_workspace.me.name
   host_ip         = var.host_ip
   
-  # Parameters from above
-  auto_generate_html = tostring(local.auto_generate_html)
+  # Always auto-generate HTML with the static server
+  auto_generate_html = "true"
   startup_command    = local.startup_command
 }
