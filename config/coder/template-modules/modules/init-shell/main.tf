@@ -33,9 +33,11 @@ output "setup_script" {
       chmod 755 ~/workspace
       
       touch ~/.init_done
-      echo "[INIT] ✅ Home directory initialized"
+      echo "[INIT] ✓ Home directory initialized"
     else
       echo "[INIT] Home directory already initialized"
     fi
+    
+    echo ""  # Line break after module
   EOT
 }

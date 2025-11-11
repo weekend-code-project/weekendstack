@@ -30,10 +30,12 @@ output "install_script" {
       ) >/dev/null 2>&1
       
       if command -v gh >/dev/null 2>&1; then
-        echo "[GITHUB-CLI] ✅ Installed"
+        echo "[GITHUB-CLI] ✓ Installed"
       else
-        echo "[GITHUB-CLI] ❌ Installation failed"
+        echo "[GITHUB-CLI] ✗ Installation failed"
       fi
     fi
+    
+    echo ""  # Line break after module
   EOT
 }

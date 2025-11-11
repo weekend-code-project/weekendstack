@@ -122,14 +122,16 @@ PROF
       # Verify it started and display connection info
       sleep 1
       if pgrep sshd >/dev/null; then
-        echo "[SSH] ✅ Enabled: ssh -p ${local.resolved_ssh_port} coder@${var.host_ip}"
+        echo "[SSH] ✓ Enabled: ssh -p ${local.resolved_ssh_port} coder@${var.host_ip}"
         # Only show password if it's auto-generated (starts with workspace UUID)
         if [[ "${var.workspace_password}" == "${var.workspace_id}"* ]]; then
-          echo "[SSH] 🔑 Password: ${var.workspace_password}"
+          echo "[SSH] Password: ${var.workspace_password}"
         fi
       else
-        echo "[SSH] ❌ Failed to start SSH daemon"
+        echo "[SSH] ✗ Failed to start SSH daemon"
       fi
+      
+      echo ""  # Line break after module
     fi
   EOT
 }

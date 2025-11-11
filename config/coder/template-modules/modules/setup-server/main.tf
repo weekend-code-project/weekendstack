@@ -280,7 +280,7 @@ python3 -m http.server \$PORT</code></pre>
 </body>
 </html>
 HTML
-  echo "[SETUP-SERVER] ✅ Generated index.html with current port mappings"
+  echo "[SETUP-SERVER] ✓ Generated index.html with current port mappings"
     fi
     
     # Run pre-server setup if provided
@@ -288,16 +288,16 @@ HTML
     
     # Display port information (always shown)
     NUM_PORTS=${local.num_ports}
-    echo "[SETUP-SERVER] 🌐 Access: ${local.access_url}"
+    echo "[SETUP-SERVER] Access: ${local.access_url}"
     if [ "$NUM_PORTS" = "1" ]; then
-      echo "[SETUP-SERVER] 📋 Port Mapping:"
+      echo "[SETUP-SERVER] Port Mapping:"
       echo "┌──────────┬──────────┬──────────┐"
       echo "│ Variable │ Internal │ External │"
       echo "├──────────┼──────────┼──────────┤"
       printf "│ %-8s │ %-8s │ %-8s │\n" "\$PORT" "${element(var.exposed_ports_list, 0)}" "${local.primary_external_port}"
       echo "└──────────┴──────────┴──────────┘"
     else
-      echo "[SETUP-SERVER] 📋 Port Mappings:"
+      echo "[SETUP-SERVER] Port Mappings:"
       echo "┌──────────┬──────────┬──────────┐"
       echo "│ Variable │ Internal │ External │"
       echo "├──────────┼──────────┼──────────┤"
@@ -314,9 +314,9 @@ HTML
       echo $! > /tmp/custom-server.pid
       sleep 1
       if ps -p $(cat /tmp/custom-server.pid) >/dev/null 2>&1; then
-        echo "[SETUP-SERVER] ✅ Custom command: $STARTUP_CMD (PID: $(cat /tmp/custom-server.pid))"
+        echo "[SETUP-SERVER] ✓ Custom command: $STARTUP_CMD (PID: $(cat /tmp/custom-server.pid))"
       else
-        echo "[SETUP-SERVER] ❌ Custom command failed - check: tail /tmp/custom-server.log"
+        echo "[SETUP-SERVER] ✗ Custom command failed - check: tail /tmp/custom-server.log"
       fi
     elif [ "$AUTO_HTML" = "true" ]; then
       # Start default server in background
@@ -324,11 +324,13 @@ HTML
       echo $! > ${var.server_pid_file}
       sleep 2
       if ps -p $(cat ${var.server_pid_file}) >/dev/null 2>&1; then
-        echo "[SETUP-SERVER] ✅ ${var.server_name} running on port $PORT (PID: $(cat ${var.server_pid_file}))"
+        echo "[SETUP-SERVER] ✓ ${var.server_name} running on port $PORT (PID: $(cat ${var.server_pid_file}))"
       else
-        echo "[SETUP-SERVER] ❌ ${var.server_name} failed to start - check: tail ${var.server_log_file}"
+        echo "[SETUP-SERVER] ✗ ${var.server_name} failed to start - check: tail ${var.server_log_file}"
       fi
     fi
+    
+    echo ""  # Line break after module
 
   EOT
 }

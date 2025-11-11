@@ -74,7 +74,7 @@ output "init_script" {
     
     # Bind mount the persistent directory
     sudo mount --bind "$${PERSIST_PATH}" "$${TARGET}"
-    echo "[NODE-MODULES] ✅ Mounted $${TARGET} -> $${PERSIST_PATH}"
+    echo "[NODE-MODULES] ✓ Mounted $${TARGET} -> $${PERSIST_PATH}"
     
     # Detect the package directory (parent of node_modules)
     PKG_DIR="$(dirname "$${TARGET}")"
@@ -119,7 +119,7 @@ output "init_script" {
           
           # Write sentinel with hash
           echo "$${LOCKHASH}" > "$${SENTINEL}"
-          echo "[NODE-MODULES] ✅ Dependencies installed successfully"
+          echo "[NODE-MODULES] ✓ Dependencies installed successfully"
         else
           echo "[NODE-MODULES] Dependencies up-to-date in $${PKG_DIR} (skipping install)"
         fi
@@ -130,7 +130,8 @@ output "init_script" {
     SUBDIR
     ])}
     
-    echo "[NODE-MODULES] ✅ All node_modules directories configured"
+    echo "[NODE-MODULES] ✓ All node_modules directories configured"
+    echo ""  # Line break after module
   EOT
 }
 

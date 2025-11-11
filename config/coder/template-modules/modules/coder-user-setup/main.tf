@@ -48,10 +48,12 @@ output "setup_script" {
         mkdir -p /home/coder/.persist
         chown -R coder:coder /home/coder/.persist
         
-        echo "[USER-SETUP] ✅ Coder user created (uid=1000)"
+        echo "[USER-SETUP] ✓ Coder user created (uid=1000)"
       else
         echo "[USER-SETUP] Coder user already exists"
       fi
+      
+      echo ""  # Line break after module
       
       # CRITICAL: Switch to coder user for all subsequent operations
       # Export HOME so ~ resolves correctly

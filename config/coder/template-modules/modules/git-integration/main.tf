@@ -54,9 +54,9 @@ output "clone_script" {
         
         # Test SSH connection
         if ssh -o StrictHostKeyChecking=accept-new -o BatchMode=yes -o ConnectTimeout=5 -p $SSH_PORT -T "git@$SSH_DOMAIN" 2>&1 | grep -qiE "successfully authenticated|welcome|hi|gitea"; then
-          echo "[GIT] ✅ SSH verified: $SSH_DOMAIN:$SSH_PORT"
+          echo "[GIT] ✓ SSH verified: $SSH_DOMAIN:$SSH_PORT"
         else
-          echo "[GIT] ❌ SSH authentication failed: $SSH_DOMAIN:$SSH_PORT"
+          echo "[GIT] ✗ SSH authentication failed: $SSH_DOMAIN:$SSH_PORT"
           echo "[GIT] Check: ls ~/.ssh/id_*"
           ls ~/.ssh/id_* 2>/dev/null || echo "[GIT] No SSH keys found!"
           exit 0
@@ -86,10 +86,12 @@ output "clone_script" {
         
         BRANCH=$(git branch --show-current 2>/dev/null || echo "main")
         BRANCH_COUNT=$(git branch -r 2>/dev/null | grep -v '\->' | wc -l)
-        echo "[GIT] ✅ Cloned successfully (branch: $BRANCH, $BRANCH_COUNT remote branches)"
+        echo "[GIT] ✓ Cloned successfully (branch: $BRANCH, $BRANCH_COUNT remote branches)"
       else
-        echo "[GIT] ❌ Clone failed - check /tmp/git-clone.log"
+        echo "[GIT] ✗ Clone failed - check /tmp/git-clone.log"
       fi
+      
+      echo ""  # Line break after module
     fi
   EOT
 }

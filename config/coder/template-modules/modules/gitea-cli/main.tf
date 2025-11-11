@@ -32,10 +32,12 @@ output "install_script" {
       sudo mv /tmp/tea /usr/local/bin/tea
       
       if command -v tea >/dev/null 2>&1; then
-        echo "[GITEA-CLI] ✅ Installed"
+        echo "[GITEA-CLI] ✓ Installed"
       else
-        echo "[GITEA-CLI] ❌ Installation failed"
+        echo "[GITEA-CLI] ✗ Installation failed"
       fi
     fi
+    
+    echo ""  # Line break after module
   EOT
 }
