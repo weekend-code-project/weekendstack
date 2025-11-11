@@ -56,6 +56,13 @@ resource "docker_container" "workspace" {
     read_only      = false
   }
   
+  # Mount SSH keys from Coder container to workspace
+  volumes {
+    container_path = "/mnt/host-ssh"
+    host_path      = "/mnt/host-ssh"
+    read_only      = true
+  }
+  
   # SSH port mapping (conditional - only when SSH is enabled)
   dynamic "ports" {
     for_each = try(module.ssh[0].docker_ports, null) != null ? [module.ssh[0].docker_ports] : []

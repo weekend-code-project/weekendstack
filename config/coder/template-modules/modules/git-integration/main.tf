@@ -32,21 +32,38 @@ output "clone_script" {
       
       # Verify SSH access if using SSH URL
       if echo "$REPO" | grep -q "^git@"; then
-        # Extract domain from git@domain:user/repo.git
+        # Extract domain from git@domain:user/repo.git or git@domain:port/user/repo.git
         SSH_DOMAIN=$(echo "$REPO" | sed -n 's/git@\([^:]*\):.*/\1/p')
         
         echo "[GIT] Verifying SSH access to $SSH_DOMAIN..."
         
-        # Test SSH connection (GitHub, GitLab, Bitbucket all support this)
-        if ssh -o StrictHostKeyChecking=accept-new -o BatchMode=yes -o ConnectTimeout=5 -T "git@$SSH_DOMAIN" 2>&1 | grep -qiE "successfully authenticated|welcome|hi"; then
-          echo "[GIT] ✅ SSH authentication successful"
+        # Detect if this is a local Gitea instance (common domains/IPs)
+        SSH_PORT=22
+        SSH_OPTS=""
+        if echo "$SSH_DOMAIN" | grep -qiE "gitea|git\.weekendcodeproject\.dev|192\.168\.|localhost|127\.0\.0\.1"; then
+          SSH_PORT=2222
+          echo "[GIT] Detected Gitea instance, using port $SSH_PORT"
+        fi
+        
+        # Test SSH connection
+        # GitHub/GitLab/Bitbucket respond with welcome messages
+        # Gitea also responds with authentication confirmation
+        if ssh -o StrictHostKeyChecking=accept-new -o BatchMode=yes -o ConnectTimeout=5 -p $SSH_PORT -T "git@$SSH_DOMAIN" 2>&1 | grep -qiE "successfully authenticated|welcome|hi|gitea"; then
+          echo "[GIT] ✅ SSH authentication successful to $SSH_DOMAIN:$SSH_PORT"
         else
-          echo "[GIT] ❌ SSH authentication failed - check your SSH keys"
+          echo "[GIT] ❌ SSH authentication failed to $SSH_DOMAIN:$SSH_PORT"
+          echo "[GIT] Attempting manual SSH test..."
+          ssh -o StrictHostKeyChecking=accept-new -o BatchMode=yes -o ConnectTimeout=5 -p $SSH_PORT -T "git@$SSH_DOMAIN" 2>&1 | head -5
           echo "[GIT] SSH keys location: ~/.ssh/"
           ls -la ~/.ssh/ 2>/dev/null || echo "[GIT] No SSH keys found!"
           echo "[GIT] Host mount: /mnt/host-ssh/"
           ls -la /mnt/host-ssh/ 2>/dev/null || echo "[GIT] No host SSH keys found!"
           exit 0
+        fi
+        
+        # Update GIT_SSH_COMMAND with correct port for Gitea
+        if [ "$SSH_PORT" != "22" ]; then
+          export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/home/coder/.ssh/known_hosts -p $SSH_PORT"
         fi
       fi
       

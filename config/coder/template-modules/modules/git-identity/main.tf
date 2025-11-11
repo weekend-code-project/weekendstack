@@ -58,6 +58,15 @@ output "setup_script" {
     ssh-keyscan -H github.com >> ~/.ssh/known_hosts 2>/dev/null || true
     ssh-keyscan -H gitlab.com >> ~/.ssh/known_hosts 2>/dev/null || true
     ssh-keyscan -H bitbucket.org >> ~/.ssh/known_hosts 2>/dev/null || true
+    
+    # Add local Gitea instance if it exists (common in self-hosted setups)
+    # Try common Gitea domains/IPs
+    for gitea_host in git.weekendcodeproject.dev gitea 192.168.1.50; do
+      if timeout 2 ssh-keyscan -H -p 2222 "$gitea_host" >> ~/.ssh/known_hosts 2>/dev/null; then
+        echo "[GIT-IDENTITY] ✓ Added Gitea host: $gitea_host"
+      fi
+    done
+    
     echo "[GIT-IDENTITY] ✅ SSH setup complete"
   EOT
 }
