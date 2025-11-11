@@ -123,7 +123,17 @@ CFG
       touch ~/.ssh/known_hosts
       ssh-keyscan -H github.com >> ~/.ssh/known_hosts 2>/dev/null || true
 
-      sudo /usr/sbin/sshd -D > /tmp/sshd.log 2>&1 &
+      # Start SSH daemon in background (not -D daemon mode, just regular background)
+      echo "[SSH] Starting SSH daemon on port 2222..."
+      sudo /usr/sbin/sshd -f /etc/ssh/sshd_config
+      
+      # Verify it started
+      sleep 1
+      if pgrep sshd >/dev/null; then
+        echo "[SSH] ✓ SSH daemon started successfully"
+      else
+        echo "[SSH] ✗ SSH daemon failed to start - check /tmp/sshd.log"
+      fi
 
       # Ensure SSH sessions start in the workspace directory by default
       if ! grep -q 'Auto-cd to workspace on SSH login' ~/.bashrc 2>/dev/null; then
@@ -179,7 +189,7 @@ output "metadata_blocks" {
     },
     {
       display_name = "SSH Status"
-      script       = "pgrep -x sshd >/dev/null && echo 'Running (port ${local.resolved_ssh_port})' || echo 'Not running'"
+      script       = "pgrep sshd >/dev/null && echo 'Running (port ${local.resolved_ssh_port})' || echo 'Not running'"
       interval     = 30
       timeout      = 2
     }
