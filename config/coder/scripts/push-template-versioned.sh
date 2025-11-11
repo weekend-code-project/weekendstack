@@ -292,6 +292,34 @@ substitute_base_domain() {
     log "✏️  Updated base_domain default to '$domain' in ${#files[@]} file(s)."
 }
 
+# Substitute host_ip default value in variables.tf
+substitute_host_ip() {
+    local root="$1"
+    local ip="${HOST_IP:-localhost}"
+    
+    # Find variables.tf files that have host_ip variable
+    local -a files
+    mapfile -t files < <(grep -l 'variable "host_ip"' "$root"/*.tf 2>/dev/null || true)
+    
+    if [[ ${#files[@]} -eq 0 ]]; then
+        # Not a warning - host_ip is optional
+        return 0
+    fi
+    
+    for f in "${files[@]}"; do
+        log "  📝 Updating host_ip in: $(basename "$f")"
+        sed -i "/variable \"host_ip\"/,/^}/ s|default[[:space:]]*=[[:space:]]*\"[^\"]*\"|default     = \"$ip\"|" "$f"
+        if grep -q "default.*=.*\"$ip\"" "$f"; then
+            log "  ✓ Verified: $ip set in $(basename "$f")"
+        else
+            log_warn "  ✗ Warning: substitution may have failed in $(basename "$f")"
+        fi
+    done
+    
+    log "✏️  Updated host_ip default to '$ip' in ${#files[@]} file(s)."
+}
+
+
 DRY_RUN_PREVIEW() {
     local root="$1"
     log "🔍 Dry run preview: showing lines with '?ref=' before substitution"
@@ -304,10 +332,13 @@ if $DRY_RUN; then
     DRY_RUN_PREVIEW "$TEMP_DIR/$TEMPLATE_NAME"
     substitute_ref_in_temp "$TEMP_DIR/$TEMPLATE_NAME"
     substitute_base_domain "$TEMP_DIR/$TEMPLATE_NAME"
+    substitute_host_ip "$TEMP_DIR/$TEMPLATE_NAME"
     log "🔍 Dry run preview: showing lines with '?ref=' after substitution"
     grep -Rn --include='*.tf' '\?ref=' "$TEMP_DIR/$TEMPLATE_NAME" || true
     log "🔍 Dry run preview: showing base_domain after substitution"
     grep -A4 'variable "base_domain"' "$TEMP_DIR/$TEMPLATE_NAME"/*.tf || true
+    log "🔍 Dry run preview: showing host_ip after substitution"
+    grep -A4 'variable "host_ip"' "$TEMP_DIR/$TEMPLATE_NAME"/*.tf || true
     log "✅ Dry run complete. No changes pushed."
     rm -rf "$TEMP_DIR"
     exit 0
@@ -316,6 +347,7 @@ fi
 # Perform substitution for actual push
 substitute_ref_in_temp "$TEMP_DIR/$TEMPLATE_NAME"
 substitute_base_domain "$TEMP_DIR/$TEMPLATE_NAME"
+substitute_host_ip "$TEMP_DIR/$TEMPLATE_NAME"
 
 # Verify substitution before push
 log "🔍 Final verification before push:"

@@ -30,3 +30,9 @@ variable "ssh_port_mode_default" {
   type        = string
   default     = "auto"
 }
+
+variable "host_ip" {
+  description = "External IP address of the Docker host (for connection instructions)"
+  type        = string
+  default     = ""
+}

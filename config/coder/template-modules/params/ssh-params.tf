@@ -113,4 +113,5 @@ module "ssh" {
   ssh_enable_default    = data.coder_parameter.ssh_enable.value
   ssh_port_mode_default = try(data.coder_parameter.ssh_port_mode[0].value, "auto")
   ssh_port_default      = try(data.coder_parameter.ssh_port[0].value, "")
+  host_ip               = var.host_ip
 }

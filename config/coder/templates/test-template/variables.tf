@@ -8,3 +8,9 @@ variable "base_domain" {
   type        = string
   default     = "localhost"
 }
+
+variable "host_ip" {
+  description = "External IP address of the Docker host VM (for SSH connection instructions)"
+  type        = string
+  default     = "192.168.1.50"
+}
