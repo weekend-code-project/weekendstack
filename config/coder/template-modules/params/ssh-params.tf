@@ -47,50 +47,6 @@ data "coder_parameter" "ssh_enable" {
   order        = 50
 }
 
-# Parameter: SSH Port Mode (conditional on ssh_enable)
-data "coder_parameter" "ssh_port_mode" {
-  count        = data.coder_parameter.ssh_enable.value ? 1 : 0
-  name         = "ssh_port_mode"
-  display_name = "SSH Port Mode"
-  description  = "Choose 'auto' for automatic port assignment or 'manual' to specify a port."
-  type         = "string"
-  default      = "auto"
-  mutable      = true
-  order        = 51
-
-  option {
-    name  = "Auto (Random)"
-    value = "auto"
-  }
-
-  option {
-    name  = "Manual"
-    value = "manual"
-  }
-}
-
-# Parameter: SSH Port (conditional on ssh_enable, disabled when auto mode)
-data "coder_parameter" "ssh_port" {
-  count        = data.coder_parameter.ssh_enable.value ? 1 : 0
-  name         = "ssh_port"
-  display_name = "SSH Port"
-  description  = "Container port for SSH server (ignored in auto mode)."
-  type         = "string"
-  default      = "2221"
-  mutable      = true
-  order        = 52
-  
-  # Disable field when in auto mode
-  styling = jsonencode({ 
-    disabled = try(data.coder_parameter.ssh_port_mode[0].value, "auto") == "auto" 
-  })
-
-  validation {
-    regex = "^([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
-    error = "SSH port must be between 1 and 65535"
-  }
-}
-
 # Parameter: SSH Password (conditional on ssh_enable)
 data "coder_parameter" "ssh_password" {
   count        = data.coder_parameter.ssh_enable.value ? 1 : 0
@@ -100,7 +56,7 @@ data "coder_parameter" "ssh_password" {
   type         = "string"
   default      = ""
   mutable      = true
-  order        = 53
+  order        = 51
 }
 
 # Module: SSH (conditional - only loaded when enabled)
@@ -108,10 +64,8 @@ module "ssh" {
   count  = data.coder_parameter.ssh_enable.value ? 1 : 0
   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/ssh-module?ref=PLACEHOLDER"
   
-  workspace_id          = data.coder_workspace.me.id
-  workspace_password    = try(data.coder_parameter.ssh_password[0].value, "") != "" ? try(data.coder_parameter.ssh_password[0].value, "") : random_password.workspace_secret.result
-  ssh_enable_default    = data.coder_parameter.ssh_enable.value
-  ssh_port_mode_default = try(data.coder_parameter.ssh_port_mode[0].value, "auto")
-  ssh_port_default      = try(data.coder_parameter.ssh_port[0].value, "")
-  host_ip               = var.host_ip
+  workspace_id       = data.coder_workspace.me.id
+  workspace_password = try(data.coder_parameter.ssh_password[0].value, "") != "" ? try(data.coder_parameter.ssh_password[0].value, "") : random_password.workspace_secret.result
+  ssh_enable_default = data.coder_parameter.ssh_enable.value
+  host_ip            = var.host_ip
 }

@@ -19,18 +19,6 @@ variable "ssh_enable_default" {
   default     = false
 }
 
-variable "ssh_port_default" {
-  description = "Default SSH port value"
-  type        = string
-  default     = ""
-}
-
-variable "ssh_port_mode_default" {
-  description = "Default SSH port mode (manual or auto)"
-  type        = string
-  default     = "auto"
-}
-
 variable "host_ip" {
   description = "External IP address of the Docker host (for connection instructions)"
   type        = string

@@ -39,12 +39,8 @@ resource "random_integer" "ssh_auto_port" {
 }
 
 locals {
-  # Use variables passed from template instead of coder_parameter data sources
-  ssh_port_manual     = try(tonumber(trimspace(var.ssh_port_default)), 0)
-  ssh_port_auto_value = random_integer.ssh_auto_port.result
-  resolved_ssh_port   = tostring(
-    var.ssh_port_mode_default == "auto" ? local.ssh_port_auto_value : local.ssh_port_manual
-  )
+  # Always use auto-generated port (deterministic per workspace UUID)
+  resolved_ssh_port = tostring(random_integer.ssh_auto_port.result)
 }
 
 # SSH Key Setup Script
