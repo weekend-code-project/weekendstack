@@ -47,27 +47,9 @@ locals {
 output "ssh_copy_script" {
   description = "Script to setup SSH keys from host mount"
   value       = <<-EOT
-    echo "[SSH] Setting up SSH keys from /mnt/host-ssh..."
-    
-    # Create .ssh directory with proper permissions
-    mkdir -p ~/.ssh
-    chmod 700 ~/.ssh
-    
-    # Copy SSH keys from mounted directory (if any exist)
-    if [ -n "$(ls -A /mnt/host-ssh 2>/dev/null)" ]; then
-      cp -r /mnt/host-ssh/* ~/.ssh/ 2>/dev/null || true
-      chmod 600 ~/.ssh/id_* 2>/dev/null || true
-      chmod 644 ~/.ssh/id_*.pub 2>/dev/null || true
-      chmod 600 ~/.ssh/config 2>/dev/null || true
-      echo "[SSH] ✅ SSH keys copied from host"
-    else
-      echo "[SSH] ℹ️  No SSH keys found - generate with: ssh-keygen -t ed25519"
-    fi
-    
-    # Create known_hosts and add GitHub
-    touch ~/.ssh/known_hosts
-    chmod 644 ~/.ssh/known_hosts
-    ssh-keyscan -H github.com >> ~/.ssh/known_hosts 2>/dev/null || true
+    # SSH keys are handled by git-identity module now
+    # This is kept for backwards compatibility but does nothing
+    true
   EOT
 }
 
@@ -78,10 +60,11 @@ output "ssh_setup_script" {
   if [ "${var.ssh_enable_default}" = "true" ]; then
       export SSH_PORT="${local.resolved_ssh_port}"
       
+      # Install SSH server if needed
       if ! command -v sshd >/dev/null 2>&1; then
         echo "[SSH] Installing OpenSSH server..."
-        sudo apt-get update
-        sudo apt-get install -y openssh-server
+        sudo apt-get update >/dev/null 2>&1
+        sudo apt-get install -y openssh-server >/dev/null 2>&1
       fi
 
       SSH_PERSIST="$HOME/.persist/ssh"
@@ -90,15 +73,15 @@ output "ssh_setup_script" {
       mkdir -p "$SSH_HOSTKEYS_DIR"
       chmod 700 "$SSH_PERSIST"
 
-      # Generate host keys if missing
-      [ -f "$SSH_HOSTKEYS_DIR/ssh_host_ed25519_key" ] || sudo ssh-keygen -t ed25519 -f "$SSH_HOSTKEYS_DIR/ssh_host_ed25519_key" -N ""
-      [ -f "$SSH_HOSTKEYS_DIR/ssh_host_rsa_key" ]     || sudo ssh-keygen -t rsa -b 4096 -f "$SSH_HOSTKEYS_DIR/ssh_host_rsa_key" -N ""
-      sudo chmod 600 "$SSH_HOSTKEYS_DIR"/ssh_host_*
+      # Generate host keys if missing (silent)
+      [ -f "$SSH_HOSTKEYS_DIR/ssh_host_ed25519_key" ] || sudo ssh-keygen -t ed25519 -f "$SSH_HOSTKEYS_DIR/ssh_host_ed25519_key" -N "" >/dev/null 2>&1
+      [ -f "$SSH_HOSTKEYS_DIR/ssh_host_rsa_key" ]     || sudo ssh-keygen -t rsa -b 4096 -f "$SSH_HOSTKEYS_DIR/ssh_host_rsa_key" -N "" >/dev/null 2>&1
+      sudo chmod 600 "$SSH_HOSTKEYS_DIR"/ssh_host_* 2>/dev/null
 
+      # Configure SSHD
       sudo mkdir -p /etc/ssh
       sudo tee /etc/ssh/sshd_config >/dev/null <<CFG
-        # Always listen on internal 2222; external port is handled by Docker publishing
-        Port 2222
+Port 2222
 PasswordAuthentication yes
 KbdInteractiveAuthentication yes
 PubkeyAuthentication yes
@@ -112,26 +95,9 @@ AllowUsers coder
 CFG
 
       sudo mkdir -p /var/run/sshd
-      echo "coder:${var.workspace_password}" | sudo chpasswd
+      echo "coder:${var.workspace_password}" | sudo chpasswd 2>/dev/null
 
-      # Preload GitHub host key
-      mkdir -p ~/.ssh && chmod 700 ~/.ssh
-      touch ~/.ssh/known_hosts
-      ssh-keyscan -H github.com >> ~/.ssh/known_hosts 2>/dev/null || true
-
-      # Start SSH daemon in background (not -D daemon mode, just regular background)
-      echo "[SSH] Starting SSH daemon on port 2222..."
-      sudo /usr/sbin/sshd -f /etc/ssh/sshd_config
-      
-      # Verify it started
-      sleep 1
-      if pgrep sshd >/dev/null; then
-        echo "[SSH] ✓ SSH daemon started successfully"
-      else
-        echo "[SSH] ✗ SSH daemon failed to start - check /tmp/sshd.log"
-      fi
-
-      # Ensure SSH sessions start in the workspace directory by default
+      # Setup workspace auto-cd for SSH sessions
       if ! grep -q 'Auto-cd to workspace on SSH login' ~/.bashrc 2>/dev/null; then
         cat >> ~/.bashrc <<'BRC'
 # Auto-cd to workspace on SSH login
@@ -141,7 +107,6 @@ fi
 BRC
       fi
 
-      # Also ensure login shells (via /etc/profile) cd into workspace if appropriate
       sudo tee /etc/profile.d/10-cd-workspace.sh >/dev/null <<'PROF'
 # Auto-cd to workspace on SSH login (login shell)
 if [ -n "$SSH_CONNECTION" ] && [ -d "$HOME/workspace" ]; then
@@ -151,17 +116,16 @@ if [ -n "$SSH_CONNECTION" ] && [ -d "$HOME/workspace" ]; then
 fi
 PROF
 
-      echo ""
-  echo "====================================="
-  echo "SSH is enabled for this workspace."
-  echo ""
-  echo "Connection command:"
-  echo "  ssh -p ${local.resolved_ssh_port} coder@${var.host_ip}"
-  echo ""
-  echo "User: coder"
-  echo "Password: ${var.workspace_password}"
-  echo "====================================="
-      echo ""
+      # Start SSH daemon
+      sudo /usr/sbin/sshd -f /etc/ssh/sshd_config 2>/dev/null
+      
+      # Verify it started
+      sleep 1
+      if pgrep sshd >/dev/null; then
+        echo "[SSH] ✅ Enabled: ssh -p ${local.resolved_ssh_port} coder@${var.host_ip}"
+      else
+        echo "[SSH] ❌ Failed to start SSH daemon"
+      fi
     fi
   EOT
 }
