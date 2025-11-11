@@ -9,7 +9,7 @@
 #   - metadata_blocks: Multi-select list of metadata to display
 #
 # DEPENDENCIES:
-#   - template-modules/modules/metadata: Core metadata script generation
+#   - template-modules/modules/metadata-module: Core metadata script generation
 #
 # OUTPUTS (via module.metadata):
 #   - metadata_blocks: Array of metadata block configurations for agent
@@ -72,7 +72,7 @@ data "coder_parameter" "metadata_blocks" {
 
 # Module: Metadata (always loaded, but content depends on selection)
 module "metadata" {
-  source         = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/metadata?ref=PLACEHOLDER"
+  source         = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/metadata-module?ref=PLACEHOLDER"
   enabled_blocks = data.coder_parameter.metadata_blocks.value != "" ? jsondecode(data.coder_parameter.metadata_blocks.value) : []
   
   # Accept custom blocks from other modules (defined in template's agent-params.tf)
