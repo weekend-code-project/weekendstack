@@ -125,14 +125,9 @@ output "setup_server_script" {
     export PORTS="${join(",", var.exposed_ports_list)}"
     export PORT="${element(var.exposed_ports_list, 0)}"
 %{for idx, port in var.exposed_ports_list~}
-    export PORT${idx}="${port}"
-%{endfor~}
-    
-    # Export external ports (for network access URLs)
-    export EXTERNAL_PORTS="${join(",", [for p in local.port_mappings : tostring(p.external)])}"
-    export EXTERNAL_PORT="${local.primary_external_port}"
-%{for idx, mapping in local.port_mappings~}
-    export EXTERNAL_PORT${idx}="${mapping.external}"
+%{if idx > 0~}
+    export PORT${idx + 1}="${port}"
+%{endif~}
 %{endfor~}
     
     # Navigate to workspace directory (should be created by init-shell module)
@@ -249,13 +244,15 @@ output "setup_server_script" {
         <table>
             <thead>
                 <tr>
+                    <th>Environment Variable</th>
                     <th>Internal Port</th>
                     <th>External Port (Network Access)</th>
                 </tr>
             </thead>
             <tbody>
-%{for mapping in local.port_mappings~}
+%{for idx, mapping in local.port_mappings~}
                 <tr>
+                    <td><code>\$PORT${idx == 0 ? "" : idx + 1}</code></td>
                     <td>${mapping.internal}</td>
                     <td>${mapping.external}</td>
                 </tr>
@@ -289,11 +286,11 @@ HTML
     NUM_PORTS=${local.num_ports}
     if [ "$NUM_PORTS" = "1" ]; then
       echo "[SETUP-SERVER] 🌐 Access: ${local.access_url}"
-      echo "[SETUP-SERVER] 💡 Variables: \$PORT=$PORT (internal), \$EXTERNAL_PORT=$EXTERNAL_PORT (network)"
+      echo "[SETUP-SERVER] 💡 Use \$PORT for internal port (bind to this)"
     else
       echo "[SETUP-SERVER] 🌐 Access: ${local.access_url} (${local.num_ports} ports)"
       echo "[SETUP-SERVER] 📋 Port mapping: Internal ${element(var.exposed_ports_list, 0)}-${element(var.exposed_ports_list, local.num_ports - 1)} → External ${local.port_display}"
-      echo "[SETUP-SERVER] 💡 Variables available: \$PORT0-\$PORT${local.num_ports - 1} (internal), \$EXTERNAL_PORT0-\$EXTERNAL_PORT${local.num_ports - 1} (network)"
+      echo "[SETUP-SERVER] 💡 Use \$PORT, \$PORT2, \$PORT3, ... (see HTML table for mappings)"
     fi
     
     # Check if custom startup command is provided
