@@ -128,6 +128,13 @@ locals {
   # Primary port (first in list)
   primary_internal_port = element(var.exposed_ports_list, 0)
   primary_external_port = random_integer.external_ports[0].result
+  
+  # Port range display for multiple ports
+  num_ports = length(var.exposed_ports_list)
+  port_display = local.num_ports == 1 ? tostring(local.primary_external_port) : "${local.primary_external_port}-${random_integer.external_ports[local.num_ports - 1].result}"
+  
+  # Access URL
+  access_url = "http://${var.host_ip}:${local.port_display}"
 }
 
 # Output the setup script
@@ -252,6 +259,15 @@ HTML
     # Run pre-server setup if provided
     ${var.pre_server_setup != "" ? "${var.pre_server_setup} >/dev/null 2>&1" : ""}
     
+    # Display port information (always shown)
+    NUM_PORTS=${local.num_ports}
+    if [ "$NUM_PORTS" = "1" ]; then
+      echo "[SETUP-SERVER] 🌐 Access: ${local.access_url}"
+    else
+      echo "[SETUP-SERVER] 🌐 Access: ${local.access_url} (${local.num_ports} ports)"
+      echo "[SETUP-SERVER] 📋 Port mapping: Internal ${element(var.exposed_ports_list, 0)}-${element(var.exposed_ports_list, local.num_ports - 1)} → External ${local.port_display}"
+    fi
+    
     # Check if custom startup command is provided
     STARTUP_CMD="${var.startup_command}"
     if [ -n "$STARTUP_CMD" ] && [ "$STARTUP_CMD" != "" ]; then
@@ -270,7 +286,6 @@ HTML
       sleep 2
       if ps -p $(cat ${var.server_pid_file}) >/dev/null 2>&1; then
         echo "[SETUP-SERVER] ✅ ${var.server_name} running on port $PORT (PID: $(cat ${var.server_pid_file}))"
-        echo "[SETUP-SERVER] 🌐 External access: http://${var.host_ip}:${local.primary_external_port}"
       else
         echo "[SETUP-SERVER] ❌ ${var.server_name} failed to start - check: tail ${var.server_log_file}"
       fi
@@ -297,8 +312,8 @@ output "metadata_blocks" {
   description = "Metadata blocks contributed by this module"
   value = [
     {
-      display_name = "Server Port"
-      script       = "echo ${local.primary_external_port}"
+      display_name = "Server Port${local.num_ports > 1 ? "s" : ""}"
+      script       = "echo ${local.port_display}"
       interval     = 60
       timeout      = 1
     }
