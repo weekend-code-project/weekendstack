@@ -8,20 +8,15 @@
 # Parameters
 # =============================================================================
 
-data "coder_parameter" "num_ports" {
-  name         = "num_ports"
-  display_name = "Number of Ports"
-  description  = "Number of ports to expose (each gets auto-assigned external port)"
-  type         = "number"
-  form_type    = "slider"
-  default      = 1
+data "coder_parameter" "auto_generate_html" {
+  name         = "auto_generate_html"
+  display_name = "Auto Generate Index"
+  description  = "Automatically generate index.html file (won't overwrite if exists)"
+  type         = "bool"
+  form_type    = "switch"
+  default      = "true"
   mutable      = true
   order        = 20
-  
-  validation {
-    min = 1
-    max = 10
-  }
 }
 
 data "coder_parameter" "startup_command" {
@@ -32,6 +27,22 @@ data "coder_parameter" "startup_command" {
   default      = "python3 -m http.server 8080 --bind 0.0.0.0"
   mutable      = true
   order        = 21
+}
+
+data "coder_parameter" "num_ports" {
+  name         = "num_ports"
+  display_name = "Number of Ports"
+  description  = "Number of ports to expose (each gets auto-assigned external port)"
+  type         = "number"
+  form_type    = "slider"
+  default      = 1
+  mutable      = true
+  order        = 22
+  
+  validation {
+    min = 1
+    max = 10
+  }
 }
 
 # =============================================================================
@@ -47,9 +58,10 @@ locals {
     for i in range(local.num_ports_value) : tostring(8080 + i)
   ]
   
-  # Get startup command (will have default Python server command)
-  startup_command   = data.coder_parameter.startup_command.value
-  has_server_config = local.startup_command != ""
+  # Get startup command and auto-generate settings
+  auto_generate_html = data.coder_parameter.auto_generate_html.value
+  startup_command    = data.coder_parameter.startup_command.value
+  has_server_config  = local.startup_command != ""
 }
 
 # =============================================================================
@@ -81,7 +93,7 @@ module "setup_server" {
   workspace_name  = data.coder_workspace.me.name
   host_ip         = var.host_ip
   
-  # Always auto-generate HTML with the static server
-  auto_generate_html = "true"
+  # Pass through the auto-generate toggle value
+  auto_generate_html = tostring(local.auto_generate_html)
   startup_command    = local.startup_command
 }
