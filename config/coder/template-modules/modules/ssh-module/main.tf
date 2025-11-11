@@ -122,15 +122,11 @@ PROF
       # Verify it started and display connection info
       sleep 1
       if pgrep sshd >/dev/null; then
-        echo "[SSH] ✅ SSH Server Started"
-        echo "[SSH] 📋 Connection Information:"
-        echo "┌──────────────┬─────────────────────────────────────────────┐"
-        echo "│ Command      │ ssh -p ${local.resolved_ssh_port} coder@${var.host_ip}              │"
-        echo "├──────────────┼─────────────────────────────────────────────┤"
-        printf "│ %-12s │ %-43s │\n" "Password" "${var.workspace_password}"
-        echo "├──────────────┼─────────────────────────────────────────────┤"
-        printf "│ %-12s │ %-43s │\n" "Port" "${local.resolved_ssh_port}"
-        echo "└──────────────┴─────────────────────────────────────────────┘"
+        echo "[SSH] ✅ Enabled: ssh -p ${local.resolved_ssh_port} coder@${var.host_ip}"
+        # Only show password if it's auto-generated (starts with workspace UUID)
+        if [[ "${var.workspace_password}" == "${var.workspace_id}"* ]]; then
+          echo "[SSH] 🔑 Password: ${var.workspace_password}"
+        fi
       else
         echo "[SSH] ❌ Failed to start SSH daemon"
       fi
