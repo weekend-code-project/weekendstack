@@ -8,13 +8,13 @@
 # Parameters
 # =============================================================================
 
-data "coder_parameter" "auto_generate_html" {
-  name         = "auto_generate_html"
-  display_name = "Auto Generate Index"
-  description  = "Automatically generate index.html file (won't overwrite if exists)"
+data "coder_parameter" "use_custom_command" {
+  name         = "use_custom_command"
+  display_name = "Use Custom Server Command"
+  description  = "Enable custom server startup command (disables default static server)"
   type         = "bool"
   form_type    = "switch"
-  default      = "true"
+  default      = "false"
   mutable      = true
   order        = 20
 }
@@ -22,14 +22,14 @@ data "coder_parameter" "auto_generate_html" {
 data "coder_parameter" "startup_command" {
   name         = "startup_command"
   display_name = "Server Startup Command"
-  description  = "Command to run server at startup (default: Python HTTP server)"
+  description  = "Custom command to run server at startup"
   type         = "string"
-  default      = "python3 -m http.server 8080 --bind 0.0.0.0"
+  default      = ""
   mutable      = true
   order        = 21
   
   styling = jsonencode({
-    disabled = data.coder_parameter.auto_generate_html.value
+    disabled = !data.coder_parameter.use_custom_command.value
   })
 }
 
@@ -62,10 +62,15 @@ locals {
     for i in range(local.num_ports_value) : tostring(8080 + i)
   ]
   
-  # Get startup command and auto-generate settings
-  auto_generate_html = data.coder_parameter.auto_generate_html.value
-  startup_command    = data.coder_parameter.startup_command.value
-  has_server_config  = local.startup_command != ""
+  # Determine server configuration
+  use_custom_command = data.coder_parameter.use_custom_command.value
+  custom_command     = data.coder_parameter.startup_command.value
+  
+  # When custom command is OFF, use default Python server and auto-generate HTML
+  # When custom command is ON, use the provided command and don't auto-generate
+  auto_generate_html = !local.use_custom_command
+  startup_command    = local.use_custom_command ? local.custom_command : "python3 -m http.server 8080 --bind 0.0.0.0"
+  has_server_config  = true  # Always run server (either default or custom)
 }
 
 # =============================================================================
