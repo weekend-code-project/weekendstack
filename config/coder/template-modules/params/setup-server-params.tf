@@ -24,11 +24,11 @@ data "coder_parameter" "num_ports" {
   }
 }
 
-# TEST: Exact copy of SSH enable toggle
-data "coder_parameter" "test_enable_server" {
-  name         = "test_enable_server"
-  display_name = "TEST Enable Server"
-  description  = "Test toggle identical to SSH enable"
+# Auto Start Server toggle - when OFF, allows custom startup command
+data "coder_parameter" "auto_generate_html" {
+  name         = "auto_generate_html"
+  display_name = "Auto Start Server"
+  description  = "Automatically start a default server (serves static HTML page)"
   type         = "bool"
   form_type    = "switch"
   default      = "false"
@@ -36,34 +36,7 @@ data "coder_parameter" "test_enable_server" {
   order        = 21
 }
 
-# TEST: Exact copy of SSH password (should disable when toggle is OFF)
-data "coder_parameter" "test_server_command" {
-  name         = "test_server_command"
-  display_name = "TEST Server Command"
-  description  = "Test field identical to SSH password (should disable when toggle OFF)"
-  type         = "string"
-  default      = ""
-  mutable      = true
-  order        = 22
-  
-  styling = jsonencode({
-    disabled = !data.coder_parameter.test_enable_server.value
-  })
-}
-
-# ORIGINAL: Auto Start Server toggle
-data "coder_parameter" "auto_generate_html" {
-  name         = "auto_generate_html"
-  display_name = "Auto Start Server"
-  description  = "Automatically start a default server (serves static HTML page)"
-  type         = "bool"
-  form_type    = "switch"
-  default      = "true"
-  mutable      = true
-  order        = 23
-}
-
-# ORIGINAL: Startup command (disabled when auto server is enabled)
+# Startup command - disabled when Auto Start Server is OFF (like SSH password pattern)
 data "coder_parameter" "startup_command" {
   name         = "startup_command"
   display_name = "Startup Command"
@@ -71,10 +44,10 @@ data "coder_parameter" "startup_command" {
   type         = "string"
   default      = ""
   mutable      = true
-  order        = 24
+  order        = 22
   
   styling = jsonencode({
-    disabled = data.coder_parameter.auto_generate_html.value
+    disabled = !data.coder_parameter.auto_generate_html.value
   })
 }
 
