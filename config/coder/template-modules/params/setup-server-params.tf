@@ -18,10 +18,10 @@ data "coder_parameter" "auto_generate_html" {
   order        = 20
 }
 
-# Always visible - disabled when not in use
+# Always visible - grayed out when not in use
 data "coder_parameter" "num_ports" {
   name         = "num_ports"
-  display_name = "Number of Ports"
+  display_name = "Number of Ports ${data.coder_parameter.auto_generate_html.value ? "(disabled)" : ""}"
   description  = "Number of ports to expose (only used when Static Site is disabled)"
   type         = "number"
   form_type    = "slider"
@@ -33,29 +33,17 @@ data "coder_parameter" "num_ports" {
     min = 1
     max = 10
   }
-  
-  option {
-    name  = "Disabled when Static Site is enabled"
-    value = "0"
-    icon  = "/emojis/1f6ab.png"
-  }
 }
 
-# Always visible - disabled when not in use
+# Always visible - grayed out when not in use
 data "coder_parameter" "startup_command" {
   name         = "startup_command"
-  display_name = "Startup Command"
+  display_name = "Startup Command ${data.coder_parameter.auto_generate_html.value ? "(disabled)" : ""}"
   description  = "Custom command to run at startup (only used when Static Site is disabled, leave empty for default)"
   type         = "string"
   default      = ""
   mutable      = true
   order        = 22
-  
-  option {
-    name  = "Disabled when Static Site is enabled"
-    value = ""
-    icon  = "/emojis/1f6ab.png"
-  }
 }
 
 # =============================================================================

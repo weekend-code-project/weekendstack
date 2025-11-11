@@ -47,21 +47,15 @@ data "coder_parameter" "ssh_enable" {
   order        = 50
 }
 
-# Parameter: SSH Password (always visible, disabled when SSH not enabled)
+# Parameter: SSH Password (always visible, grayed out when SSH not enabled)
 data "coder_parameter" "ssh_password" {
   name         = "ssh_password"
-  display_name = "SSH Password"
+  display_name = "SSH Password ${data.coder_parameter.ssh_enable.value ? "" : "(disabled)"}"
   description  = "Optional custom password (only used when SSH is enabled, leave empty for auto-generated)"
   type         = "string"
   default      = ""
   mutable      = true
   order        = 51
-  
-  option {
-    name  = "Disabled when SSH is not enabled"
-    value = ""
-    icon  = "/emojis/1f6ab.png"
-  }
 }
 
 # Module: SSH (conditional - only loaded when enabled)
