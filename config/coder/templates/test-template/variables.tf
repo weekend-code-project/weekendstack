@@ -14,3 +14,9 @@ variable "host_ip" {
   type        = string
   default     = "192.168.1.50"
 }
+
+variable "ssh_key_dir" {
+  description = "Path to SSH key directory on host (injected from .env TF_VAR_ssh_key_dir)"
+  type        = string
+  default     = "/home/docker/.ssh"
+}

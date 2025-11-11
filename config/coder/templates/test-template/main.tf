@@ -56,10 +56,11 @@ resource "docker_container" "workspace" {
     read_only      = false
   }
   
-  # Mount SSH keys from Coder container to workspace
+  # Mount SSH keys from host VM to workspace
+  # This mounts the actual SSH directory from the Docker host (e.g., /home/docker/.ssh)
   volumes {
     container_path = "/mnt/host-ssh"
-    host_path      = "/mnt/host-ssh"
+    host_path      = var.ssh_key_dir
     read_only      = true
   }
   
