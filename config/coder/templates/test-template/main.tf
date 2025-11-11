@@ -134,3 +134,18 @@ module "code_server" {
 # Module: metadata (Issue #27)
 # Overlaid from metadata-params.tf
 # Provides resource monitoring metadata blocks (CPU, RAM, disk, etc.)
+
+# =============================================================================
+# Phase 5 Modules: Complex Conditional Parameters
+# =============================================================================
+
+# Module: ssh (Issue #33)
+# Overlaid from ssh-params.tf
+# Provides SSH server with enable toggle, port mode, and password configuration
+# VERY HIGH flickering risk: conditional parameters with disabled styling
+
+# Workspace secret for SSH password (if not manually set)
+resource "random_password" "workspace_secret" {
+  length  = 16
+  special = true
+}

@@ -167,3 +167,21 @@ output "ssh_enabled" {
   description = "Whether SSH is enabled"
   value       = var.ssh_enable_default
 }
+
+output "metadata_blocks" {
+  description = "Metadata blocks contributed by this module"
+  value = [
+    {
+      display_name = "SSH Port"
+      script       = "echo ${local.resolved_ssh_port}"
+      interval     = 60
+      timeout      = 1
+    },
+    {
+      display_name = "SSH Status"
+      script       = "pgrep -x sshd >/dev/null && echo 'Running (port ${local.resolved_ssh_port})' || echo 'Not running'"
+      interval     = 30
+      timeout      = 2
+    }
+  ]
+}

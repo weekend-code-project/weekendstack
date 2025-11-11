@@ -7,10 +7,12 @@
 # This local is referenced by the overlaid metadata-params.tf
 locals {
   docker_metadata = try(module.docker[0].metadata_blocks, [])
+  ssh_metadata    = try(module.ssh[0].metadata_blocks, [])
   
   # Combine all module metadata - add more as modules are added
   all_custom_metadata = concat(
-    local.docker_metadata
+    local.docker_metadata,
+    local.ssh_metadata
   )
 }
 
@@ -48,6 +50,10 @@ module "agent" {
     try(module.docker[0].docker_install_script, "# Docker disabled"),
     try(module.docker[0].docker_config_script, ""),
     try(module.docker[0].docker_test_script, ""),
+    "",
+    "# Phase 5 Module: ssh (Issue #33) - Conditional",
+    try(module.ssh[0].ssh_copy_script, "# SSH disabled"),
+    try(module.ssh[0].ssh_setup_script, ""),
     "",
     "echo '[WORKSPACE] Workspace ready!'"
   ])
