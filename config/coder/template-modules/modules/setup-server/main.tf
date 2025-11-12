@@ -349,9 +349,8 @@ resource "coder_app" "preview_server" {
   slug         = "preview"
   display_name = "Preview Server"
   url          = "http://localhost:8080"
-  external     = "http://${var.host_ip}:${local.primary_external_port}"
   icon         = "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/html5/html5-original.svg"
-  subdomain    = false
+  subdomain    = true
   share        = "owner"
 }
 
