@@ -85,7 +85,7 @@ module "setup_server" {
   
   # Workspace identity for deterministic port generation
   workspace_id = data.coder_workspace.me.id
-  agent_id     = module.agent.coder_agent_id
+  agent_id     = module.agent.agent_id
   
   # Port configuration
   exposed_ports_list = local.exposed_ports_list
