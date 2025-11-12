@@ -21,6 +21,11 @@ variable "workspace_id" {
   type        = string
 }
 
+variable "agent_id" {
+  description = "Coder agent ID for the preview button"
+  type        = string
+}
+
 variable "exposed_ports_list" {
   description = "List of ports to expose"
   type        = list(string)
@@ -333,6 +338,20 @@ HTML
     echo ""  # Line break after module
 
   EOT
+}
+
+# =============================================================================
+# Preview Button
+# =============================================================================
+
+resource "coder_app" "server_preview" {
+  agent_id     = var.agent_id
+  slug         = "server-preview"
+  display_name = "Preview Server"
+  url          = "http://${var.host_ip}:${local.primary_external_port}"
+  icon         = "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/html5/html5-original.svg"
+  subdomain    = false
+  share        = "owner"
 }
 
 # =============================================================================
