@@ -132,31 +132,23 @@ USERNAME="${var.workspace_owner}"
 SECRET_VALUE="${var.workspace_secret}"
 PREVIEW_MODE="${var.preview_mode}"
 
-echo "[TRAEFIK-DEBUG] Preview mode: $PREVIEW_MODE"
-echo "[TRAEFIK-DEBUG] Password length: $${#SECRET_VALUE}"
-
 # Only setup auth if password is provided AND using traefik mode
 if [ "$PREVIEW_MODE" != "traefik" ]; then
-  echo "[TRAEFIK-AUTH] Skipping auth setup (using internal preview mode)"
   exit 0
 fi
 
 if [ -z "$SECRET_VALUE" ]; then
-  echo "[TRAEFIK-AUTH] No password provided - workspace is public"
   exit 0
 fi
 
-echo "[TRAEFIK-AUTH] Setting up password protection..."
-
 # Check if traefik-auth directory is mounted
 if [ ! -d "/traefik-auth" ]; then
-  echo "[TRAEFIK-AUTH] ✗ /traefik-auth directory not mounted; skipping auth setup"
-  exit 0
+  echo "[TRAEFIK-AUTH] ✗ /traefik-auth directory not mounted"
+  exit 1
 fi
 
 # Install htpasswd if not available
 if ! command -v htpasswd >/dev/null 2>&1; then
-  echo "[TRAEFIK-AUTH] Installing apache2-utils..."
   sudo apt-get update -qq >/dev/null 2>&1
   sudo apt-get install -y -qq apache2-utils >/dev/null 2>&1
 fi
@@ -179,10 +171,11 @@ http:
 EOF
 
 # Display auth info
+echo ""
 echo "[TRAEFIK-AUTH] ✓ Password protection enabled"
-echo "[TRAEFIK-AUTH] URL: https://${lower(var.workspace_name)}.${var.domain}"
 echo "[TRAEFIK-AUTH] Username: $USERNAME"
-echo ""  # Line break after module
+echo "[TRAEFIK-AUTH] Password: $SECRET_VALUE"
+echo ""
 EOT
 }
 
