@@ -351,7 +351,6 @@ resource "coder_app" "preview_server" {
   url          = "http://${var.host_ip}:${local.primary_external_port}"
   icon         = "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/html5/html5-original.svg"
   external     = true
-  share        = "owner"
 }
 
 # =============================================================================
