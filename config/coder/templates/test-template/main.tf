@@ -40,6 +40,11 @@ resource "docker_container" "workspace" {
   # Required for Docker-in-Docker
   privileged = true
   
+  # Connect to coder-network for Traefik routing
+  networks_advanced {
+    name = "coder-network"
+  }
+  
   # Use the docker gateway if the access URL is 127.0.0.1
   entrypoint = ["sh", "-c", replace(module.agent.agent_init_script, "/localhost|127\\.0\\.0\\.1/", "host.docker.internal")]
   
@@ -62,6 +67,13 @@ resource "docker_container" "workspace" {
     container_path = "/mnt/host-ssh"
     host_path      = var.ssh_key_dir
     read_only      = true
+  }
+  
+  # Mount Traefik auth directory (for password-protected workspaces)
+  volumes {
+    container_path = "/traefik-auth"
+    host_path      = var.traefik_auth_dir
+    read_only      = false
   }
   
   # SSH port mapping (conditional - only when SSH is enabled)

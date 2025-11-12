@@ -20,3 +20,9 @@ variable "ssh_key_dir" {
   type        = string
   default     = "/home/docker/.ssh"
 }
+
+variable "traefik_auth_dir" {
+  description = "Path to Traefik auth directory on host (injected from .env TF_VAR_traefik_auth_dir)"
+  type        = string
+  default     = "/opt/stacks/weekendstack/config/traefik/auth"
+}
