@@ -173,6 +173,7 @@ EOF
 # Display auth info
 echo ""
 echo "[TRAEFIK-AUTH] ✓ Password protection enabled"
+echo "[TRAEFIK-AUTH] URL: https://${lower(var.workspace_name)}.${var.domain}"
 echo "[TRAEFIK-AUTH] Username: $USERNAME"
 echo "[TRAEFIK-AUTH] Password: $SECRET_VALUE"
 echo ""
