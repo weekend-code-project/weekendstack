@@ -33,7 +33,7 @@ data "coder_parameter" "make_public" {
   type         = "bool"
   form_type    = "switch"
   default      = "true"
-  mutable      = false
+  mutable      = true
   order        = 31
 }
 
@@ -44,7 +44,7 @@ data "coder_parameter" "workspace_secret" {
   description  = "Password to protect workspace URL (leave blank for auto-generated)"
   type         = "string"
   default      = ""
-  mutable      = false
+  mutable      = true
   order        = 32
   
   validation {
