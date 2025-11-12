@@ -348,16 +348,10 @@ resource "coder_app" "preview_server" {
   agent_id     = var.agent_id
   slug         = "preview"
   display_name = "Preview Server"
-  url          = "http://localhost:8080"
+  url          = "http://${var.host_ip}:${local.primary_external_port}"
   icon         = "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/html5/html5-original.svg"
-  subdomain    = false
+  external     = true
   share        = "owner"
-  
-  healthcheck {
-    url       = "http://localhost:8080"
-    interval  = 5
-    threshold = 6
-  }
 }
 
 # =============================================================================
