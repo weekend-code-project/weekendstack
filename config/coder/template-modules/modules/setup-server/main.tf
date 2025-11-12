@@ -349,7 +349,7 @@ resource "coder_app" "preview_server" {
   slug         = "direct-preview"
   display_name = "Local Preview"
   url          = "http://${var.host_ip}:${local.primary_external_port}"
-  icon         = "/icon/network.svg"
+  icon         = "/icon/coder.svg"
   external     = true
 }
 
