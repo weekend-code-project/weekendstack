@@ -207,7 +207,7 @@ resource "coder_app" "preview_traefik" {
   count        = var.preview_mode == "traefik" ? var.workspace_start_count : 0
   agent_id     = var.agent_id
   slug         = "preview"
-  display_name = var.make_public ? "Preview (Public)" : "Preview (Protected)"
+  display_name = var.make_public ? "External Preview (Public)" : "External Preview (Protected)"
   icon         = var.make_public ? "/icon/globe.svg" : "/icon/lock.svg"
   url          = local.workspace_url
   external     = true

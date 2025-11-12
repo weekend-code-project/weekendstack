@@ -347,9 +347,9 @@ HTML
 resource "coder_app" "preview_server" {
   agent_id     = var.agent_id
   slug         = "direct-preview"
-  display_name = "Direct Preview"
+  display_name = "Local Preview"
   url          = "http://${var.host_ip}:${local.primary_external_port}"
-  icon         = "/icon/coder.svg"
+  icon         = "/icon/network.svg"
   external     = true
 }
 
