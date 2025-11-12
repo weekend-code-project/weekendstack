@@ -343,15 +343,18 @@ HTML
 # =============================================================================
 # Preview Button - Direct IP Access
 # =============================================================================
+# NOTE: Commented out in favor of unified preview button in traefik-routing module
+# The traefik-routing module provides a single "Preview" button that switches between
+# internal (Coder proxy) and external (Traefik subdomain) based on preview_mode parameter
 
-resource "coder_app" "preview_server" {
-  agent_id     = var.agent_id
-  slug         = "direct-preview"
-  display_name = "Local Preview"
-  url          = "http://${var.host_ip}:${local.primary_external_port}"
-  icon         = "/icon/coder.svg"
-  external     = true
-}
+# resource "coder_app" "preview_server" {
+#   agent_id     = var.agent_id
+#   slug         = "direct-preview"
+#   display_name = "Local Preview"
+#   url          = "http://${var.host_ip}:${local.primary_external_port}"
+#   icon         = "/icon/coder.svg"
+#   external     = true
+# }
 
 # =============================================================================
 # Outputs

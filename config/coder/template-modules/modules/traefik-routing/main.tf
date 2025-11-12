@@ -189,7 +189,7 @@ resource "coder_app" "preview_internal" {
   count        = var.preview_mode == "internal" ? var.workspace_start_count : 0
   agent_id     = var.agent_id
   slug         = "preview"
-  display_name = "Preview (Internal)"
+  display_name = "Preview"
   icon         = "/icon/coder.svg"
   url          = "http://localhost:${var.exposed_port}"
   subdomain    = false
@@ -207,7 +207,7 @@ resource "coder_app" "preview_traefik" {
   count        = var.preview_mode == "traefik" ? var.workspace_start_count : 0
   agent_id     = var.agent_id
   slug         = "preview"
-  display_name = "External Preview"
+  display_name = "Preview"
   icon         = "/icon/desktop.svg"
   url          = local.workspace_url
   external     = true
