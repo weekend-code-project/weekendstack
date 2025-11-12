@@ -41,12 +41,15 @@ locals {
 locals {
   docker_config_script = <<-EOT
     #!/bin/bash
-    set -e
+    # Note: No set -e here because this script is wrapped in a subshell with || true
+    # We want to continue even if some commands fail
     
     echo "[DOCKER-CONFIG] Configuring Docker-in-Docker daemon..."
     
     # Create Docker config directory
-    mkdir -p /home/coder/.config/docker
+    mkdir -p /home/coder/.config/docker || true
+    echo "[DOCKER-CONFIG] DEBUG: Created config directory"
+    echo "[DOCKER-CONFIG] DEBUG: Created config directory"
     
     # Write daemon configuration
     cat > /home/coder/.config/docker/daemon.json <<'JSON'
@@ -56,6 +59,7 @@ locals {
 }
 JSON
     echo "[DOCKER-CONFIG] ✓ Daemon config created"
+    echo "[DOCKER-CONFIG] DEBUG: Daemon config file written"
     
     # Configure Docker host socket in bash profile
     if ! grep -q "DOCKER_HOST=unix:///var/run/docker.sock" ~/.bashrc; then
