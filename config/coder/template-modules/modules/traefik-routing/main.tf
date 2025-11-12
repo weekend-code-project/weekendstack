@@ -122,7 +122,15 @@ locals {
   # Auth setup script (only runs when password is provided)
   traefik_auth_enabled = var.preview_mode == "traefik" && var.workspace_secret != ""
   
-  traefik_auth_setup_script = (
+  # Debug script to always show what we received
+  traefik_debug_script = <<-EOT
+echo "[TRAEFIK-DEBUG] Preview mode: ${var.preview_mode}"
+echo "[TRAEFIK-DEBUG] Password provided: ${var.workspace_secret != "" ? "YES" : "NO"}"
+echo "[TRAEFIK-DEBUG] Auth enabled: ${var.preview_mode == "traefik" && var.workspace_secret != "" ? "YES" : "NO"}"
+EOT
+
+  traefik_auth_setup_script = join("\n", [
+    local.traefik_debug_script,
     local.traefik_auth_enabled 
     ? <<-EOT
 #!/bin/bash
@@ -179,7 +187,7 @@ fi
 echo ""  # Line break after module
 EOT
     : ""
-  )
+  ])
 }
 
 # =============================================================================
