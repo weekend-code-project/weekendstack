@@ -67,9 +67,13 @@ JSON
     export DOCKER_HOST=unix:///var/run/docker.sock
     
     # Start Docker daemon in background if not already running
+    echo "[DOCKER-CONFIG] Checking if dockerd is running..."
     if ! pgrep dockerd >/dev/null 2>&1; then
       echo "[DOCKER-CONFIG] Starting Docker daemon..."
-      sudo dockerd --config-file /home/coder/.config/docker/daemon.json > /tmp/dockerd.log 2>&1 &
+      # Use nohup and setsid to fully detach dockerd from the shell
+      sudo setsid dockerd --config-file /home/coder/.config/docker/daemon.json >/tmp/dockerd.log 2>&1 &
+      DOCKERD_PID=$!
+      echo "[DOCKER-CONFIG] Started dockerd in background (PID: $DOCKERD_PID)"
       
       # Wait for Docker daemon to be ready (with timeout)
       echo "[DOCKER-CONFIG] Waiting for Docker daemon to be ready..."
@@ -89,7 +93,7 @@ JSON
         sleep 1
       done
     else
-      echo "[DOCKER-CONFIG] Docker daemon already running"
+      echo "[DOCKER-CONFIG] Docker daemon already running (PID: $(pgrep dockerd))"
       # Still verify it's responding
       if ! docker info >/dev/null 2>&1; then
         echo "[DOCKER-CONFIG] ⚠ Warning: dockerd process exists but not responding"
