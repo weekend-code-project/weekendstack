@@ -41,7 +41,7 @@ locals {
 locals {
   docker_config_script = <<-EOT
     #!/bin/bash
-    # Note: No 'set -e' here - we handle errors gracefully to avoid failing workspace startup
+    set -e
     
     echo "[DOCKER-CONFIG] Configuring Docker-in-Docker daemon..."
     
@@ -69,58 +69,50 @@ JSON
     # Start Docker daemon in background if not already running
     if ! pgrep dockerd >/dev/null 2>&1; then
       echo "[DOCKER-CONFIG] Starting Docker daemon..."
-      
-      # Start dockerd with nohup and proper backgrounding
-      nohup sudo dockerd \
-        --config-file /home/coder/.config/docker/daemon.json \
-        --host=unix:///var/run/docker.sock \
-        </dev/null >/tmp/dockerd.log 2>&1 &
-      
-      DOCKERD_PID=$!
-      echo "[DOCKER-CONFIG] Started dockerd (PID: $DOCKERD_PID)"
+      sudo dockerd --config-file /home/coder/.config/docker/daemon.json > /tmp/dockerd.log 2>&1 &
       
       # Wait for Docker daemon to be ready (with timeout)
       echo "[DOCKER-CONFIG] Waiting for Docker daemon to be ready..."
-      READY=false
       for i in {1..15}; do
         if docker info >/dev/null 2>&1; then
           echo "[DOCKER-CONFIG] ✓ Docker daemon is ready (took $i seconds)"
-          READY=true
           break
+        fi
+        if [ $i -eq 15 ]; then
+          echo "[DOCKER-CONFIG] ✗ Docker daemon failed to start after 15 seconds"
+          echo "[DOCKER-CONFIG] Check logs: sudo tail -20 /tmp/dockerd.log"
+          sudo tail -20 /tmp/dockerd.log || true
+          echo "[DOCKER-CONFIG] ⚠ Continuing without Docker-in-Docker..."
+          echo ""
+          exit 0  # Don't fail workspace, just skip Docker setup
         fi
         sleep 1
       done
-      
-      if [ "$READY" = "false" ]; then
-        echo "[DOCKER-CONFIG] ✗ Docker daemon failed to start after 15 seconds"
-        echo "[DOCKER-CONFIG] Logs from /tmp/dockerd.log:"
-        sudo tail -30 /tmp/dockerd.log 2>/dev/null || echo "[DOCKER-CONFIG] No logs available"
-        echo "[DOCKER-CONFIG] ⚠ Continuing workspace startup without Docker-in-Docker..."
-        echo ""
-        # Don't return/exit - just continue without Docker
-      fi
     else
-      echo "[DOCKER-CONFIG] Docker daemon already running (PID: $(pgrep dockerd))"
+      echo "[DOCKER-CONFIG] Docker daemon already running"
       # Still verify it's responding
       if ! docker info >/dev/null 2>&1; then
         echo "[DOCKER-CONFIG] ⚠ Warning: dockerd process exists but not responding"
-        echo "[DOCKER-CONFIG] Continuing workspace startup without Docker-in-Docker..."
-        echo ""
+        echo "[DOCKER-CONFIG] Continuing without Docker-in-Docker..."
+        exit 0
       fi
     fi
     
-    # Only create network if Docker is actually working
-    if docker info >/dev/null 2>&1; then
-      # Create isolated coder-net network for workspace containers
-      echo "[DOCKER-CONFIG] Creating coder-net network..."
-      if ! docker network inspect coder-net >/dev/null 2>&1; then
-        docker network create coder-net >/dev/null 2>&1
-        echo "[DOCKER-CONFIG] ✓ Created coder-net network"
-      else
-        echo "[DOCKER-CONFIG] ✓ coder-net network already exists"
-      fi
-      
+    # Create isolated coder-net network for workspace containers
+    echo "[DOCKER-CONFIG] Creating coder-net network..."
+    if ! docker network inspect coder-net >/dev/null 2>&1; then
+      docker network create coder-net
+      echo "[DOCKER-CONFIG] ✓ Created coder-net network"
+    else
+      echo "[DOCKER-CONFIG] ✓ coder-net network already exists"
+    fi
+    
+    # Verify Docker is working
+    if docker ps >/dev/null 2>&1; then
       echo "[DOCKER-CONFIG] ✓ Docker-in-Docker setup complete and verified"
+    else
+      echo "[DOCKER-CONFIG] ✗ Error: Docker daemon not responding to commands"
+      exit 1
     fi
     
     echo ""
