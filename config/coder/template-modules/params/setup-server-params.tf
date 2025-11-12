@@ -81,7 +81,7 @@ locals {
 module "setup_server" {
   count = local.has_server_config ? 1 : 0
   
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/setup-server?ref=PLACEHOLDER"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/setup-server-module?ref=PLACEHOLDER"
   
   # Workspace identity for deterministic port generation
   workspace_id = data.coder_workspace.me.id

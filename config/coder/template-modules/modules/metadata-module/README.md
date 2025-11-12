@@ -31,7 +31,7 @@ module "agent" {
 
 ```hcl
 module "metadata" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/metadata-module?ref=v0.1.0"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/metadata?ref=v0.1.0"
   
   # Only show these metrics
   enabled_blocks = ["cpu", "ram", "disk"]
@@ -67,7 +67,7 @@ module "metadata" {
 
 ```hcl
 module "metadata" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/metadata-module?ref=v0.1.0"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/metadata?ref=v0.1.0"
   
   enabled_blocks = ["cpu", "ram"]
   

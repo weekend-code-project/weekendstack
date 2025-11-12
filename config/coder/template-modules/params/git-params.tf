@@ -10,10 +10,10 @@
 #   - github_repo: Repository URL (empty = no clone, SSH recommended)
 #
 # DEPENDENCIES:
-#   - template-modules/modules/git-identity: Git user configuration
-#   - template-modules/modules/git-integration: Repository cloning
-#   - template-modules/modules/github-cli: GitHub CLI installation
-#   - template-modules/modules/gitea-cli: Gitea CLI installation
+#   - template-modules/modules/git-identity-module: Git user configuration
+#   - template-modules/modules/git-integration-module: Repository cloning
+#   - template-modules/modules/github-cli-module: GitHub CLI installation
+#   - template-modules/modules/gitea-cli-module: Gitea CLI installation
 #
 # OUTPUTS (via modules):
 #   - git_identity.setup_script: Git config script (always runs)
@@ -84,7 +84,7 @@ locals {
 
 # Module: Git Identity (always loaded - sets up git config)
 module "git_identity" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/git-identity?ref=PLACEHOLDER"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/git-identity-module?ref=PLACEHOLDER"
   
   git_author_name  = coalesce(data.coder_workspace_owner.me.full_name, data.coder_workspace_owner.me.name)
   git_author_email = data.coder_workspace_owner.me.email
@@ -93,7 +93,7 @@ module "git_identity" {
 # Module: Git Integration (conditional - only loaded when repo URL is provided)
 module "git_integration" {
   count  = local.has_repo ? 1 : 0
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/git-integration?ref=PLACEHOLDER"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/git-integration-module?ref=PLACEHOLDER"
   
   github_repo_url = local.repo_url
 }
@@ -101,11 +101,11 @@ module "git_integration" {
 # Module: GitHub CLI (conditional - auto-detected for GitHub repos)
 module "github_cli" {
   count  = local.use_github_cli ? 1 : 0
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/github-cli?ref=PLACEHOLDER"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/github-cli-module?ref=PLACEHOLDER"
 }
 
 # Module: Gitea CLI (conditional - auto-detected for Gitea repos)
 module "gitea_cli" {
   count  = local.use_gitea_cli ? 1 : 0
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/gitea-cli?ref=PLACEHOLDER"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/gitea-cli-module?ref=PLACEHOLDER"
 }

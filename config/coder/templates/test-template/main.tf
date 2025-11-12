@@ -143,7 +143,7 @@ resource "docker_volume" "home_volume" {
 # Issue #23 - Simplest baseline module (0 params, no deps)
 # Pure git module call with zero parameters and no Coder dependencies
 module "init_shell" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/init-shell?ref=v0.1.0"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/init-shell-module?ref=v0.1.0"
 }
 
 # Module: debug-domain (base domain local)
@@ -161,7 +161,7 @@ locals {
 # Issue #24 - VS Code web IDE (0 params, depends on agent)
 # Uses Coder data sources but no UI parameters - tests data source integration
 module "code_server" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/code-server?ref=v0.1.0"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/code-server-module?ref=v0.1.0"
   
   agent_id              = module.agent.agent_id
   workspace_start_count = data.coder_workspace.me.start_count
