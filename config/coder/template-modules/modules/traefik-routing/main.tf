@@ -47,14 +47,8 @@ variable "workspace_start_count" {
   type        = number
 }
 
-variable "make_public" {
-  description = "Whether workspace is public (no auth required)"
-  type        = bool
-  default     = true
-}
-
 variable "workspace_secret" {
-  description = "Password for workspace auth (required when make_public is false)"
+  description = "Password for workspace auth - if empty, workspace is public (no auth)"
   type        = string
   default     = ""
   sensitive   = true
@@ -120,12 +114,13 @@ locals {
   }
   
   # Combined Traefik labels - conditionally include auth labels
+  # Auth is enabled when workspace_secret is not empty
   traefik_labels = var.preview_mode == "traefik" ? (
-    !var.make_public ? merge(local.traefik_base_labels, local.traefik_auth_labels) : local.traefik_base_labels
+    var.workspace_secret != "" ? merge(local.traefik_base_labels, local.traefik_auth_labels) : local.traefik_base_labels
   ) : {}
   
-  # Auth setup script (only runs when not public)
-  traefik_auth_enabled = var.preview_mode == "traefik" && !var.make_public
+  # Auth setup script (only runs when password is provided)
+  traefik_auth_enabled = var.preview_mode == "traefik" && var.workspace_secret != ""
   
   traefik_auth_setup_script = (
     local.traefik_auth_enabled 

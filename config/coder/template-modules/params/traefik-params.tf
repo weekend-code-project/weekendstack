@@ -45,12 +45,9 @@ data "coder_parameter" "workspace_secret" {
 locals {
   preview_mode = data.coder_parameter.preview_mode.value
   
-  # Determine if workspace should be public based on whether a password is provided
-  # If workspace_secret parameter is empty, workspace is public (no auth)
-  make_public = data.coder_parameter.workspace_secret.value == ""
-  
-  # Use provided password or fall back to auto-generated one (same pattern as SSH)
-  resolved_workspace_secret = data.coder_parameter.workspace_secret.value != "" ? data.coder_parameter.workspace_secret.value : random_password.workspace_secret.result
+  # Pass the workspace_secret parameter value directly to the module
+  # Module will determine if auth is needed based on whether password is empty
+  workspace_secret_value = data.coder_parameter.workspace_secret.value
   
   # Enable Traefik routing (always create module, it handles preview button for both modes)
   enable_traefik = true
@@ -74,6 +71,5 @@ module "traefik" {
   domain           = local.actual_base_domain
   exposed_port     = element(local.exposed_ports_list, 0)
   preview_mode     = local.preview_mode
-  make_public      = local.make_public
-  workspace_secret = local.resolved_workspace_secret
+  workspace_secret = local.workspace_secret_value
 }
