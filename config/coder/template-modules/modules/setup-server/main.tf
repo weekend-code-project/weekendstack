@@ -344,11 +344,12 @@ HTML
 # Preview Button
 # =============================================================================
 
-resource "coder_app" "server_preview" {
+resource "coder_app" "preview_server" {
   agent_id     = var.agent_id
-  slug         = "server-preview"
+  slug         = "preview"
   display_name = "Preview Server"
-  url          = "http://${var.host_ip}:${local.primary_external_port}"
+  url          = "http://localhost:8080"
+  external     = "http://${var.host_ip}:${local.primary_external_port}"
   icon         = "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/html5/html5-original.svg"
   subdomain    = false
   share        = "owner"
