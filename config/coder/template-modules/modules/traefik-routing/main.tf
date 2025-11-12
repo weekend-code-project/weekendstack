@@ -128,52 +128,52 @@ locals {
   traefik_auth_enabled = var.preview_mode == "traefik" && !var.make_public
   
   traefik_auth_setup_script = local.traefik_auth_enabled ? <<-EOT
-    #!/bin/bash
-    set -e
-    
-    WORKSPACE_NAME="${var.workspace_name}"
-    USERNAME="${var.workspace_owner}"
-    
-    # Check if traefik-auth directory is mounted
-    if [ ! -d "/traefik-auth" ]; then
-      echo "[TRAEFIK-AUTH] ✗ /traefik-auth directory not mounted; skipping auth setup"
-      exit 0
-    fi
-    
-    # Install htpasswd if not available
-    if ! command -v htpasswd >/dev/null 2>&1; then
-      echo "[TRAEFIK-AUTH] Installing apache2-utils..."
-      sudo apt-get update -qq >/dev/null 2>&1
-      sudo apt-get install -y -qq apache2-utils >/dev/null 2>&1
-    fi
-    
-    # Set permissions
-    sudo chown -R coder:coder /traefik-auth 2>/dev/null || true
-    
-    # Validate password provided
-    SECRET_VALUE="${var.workspace_secret}"
-    if [ -z "$SECRET_VALUE" ]; then
-      echo "[TRAEFIK-AUTH] ✗ Password required for private workspace"
-      exit 1
-    fi
-    
-    # Generate htpasswd file
-    echo "[TRAEFIK-AUTH] Setting up basic auth for workspace..."
-    htpasswd -nbB "$USERNAME" "$SECRET_VALUE" | sudo tee "/traefik-auth/hashed_password-$WORKSPACE_NAME" >/dev/null
-    sudo chmod 600 "/traefik-auth/hashed_password-$WORKSPACE_NAME"
-    
-    # Create dynamic Traefik config
-    sudo tee "/traefik-auth/dynamic-$WORKSPACE_NAME.yaml" >/dev/null <<EOF
-    http:
-      middlewares:
-        $(echo "$WORKSPACE_NAME" | tr '[:upper:]' '[:lower:]')-auth:
-          basicAuth:
-            realm: "$USERNAME-$WORKSPACE_NAME-workspace"
-            usersFile: "/traefik-auth/hashed_password-$WORKSPACE_NAME"
-    EOF
-    
-    echo "[TRAEFIK-AUTH] ✓ Auth configuration created"
-  EOT
+#!/bin/bash
+set -e
+
+WORKSPACE_NAME="${var.workspace_name}"
+USERNAME="${var.workspace_owner}"
+
+# Check if traefik-auth directory is mounted
+if [ ! -d "/traefik-auth" ]; then
+  echo "[TRAEFIK-AUTH] ✗ /traefik-auth directory not mounted; skipping auth setup"
+  exit 0
+fi
+
+# Install htpasswd if not available
+if ! command -v htpasswd >/dev/null 2>&1; then
+  echo "[TRAEFIK-AUTH] Installing apache2-utils..."
+  sudo apt-get update -qq >/dev/null 2>&1
+  sudo apt-get install -y -qq apache2-utils >/dev/null 2>&1
+fi
+
+# Set permissions
+sudo chown -R coder:coder /traefik-auth 2>/dev/null || true
+
+# Validate password provided
+SECRET_VALUE="${var.workspace_secret}"
+if [ -z "$SECRET_VALUE" ]; then
+  echo "[TRAEFIK-AUTH] ✗ Password required for private workspace"
+  exit 1
+fi
+
+# Generate htpasswd file
+echo "[TRAEFIK-AUTH] Setting up basic auth for workspace..."
+htpasswd -nbB "$USERNAME" "$SECRET_VALUE" | sudo tee "/traefik-auth/hashed_password-$WORKSPACE_NAME" >/dev/null
+sudo chmod 600 "/traefik-auth/hashed_password-$WORKSPACE_NAME"
+
+# Create dynamic Traefik config
+sudo tee "/traefik-auth/dynamic-$WORKSPACE_NAME.yaml" >/dev/null <<EOF
+http:
+  middlewares:
+    $(echo "$WORKSPACE_NAME" | tr '[:upper:]' '[:lower:]')-auth:
+      basicAuth:
+        realm: "$USERNAME-$WORKSPACE_NAME-workspace"
+        usersFile: "/traefik-auth/hashed_password-$WORKSPACE_NAME"
+EOF
+
+echo "[TRAEFIK-AUTH] ✓ Auth configuration created"
+EOT
   : ""
 }
 
