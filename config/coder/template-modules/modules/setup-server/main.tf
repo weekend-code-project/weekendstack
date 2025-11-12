@@ -341,13 +341,13 @@ HTML
 }
 
 # =============================================================================
-# Preview Button
+# Preview Button - Direct IP Access
 # =============================================================================
 
 resource "coder_app" "preview_server" {
   agent_id     = var.agent_id
-  slug         = "preview"
-  display_name = "Preview Server"
+  slug         = "direct-preview"
+  display_name = "Direct Preview"
   url          = "http://${var.host_ip}:${local.primary_external_port}"
   icon         = "/icon/coder.svg"
   external     = true
