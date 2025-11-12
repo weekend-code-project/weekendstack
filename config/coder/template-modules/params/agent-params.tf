@@ -26,9 +26,9 @@ module "agent" {
     module.ssh.ssh_copy_script,
     module.git_integration.clone_script,
     (data.coder_parameter.clone_repo.value && try(data.coder_parameter.install_github_cli.value, false)) ? module.github_cli.install_script : "",
-    # Docker scripts - errors handled within the scripts themselves
-    data.coder_parameter.enable_docker.value ? module.docker.docker_install_script : "",
-    data.coder_parameter.enable_docker.value ? module.docker.docker_config_script : "",
+    # Docker scripts - wrapped in subshell to allow exit 0 without killing parent script
+    data.coder_parameter.enable_docker.value ? "(\n${module.docker.docker_install_script}\n)" : "",
+    data.coder_parameter.enable_docker.value ? "(\n${module.docker.docker_config_script}\n) || true" : "",
     module.ssh.ssh_setup_script,
     local.traefik_auth_setup_script,
     local.setup_server_script,
