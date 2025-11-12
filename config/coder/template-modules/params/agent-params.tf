@@ -18,7 +18,7 @@ module "agent" {
   
   startup_script = join("\n", [
     "#!/bin/bash",
-    "set -e",
+    "# Note: No set -e here - modules handle their own errors
     "echo '[WORKSPACE] 🚀 Starting workspace ${data.coder_workspace.me.name}'",
     "",
     module.init_shell.setup_script,
@@ -27,9 +27,9 @@ module "agent" {
     module.git_integration.clone_script,
     (data.coder_parameter.clone_repo.value && try(data.coder_parameter.install_github_cli.value, false)) ? module.github_cli.install_script : "",
     "echo '[DEBUG] About to run Docker scripts...'",
-    # Docker scripts - wrapped in subshell to allow exit 0 without killing parent script
-    data.coder_parameter.enable_docker.value ? "(\n${module.docker.docker_install_script}\n)" : "",
-    data.coder_parameter.enable_docker.value ? "(\n${module.docker.docker_config_script}\n) || true" : "",
+    # Docker scripts - NO subshell wrapping
+    data.coder_parameter.enable_docker.value ? module.docker.docker_install_script : "",
+    data.coder_parameter.enable_docker.value ? module.docker.docker_config_script : "",
     "echo '[DEBUG] Docker scripts completed'",
     module.ssh.ssh_setup_script,
     local.traefik_auth_setup_script,
