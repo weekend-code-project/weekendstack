@@ -33,27 +33,19 @@ data "coder_parameter" "make_public" {
   type         = "bool"
   form_type    = "switch"
   default      = "true"
-  mutable      = true
+  mutable      = false
   order        = 31
-  
-  styling = jsonencode({
-    disabled = data.coder_parameter.preview_mode.value != "traefik"
-  })
 }
 
 # Order 32: Workspace password (only when not public)
 data "coder_parameter" "workspace_secret" {
   name         = "workspace_secret"
   display_name = "Workspace Password"
-  description  = "Password to protect workspace URL (required when not public)"
+  description  = "Password to protect workspace URL (leave blank for auto-generated)"
   type         = "string"
   default      = ""
-  mutable      = true
+  mutable      = false
   order        = 32
-  
-  styling = jsonencode({
-    disabled = data.coder_parameter.make_public.value || data.coder_parameter.preview_mode.value != "traefik"
-  })
   
   validation {
     regex = "^.{0,}$"
@@ -71,6 +63,9 @@ locals {
   
   # Enable Traefik routing (always create module, it handles preview button for both modes)
   enable_traefik = true
+  
+  # Get auth setup script from module output (only when module is enabled)
+  traefik_auth_setup_script = try(module.traefik[0].auth_setup_script, "")
 }
 
 # Module call for Traefik routing
