@@ -350,8 +350,14 @@ resource "coder_app" "preview_server" {
   display_name = "Preview Server"
   url          = "http://localhost:8080"
   icon         = "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/html5/html5-original.svg"
-  subdomain    = true
+  subdomain    = false
   share        = "owner"
+  
+  healthcheck {
+    url       = "http://localhost:8080"
+    interval  = 5
+    threshold = 6
+  }
 }
 
 # =============================================================================
