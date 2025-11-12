@@ -119,26 +119,34 @@ locals {
     var.workspace_secret != "" ? merge(local.traefik_base_labels, local.traefik_auth_labels) : local.traefik_base_labels
   ) : {}
   
-  # Auth setup script (only runs when password is provided)
+  # Auth setup script (always runs, but checks password at runtime)
   traefik_auth_enabled = var.preview_mode == "traefik" && var.workspace_secret != ""
   
-  # Debug script to always show what we received
-  traefik_debug_script = <<-EOT
-echo "[TRAEFIK-DEBUG] Preview mode: ${var.preview_mode}"
-echo "[TRAEFIK-DEBUG] Password provided: ${var.workspace_secret != "" ? "YES" : "NO"}"
-echo "[TRAEFIK-DEBUG] Auth enabled: ${var.preview_mode == "traefik" && var.workspace_secret != "" ? "YES" : "NO"}"
-EOT
-
-  traefik_auth_setup_script = join("\n", [
-    local.traefik_debug_script,
-    local.traefik_auth_enabled 
-    ? <<-EOT
+  # Always output the auth script - it will check if password is provided at runtime
+  traefik_auth_setup_script = <<-EOT
 #!/bin/bash
 set -e
 
 WORKSPACE_NAME="${var.workspace_name}"
 USERNAME="${var.workspace_owner}"
 SECRET_VALUE="${var.workspace_secret}"
+PREVIEW_MODE="${var.preview_mode}"
+
+echo "[TRAEFIK-DEBUG] Preview mode: $PREVIEW_MODE"
+echo "[TRAEFIK-DEBUG] Password length: $${#SECRET_VALUE}"
+
+# Only setup auth if password is provided AND using traefik mode
+if [ "$PREVIEW_MODE" != "traefik" ]; then
+  echo "[TRAEFIK-AUTH] Skipping auth setup (using internal preview mode)"
+  exit 0
+fi
+
+if [ -z "$SECRET_VALUE" ]; then
+  echo "[TRAEFIK-AUTH] No password provided - workspace is public"
+  exit 0
+fi
+
+echo "[TRAEFIK-AUTH] Setting up password protection..."
 
 # Check if traefik-auth directory is mounted
 if [ ! -d "/traefik-auth" ]; then
@@ -155,12 +163,6 @@ fi
 
 # Set permissions
 sudo chown -R coder:coder /traefik-auth 2>/dev/null || true
-
-# Validate password is provided (should always be set via resolved_workspace_secret)
-if [ -z "$SECRET_VALUE" ]; then
-  echo "[TRAEFIK-AUTH] ✗ Password required for private workspace"
-  exit 1
-fi
 
 # Generate htpasswd file
 htpasswd -nbB "$USERNAME" "$SECRET_VALUE" | sudo tee "/traefik-auth/hashed_password-$WORKSPACE_NAME" >/dev/null
@@ -180,14 +182,8 @@ EOF
 echo "[TRAEFIK-AUTH] ✓ Password protection enabled"
 echo "[TRAEFIK-AUTH] URL: https://${lower(var.workspace_name)}.${var.domain}"
 echo "[TRAEFIK-AUTH] Username: $USERNAME"
-# Only show password if it's auto-generated (starts with workspace ID)
-if [[ "$SECRET_VALUE" == "${var.workspace_id}"* ]]; then
-  echo "[TRAEFIK-AUTH] Password: $SECRET_VALUE"
-fi
 echo ""  # Line break after module
 EOT
-    : ""
-  ])
 }
 
 # =============================================================================
