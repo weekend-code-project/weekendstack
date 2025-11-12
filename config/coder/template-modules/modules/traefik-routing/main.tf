@@ -135,6 +135,7 @@ set -e
 
 WORKSPACE_NAME="${var.workspace_name}"
 USERNAME="${var.workspace_owner}"
+SECRET_VALUE="${var.workspace_secret}"
 
 # Check if traefik-auth directory is mounted
 if [ ! -d "/traefik-auth" ]; then
@@ -152,15 +153,13 @@ fi
 # Set permissions
 sudo chown -R coder:coder /traefik-auth 2>/dev/null || true
 
-# Validate password provided
-SECRET_VALUE="${var.workspace_secret}"
+# Validate password is provided (should always be set via resolved_workspace_secret)
 if [ -z "$SECRET_VALUE" ]; then
   echo "[TRAEFIK-AUTH] ✗ Password required for private workspace"
   exit 1
 fi
 
 # Generate htpasswd file
-echo "[TRAEFIK-AUTH] Setting up basic auth for workspace..."
 htpasswd -nbB "$USERNAME" "$SECRET_VALUE" | sudo tee "/traefik-auth/hashed_password-$WORKSPACE_NAME" >/dev/null
 sudo chmod 600 "/traefik-auth/hashed_password-$WORKSPACE_NAME"
 
@@ -174,7 +173,15 @@ http:
         usersFile: "/traefik-auth/hashed_password-$WORKSPACE_NAME"
 EOF
 
-echo "[TRAEFIK-AUTH] ✓ Auth configuration created"
+# Display auth info
+echo "[TRAEFIK-AUTH] ✓ Password protection enabled"
+echo "[TRAEFIK-AUTH] URL: https://${lower(var.workspace_name)}.${var.domain}"
+echo "[TRAEFIK-AUTH] Username: $USERNAME"
+# Only show password if it's auto-generated (starts with workspace ID)
+if [[ "$SECRET_VALUE" == "${var.workspace_id}"* ]]; then
+  echo "[TRAEFIK-AUTH] Password: $SECRET_VALUE"
+fi
+echo ""  # Line break after module
 EOT
     : ""
   )
