@@ -127,7 +127,9 @@ locals {
   # Auth setup script (only runs when not public)
   traefik_auth_enabled = var.preview_mode == "traefik" && !var.make_public
   
-  traefik_auth_setup_script = local.traefik_auth_enabled ? <<-EOT
+  traefik_auth_setup_script = (
+    local.traefik_auth_enabled 
+    ? <<-EOT
 #!/bin/bash
 set -e
 
@@ -174,7 +176,8 @@ EOF
 
 echo "[TRAEFIK-AUTH] ✓ Auth configuration created"
 EOT
- : ""
+    : ""
+  )
 }
 
 # =============================================================================
