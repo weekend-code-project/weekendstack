@@ -83,6 +83,15 @@ resource "docker_container" "workspace" {
       protocol = "tcp"
     }
   }
+  
+  # Traefik routing labels (conditional - only when Traefik module is enabled)
+  dynamic "labels" {
+    for_each = try(module.traefik[0].traefik_labels, {})
+    content {
+      label = labels.key
+      value = labels.value
+    }
+  }
 }
 
 # Home volume
