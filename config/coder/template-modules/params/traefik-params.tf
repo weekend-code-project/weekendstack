@@ -25,27 +25,15 @@ data "coder_parameter" "preview_mode" {
   }
 }
 
-# Order 31: Make public toggle (only shown for Traefik mode)
-data "coder_parameter" "make_public" {
-  name         = "make_public"
-  display_name = "Make Public"
-  description  = "Allow public access without password (Traefik mode only)"
-  type         = "bool"
-  form_type    = "switch"
-  default      = "true"
-  mutable      = true
-  order        = 31
-}
-
-# Order 32: Workspace password (only when not public)
+# Order 31: Workspace password (optional - if empty, workspace is public)
 data "coder_parameter" "workspace_secret" {
   name         = "workspace_secret"
-  display_name = "Workspace Password"
-  description  = "Password to protect workspace URL (leave blank for auto-generated)"
+  display_name = "Workspace Password (Optional)"
+  description  = "Leave blank for public access, or set a password to require authentication"
   type         = "string"
   default      = ""
   mutable      = true
-  order        = 32
+  order        = 31
   
   validation {
     regex = "^.{0,}$"
@@ -55,8 +43,11 @@ data "coder_parameter" "workspace_secret" {
 
 # Locals for Traefik module
 locals {
-  preview_mode     = data.coder_parameter.preview_mode.value
-  make_public      = data.coder_parameter.make_public.value
+  preview_mode = data.coder_parameter.preview_mode.value
+  
+  # Determine if workspace should be public based on whether a password is provided
+  # If workspace_secret parameter is empty, workspace is public (no auth)
+  make_public = data.coder_parameter.workspace_secret.value == ""
   
   # Use provided password or fall back to auto-generated one (same pattern as SSH)
   resolved_workspace_secret = data.coder_parameter.workspace_secret.value != "" ? data.coder_parameter.workspace_secret.value : random_password.workspace_secret.result
