@@ -41,7 +41,7 @@ locals {
 locals {
   docker_config_script = <<-EOT
     #!/bin/bash
-    set -e
+    # Note: No 'set -e' here - we handle errors gracefully to avoid failing workspace startup
     
     echo "[DOCKER-CONFIG] Configuring Docker-in-Docker daemon..."
     
@@ -81,10 +81,10 @@ JSON
         if [ $i -eq 15 ]; then
           echo "[DOCKER-CONFIG] ✗ Docker daemon failed to start after 15 seconds"
           echo "[DOCKER-CONFIG] Check logs: sudo tail -20 /tmp/dockerd.log"
-          sudo tail -20 /tmp/dockerd.log || true
-          echo "[DOCKER-CONFIG] ⚠ Continuing without Docker-in-Docker..."
+          sudo tail -20 /tmp/dockerd.log 2>/dev/null || echo "[DOCKER-CONFIG] No logs available"
+          echo "[DOCKER-CONFIG] ⚠ Continuing workspace startup without Docker-in-Docker..."
           echo ""
-          exit 0  # Don't fail workspace, just skip Docker setup
+          return 0  # Return success to continue workspace startup
         fi
         sleep 1
       done
@@ -93,8 +93,9 @@ JSON
       # Still verify it's responding
       if ! docker info >/dev/null 2>&1; then
         echo "[DOCKER-CONFIG] ⚠ Warning: dockerd process exists but not responding"
-        echo "[DOCKER-CONFIG] Continuing without Docker-in-Docker..."
-        exit 0
+        echo "[DOCKER-CONFIG] Continuing workspace startup without Docker-in-Docker..."
+        echo ""
+        return 0
       fi
     fi
     
