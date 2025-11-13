@@ -42,15 +42,8 @@ locals {
   docker_config_script = <<-EOT
     #!/bin/bash
     
-    echo "[DOCKER-CONFIG] Starting Docker daemon..."
-    
-    # Just start dockerd - don't overthink it
-    sudo dockerd >/tmp/dockerd.log 2>&1 &
-    
-    # Give it a moment to start
-    sleep 3
-    
-    echo "[DOCKER-CONFIG] ✓ Docker daemon started"
+    echo "[DOCKER-CONFIG] Docker is already running - skipping daemon start"
+    echo "[DOCKER-CONFIG] ✓ Docker-in-Docker ready"
     echo ""
   EOT
 }
