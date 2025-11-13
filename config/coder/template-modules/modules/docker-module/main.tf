@@ -12,41 +12,40 @@
 # =============================================================================
 
 # =============================================================================
-# Docker Install Script
+# Docker Setup Script (Combined Install + Config)
 # =============================================================================
+# NOTE: This is ONE script, not split into install/config to avoid join() issues
 
 locals {
-  docker_install_script = <<-EOT
+  docker_setup_script = <<-EOT
     #!/bin/bash
     
-    echo "[DOCKER-INSTALL] Checking Docker installation..."
+    echo "[DOCKER] Setting up Docker-in-Docker..."
     
+    # Check/install Docker
     if ! command -v docker >/dev/null 2>&1; then
-      echo "[DOCKER-INSTALL] Installing Docker..."
+      echo "[DOCKER] Installing Docker..."
       curl -fsSL https://get.docker.com | sh
-      echo "[DOCKER-INSTALL] ✓ Docker installed: $(docker --version)"
-    else
-      echo "[DOCKER-INSTALL] ✓ Docker already installed: $(docker --version)"
     fi
+    echo "[DOCKER] ✓ Docker CLI installed: $(docker --version)"
     
-    echo ""
-  EOT
-}
-
-# =============================================================================
-# Docker Config Script
-# =============================================================================
-
-locals {
-  docker_config_script = <<-EOT
+    # Configure daemon
     mkdir -p /home/coder/.config/docker
     echo '{"insecure-registries":["registry-cache:5000"],"registry-mirrors":["http://registry-cache:5000"]}' > /home/coder/.config/docker/daemon.json
+    
+    # Start daemon
     sudo dockerd --config-file /home/coder/.config/docker/daemon.json > /tmp/dockerd.log 2>&1 &
     sleep 3
+    
+    # Configure environment
     echo 'export DOCKER_HOST=unix:///var/run/docker.sock' >> ~/.bashrc
     export DOCKER_HOST=unix:///var/run/docker.sock
+    
+    # Create network
     docker network inspect coder-net >/dev/null 2>&1 || docker network create coder-net
-    echo "[DOCKER-CONFIG] ✓ Docker-in-Docker configured"
+    
+    echo "[DOCKER] ✓ Docker-in-Docker ready"
+    echo ""
   EOT
 }
 
@@ -87,14 +86,9 @@ locals {
 # Outputs
 # =============================================================================
 
-output "docker_install_script" {
-  description = "Script to install Docker"
-  value       = local.docker_install_script
-}
-
-output "docker_config_script" {
-  description = "Script to configure Docker daemon"
-  value       = local.docker_config_script
+output "docker_setup_script" {
+  description = "Combined script to install and configure Docker-in-Docker"
+  value       = local.docker_setup_script
 }
 
 output "docker_test_script" {
