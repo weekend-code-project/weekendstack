@@ -42,48 +42,15 @@ locals {
   docker_config_script = <<-EOT
     #!/bin/bash
     
-    echo "[DOCKER-CONFIG] Configuring Docker-in-Docker daemon..."
-    echo "[DOCKER-CONFIG] DEBUG: Step 1 - Starting config"
+    echo "[DOCKER-CONFIG] Starting Docker daemon..."
     
-    # Check if Docker is already working (simpler than pgrep which can hang)
-    echo "[DOCKER-CONFIG] DEBUG: Step 2 - Checking if Docker already works..."
-    if timeout 2 docker info >/dev/null 2>&1; then
-      echo "[DOCKER-CONFIG] ✓ Docker is already working"
-      echo "[DOCKER-CONFIG] ✓ Docker-in-Docker already configured"
-      exit 0
-    fi
+    # Just start dockerd - don't overthink it
+    sudo dockerd >/tmp/dockerd.log 2>&1 &
     
-    echo "[DOCKER-CONFIG] DEBUG: Step 3 - Docker not responding, need to configure"
+    # Give it a moment to start
+    sleep 3
     
-    # Create Docker config directory
-    echo "[DOCKER-CONFIG] DEBUG: Step 4 - Creating config directory..."
-    mkdir -p /home/coder/.config/docker
-    echo "[DOCKER-CONFIG] DEBUG: Step 5 - Config directory created"
-    
-    # Write daemon configuration using echo instead of heredoc to avoid potential hang
-    echo "[DOCKER-CONFIG] DEBUG: Step 6 - Writing daemon config..."
-    echo '{"insecure-registries":["registry-cache:5000"],"registry-mirrors":["http://registry-cache:5000"]}' > /home/coder/.config/docker/daemon.json
-    echo "[DOCKER-CONFIG] DEBUG: Step 7 - Daemon config written"
-    
-    # Export for current session
-    export DOCKER_HOST=unix:///var/run/docker.sock
-    echo "[DOCKER-CONFIG] DEBUG: Step 8 - DOCKER_HOST set"
-    
-    # Start Docker daemon
-    echo "[DOCKER-CONFIG] DEBUG: Step 9 - Starting dockerd..."
-    sudo dockerd --config-file /home/coder/.config/docker/daemon.json >/tmp/dockerd.log 2>&1 &
-    echo "[DOCKER-CONFIG] DEBUG: Step 10 - dockerd started in background"
-    
-    # Wait for Docker daemon (quick check)
-    echo "[DOCKER-CONFIG] DEBUG: Step 11 - Waiting for Docker to be ready..."
-    sleep 2
-    if timeout 2 docker info >/dev/null 2>&1; then
-      echo "[DOCKER-CONFIG] ✓ Docker daemon is ready"
-    else
-      echo "[DOCKER-CONFIG] ⚠ Docker daemon may not be ready - check logs: tail /tmp/dockerd.log"
-    fi
-    
-    echo "[DOCKER-CONFIG] ✓ Docker-in-Docker setup complete"
+    echo "[DOCKER-CONFIG] ✓ Docker daemon started"
     echo ""
   EOT
 }
