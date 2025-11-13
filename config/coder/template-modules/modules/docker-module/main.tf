@@ -40,12 +40,13 @@ locals {
 locals {
   docker_config_script = <<-EOT
     mkdir -p /home/coder/.config/docker
-    printf '{\n  "insecure-registries": ["registry-cache:5000"],\n  "registry-mirrors": ["http://registry-cache:5000"]\n}\n' > /home/coder/.config/docker/daemon.json
+    echo '{"insecure-registries":["registry-cache:5000"],"registry-mirrors":["http://registry-cache:5000"]}' > /home/coder/.config/docker/daemon.json
     sudo dockerd --config-file /home/coder/.config/docker/daemon.json > /tmp/dockerd.log 2>&1 &
     sleep 3
     echo 'export DOCKER_HOST=unix:///var/run/docker.sock' >> ~/.bashrc
     export DOCKER_HOST=unix:///var/run/docker.sock
     docker network inspect coder-net >/dev/null 2>&1 || docker network create coder-net
+    echo "[DOCKER-CONFIG] ✓ Docker-in-Docker configured"
   EOT
 }
 
