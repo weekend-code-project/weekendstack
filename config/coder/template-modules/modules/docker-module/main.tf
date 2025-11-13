@@ -30,21 +30,48 @@ locals {
     echo "[DOCKER] ✓ Docker CLI installed: $(docker --version)"
     
     # Configure daemon
-    mkdir -p /home/coder/.config/docker
-    echo '{"insecure-registries":["registry-cache:5000"],"registry-mirrors":["http://registry-cache:5000"]}' > /home/coder/.config/docker/daemon.json
+    mkdir -p /etc/docker
+    cat > /etc/docker/daemon.json <<'JSON'
+{
+  "insecure-registries": ["registry-cache:5000"],
+  "registry-mirrors": ["http://registry-cache:5000"]
+}
+JSON
     
-    # Start daemon
-    sudo dockerd --config-file /home/coder/.config/docker/daemon.json > /tmp/dockerd.log 2>&1 &
-    sleep 3
+    # Start dockerd if not already running
+    if ! pgrep -x dockerd > /dev/null; then
+      echo "[DOCKER] Starting Docker daemon..."
+      dockerd > /var/log/dockerd.log 2>&1 &
+      
+      # Wait for Docker to be ready (up to 10 seconds)
+      for i in {1..10}; do
+        if docker info >/dev/null 2>&1; then
+          echo "[DOCKER] ✓ Docker daemon ready"
+          break
+        fi
+        echo "[DOCKER] Waiting for Docker daemon... ($i/10)"
+        sleep 1
+      done
+      
+      if ! docker info >/dev/null 2>&1; then
+        echo "[DOCKER] ⚠️  Docker daemon not responding after 10s"
+        echo "[DOCKER] Check logs: tail /var/log/dockerd.log"
+      fi
+    else
+      echo "[DOCKER] ✓ Docker daemon already running"
+    fi
     
     # Configure environment
     echo 'export DOCKER_HOST=unix:///var/run/docker.sock' >> ~/.bashrc
     export DOCKER_HOST=unix:///var/run/docker.sock
     
     # Create network
-    docker network inspect coder-net >/dev/null 2>&1 || docker network create coder-net
+    if docker info >/dev/null 2>&1; then
+      docker network inspect coder-net >/dev/null 2>&1 || docker network create coder-net
+      echo "[DOCKER] ✓ Network 'coder-net' ready"
+    fi
     
-    echo "[DOCKER] ✓ Docker-in-Docker ready"
+    echo "[DOCKER] ✓ Setup complete"
     echo ""
   EOT
 }
