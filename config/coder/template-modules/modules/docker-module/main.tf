@@ -18,7 +18,6 @@
 locals {
   docker_install_script = <<-EOT
     #!/bin/bash
-    set -e
     
     echo "[DOCKER-INSTALL] Checking Docker installation..."
     
