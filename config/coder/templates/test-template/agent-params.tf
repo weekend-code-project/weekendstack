@@ -44,7 +44,6 @@ module "agent" {
   # Minimal startup script - just bash basics
   startup_script = join("\n", [
     "#!/bin/bash",
-    "set -e",
     "echo '[WORKSPACE] Starting workspace ${data.coder_workspace.me.name}'",
     "",
     "# Phase 1 Module: init-shell (Issue #23)",
