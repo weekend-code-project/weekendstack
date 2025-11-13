@@ -18,7 +18,7 @@ module "agent" {
   
   startup_script = join("\n", [
     "#!/bin/bash",
-    "# Note: No set -e here - modules handle their own errors
+    "# Note: No set -e here - modules handle their own errors",
     "echo '[WORKSPACE] 🚀 Starting workspace ${data.coder_workspace.me.name}'",
     "",
     module.init_shell.setup_script,
