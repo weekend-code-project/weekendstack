@@ -14,65 +14,29 @@
 # =============================================================================
 # Docker Setup Script (Combined Install + Config)
 # =============================================================================
-# NOTE: This is ONE script, not split into install/config to avoid join() issues
+# NOTE: Exact copy of working config from old template
 
 locals {
   docker_setup_script = <<-EOT
-    #!/bin/bash
-    
-    echo "[DOCKER] Setting up Docker-in-Docker..."
-    
-    # Check/install Docker
     if ! command -v docker >/dev/null 2>&1; then
-      echo "[DOCKER] Installing Docker..."
       curl -fsSL https://get.docker.com | sh
     fi
-    echo "[DOCKER] ✓ Docker CLI installed: $(docker --version)"
     
-    # Configure daemon
-    mkdir -p /etc/docker
-    cat > /etc/docker/daemon.json <<'JSON'
+    mkdir -p /home/coder/.config/docker
+    cat > /home/coder/.config/docker/daemon.json <<'JSON'
 {
   "insecure-registries": ["registry-cache:5000"],
   "registry-mirrors": ["http://registry-cache:5000"]
 }
 JSON
-    
-    # Start dockerd if not already running
-    if ! pgrep -x dockerd > /dev/null; then
-      echo "[DOCKER] Starting Docker daemon..."
-      dockerd > /var/log/dockerd.log 2>&1 &
-      
-      # Wait for Docker to be ready (up to 10 seconds)
-      for i in {1..10}; do
-        if docker info >/dev/null 2>&1; then
-          echo "[DOCKER] ✓ Docker daemon ready"
-          break
-        fi
-        echo "[DOCKER] Waiting for Docker daemon... ($i/10)"
-        sleep 1
-      done
-      
-      if ! docker info >/dev/null 2>&1; then
-        echo "[DOCKER] ⚠️  Docker daemon not responding after 10s"
-        echo "[DOCKER] Check logs: tail /var/log/dockerd.log"
-      fi
-    else
-      echo "[DOCKER] ✓ Docker daemon already running"
-    fi
-    
-    # Configure environment
+
+    sudo dockerd --config-file /home/coder/.config/docker/daemon.json > /tmp/dockerd.log 2>&1 &
+    sleep 3
+
     echo 'export DOCKER_HOST=unix:///var/run/docker.sock' >> ~/.bashrc
     export DOCKER_HOST=unix:///var/run/docker.sock
-    
-    # Create network
-    if docker info >/dev/null 2>&1; then
-      docker network inspect coder-net >/dev/null 2>&1 || docker network create coder-net
-      echo "[DOCKER] ✓ Network 'coder-net' ready"
-    fi
-    
-    echo "[DOCKER] ✓ Setup complete"
-    echo ""
+
+    docker network inspect coder-net >/dev/null 2>&1 || docker network create coder-net
   EOT
 }
 
