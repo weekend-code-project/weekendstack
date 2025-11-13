@@ -31,8 +31,8 @@ module "agent" {
   git_author_name  = data.coder_workspace_owner.me.name
   git_author_email = data.coder_workspace_owner.me.email
   
-  # Access URL for agent connection
-  coder_access_url = "http://host.docker.internal:7080"
+  # Access URL for agent connection (match host IP the user configures in variables.tf).
+  coder_access_url = format("http://%s:7080", var.host_ip)
   
   # No additional environment variables
   env_vars = {}

@@ -466,7 +466,7 @@ This makes templates portable across different installations.
 - Container logs show: `curl: (6) Could not resolve host: coder`
 - Error message: `failed to download coder agent`
 
-**Cause**: `CODER_ACCESS_URL` is set to `http://coder:7080` but workspace containers can't resolve the hostname `coder`
+**Cause**: `CODER_ACCESS_URL` advertises a host that isn't reachable from workspace containers (e.g., `http://coder:7080` or `http://host.docker.internal:7080` on Linux)
 
 **Why this happens**: 
 - Workspace containers run on the default Docker `bridge` network
@@ -476,13 +476,15 @@ This makes templates portable across different installations.
 
 **Fix**: 
 
-1. Update `CODER_ACCESS_URL` in `.env`:
+1. Update `CODER_ACCESS_URL` in `.env` to the Docker host's IP address (reachable from workspace containers):
    ```bash
-   # Change from:
-   CODER_ACCESS_URL=http://coder:7080
-   
-   # To:
-   CODER_ACCESS_URL=http://host.docker.internal:7080
+  # Change from an unreachable hostname, e.g.:
+  CODER_ACCESS_URL=http://coder:7080
+  # Or:
+  CODER_ACCESS_URL=http://host.docker.internal:7080
+
+  # To the Docker host IP:
+  CODER_ACCESS_URL=http://192.168.1.50:7080
    ```
 
 2. Recreate the Coder container to apply the change:
@@ -494,16 +496,16 @@ This makes templates portable across different installations.
 
 3. Verify the new URL is set:
    ```bash
-   docker exec coder printenv CODER_ACCESS_URL
-   # Should output: http://host.docker.internal:7080
+  docker exec coder printenv CODER_ACCESS_URL
+  # Should output: http://192.168.1.50:7080 (replace with your host IP)
    ```
 
 4. Delete and recreate any affected workspaces (updating won't fix existing containers)
 
 **How it works**: 
-- `host.docker.internal` is automatically configured in Docker containers to point to the host machine
-- The Coder server listens on `0.0.0.0:7080`, accessible from both container networks and the host
-- Workspace containers can reach Coder via `http://host.docker.internal:7080`
+- The Coder server listens on `0.0.0.0:7080`, so any address routed to the host is valid
+- Advertising the host IP ensures both the Coder control plane and detached workspace containers reach the same endpoint
+- On Linux, `host.docker.internal` often resolves to `172.17.0.1`, which may not accept traffic; using the host IP avoids that mismatch
 
 **Note**: This is the **server-side** `CODER_ACCESS_URL` that Coder uses to generate agent download URLs. This is different from the `coder_access_url` parameter in templates, which sets the `CODER_ACCESS_URL` environment variable inside workspace containers.
 
