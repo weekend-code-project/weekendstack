@@ -40,11 +40,21 @@ locals {
 
 locals {
   docker_config_script = <<-EOT
-    #!/bin/bash
-    
-    echo "[DOCKER-CONFIG] Docker is already running - skipping daemon start"
-    echo "[DOCKER-CONFIG] ✓ Docker-in-Docker ready"
-    echo ""
+    mkdir -p /home/coder/.config/docker
+    cat > /home/coder/.config/docker/daemon.json <<'JSON'
+{
+  "insecure-registries": ["registry-cache:5000"],
+  "registry-mirrors": ["http://registry-cache:5000"]
+}
+JSON
+
+    sudo dockerd --config-file /home/coder/.config/docker/daemon.json > /tmp/dockerd.log 2>&1 &
+    sleep 3
+
+    echo 'export DOCKER_HOST=unix:///var/run/docker.sock' >> ~/.bashrc
+    export DOCKER_HOST=unix:///var/run/docker.sock
+
+    docker network inspect coder-net >/dev/null 2>&1 || docker network create coder-net
   EOT
 }
 
