@@ -57,17 +57,12 @@ locals {
     
     # Create Docker config directory
     echo "[DOCKER-CONFIG] DEBUG: Step 4 - Creating config directory..."
-    mkdir -p /home/coder/.config/docker 2>/dev/null || true
+    mkdir -p /home/coder/.config/docker
     echo "[DOCKER-CONFIG] DEBUG: Step 5 - Config directory created"
     
-    # Write daemon configuration
+    # Write daemon configuration using echo instead of heredoc to avoid potential hang
     echo "[DOCKER-CONFIG] DEBUG: Step 6 - Writing daemon config..."
-    cat > /home/coder/.config/docker/daemon.json 2>/dev/null <<'JSON'
-{
-  "insecure-registries": ["registry-cache:5000"],
-  "registry-mirrors": ["http://registry-cache:5000"]
-}
-JSON
+    echo '{"insecure-registries":["registry-cache:5000"],"registry-mirrors":["http://registry-cache:5000"]}' > /home/coder/.config/docker/daemon.json
     echo "[DOCKER-CONFIG] DEBUG: Step 7 - Daemon config written"
     
     # Export for current session
