@@ -142,8 +142,10 @@ output "setup_server_script" {
 
     # Auto-generate HTML if enabled (always regenerate to reflect current settings)
     if [ "$AUTO_HTML" = "true" ]; then
-  # Use an unquoted heredoc so shell variables like $PORT expand
-  cat <<-HTML > index.html 2>/dev/null
+        # Always rewrite the landing page on startup so restarts stay in sync
+        rm -f index.html
+        # Use an unquoted heredoc so shell variables like $PORT expand
+        cat <<-HTML > index.html
 <!DOCTYPE html>
 <html lang="en">
 <head>

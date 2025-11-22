@@ -24,7 +24,7 @@ data "coder_parameter" "startup_command" {
   display_name = "Server Startup Command"
   description  = "Custom command to run server at startup"
   type         = "string"
-  default      = ""
+  default      = "python3 -m http.server 8080 --bind 0.0.0.0"
   mutable      = true
   order        = 21
   
@@ -64,12 +64,12 @@ locals {
   
   # Determine server configuration
   use_custom_command = data.coder_parameter.use_custom_command.value
-  custom_command     = data.coder_parameter.startup_command.value
-  
-  # When custom command is OFF, use default Python server and auto-generate HTML
-  # When custom command is ON, use the provided command and don't auto-generate
-  auto_generate_html = !local.use_custom_command
-  startup_command    = local.use_custom_command ? local.custom_command : "python3 -m http.server 8080 --bind 0.0.0.0"
+  default_command    = "python3 -m http.server 8080 --bind 0.0.0.0"
+  custom_command     = trimspace(data.coder_parameter.startup_command.value)
+
+  # Always regenerate the landing page and server command
+  auto_generate_html = true
+  startup_command    = local.use_custom_command ? coalesce(local.custom_command != "" ? local.custom_command : null, local.default_command) : local.default_command
   has_server_config  = true  # Always run server (either default or custom)
 }
 
