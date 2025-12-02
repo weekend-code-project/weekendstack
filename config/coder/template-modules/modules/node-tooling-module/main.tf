@@ -59,10 +59,17 @@ locals {
     if [ ! -d "$NVM_DIR" ]; then
       echo "[NODE-TOOLING] Installing NVM..."
       curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-      [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-    else
-      [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
     fi
+
+    # Explicitly ensure .bashrc has NVM loading logic (in case install.sh missed it or for non-interactive shells)
+    if ! grep -q "NVM_DIR" ~/.bashrc; then
+      echo 'export NVM_DIR="$HOME/.nvm"' >> ~/.bashrc
+      echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm' >> ~/.bashrc
+      echo '[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion' >> ~/.bashrc
+    fi
+
+    # Load NVM for this script
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
     echo "[NODE-TOOLING] Installing/Using Node.js version: ${var.node_version}..."
     nvm install "${var.node_version}"
