@@ -46,8 +46,17 @@ variable "node_version" {
 locals {
   tooling_script = <<-EOT
     #!/bin/bash
-    set -e
-    echo "[NODE-TOOLING] Setting up tooling (pm=${var.package_manager})..."
+    # set -e # Disable strict error checking to allow logging and recovery
+    
+    LOG_FILE="$HOME/node-tooling.log"
+    echo "[NODE-TOOLING] Starting setup at $(date)" > "$LOG_FILE"
+    
+    echo "[NODE-TOOLING] Checking for curl..." | tee -a "$LOG_FILE"
+    if ! command -v curl &> /dev/null; then
+        echo "[NODE-TOOLING] Installing curl..." | tee -a "$LOG_FILE"
+        sudo apt-get update >> "$LOG_FILE" 2>&1
+        sudo apt-get install -y curl >> "$LOG_FILE" 2>&1
+    fi
 
     ensure_profile_line() {
       local LINE="$1"
@@ -57,12 +66,13 @@ locals {
     # Install NVM and Node.js
     export NVM_DIR="$HOME/.nvm"
     if [ ! -d "$NVM_DIR" ]; then
-      echo "[NODE-TOOLING] Installing NVM..."
-      curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+      echo "[NODE-TOOLING] Installing NVM..." | tee -a "$LOG_FILE"
+      curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash >> "$LOG_FILE" 2>&1
     fi
 
-    # Explicitly ensure .bashrc has NVM loading logic (in case install.sh missed it or for non-interactive shells)
+    # Explicitly ensure .bashrc has NVM loading logic
     if ! grep -q "NVM_DIR" ~/.bashrc; then
+      echo "[NODE-TOOLING] Adding NVM to .bashrc..." | tee -a "$LOG_FILE"
       echo 'export NVM_DIR="$HOME/.nvm"' >> ~/.bashrc
       echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm' >> ~/.bashrc
       echo '[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion' >> ~/.bashrc
@@ -71,10 +81,10 @@ locals {
     # Load NVM for this script
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
-    echo "[NODE-TOOLING] Installing/Using Node.js version: ${var.node_version}..."
-    nvm install "${var.node_version}"
-    nvm alias default "${var.node_version}"
-    nvm use default
+    echo "[NODE-TOOLING] Installing/Using Node.js version: ${var.node_version}..." | tee -a "$LOG_FILE"
+    nvm install "${var.node_version}" >> "$LOG_FILE" 2>&1
+    nvm alias default "${var.node_version}" >> "$LOG_FILE" 2>&1
+    nvm use default >> "$LOG_FILE" 2>&1
 
     # Cache dirs
     mkdir -p ~/.cache/node ~/.npm ~/.pnpm-store ~/.yarn
@@ -96,15 +106,16 @@ locals {
     # Install globals using chosen manager (fallback to npm)
     install_global() {
       local PKG="$1"
+      echo "[NODE-TOOLING] Installing global package: $PKG" | tee -a "$LOG_FILE"
       case "${var.package_manager}" in
         pnpm)
-          pnpm add -g "$PKG" || sudo pnpm add -g "$PKG" || true
+          pnpm add -g "$PKG" >> "$LOG_FILE" 2>&1 || sudo pnpm add -g "$PKG" >> "$LOG_FILE" 2>&1 || true
           ;;
         yarn)
-          yarn global add "$PKG" || sudo yarn global add "$PKG" || true
+          yarn global add "$PKG" >> "$LOG_FILE" 2>&1 || sudo yarn global add "$PKG" >> "$LOG_FILE" 2>&1 || true
           ;;
         npm|*)
-          npm install -g "$PKG" || sudo npm install -g "$PKG" || true
+          npm install -g "$PKG" >> "$LOG_FILE" 2>&1 || sudo npm install -g "$PKG" >> "$LOG_FILE" 2>&1 || true
           ;;
       esac
     }
