@@ -31,6 +31,12 @@ variable "package_manager" {
   description = "npm|pnpm|yarn"
 }
 
+variable "node_version" {
+  type        = string
+  default     = "20"
+  description = "Node.js version to install/use"
+}
+
 locals {
   tooling_script = <<-EOT
     #!/bin/bash
