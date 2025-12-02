@@ -91,13 +91,13 @@ locals {
       local PKG="$1"
       case "${var.package_manager}" in
         pnpm)
-          sudo pnpm add -g "$PKG" || sudo pnpm install -g "$PKG" || true
+          pnpm add -g "$PKG" || sudo pnpm add -g "$PKG" || true
           ;;
         yarn)
-          sudo yarn global add "$PKG" || true
+          yarn global add "$PKG" || sudo yarn global add "$PKG" || true
           ;;
         npm|*)
-          sudo npm install -g "$PKG" || true
+          npm install -g "$PKG" || sudo npm install -g "$PKG" || true
           ;;
       esac
     }
