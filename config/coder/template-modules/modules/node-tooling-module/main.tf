@@ -45,11 +45,13 @@ variable "node_version" {
 
 locals {
   tooling_script = <<-EOT
-    #!/bin/bash
-    # set -e # Disable strict error checking to allow logging and recovery
+    # NODE TOOLING START
+    # Disable strict error checking to allow logging and recovery
+    set +e
     
     LOG_FILE="$HOME/node-tooling.log"
     echo "[NODE-TOOLING] Starting setup at $(date)" > "$LOG_FILE"
+    chmod 644 "$LOG_FILE"
     
     echo "[NODE-TOOLING] Checking for curl..." | tee -a "$LOG_FILE"
     if ! command -v curl &> /dev/null; then
