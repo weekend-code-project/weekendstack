@@ -48,6 +48,21 @@ locals {
       grep -qxF "$LINE" ~/.bashrc || echo "$LINE" >> ~/.bashrc
     }
 
+    # Install NVM and Node.js
+    export NVM_DIR="$HOME/.nvm"
+    if [ ! -d "$NVM_DIR" ]; then
+      echo "[NODE-TOOLING] Installing NVM..."
+      curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+      [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    else
+      [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    fi
+
+    echo "[NODE-TOOLING] Installing/Using Node.js version: ${var.node_version}..."
+    nvm install "${var.node_version}"
+    nvm alias default "${var.node_version}"
+    nvm use default
+
     # Cache dirs
     mkdir -p ~/.cache/node ~/.npm ~/.pnpm-store ~/.yarn
     case "${var.package_manager}" in
