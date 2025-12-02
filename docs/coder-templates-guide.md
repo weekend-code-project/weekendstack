@@ -32,27 +32,13 @@ config/coder/
 │   ├── push-templates.sh             # Batch push script
 │   ├── cleanup-coder.sh              # Template cleanup
 │   └── backup-templates.sh           # Template backup
+├── template-modules/
+│   ├── modules/                      # Git-addressable Terraform modules (agent, docker, ssh, etc.)
+│   └── params/                       # Shared parameter glue overlaid into templates at push time
 └── templates/
-    ├── git-modules/                  # Reusable modules (git-based)
-    │   ├── agent/                    # Coder agent
-    │   ├── init-shell/               # Shell initialization
-    │   ├── git-integration/          # Git cloning
-    │   ├── git-identity/             # Git config (name/email)
-    │   ├── ssh-integration/          # SSH server
-    │   ├── docker-integration/       # Docker-in-Docker
-    │   ├── code-server/              # VS Code Server
-    │   ├── preview-link/             # Preview URLs
-    │   ├── metadata/                 # Workspace metadata
-    │   ├── routing-labels-test/      # Traefik routing labels
-    │   ├── setup-server/             # Server setup
-    │   ├── workspace-auth/           # Password protection
-    │   ├── password-protection/      # Auth middleware
-    │   ├── github-cli/               # (empty - needs implementation)
-    │   └── validation/               # Parameter validation
-    └── v0-1-0-test/                  # Main template
-        ├── main.tf                   # Template orchestration
-        ├── metadata-params.tf        # Metadata parameters
-        └── .template_versions.json   # Version tracking
+  ├── docker-template/              # Production template (v82 baseline)
+  ├── node-template/                # Node-focused variant (under investigation)
+  └── test-template/                # Zero-parameter baseline for flicker work
 ```
 
 ---
@@ -72,7 +58,7 @@ This project uses a **git-based module system** where modules are stored in a gi
 **Module Source Format:**
 ```hcl
 module "example" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/example?ref=v0.1.0"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/example?ref=v0.1.0"
 }
 ```
 
@@ -104,6 +90,10 @@ module-name/
 ├── outputs.tf       # Output values (optional)
 └── README.md        # Documentation
 ```
+
+### Shared Parameter Files
+
+The `config/coder/template-modules/params/` directory contains `*-params.tf` files that define reusable Coder parameters plus the corresponding module invocations (via `module "xyz" { ... }`). During a template push, `push-template-versioned.sh` copies any missing shared parameter files into the template's working directory unless the template ships its own override. This keeps templates lightweight while guaranteeing consistent parameter definitions across Docker, SSH, metadata, etc.
 
 ### Module Anatomy
 
@@ -266,7 +256,7 @@ resource "docker_volume" "home" {
 
 # Agent (REQUIRED - must be first)
 module "agent" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/coder-agent?ref=v0.1.0"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/coder-agent-module?ref=v0.1.0"
   
   container_id = docker_container.workspace.id
   
@@ -277,7 +267,7 @@ module "agent" {
 
 # Init Shell
 module "init_shell" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/init-shell?ref=v0.1.0"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/init-shell-module?ref=v0.1.0"
   
   agent_id           = module.agent.agent_id
   workspace_start_count = data.coder_workspace.me.start_count
@@ -289,7 +279,7 @@ module "init_shell" {
 
 # Git Integration
 module "git_integration" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/git-integration?ref=v0.1.0"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/git-integration-module?ref=v0.1.0"
   
   agent_id              = module.agent.agent_id
   workspace_start_count = data.coder_workspace.me.start_count
@@ -307,8 +297,8 @@ module "git_integration" {
 ### Step 1: Create Module Directory
 
 ```bash
-mkdir -p config/coder/templates/git-modules/my-module
-cd config/coder/templates/git-modules/my-module
+mkdir -p config/coder/template-modules/modules/my-module
+cd config/coder/template-modules/modules/my-module
 ```
 
 ### Step 2: Create main.tf
@@ -383,7 +373,7 @@ Brief description of the module.
 ## Usage
 \`\`\`hcl
 module "my_module" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/my-module?ref=v0.1.0"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/my-module?ref=v0.1.0"
   
   agent_id          = module.agent.agent_id
   enable_my_feature = true
@@ -401,7 +391,7 @@ module "my_module" {
 ### Step 5: Commit and Push
 
 ```bash
-git add config/coder/templates/git-modules/my-module/
+git add config/coder/template-modules/modules/my-module/
 git commit -m "feat: add my-module for feature X"
 git push origin v0.1.0
 ```
@@ -430,7 +420,7 @@ data "coder_parameter" "enable_my_feature" {
 
 ```hcl
 module "my_module" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/my-module?ref=v0.1.0"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/my-module?ref=v0.1.0"
   
   agent_id          = module.agent.agent_id
   enable_my_feature = data.coder_parameter.enable_my_feature.value
@@ -463,7 +453,7 @@ Then test by creating a workspace in the Coder UI.
 
 ```hcl
 # module "my_module" {
-#   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/my-module?ref=v0.1.0"
+#   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/my-module?ref=v0.1.0"
 #   
 #   agent_id          = module.agent.agent_id
 #   enable_my_feature = data.coder_parameter.enable_my_feature.value
@@ -485,7 +475,10 @@ This script automatically handles version management, conflict resolution, envir
 - Retries up to 5 times
 - Updates `.template_versions.json`
 - Prevents manual version conflicts
+- Detects the active Git ref (tag > main > branch) and substitutes module `?ref=` query params inside the staging directory only
+- Overlays shared parameter files from `template-modules/params/` unless the template ships its own override
 - **Injects BASE_DOMAIN from .env into templates** (via sed)
+- **Injects HOST_IP defaults for host binding variables**
 - **Passes TF_VAR_base_domain to Terraform** (for parameter descriptions)
 - Coder automatically validates Terraform during push
 
@@ -508,8 +501,8 @@ This allows the same template code to work on any domain without hardcoded value
 # 1. Loads .env file to get BASE_DOMAIN
 # 2. Reads current version from .template_versions.json
 # 3. Copies template to temp directory
-# 4. Overlays shared-template-modules into template
-# 5. Runs sed to replace base_domain default with actual domain
+# 4. Overlays shared parameter files (if the template doesn't provide an override)
+# 5. Rewrites git module `?ref=` values to the detected ref, updates base_domain/host_ip defaults
 # 6. Copies modified template to Coder container
 # 7. Passes -e TF_VAR_base_domain to docker exec for Terraform interpolation
 # 8. Pushes template with that version
@@ -612,39 +605,36 @@ This tracks the next version to use for each template.
 
 ---
 
-## Shared Template Modules
+## Shared Parameter Glue
 
 ### Overview
 
-Shared template modules are Terraform files that get copied into every template during the push process. They provide common functionality without duplicating code.
+Shared parameter files are Terraform snippets (named `*-params.tf`) that define consistent `data "coder_parameter"` blocks plus their companion module calls. They are kept outside of individual templates so that we can fix flickering bugs once and have every template benefit automatically.
 
-**Location:** `config/coder/templates/shared-template-modules/`
+**Location:** `config/coder/template-modules/params/`
 
-**Pattern:** Files named `module-*.tf` are automatically overlaid into templates.
+**Pattern:** During the push process, any shared `*-params.tf` file that does **not** already exist inside the template directory is copied into the temp staging folder. If a template needs to override the defaults, simply add a file with the same name locally; the push script will respect the local copy.
 
 ### How It Works
 
 ```bash
 # During template push:
-overlay_shared_modules() {
-    # Copy module-*.tf files from shared-template-modules/
-    # Into the template directory
-    # Template-specific files take precedence (not overwritten)
+overlay_shared_params() {
+  # Copy *-params.tf files from template-modules/params/
+  # into the template's staging directory (unless overridden)
 }
 ```
 
-### Shared Modules Available
+### Shared Parameter Files Available
 
-- **module-debug-domain.tf**: Exports `local.actual_base_domain` for other modules
-- **module-preview-link.tf**: Preview link mode selection and base domain input
-- **module-traefik-local.tf**: Traefik routing labels and authentication
-- **module-code-server.tf**: VS Code Server integration
-- **module-git.tf**: Git identity, cloning, and GitHub CLI
-- **module-ssh.tf**: SSH server with dynamic ports
-- **module-docker.tf**: Docker-in-Docker integration
-- **module-metadata.tf**: Workspace information display
-- **module-agent.tf**: Startup script orchestration
-- **module-init-shell.tf**: Home directory initialization
+- `agent-params.tf`: Core agent metadata aggregation and startup script wiring
+- `docker-params.tf`: Docker-in-Docker toggle and module invocation
+- `git-params.tf`: Git identity + cloning switches
+- `metadata-params.tf`: Resource metadata for UI display
+- `setup-server-params.tf`: Optional HTTP server port exposure
+- `ssh-params.tf`: SSH toggle, password, and port configuration
+- `traefik-params.tf`: Preview link + routing labels
+- Additional experimental params live beside these files for iterative testing
 
 ### Base Domain System
 
@@ -1148,7 +1138,7 @@ journalctl -u coder-agent
 
 1. **Commit module changes first:**
 ```bash
-git add config/coder/templates/git-modules/my-module/
+git add config/coder/template-modules/modules/my-module/
 git commit -m "feat: add my-module"
 git push origin v0.1.0
 ```
@@ -1197,8 +1187,8 @@ data "coder_parameter" "port" {
 
 ### Create New Module
 ```bash
-mkdir -p config/coder/templates/git-modules/MODULE_NAME
-cd config/coder/templates/git-modules/MODULE_NAME
+mkdir -p config/coder/template-modules/modules/MODULE_NAME
+cd config/coder/template-modules/modules/MODULE_NAME
 # Create main.tf, variables.tf, README.md
 git add .
 git commit -m "feat: add MODULE_NAME"
@@ -1208,7 +1198,7 @@ git push origin v0.1.0
 ### Add Module to Template
 ```hcl
 module "MODULE_NAME" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/MODULE_NAME?ref=v0.1.0"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/MODULE_NAME?ref=v0.1.0"
   
   agent_id = module.agent.agent_id
   # ... other variables

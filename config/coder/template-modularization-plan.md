@@ -4,7 +4,7 @@
 
 **Original v0.1.1 Goals** (deferred until flickering issue resolved):
 - Centralize reusable per-template Terraform module glue (`module-*.tf` files currently in `config/coder/templates/docker-template/`) into a shared location so multiple specialized templates can consume them without duplication.
-- Preserve existing git-based reusable modules in `config/coder/templates/git-modules/` (unchanged).
+- Preserve existing git-based reusable modules in `config/coder/template-modules/modules/` (unchanged).
 - Introduce automatic Git ref resolution for git module sources (tag > main > current branch) during push, without committing moving refs.
 - Maintain existing template versioning semantics (incremental v1, v2...) while enabling branch-aware module sourcing.
 - Enable iterative development on a new branch `v0.1.1` and merge back to `main` when complete.
@@ -51,21 +51,21 @@ Out of Scope (for v0.1.1 workstream):
 
 ## 3. Current State Summary
 
-**As of November 10, 2025** (test-params-incrementally branch):
+**As of December 2, 2025** (test-params-incrementally branch):
 
-- All 17 modules moved to `_trash/shared-template-modules/` for controlled re-addition
-- Test-template v1 created with zero parameters (clean baseline, compiles successfully)
-- 17 comprehensive GitHub issues created (#23-#34 shared, #37-#42 node) with full ASCII diagrams
-- Each issue documents: parameters, dependencies, flickering risk, recommendations, testing priority
+- `config/coder/template-modules/modules/` now contains the curated git-based modules (migrated from the historical `templates/git-modules/` path)
+- Shared parameter overlays live in `config/coder/template-modules/params/` and are injected automatically by the push script when a template omits a local override
+- Test-template v1 remains the zero-parameter baseline and now references modules via the new path with `?ref=PLACEHOLDER` or `?ref=v0.1.0` values for substitution
+- 17 comprehensive GitHub issues created (#23-#34 shared, #37-#42 node) with full ASCII diagrams and flickering notes
 - Module-refactoring-checklist.md committed tracking all issues (17/17 complete)
-- Git state: Branch test-params-incrementally, commit 516bebe
-- Push script sed bug fixed (line 259: `[^\"]+ ` pattern)
-- Agent module interface fixed (env_vars type, output names)
-- Ready to begin incremental module testing
+- Push script enhancements landed: sed bug fix (line 259), shared param overlay, base_domain/host_ip substitution, retry logic, and git ref detection/validation
+- Agent module interface fixed (env_vars type, output names) and now references shared metadata locals collected inside `agent-params.tf`
+- Docker template currently holds the stable production build (v82); test-template is the active flicker lab environment
 
 **Module Locations**:
-- Reusable git modules: `config/coder/templates/git-modules/` (referenced with `?ref=v0.1.0`)
-- Shared template modules: Currently in `_trash/shared-template-modules/` (11 files)
+- Reusable git modules: `config/coder/template-modules/modules/` (referenced with `?ref=v0.1.0` in-repo, substituted during push)
+- Archived historical shared glue: `_trash/shared-template-modules/` (kept for diffing/reference only)
+- Shared parameter definitions: `config/coder/template-modules/params/`
 - Node-specific modules: `config/coder/templates/node-template/` (6 files documented in issues)
 - Test template: `config/coder/templates/test-template/` (minimal baseline, zero parameters)
 - Docker template: `config/coder/templates/docker-template/` (stable at v82)
@@ -87,28 +87,18 @@ Out of Scope (for v0.1.1 workstream):
 ```
 config/coder/
 │
-├── shared-template-modules/          # NEW: central home for module-*.tf glue
-│   ├── README.md                      # Purpose & usage
-│   ├── module-agent.tf
-│   ├── module-docker.tf
-│   ├── module-git.tf
-│   ├── module-init-shell.tf
-│   ├── module-metadata.tf
-│   ├── module-preview-link.tf
-│   ├── module-setup-server.tf
-│   ├── module-ssh.tf
-│   ├── module-traefik-local.tf
-│   └── (future additional module-*.tf)
+├── template-modules/
+│   ├── modules/                      # Git-addressable Terraform modules (agent, docker, metadata, etc.)
+│   └── params/                       # Shared parameter glue copied into templates during push
 │
 ├── templates/
-│   ├── docker-template/               # Now slimmer: main.tf, variables.tf, resources.tf, minimal README
-│   ├── <specialized-template-A>/
-│   ├── <specialized-template-B>/
-│   └── git-modules/                  # (unchanged)
+│   ├── docker-template/              # Production template (v82)
+│   ├── node-template/                # Node-specific variant under investigation
+│   └── test-template/                # Zero-parameter baseline for flicker testing
 │
 ├── scripts/
-│   ├── push-template-versioned.sh    # Enhanced with auto-ref & shared module overlay
-│   └── push-templates.sh             # (optionally updated later)
+│   ├── push-template-versioned.sh    # Auto-ref substitution, shared param overlay, retry logic
+│   └── push-templates.sh             # Batch push helper (legacy)
 │
 └── template-modularization-plan.md   # This plan
 ```
@@ -116,14 +106,13 @@ config/coder/
 ### Overlay Mechanics
 - During push, the script constructs a temp directory: `TEMP_DIR/<template-name>/`.
 - It copies the base template files.
-- It then overlays (copies) all `*.tf` from `shared-template-modules/` into that temp template directory unless a template supplies an override file with the same name (override precedence: template-local > shared).
-- Optional: allow per-template exclusion via a `.shared-modules-ignore` file listing filenames to skip.
+- It overlays (copies) all `*-params.tf` files from `template-modules/params/` into that temp template directory unless a template supplies an override file with the same name (override precedence: template-local > shared).
+- Optional: per-template exclusion list still future work (consider `.shared-modules-ignore`).
 
 ### Ref Placeholder Strategy
-- Shared and template files use a placeholder token instead of a static ref, e.g.:
-  `source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/ssh-integration?ref={{GIT_REF}}"`
-- Push script resolves `{{GIT_REF}}` based on Git context and performs in-place substitution only inside the temp push directory.
-- Repository stays with placeholder tokens to avoid noisy commits when switching branches.
+- Terraform sources live under `git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/<module>?ref=<sentinel>`.
+- Refs remain `v0.1.0` (or `PLACEHOLDER`) inside the repo. `push-template-versioned.sh` rewrites those refs inside the temp directory only, using the detected Git ref and URL-encoded output.
+- Result: no moving-ref commits; pushes always resolve to the active branch/tag while the repo stays deterministic.
 
 ## 5. Auto-Ref Resolution Policy
 Priority order:
@@ -149,9 +138,9 @@ Add the following responsibilities to `push-template-versioned.sh`:
 
 ## 7. Task Breakdown - Incremental Module Addition (test-params-incrementally branch)
 
-**Current Status**: All 17 modules moved to `_trash/shared-template-modules/` with comprehensive GitHub issues created. Test template v1 pushed successfully with zero parameters (clean baseline). Ready for incremental testing.
+**Current Status**: Shared modules now live in `template-modules/modules/` (tracked in git). `_trash/shared-template-modules/` remains as an archive for comparison, but the active templates reference the new location. Test template v1 is pushed and stable, awaiting incremental parameter/module reintroduction while tracking flickering.
 
-**Strategy**: Add modules one-by-one from `_trash/` back to `shared-template-modules/`, testing for UI flickering after each addition.
+**Strategy**: Enable modules/parameters one-by-one using the tracked files under `template-modules/params/`, referencing `_trash/shared-template-modules/` only when a historical variant is needed for comparison. Each addition should be validated for UI flickering before moving on.
 
 ### Module Addition Order (by Testing Priority)
 
@@ -174,8 +163,8 @@ Add the following responsibilities to `push-template-versioned.sh`:
 
 For each module (in priority order):
 
-1. **Copy from _trash**: `cp _trash/shared-template-modules/module-X.tf config/coder/templates/test-template/`
-2. **Update template**: Ensure module is called/integrated in `main.tf` or `module-agent.tf`
+1. **Stage params**: Edit or copy the relevant `*-params.tf` under `template-modules/params/` (use `_trash/shared-template-modules/` as historical reference only).
+2. **Update template**: Ensure module is called/integrated in `main.tf` or `agent-params.tf` as needed.
 3. **Push to Coder**: `./push-template-versioned.sh test-template`
 4. **Test workspace**: 
    - Create new workspace OR update existing workspace
@@ -208,7 +197,7 @@ For each module (in priority order):
 | ID | Task | Description | Acceptance Criteria |
 |----|------|-------------|---------------------|
 | 1 | Create branch | Create `v0.1.1` branch for workstream | Branch exists locally & remotely |
-| 2 | Establish shared folder | Add `shared-template-modules/` & move module-*.tf from docker-template | Files relocated; docker-template still functional after overlay |
+| 2 | Establish shared folder | Add `template-modules/` & move module-*.tf from docker-template | Files relocated; docker-template still functional after overlay |
 | 3 | Introduce placeholders | Replace hard-coded `?ref=v0.1.0` with `?ref={{GIT_REF}}` in all relevant tf files | No lingering hard-coded refs except in git-modules README examples |
 | 4 | Update push script (detection) | Add git ref detection & validation (dry-run) | Dry-run outputs correct ref for tag/branch/main |
 | 5 | Update push script (overlay) | Implement overlay logic with override precedence and optional ignore file | Pushed template includes shared files; per-template override works |

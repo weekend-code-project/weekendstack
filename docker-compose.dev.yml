@@ -127,7 +127,7 @@ services:
       - all
       - dev
     environment:
-      CODER_ACCESS_URL: ${CODER_ACCESS_URL}
+      CODER_ACCESS_URL: ${CODER_ACCESS_URL:-http://${HOST_IP}:${CODER_HTTP_PORT:-7080}}
       CODER_PG_CONNECTION_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database/${POSTGRES_DB}?sslmode=disable"
       CODER_HTTP_ADDRESS: ${CODER_HTTP_ADDRESS}
       DOCKER_HOST: "tcp://socat:2375"
