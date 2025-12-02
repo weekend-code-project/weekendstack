@@ -25,6 +25,12 @@ variable "enable_eslint" {
   description = "Install ESLint globally"
 }
 
+variable "enable_http_server" {
+  type        = bool
+  default     = true
+  description = "Install http-server globally"
+}
+
 variable "package_manager" {
   type        = string
   default     = "npm"
@@ -103,6 +109,10 @@ locals {
     if [ "${var.enable_eslint}" = "true" ]; then
       echo "[NODE-TOOLING] Installing ESLint..."
       install_global eslint
+    fi
+    if [ "${var.enable_http_server}" = "true" ]; then
+      echo "[NODE-TOOLING] Installing http-server..."
+      install_global http-server
     fi
 
     echo "[NODE-TOOLING] Node: $(node -v 2>/dev/null || echo -), npm: $(npm -v 2>/dev/null || echo -)"
