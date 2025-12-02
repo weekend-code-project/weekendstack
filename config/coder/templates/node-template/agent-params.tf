@@ -16,7 +16,8 @@ locals {
     local.docker_metadata,
     local.ssh_metadata,
     local.git_metadata,
-    local.server_metadata
+    local.server_metadata,
+    try(module.node_tooling.metadata_blocks, [])
   )
 }
 
@@ -46,10 +47,19 @@ module "agent" {
   # Minimal startup script - just bash basics
   startup_script = join("\n", [
     "#!/bin/bash",
-    "echo '[WORKSPACE] Starting workspace ${data.coder_workspace.me.name}'",
+    "set -x # Enable debug printing",
+    "echo '[WORKSPACE] Starting workspace ${data.coder_workspace.me.name} (v102)'",
     "",
     "# Phase 1 Module: init-shell (Issue #23)",
     module.init_shell.setup_script,
+    "",
+    "echo '[DEBUG] Phase 1 complete. Starting Phase 2...'",
+    "set +e",
+    "",
+    "# Phase 2 Module: node-tooling",
+    module.node_tooling.tooling_install_script,
+    "",
+    "echo '[DEBUG] Phase 2 complete.'",
     "",
     "# Git Module: git-identity (always runs)",
     module.git_identity.setup_script,
@@ -73,6 +83,11 @@ module "agent" {
     "",
     "# Phase 6 Module: setup-server (Issue #32) - Conditional",
     try(module.setup_server[0].setup_server_script, "# Server disabled"),
+    "",
+    "# Node.js Modules",
+    # module.node_version.setup_script, # Removed
+    # module.node_tooling.tooling_install_script, # Moved to Phase 2
+    # module.node_modules_persistence.init_script, # Module not yet implemented
     "",
     "echo '[WORKSPACE] Workspace ready!'"
   ])
