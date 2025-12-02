@@ -79,6 +79,18 @@ variable "startup_command" {
   type        = string
 }
 
+variable "server_stop_command" {
+  description = "Command to stop the server (displayed in index.html)"
+  type        = string
+  default     = "pkill -f \"python3 -m http.server\""
+}
+
+variable "server_restart_command" {
+  description = "Command to restart the server (displayed in index.html)"
+  type        = string
+  default     = "python3 -m http.server $PORT"
+}
+
 # =============================================================================
 # Port Generation
 # =============================================================================
@@ -271,10 +283,10 @@ PORTS
         
         <h3>Manage Server</h3>
         <pre><code># Stop the server
-pkill -f "python3 -m http.server"
+${var.server_stop_command}
 
 # Restart the server (uses \$PORT=${local.primary_internal_port})
-python3 -m http.server \$PORT</code></pre>
+${var.server_restart_command}</code></pre>
         
         <p style="font-size: 0.9em; color: #666; margin-top: 20px;">
             💡 <strong>Port Mapping:</strong> Internal port ${local.primary_internal_port} (default) maps to external ${local.primary_external_port}
