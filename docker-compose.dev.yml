@@ -261,6 +261,61 @@ services:
       - traefik.http.routers.registry.rule=Host(`${REGISTRY_DOMAIN:-registry-${COMPUTER_NAME}.${BASE_DOMAIN}}`)
       - traefik.http.services.registry.loadbalancer.server.port=5000
 
+  # ====================================================================
+  # GITLAB CE - Complete DevOps Platform
+  # ====================================================================
+  gitlab:
+    image: gitlab/gitlab-ce:latest
+    container_name: gitlab
+    restart: unless-stopped
+    hostname: gitlab.${BASE_DOMAIN}
+    networks:
+      - coder-network
+      - shared-network
+    profiles:
+      - all
+      - dev
+      - gitlab
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'https://gitlab.${BASE_DOMAIN}'
+        gitlab_rails['gitlab_shell_ssh_port'] = ${GITLAB_SSH_PORT:-2224}
+        nginx['listen_port'] = 80
+        nginx['listen_https'] = false
+        nginx['proxy_set_headers'] = {
+          "X-Forwarded-Proto" => "https",
+          "X-Forwarded-Ssl" => "on"
+        }
+        # Reduce memory usage
+        puma['worker_processes'] = 2
+        sidekiq['max_concurrency'] = 10
+        prometheus_monitoring['enable'] = false
+    ports:
+      - "${GITLAB_HTTP_PORT:-8929}:80"
+      - "${GITLAB_SSH_PORT:-2222}:22"
+    volumes:
+      - type: bind
+        source: ${GITLAB_CONFIG_DIR:-./files/gitlab/config}
+        target: /etc/gitlab
+      - type: bind
+        source: ${GITLAB_LOGS_DIR:-./files/gitlab/logs}
+        target: /var/log/gitlab
+      - type: bind
+        source: ${GITLAB_DATA_DIR:-./files/gitlab/data}
+        target: /var/opt/gitlab
+    shm_size: '256m'
+    deploy:
+      resources:
+        limits:
+          memory: ${GITLAB_MEMORY_LIMIT:-4g}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.gitlab.entrypoints=web,websecure
+      - traefik.http.routers.gitlab.rule=Host(`gitlab.${BASE_DOMAIN}`)
+      - traefik.http.routers.gitlab.tls=true
+      - traefik.http.services.gitlab.loadbalancer.server.port=80
+      - traefik.docker.network=shared-network
+
 volumes:
   coder-db-data:
   gitea-db-data:
