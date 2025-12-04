@@ -47,8 +47,7 @@ module "agent" {
   # Minimal startup script - just bash basics
   startup_script = join("\n", [
     "#!/bin/bash",
-    "set -x # Enable debug printing",
-    "echo '[WORKSPACE] Starting workspace ${data.coder_workspace.me.name} (v102)'",
+    "echo '[WORKSPACE] Starting workspace ${data.coder_workspace.me.name} (v103)'",
     "",
     "# Phase 1 Module: init-shell (Issue #23)",
     module.init_shell.setup_script,

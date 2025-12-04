@@ -11,7 +11,8 @@
 # Available profiles:
 #   - all: Default profile that includes every service
 #   - dev: Coder platform + socat proxy
-#   - proxy: Traefik reverse proxy + Cloudflare tunnel
+#   - proxy: Traefik reverse proxy + Cloudflare tunnel (legacy)
+#   - networking: Traefik, Cloudflare tunnel, Pi-Hole
 #   - dev-tools: Docker registry cache
 #   - ai: AI services (chat, search, image generation)
 #   - productivity: NocoDB, Paperless-ngx, N8N
@@ -30,11 +31,10 @@ include:
   - docker-compose.ai.yml
   - docker-compose.dev.yml
   - docker-compose.productivity.yml
-  - docker-compose.traefik.yml
-  - docker-compose.traefik.yml
-  # - docker-compose.automation.yml       # Currently no automation services
-  # - docker-compose.development.yml      # Will be created in Phase 5
-  # - docker-compose.monitoring.yml       # Will be created in Phase 6
+  - docker-compose.networking.yml
+  # - docker-compose.media.yml            # Will be created for Immich, Kavita, Navidrome
+  # - docker-compose.automation.yml       # Will be created for Home Assistant
+  # - docker-compose.monitoring.yml       # Will be created in future phase
 
 # Shared network for inter-service communication
 networks:

@@ -43,6 +43,7 @@ docker compose --profile all up -d                   # Everything (default)
 - **NocoDB**: http://localhost:8090
 - **N8N**: http://localhost:5678
 - **Traefik Dashboard**: http://localhost:8083/dashboard/
+- **Pi-Hole**: http://localhost:8088/admin (internal only)
 
 **External Access (via Cloudflare Tunnel):**
 - https://coder.example.com
@@ -60,6 +61,9 @@ docker compose --profile all up -d                   # Everything (default)
 - **Docker Registry** - Container image cache
 - **Traefik** - Reverse proxy and load balancer
 - **Cloudflare Tunnel** - Secure external access
+
+### Networking
+- **Pi-Hole** - Network-wide ad blocking and DNS (internal only)
 
 ### AI Services
 - **Open WebUI** - AI chat interface (connects to native Ollama)
@@ -87,8 +91,8 @@ docker compose --profile all up -d                   # Everything (default)
 ### Compose File Organization
 ```
 docker-compose.yml              # Main file (includes all others)
-├── docker-compose.core.yml     # Database, Traefik (always on)
-├── docker-compose.traefik.yml  # Traefik reverse proxy config
+├── docker-compose.core.yml     # Core infrastructure (databases)
+├── docker-compose.networking.yml  # Traefik, Cloudflare Tunnel, Pi-Hole
 ├── docker-compose.dev.yml      # Coder, Gitea, Registry
 ├── docker-compose.ai.yml       # Open WebUI, SearXNG, Stable Diffusion
 ├── docker-compose.productivity.yml  # Paperless, NocoDB, N8N, Activepieces

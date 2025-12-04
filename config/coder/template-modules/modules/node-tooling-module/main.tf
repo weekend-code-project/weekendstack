@@ -67,8 +67,10 @@ locals {
 
     # Install NVM and Node.js
     export NVM_DIR="$HOME/.nvm"
-    if [ ! -d "$NVM_DIR" ]; then
-      echo "[NODE-TOOLING] Installing NVM..." | tee -a "$LOG_FILE"
+    # Check if NVM is installed correctly (nvm.sh must exist)
+    if [ ! -s "$NVM_DIR/nvm.sh" ]; then
+      echo "[NODE-TOOLING] Installing NVM (nvm.sh not found)..." | tee -a "$LOG_FILE"
+      rm -rf "$NVM_DIR" # Clean up partial install
       curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash >> "$LOG_FILE" 2>&1
     fi
 
@@ -81,12 +83,34 @@ locals {
     fi
 
     # Load NVM for this script
-    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    if [ -s "$NVM_DIR/nvm.sh" ]; then
+        \. "$NVM_DIR/nvm.sh"
+    else
+        echo "[NODE-TOOLING] ERROR: nvm.sh not found at $NVM_DIR/nvm.sh" | tee -a "$LOG_FILE"
+    fi
 
     echo "[NODE-TOOLING] Installing/Using Node.js version: ${var.node_version}..." | tee -a "$LOG_FILE"
-    nvm install "${var.node_version}" >> "$LOG_FILE" 2>&1
-    nvm alias default "${var.node_version}" >> "$LOG_FILE" 2>&1
-    nvm use default >> "$LOG_FILE" 2>&1
+    
+    # Debug: Check if nvm is a function
+    if ! command -v nvm &> /dev/null; then
+         echo "[NODE-TOOLING] ERROR: nvm command not found!" | tee -a "$LOG_FILE"
+    else
+         echo "[NODE-TOOLING] nvm version: $(nvm --version)" | tee -a "$LOG_FILE"
+    fi
+
+    # Run nvm install without redirection to see output in main log
+    nvm install "${var.node_version}"
+    nvm alias default "${var.node_version}"
+    nvm use default
+
+    if ! command -v node &> /dev/null; then
+        echo "[NODE-TOOLING] ERROR: Node not found after installation!" | tee -a "$LOG_FILE"
+        # Fallback: Try to find where it installed
+        echo "[NODE-TOOLING] Debug: NVM_DIR content:" | tee -a "$LOG_FILE"
+        ls -R "$NVM_DIR/versions" | head -n 20 | tee -a "$LOG_FILE"
+    else
+        echo "[NODE-TOOLING] Node installed successfully: $(node -v)" | tee -a "$LOG_FILE"
+    fi
 
     # Cache dirs
     mkdir -p ~/.cache/node ~/.npm ~/.pnpm-store ~/.yarn

@@ -1,0 +1,134 @@
+# =============================================================================
+# NETWORKING SERVICES - REVERSE PROXY, TUNNELS, AND DNS
+# =============================================================================
+# This file contains networking infrastructure services:
+# - Traefik: Reverse proxy and load balancer
+# - Cloudflare Tunnel: Secure external access
+# - Pi-Hole: Network-wide ad blocking and DNS (internal only)
+#
+# Usage:
+#   docker compose --profile networking up -d
+#   docker compose --profile proxy up -d  (legacy alias)
+# =============================================================================
+
+services:
+  # =============================================================================
+  # TRAEFIK - REVERSE PROXY
+  # =============================================================================
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
+    restart: unless-stopped
+    profiles:
+      - all
+      - proxy
+      - networking
+    ports:
+      - "${TRAEFIK_HTTP_PORT:-80}:80"
+      - "${TRAEFIK_HTTPS_PORT:-443}:443"
+      - "${TRAEFIK_DASHBOARD_PORT:-8080}:8080"
+    volumes:
+      - ${TRAEFIK_CONFIG_FILE}:/etc/traefik/traefik.yml:ro
+      - ${TRAEFIK_AUTH_DIR}:/traefik-auth:ro
+    networks:
+      - coder-network
+      - traefik-network
+      - shared-network
+    depends_on:
+      - socat
+    command:
+      - --api.insecure=true
+      - --api.dashboard=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.endpoint=tcp://socat:2375
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+
+  # =============================================================================
+  # CLOUDFLARE TUNNEL - SECURE EXTERNAL ACCESS
+  # =============================================================================
+  cloudflare-tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflare-tunnel
+    restart: unless-stopped
+    networks:
+      - traefik-network
+      - shared-network
+    profiles:
+      - all
+      - proxy
+      - networking
+    volumes:
+      - ${CLOUDFLARE_CONFIG_FILE}:/etc/cloudflared/config.yml:ro
+      - ${CLOUDFLARE_CREDENTIALS_DIR}:/etc/cloudflared/.cloudflared:ro
+    command: tunnel --config /etc/cloudflared/config.yml run
+
+  # =============================================================================
+  # PI-HOLE - NETWORK-WIDE AD BLOCKING & DNS (INTERNAL ONLY)
+  # =============================================================================
+  # Pi-Hole provides DNS-level ad blocking for your entire network.
+  # NOT exposed via Traefik - access only via local IP:port
+  # 
+  # After starting, set your router's DNS to point to this server's IP
+  # Web interface: http://${HOST_IP}:${PIHOLE_PORT_WEB}/admin
+  # =============================================================================
+  pihole:
+    image: pihole/pihole:latest
+    container_name: pihole
+    restart: unless-stopped
+    hostname: pihole
+    networks:
+      - traefik-network
+      - shared-network
+    profiles:
+      - all
+      - networking
+    ports:
+      # DNS ports - may conflict with systemd-resolved on Linux
+      # If conflict, run: sudo systemctl disable systemd-resolved
+      - "${PIHOLE_PORT_DNS:-53}:53/tcp"
+      - "${PIHOLE_PORT_DNS:-53}:53/udp"
+      # Web interface (internal access only)
+      - "${PIHOLE_PORT_WEB:-8088}:80/tcp"
+    environment:
+      TZ: ${TIMEZONE:-UTC}
+      WEBPASSWORD: ${PIHOLE_WEBPASSWORD:-pihole-admin-2024}
+      PIHOLE_DNS_: ${PIHOLE_DNS1:-1.1.1.1};${PIHOLE_DNS2:-1.0.0.1}
+      FTLCONF_webserver_api_password: ${PIHOLE_WEBPASSWORD:-pihole-admin-2024}
+      DNSMASQ_LISTENING: all
+      # Disable DHCP - use router for DHCP
+      DHCP_ACTIVE: "false"
+    volumes:
+      - type: bind
+        source: ${FILES_BASE_DIR:-./files}/pihole/etc-pihole
+        target: /etc/pihole
+        bind:
+          create_host_path: true
+      - type: bind
+        source: ${FILES_BASE_DIR:-./files}/pihole/etc-dnsmasq.d
+        target: /etc/dnsmasq.d
+        bind:
+          create_host_path: true
+    cap_add:
+      - NET_ADMIN
+    deploy:
+      resources:
+        limits:
+          memory: ${PIHOLE_MEMORY_LIMIT:-512m}
+    healthcheck:
+      test: ["CMD", "dig", "+short", "+norecurse", "+retry=0", "@127.0.0.1", "pi.hole"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    labels:
+      # NOT exposed via Traefik - internal network access only
+      - traefik.enable=false
+      - "com.docker.compose.service=pihole"
+      - "description=Pi-Hole - Network-wide Ad Blocking (Internal Only)"
+
+networks:
+  traefik-network:
+    name: traefik-network
+    driver: bridge
