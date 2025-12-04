@@ -16,6 +16,7 @@
 #   - dev-tools: Docker registry cache
 #   - ai: AI services (chat, search, image generation)
 #   - productivity: NocoDB, Paperless-ngx, N8N
+#   - automation: Home Assistant
 #   - development: Gitea with Actions
 #   - monitoring: Uptime Kuma
 # =============================================================================
@@ -32,8 +33,8 @@ include:
   - docker-compose.dev.yml
   - docker-compose.productivity.yml
   - docker-compose.networking.yml
+  - docker-compose.automation.yml
   # - docker-compose.media.yml            # Will be created for Immich, Kavita, Navidrome
-  # - docker-compose.automation.yml       # Will be created for Home Assistant
   # - docker-compose.monitoring.yml       # Will be created in future phase
 
 # Shared network for inter-service communication

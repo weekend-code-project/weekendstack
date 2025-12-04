@@ -1,0 +1,80 @@
+# =============================================================================
+# AUTOMATION SERVICES - HOME AUTOMATION AND IOT
+# =============================================================================
+# This file contains home automation services:
+# - Home Assistant: Smart home automation platform
+#
+# Usage:
+#   docker compose --profile automation up -d
+#
+# Data Storage:
+#   Configuration and state stored under ./files/homeassistant/
+# =============================================================================
+
+networks:
+  automation-network:
+    name: automation-network
+    driver: bridge
+    external: false
+
+services:
+  # =============================================================================
+  # HOME ASSISTANT - SMART HOME AUTOMATION PLATFORM
+  # =============================================================================
+  # Home Assistant is a powerful home automation platform that puts local control
+  # and privacy first. It integrates with thousands of devices and services.
+  #
+  # First Run:
+  #   1. Access http://<your-ip>:8123
+  #   2. Create your admin account
+  #   3. Set up your home location and preferences
+  #
+  # Device Discovery:
+  #   For full device discovery (mDNS, SSDP, etc.), you may need to use
+  #   network_mode: host instead of bridge networking. See comments below.
+  # =============================================================================
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: homeassistant
+    restart: unless-stopped
+    networks:
+      - automation-network
+      - shared-network
+    profiles:
+      - all
+      - automation
+    ports:
+      - "${HOMEASSISTANT_PORT:-8123}:8123"
+    environment:
+      TZ: ${TIMEZONE:-UTC}
+    volumes:
+      - type: bind
+        source: ${FILES_BASE_DIR:-./files}/homeassistant/config
+        target: /config
+        bind:
+          create_host_path: true
+      - /etc/localtime:/etc/localtime:ro
+    # Uncomment the following for USB device access (Zigbee/Z-Wave dongles)
+    # privileged: true
+    # devices:
+    #   - /dev/ttyUSB0:/dev/ttyUSB0  # Zigbee/Z-Wave USB stick
+    #   - /dev/ttyACM0:/dev/ttyACM0  # Alternative USB device path
+    deploy:
+      resources:
+        limits:
+          memory: ${HOMEASSISTANT_MEMORY_LIMIT:-2g}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8123/api/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    labels:
+      - traefik.enable=${HOMEASSISTANT_TRAEFIK_ENABLE:-true}
+      - "traefik.http.routers.homeassistant.rule=Host(`${HOMEASSISTANT_DOMAIN:-home-${COMPUTER_NAME}.${BASE_DOMAIN}}`)"
+      - traefik.http.routers.homeassistant.entrypoints=web,websecure
+      - traefik.http.routers.homeassistant.tls=true
+      - traefik.http.services.homeassistant.loadbalancer.server.port=8123
+      - traefik.docker.network=shared-network
+      - "com.docker.compose.service=homeassistant"
+      - "description=Home Assistant - Smart Home Automation"
