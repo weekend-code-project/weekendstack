@@ -16,6 +16,52 @@ volumes:
   coder-db-data:
   gitea-db-data:
 
-services: {}
+services:
+  # =============================================================================
+  # HOMER - SERVICE DASHBOARD / LANDING PAGE
+  # =============================================================================
+  # A simple, lightweight dashboard to access all services from one place.
+  # Access at http://<your-ip>:8080 or via Traefik at your root domain.
+  #
+  # Configuration: Edit files/homer/config.yml to customize the dashboard.
+  # =============================================================================
+  homer:
+    image: b4bz/homer:latest
+    container_name: homer
+    restart: unless-stopped
+    networks:
+      - core-network
+      - shared-network
+    profiles:
+      - all
+      - core
+    ports:
+      - "${HOMER_PORT:-8080}:8080"
+    environment:
+      - INIT_ASSETS=1
+    volumes:
+      - type: bind
+        source: ./config/homer
+        target: /www/assets
+        bind:
+          create_host_path: true
+    deploy:
+      resources:
+        limits:
+          memory: ${HOMER_MEMORY_LIMIT:-128m}
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - traefik.enable=${HOMER_TRAEFIK_ENABLE:-true}
+      - "traefik.http.routers.homer.rule=Host(`${HOMER_DOMAIN:-dashboard-${COMPUTER_NAME}.${BASE_DOMAIN}}`)"
+      - traefik.http.routers.homer.entrypoints=web,websecure
+      - traefik.http.routers.homer.tls=true
+      - traefik.http.services.homer.loadbalancer.server.port=8080
+      - traefik.docker.network=shared-network
+      - "com.docker.compose.service=homer"
+      - "description=Homer - Service Dashboard"
 
 

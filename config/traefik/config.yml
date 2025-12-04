@@ -15,7 +15,7 @@ providers:
   docker:
     endpoint: "tcp://socat:2375"
     exposedByDefault: false
-    network: coder-network
+    network: shared-network
   file:
     directory: /traefik-auth
     watch: true

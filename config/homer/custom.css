@@ -1,0 +1,12 @@
+/* Custom padding for service cards */
+.card {
+  margin-bottom: 1rem !important;
+}
+
+.card-content {
+  padding: 1.25rem !important;
+}
+
+.service {
+  margin-bottom: 0.75rem !important;
+}

@@ -1,0 +1,114 @@
+---
+# Homepage configuration
+# See https://fontawesome.com/search for icons options
+
+title: "Weekend Stack"
+subtitle: "Local Network"
+logo: "logo.png"
+# icon: "fas fa-skull-crossbones" # Optional icon
+
+header: true
+footer: '<p>Created with <span class="has-text-danger">❤️</span> with <a href="https://bulma.io/">Bulma</a>, <a href="https://vuejs.org/">Vue.js</a> & <a href="https://fontawesome.com/">font awesome</a> // Fork me on <a href="https://github.com/bastienwirtz/homer"><i class="fab fa-github-alt"></i></a></p>' # set false if you want to hide it.
+
+# Optional theme customization
+theme: default
+
+# Optional message
+message:
+  style: "is-info"
+  title: "Weekend Stack Dashboard"
+  content: "Your self-hosted services running on the local network"
+
+# Optional navbar
+links:
+  - name: "Local"
+    icon: "fas fa-home"
+    url: "#"
+  - name: "Public"
+    icon: "fas fa-globe"
+    url: "#public" 
+
+# Services
+# First level array represent a group.
+# Leave only a "items" key if not using group (group name, icon & tagstyle are optional, section separation will not be displayed).
+services:
+  - name: "Local Services"
+    icon: "fa-solid fa-server"
+    items:
+      - name: "Open WebUI"
+        icon: "fas fa-comments"
+        subtitle: "AI Chat Interface"
+        tag: "ai"
+        tagstyle: "is-info"
+        url: "http://192.168.2.50:3000"
+        target: "_blank"
+      - name: "SearXNG"
+        icon: "fas fa-search"
+        subtitle: "Private Search"
+        tag: "ai"
+        tagstyle: "is-info"
+        url: "http://192.168.2.50:4000"
+        target: "_blank"
+      - name: "n8n"
+        icon: "fas fa-project-diagram"
+        subtitle: "Workflow Automation"
+        tag: "productivity"
+        tagstyle: "is-success"
+        url: "http://192.168.2.50:5678"
+        target: "_blank"
+      - name: "Activepieces"
+        icon: "fas fa-puzzle-piece"
+        subtitle: "Business Automation"
+        tag: "productivity"
+        tagstyle: "is-success"
+        url: "http://192.168.2.50:8087"
+        target: "_blank"
+      - name: "NocoDB"
+        icon: "fas fa-database"
+        subtitle: "Database Platform"
+        tag: "productivity"
+        tagstyle: "is-success"
+        url: "http://192.168.2.50:8090"
+        target: "_blank"
+      - name: "Paperless-ngx"
+        icon: "fas fa-file-alt"
+        subtitle: "Document Management"
+        tag: "productivity"
+        tagstyle: "is-success"
+        url: "http://192.168.2.50:8082"
+        target: "_blank"
+      - name: "Home Assistant"
+        icon: "fas fa-home"
+        subtitle: "Home Automation"
+        tag: "automation"
+        tagstyle: "is-warning"
+        url: "http://192.168.2.50:8123"
+        target: "_blank"
+      - name: "Coder"
+        icon: "fas fa-laptop-code"
+        subtitle: "Cloud IDE"
+        tag: "dev"
+        tagstyle: "is-primary"
+        url: "http://192.168.2.50:7080"
+        target: "_blank"
+      - name: "Gitea"
+        icon: "fab fa-git-alt"
+        subtitle: "Git Repository"
+        tag: "dev"
+        tagstyle: "is-primary"
+        url: "http://192.168.2.50:7001"
+        target: "_blank"
+      - name: "Traefik"
+        icon: "fas fa-route"
+        subtitle: "Reverse Proxy"
+        tag: "networking"
+        tagstyle: "is-danger"
+        url: "http://192.168.2.50:8083"
+        target: "_blank"
+      - name: "Pi-Hole"
+        icon: "fas fa-shield-alt"
+        subtitle: "Ad Blocking DNS"
+        tag: "networking"
+        tagstyle: "is-danger"
+        url: "http://192.168.2.50:8088/admin"
+        target: "_blank"
