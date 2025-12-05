@@ -119,8 +119,48 @@ services:
       timeout: 5s
       retries: 5
 
+  # ====================================================================
+  # KAVITA - eBook/Manga/Comic Reader
+  # ====================================================================
+  # A fast, feature-rich, cross platform reading server.
+  # Supports manga, comics, ebooks (epub, pdf), and more.
+  # ====================================================================
+  kavita:
+    image: jvmilazz0/kavita:latest
+    container_name: kavita
+    networks:
+      - media-network
+      - shared-network
+    profiles:
+      - all
+      - media
+    ports:
+      - "${KAVITA_PORT:-5000}:5000"
+    volumes:
+      - type: volume
+        source: kavita-data
+        target: /kavita/config
+      - type: bind
+        source: ${KAVITA_LIBRARY_PATH:-./files/kavita/library}
+        target: /manga
+        bind:
+          create_host_path: true
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: ${KAVITA_MEMORY_LIMIT:-512m}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.kavita.rule=Host(`${KAVITA_DOMAIN:-kavita.${BASE_DOMAIN}}`)
+      - traefik.http.routers.kavita.entrypoints=web,websecure
+      - traefik.http.routers.kavita.tls=true
+      - traefik.http.services.kavita.loadbalancer.server.port=5000
+      - traefik.docker.network=shared-network
+
 volumes:
   immich-upload:
   immich-model-cache:
   immich-redis-data:
   immich-db-data:
+  kavita-data:
