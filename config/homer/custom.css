@@ -1,12 +1,10 @@
-/* Custom padding for service cards */
-.card {
-  margin-bottom: 1rem !important;
+/* Hide the layout toggle button in navbar */
+#bighead .navbar-end .navbar-item:has(.fa-columns),
+#bighead .navbar-end .navbar-item:has(.fa-list) {
+  display: none !important;
 }
 
-.card-content {
-  padding: 1.25rem !important;
-}
-
-.service {
-  margin-bottom: 0.75rem !important;
+/* Alternative: hide by position if :has() not supported */
+.navbar-end > .navbar-item:last-child {
+  display: none !important;
 }
