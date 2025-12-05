@@ -64,7 +64,7 @@ services:
       - SEARXNG_SECRET=${SEARXNG_SECRET:-searxng-secret-key-change-me-2024}
     volumes:
       - type: bind
-        source: ${FILES_BASE_DIR:-./files}/searxng
+        source: ./config/searxng
         target: /etc/searxng
         bind:
           create_host_path: true
