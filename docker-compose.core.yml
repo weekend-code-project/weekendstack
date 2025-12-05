@@ -80,7 +80,8 @@ services:
     ports:
       - "${VAULTWARDEN_PORT:-8222}:80"
     environment:
-      DOMAIN: "https://${VAULTWARDEN_DOMAIN:-vault.${BASE_DOMAIN}}"
+      # Use HTTP for local access - the web vault will work with both HTTP and HTTPS
+      DOMAIN: "http://192.168.2.50:8222"
       SIGNUPS_ALLOWED: ${VAULTWARDEN_SIGNUPS_ALLOWED:-true}
       ADMIN_TOKEN: ${VAULTWARDEN_ADMIN_TOKEN:-}
       WEBSOCKET_ENABLED: "true"
