@@ -587,8 +587,8 @@ services:
     ports:
       - "${FOCALBOARD_PORT:-8097}:8000"
     volumes:
-      - type: bind
-        source: ${FILES_BASE_DIR:-./files}/focalboard
+      - type: volume
+        source: focalboard-data
         target: /opt/focalboard/data
     restart: unless-stopped
     deploy:
@@ -614,4 +614,5 @@ volumes:
   paperless-data:
   postiz-db-data:
   postiz-redis-data:
+  focalboard-data:
 
