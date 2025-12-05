@@ -6,8 +6,6 @@ logo: "logo.png"
 header: true
 footer: false
 theme: default
-stylesheet:
-  - "custom.css"
 
 message:
   style: "is-success"

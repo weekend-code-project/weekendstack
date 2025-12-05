@@ -12,8 +12,6 @@ footer: '<p>Created with <span class="has-text-danger">❤️</span> with <a hre
 
 # Optional theme customization
 theme: default
-stylesheet:
-  - "custom.css"
 
 # Optional message
 message:
