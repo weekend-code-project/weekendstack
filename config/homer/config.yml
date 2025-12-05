@@ -29,10 +29,15 @@ links:
     url: "#public" 
 
 # Services
-# First level array represent a group.
-# Leave only a "items" key if not using group (group name, icon & tagstyle are optional, section separation will not be displayed).
+# Tag colors:
+#   ai = is-info (blue)
+#   productivity = is-success (green)
+#   dev = is-warning (yellow/orange)
+#   media = is-link (purple)
+#   admin = is-danger (red)
+
 services:
-  - name: "Local Services"
+  - name: "Local Applications"
     icon: "fa-solid fa-server"
     items:
       - name: "Open WebUI"
@@ -84,40 +89,19 @@ services:
         tagstyle: "is-success"
         url: "http://192.168.2.50:8097"
         target: "_blank"
-      - name: "Home Assistant"
-        icon: "fas fa-home"
-        subtitle: "Home Automation"
-        tag: "automation"
-        tagstyle: "is-warning"
-        url: "http://192.168.2.50:8123"
-        target: "_blank"
       - name: "Coder"
         icon: "fas fa-laptop-code"
         subtitle: "Cloud IDE"
         tag: "dev"
-        tagstyle: "is-primary"
+        tagstyle: "is-warning"
         url: "http://192.168.2.50:7080"
         target: "_blank"
       - name: "Gitea"
         icon: "fab fa-git-alt"
         subtitle: "Git Repository"
         tag: "dev"
-        tagstyle: "is-primary"
+        tagstyle: "is-warning"
         url: "http://192.168.2.50:7001"
-        target: "_blank"
-      - name: "Traefik"
-        icon: "fas fa-route"
-        subtitle: "Reverse Proxy"
-        tag: "networking"
-        tagstyle: "is-danger"
-        url: "http://192.168.2.50:8083"
-        target: "_blank"
-      - name: "Pi-Hole"
-        icon: "fas fa-shield-alt"
-        subtitle: "Ad Blocking DNS"
-        tag: "networking"
-        tagstyle: "is-danger"
-        url: "http://192.168.2.50:8088/admin"
         target: "_blank"
       - name: "Immich"
         icon: "fas fa-images"
@@ -139,4 +123,29 @@ services:
         tag: "media"
         tagstyle: "is-link"
         url: "http://192.168.2.50:4533"
+        target: "_blank"
+
+  - name: "Local Admin"
+    icon: "fa-solid fa-shield-halved"
+    items:
+      - name: "Traefik"
+        icon: "fas fa-route"
+        subtitle: "Reverse Proxy"
+        tag: "admin"
+        tagstyle: "is-danger"
+        url: "http://192.168.2.50:8083"
+        target: "_blank"
+      - name: "Pi-Hole"
+        icon: "fas fa-shield-alt"
+        subtitle: "Ad Blocking DNS"
+        tag: "admin"
+        tagstyle: "is-danger"
+        url: "http://192.168.2.50:8088/admin"
+        target: "_blank"
+      - name: "Home Assistant"
+        icon: "fas fa-home"
+        subtitle: "Home Automation"
+        tag: "admin"
+        tagstyle: "is-danger"
+        url: "http://192.168.2.50:8123"
         target: "_blank"

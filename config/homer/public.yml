@@ -20,8 +20,14 @@ links:
     icon: "fas fa-globe"
     url: "#public"
 
+# Tag colors:
+#   ai = is-info (blue)
+#   productivity = is-success (green)
+#   dev = is-warning (yellow/orange)
+#   media = is-link (purple)
+
 services:
-  - name: "Public Services"
+  - name: "Public Applications"
     icon: "fa-solid fa-globe"
     items:
       - name: "Open WebUI"
@@ -73,25 +79,32 @@ services:
         tagstyle: "is-success"
         url: "https://focalboard.weekendcodeproject.dev"
         target: "_blank"
+      - name: "Vaultwarden"
+        icon: "fas fa-key"
+        subtitle: "Password Manager"
+        tag: "productivity"
+        tagstyle: "is-success"
+        url: "https://vault.weekendcodeproject.dev"
+        target: "_blank"
       - name: "Coder"
         icon: "fas fa-laptop-code"
         subtitle: "Cloud IDE"
         tag: "dev"
-        tagstyle: "is-primary"
+        tagstyle: "is-warning"
         url: "https://coder.weekendcodeproject.dev"
         target: "_blank"
       - name: "Gitea"
         icon: "fab fa-git-alt"
         subtitle: "Git Repository"
         tag: "dev"
-        tagstyle: "is-primary"
+        tagstyle: "is-warning"
         url: "https://gitea.weekendcodeproject.dev"
         target: "_blank"
       - name: "GitLab"
         icon: "fab fa-gitlab"
         subtitle: "DevOps Platform"
         tag: "dev"
-        tagstyle: "is-primary"
+        tagstyle: "is-warning"
         url: "https://gitlab.weekendcodeproject.dev"
         target: "_blank"
       - name: "Immich"
@@ -114,11 +127,4 @@ services:
         tag: "media"
         tagstyle: "is-link"
         url: "https://music.weekendcodeproject.dev"
-        target: "_blank"
-      - name: "Vaultwarden"
-        icon: "fas fa-key"
-        subtitle: "Password Manager"
-        tag: "core"
-        tagstyle: "is-dark"
-        url: "https://vault.weekendcodeproject.dev"
         target: "_blank"
