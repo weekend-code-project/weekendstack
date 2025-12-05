@@ -158,9 +158,55 @@ services:
       - traefik.http.services.kavita.loadbalancer.server.port=5000
       - traefik.docker.network=shared-network
 
+  # ====================================================================
+  # NAVIDROME - Music Streaming Server
+  # ====================================================================
+  # A self-hosted music server compatible with Subsonic/Airsonic clients.
+  # Supports MP3, FLAC, AAC, OGG, and more.
+  # ====================================================================
+  navidrome:
+    image: deluan/navidrome:latest
+    container_name: navidrome
+    networks:
+      - media-network
+      - shared-network
+    profiles:
+      - all
+      - media
+    ports:
+      - "${NAVIDROME_PORT:-4533}:4533"
+    environment:
+      ND_SCANSCHEDULE: "1h"
+      ND_LOGLEVEL: "info"
+      ND_SESSIONTIMEOUT: "24h"
+      ND_BASEURL: ""
+    volumes:
+      - type: volume
+        source: navidrome-data
+        target: /data
+      - type: bind
+        source: ${NAVIDROME_MUSIC_PATH:-./files/navidrome/music}
+        target: /music
+        read_only: true
+        bind:
+          create_host_path: true
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: ${NAVIDROME_MEMORY_LIMIT:-512m}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.navidrome.rule=Host(`${NAVIDROME_DOMAIN:-music.${BASE_DOMAIN}}`)
+      - traefik.http.routers.navidrome.entrypoints=web,websecure
+      - traefik.http.routers.navidrome.tls=true
+      - traefik.http.services.navidrome.loadbalancer.server.port=4533
+      - traefik.docker.network=shared-network
+
 volumes:
   immich-upload:
   immich-model-cache:
   immich-redis-data:
   immich-db-data:
   kavita-data:
+  navidrome-data:
