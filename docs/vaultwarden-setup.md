@@ -2,12 +2,25 @@
 
 Vaultwarden is a lightweight, self-hosted password manager compatible with Bitwarden clients.
 
+## ⚠️ HTTPS Required
+
+**Vaultwarden requires HTTPS** for the web vault to function. The WebCrypto API used for encryption is only available in secure contexts (HTTPS or localhost).
+
+**You must access Vaultwarden via the Cloudflare tunnel:**
+- ✅ https://vault.weekendcodeproject.dev (works)
+- ❌ http://192.168.2.50:8222 (will not work from remote machines)
+
+The local HTTP URL will only work if you're accessing from the Docker host itself via `http://localhost:8222`.
+
+> **Note:** Bitwarden desktop and mobile apps work fine with HTTP URLs since they handle encryption internally.
+
 ## Access URLs
 
-| Type | URL |
-|------|-----|
-| Local | http://192.168.2.50:8222 |
-| Public | https://vault.weekendcodeproject.dev |
+| Type | URL | Notes |
+|------|-----|-------|
+| Public (recommended) | https://vault.weekendcodeproject.dev | Full functionality |
+| Local (Docker host only) | http://localhost:8222 | Only works on the server itself |
+| Bitwarden Apps | http://192.168.2.50:8222 | Desktop/mobile apps work with HTTP |
 
 ## Starting Vaultwarden
 
@@ -17,7 +30,7 @@ docker compose --profile core up -d vaultwarden
 
 ## Initial Setup
 
-1. Navigate to http://192.168.2.50:8222
+1. Navigate to https://vault.weekendcodeproject.dev
 2. Click "Create Account"
 3. Enter your email, master password, and password hint
 4. Click "Submit"
@@ -57,7 +70,7 @@ To enable the admin panel:
    docker compose --profile core up -d vaultwarden
    ```
 
-4. Access the admin panel at http://192.168.2.50:8222/admin
+4. Access the admin panel at https://vault.weekendcodeproject.dev/admin
 
 ## Using Bitwarden Clients
 

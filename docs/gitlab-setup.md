@@ -2,6 +2,16 @@
 
 GitLab CE provides a complete DevOps platform including Git repository hosting, CI/CD pipelines, issue tracking, and more.
 
+## ⚠️ HTTPS Required
+
+**GitLab requires HTTPS** for the web interface to function properly. The WebCrypto API used by GitLab is only available in secure contexts (HTTPS or localhost).
+
+**You must access GitLab via the Cloudflare tunnel:**
+- ✅ https://gitlab.weekendcodeproject.dev (works)
+- ❌ http://192.168.2.50:8929 (will not work from remote machines)
+
+The local HTTP URL will only work if you're accessing from the Docker host itself via `http://localhost:8929`.
+
 ## Configuration
 
 GitLab is configured in `docker-compose.dev.yml` with the `gitlab` profile.
@@ -27,10 +37,10 @@ GitLab takes **3-5 minutes** to fully initialize on first start.
 
 ## Access
 
-| Type | URL |
-|------|-----|
-| Local | http://192.168.2.50:8929 |
-| Public | https://gitlab.weekendcodeproject.dev |
+| Type | URL | Notes |
+|------|-----|-------|
+| Public (recommended) | https://gitlab.weekendcodeproject.dev | Full functionality |
+| Local (Docker host only) | http://localhost:8929 | Only works on the server itself |
 
 ## Initial Root Password
 
