@@ -1,0 +1,126 @@
+# ====================================================================
+# MEDIA SERVICES - DOCKER COMPOSE CONFIGURATION
+# ====================================================================
+# This file contains media-focused services:
+# - Immich: Photo and video backup/management (Google Photos alternative)
+#
+# Usage:
+#   docker compose --profile media up -d
+#
+# ====================================================================
+
+networks:
+  media-network:
+    name: media-network
+    driver: bridge
+    external: false
+
+services:
+  # ====================================================================
+  # IMMICH - Photo & Video Management (Google Photos Alternative)
+  # ====================================================================
+  
+  immich-server:
+    image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
+    container_name: immich-server
+    networks:
+      - media-network
+      - shared-network
+    profiles:
+      - all
+      - media
+    ports:
+      - "${IMMICH_PORT:-2283}:2283"
+    volumes:
+      - type: volume
+        source: immich-upload
+        target: /usr/src/app/upload
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      DB_HOSTNAME: immich-db
+      DB_USERNAME: ${IMMICH_DB_USER:-immich}
+      DB_PASSWORD: ${IMMICH_DB_PASSWORD:-immich_password_2024}
+      DB_DATABASE_NAME: ${IMMICH_DB_NAME:-immich}
+      REDIS_HOSTNAME: immich-redis
+    depends_on:
+      - immich-redis
+      - immich-db
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: ${IMMICH_MEMORY_LIMIT:-2g}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.immich.rule=Host(`${IMMICH_DOMAIN:-immich.${BASE_DOMAIN}}`)
+      - traefik.http.routers.immich.entrypoints=web,websecure
+      - traefik.http.routers.immich.tls=true
+      - traefik.http.services.immich.loadbalancer.server.port=2283
+      - traefik.docker.network=shared-network
+
+  immich-machine-learning:
+    image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-release}
+    container_name: immich-ml
+    networks:
+      - media-network
+    profiles:
+      - all
+      - media
+    volumes:
+      - type: volume
+        source: immich-model-cache
+        target: /cache
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: ${IMMICH_ML_MEMORY_LIMIT:-4g}
+
+  immich-redis:
+    image: redis:6.2-alpine
+    container_name: immich-redis
+    networks:
+      - media-network
+    profiles:
+      - all
+      - media
+    volumes:
+      - type: volume
+        source: immich-redis-data
+        target: /data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  immich-db:
+    image: tensorchord/pgvecto-rs:pg14-v0.2.0
+    container_name: immich-db
+    networks:
+      - media-network
+    profiles:
+      - all
+      - media
+    environment:
+      POSTGRES_USER: ${IMMICH_DB_USER:-immich}
+      POSTGRES_PASSWORD: ${IMMICH_DB_PASSWORD:-immich_password_2024}
+      POSTGRES_DB: ${IMMICH_DB_NAME:-immich}
+      POSTGRES_INITDB_ARGS: '--data-checksums'
+    volumes:
+      - type: volume
+        source: immich-db-data
+        target: /var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${IMMICH_DB_USER:-immich} -d ${IMMICH_DB_NAME:-immich}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  immich-upload:
+  immich-model-cache:
+  immich-redis-data:
+  immich-db-data:

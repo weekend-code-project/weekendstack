@@ -34,7 +34,7 @@ include:
   - docker-compose.productivity.yml
   - docker-compose.networking.yml
   - docker-compose.automation.yml
-  # - docker-compose.media.yml            # Will be created for Immich, Kavita, Navidrome
+  - docker-compose.media.yml
   # - docker-compose.monitoring.yml       # Will be created in future phase
 
 # Shared network for inter-service communication
