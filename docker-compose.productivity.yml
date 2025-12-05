@@ -572,6 +572,37 @@ services:
       - "com.docker.compose.project=${COMPOSE_PROJECT_NAME:-coder}"
       - "description=Postiz - Self-hosted Social Media Scheduler"
 
+  # ====================================================================
+  # FOCALBOARD - Project Management (Trello/Asana Alternative)
+  # ====================================================================
+  focalboard:
+    image: mattermost/focalboard:latest
+    container_name: focalboard
+    networks:
+      - productivity-network
+      - shared-network
+    profiles:
+      - all
+      - productivity
+    ports:
+      - "${FOCALBOARD_PORT:-8097}:8000"
+    volumes:
+      - type: bind
+        source: ${FILES_BASE_DIR:-./files}/focalboard
+        target: /opt/focalboard/data
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: ${FOCALBOARD_MEMORY_LIMIT:-512m}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.focalboard.rule=Host(`${FOCALBOARD_DOMAIN:-focalboard.${BASE_DOMAIN}}`)
+      - traefik.http.routers.focalboard.entrypoints=web,websecure
+      - traefik.http.routers.focalboard.tls=true
+      - traefik.http.services.focalboard.loadbalancer.server.port=8000
+      - traefik.docker.network=shared-network
+
 volumes:
   nocodb-db-data:
   n8n-db-data:
