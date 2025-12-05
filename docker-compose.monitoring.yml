@@ -1,0 +1,356 @@
+# =============================================================================
+# MONITORING & INFRASTRUCTURE STACK
+# =============================================================================
+# Services for monitoring, logging, backups, and infrastructure management
+#
+# Included services:
+# - Dozzle: Real-time Docker log viewer
+# - Watchtower: Automatic container updates
+# - Uptime Kuma: Service uptime monitoring
+# - Netdata: Real-time system monitoring
+# - Netbox: Network documentation/IPAM
+# - Duplicati: Backup solution
+# - Komodo: Container management
+#
+# Usage: docker compose -f docker-compose.monitoring.yml --profile monitoring up -d
+# =============================================================================
+
+networks:
+  monitoring-network:
+    name: monitoring-network
+    driver: bridge
+  shared-network:
+    external: true
+
+volumes:
+  uptime-kuma-data:
+  netdata-config:
+  netdata-lib:
+  netdata-cache:
+  netbox-data:
+  netbox-redis:
+  netbox-postgres:
+  duplicati-config:
+  duplicati-backups:
+  portainer-data:
+
+services:
+  # =============================================================================
+  # DOZZLE - Real-time Docker Log Viewer
+  # =============================================================================
+  # Lightweight, web-based Docker log viewer. No database required.
+  # =============================================================================
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: dozzle
+    networks:
+      - monitoring-network
+      - shared-network
+    profiles:
+      - all
+      - monitoring
+    ports:
+      - "${DOZZLE_PORT:-9999}:8080"
+    environment:
+      DOZZLE_LEVEL: info
+      DOZZLE_TAILSIZE: 300
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.dozzle.rule=Host(`${DOZZLE_DOMAIN:-dozzle.${BASE_DOMAIN}}`)
+      - traefik.http.routers.dozzle.entrypoints=web,websecure
+      - traefik.http.routers.dozzle.tls=true
+      - traefik.http.services.dozzle.loadbalancer.server.port=8080
+      - traefik.docker.network=shared-network
+
+  # =============================================================================
+  # WATCHTOWER - Automatic Container Updates
+  # =============================================================================
+  # Automatically updates running containers when new images are available.
+  # =============================================================================
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: watchtower
+    networks:
+      - monitoring-network
+    profiles:
+      - all
+      - monitoring
+    environment:
+      WATCHTOWER_CLEANUP: "true"
+      WATCHTOWER_POLL_INTERVAL: 86400  # Check every 24 hours
+      WATCHTOWER_INCLUDE_STOPPED: "false"
+      WATCHTOWER_REVIVE_STOPPED: "false"
+      WATCHTOWER_NOTIFICATIONS: "shoutrrr"
+      WATCHTOWER_NOTIFICATION_URL: ${WATCHTOWER_NOTIFICATION_URL:-}
+      TZ: ${TZ:-America/New_York}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 64m
+
+  # =============================================================================
+  # UPTIME KUMA - Service Monitoring
+  # =============================================================================
+  # Self-hosted monitoring tool like "Uptime Robot"
+  # =============================================================================
+  uptime-kuma:
+    image: louislam/uptime-kuma:latest
+    container_name: uptime-kuma
+    networks:
+      - monitoring-network
+      - shared-network
+    profiles:
+      - all
+      - monitoring
+    ports:
+      - "${UPTIME_KUMA_PORT:-3001}:3001"
+    volumes:
+      - type: volume
+        source: uptime-kuma-data
+        target: /app/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.uptime-kuma.rule=Host(`${UPTIME_KUMA_DOMAIN:-uptime.${BASE_DOMAIN}}`)
+      - traefik.http.routers.uptime-kuma.entrypoints=web,websecure
+      - traefik.http.routers.uptime-kuma.tls=true
+      - traefik.http.services.uptime-kuma.loadbalancer.server.port=3001
+      - traefik.docker.network=shared-network
+
+  # =============================================================================
+  # NETDATA - Real-time System Monitoring
+  # =============================================================================
+  # High-resolution system monitoring with beautiful dashboards
+  # =============================================================================
+  netdata:
+    image: netdata/netdata:stable
+    container_name: netdata
+    hostname: ${HOSTNAME:-docker-host}
+    networks:
+      - monitoring-network
+      - shared-network
+    profiles:
+      - all
+      - monitoring
+    ports:
+      - "${NETDATA_PORT:-19999}:19999"
+    cap_add:
+      - SYS_PTRACE
+      - SYS_ADMIN
+    security_opt:
+      - apparmor:unconfined
+    environment:
+      NETDATA_CLAIM_TOKEN: ${NETDATA_CLAIM_TOKEN:-}
+      NETDATA_CLAIM_URL: ${NETDATA_CLAIM_URL:-https://app.netdata.cloud}
+      NETDATA_CLAIM_ROOMS: ${NETDATA_CLAIM_ROOMS:-}
+    volumes:
+      - type: volume
+        source: netdata-config
+        target: /etc/netdata
+      - type: volume
+        source: netdata-lib
+        target: /var/lib/netdata
+      - type: volume
+        source: netdata-cache
+        target: /var/cache/netdata
+      - /etc/passwd:/host/etc/passwd:ro
+      - /etc/group:/host/etc/group:ro
+      - /etc/localtime:/etc/localtime:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /etc/os-release:/host/etc/os-release:ro
+      - /var/log:/host/var/log:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.netdata.rule=Host(`${NETDATA_DOMAIN:-netdata.${BASE_DOMAIN}}`)
+      - traefik.http.routers.netdata.entrypoints=web,websecure
+      - traefik.http.routers.netdata.tls=true
+      - traefik.http.services.netdata.loadbalancer.server.port=19999
+      - traefik.docker.network=shared-network
+
+  # =============================================================================
+  # DUPLICATI - Backup Solution
+  # =============================================================================
+  # Free backup software to store encrypted backups online
+  # =============================================================================
+  duplicati:
+    image: lscr.io/linuxserver/duplicati:latest
+    container_name: duplicati
+    networks:
+      - monitoring-network
+      - shared-network
+    profiles:
+      - all
+      - monitoring
+    ports:
+      - "${DUPLICATI_PORT:-8200}:8200"
+    environment:
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      TZ: ${TZ:-America/New_York}
+      SETTINGS_ENCRYPTION_KEY: ${DUPLICATI_ENCRYPTION_KEY:-duplicati-encryption-key-change-me}
+    volumes:
+      - type: volume
+        source: duplicati-config
+        target: /config
+      - type: volume
+        source: duplicati-backups
+        target: /backups
+      - /opt/stacks:/source/stacks:ro
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.duplicati.rule=Host(`${DUPLICATI_DOMAIN:-duplicati.${BASE_DOMAIN}}`)
+      - traefik.http.routers.duplicati.entrypoints=web,websecure
+      - traefik.http.routers.duplicati.tls=true
+      - traefik.http.services.duplicati.loadbalancer.server.port=8200
+      - traefik.docker.network=shared-network
+
+  # =============================================================================
+  # PORTAINER - Container Management UI
+  # =============================================================================
+  # Easy-to-use Docker container management interface
+  # =============================================================================
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    networks:
+      - monitoring-network
+      - shared-network
+    profiles:
+      - all
+      - monitoring
+    ports:
+      - "${PORTAINER_PORT:-9443}:9443"
+      - "9000:9000"
+    volumes:
+      - type: volume
+        source: portainer-data
+        target: /data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.portainer.rule=Host(`${PORTAINER_DOMAIN:-portainer.${BASE_DOMAIN}}`)
+      - traefik.http.routers.portainer.entrypoints=web,websecure
+      - traefik.http.routers.portainer.tls=true
+      - traefik.http.services.portainer.loadbalancer.server.port=9000
+      - traefik.docker.network=shared-network
+
+  # =============================================================================
+  # NETBOX - Network Documentation & IPAM
+  # =============================================================================
+  # IP address management (IPAM) and data center infrastructure management (DCIM)
+  # =============================================================================
+  netbox:
+    image: netboxcommunity/netbox:latest
+    container_name: netbox
+    networks:
+      - monitoring-network
+      - shared-network
+    profiles:
+      - all
+      - monitoring
+    ports:
+      - "${NETBOX_PORT:-8484}:8080"
+    environment:
+      SUPERUSER_NAME: ${NETBOX_SUPERUSER:-admin}
+      SUPERUSER_EMAIL: ${NETBOX_SUPERUSER_EMAIL:-admin@example.com}
+      SUPERUSER_PASSWORD: ${NETBOX_SUPERUSER_PASSWORD:-admin}
+      ALLOWED_HOSTS: "*"
+      DB_HOST: netbox-postgres
+      DB_NAME: netbox
+      DB_USER: netbox
+      DB_PASSWORD: ${NETBOX_DB_PASSWORD:-netbox}
+      REDIS_HOST: netbox-redis
+      REDIS_PASSWORD: ""
+      SECRET_KEY: ${NETBOX_SECRET_KEY:-netbox-secret-key-change-me-in-production}
+      SKIP_SUPERUSER: "false"
+    volumes:
+      - type: volume
+        source: netbox-data
+        target: /opt/netbox/netbox/media
+    depends_on:
+      - netbox-postgres
+      - netbox-redis
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.netbox.rule=Host(`${NETBOX_DOMAIN:-netbox.${BASE_DOMAIN}}`)
+      - traefik.http.routers.netbox.entrypoints=web,websecure
+      - traefik.http.routers.netbox.tls=true
+      - traefik.http.services.netbox.loadbalancer.server.port=8080
+      - traefik.docker.network=shared-network
+
+  netbox-postgres:
+    image: postgres:15-alpine
+    container_name: netbox-postgres
+    networks:
+      - monitoring-network
+    profiles:
+      - all
+      - monitoring
+    environment:
+      POSTGRES_DB: netbox
+      POSTGRES_USER: netbox
+      POSTGRES_PASSWORD: ${NETBOX_DB_PASSWORD:-netbox}
+    volumes:
+      - type: volume
+        source: netbox-postgres
+        target: /var/lib/postgresql/data
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+
+  netbox-redis:
+    image: redis:7-alpine
+    container_name: netbox-redis
+    networks:
+      - monitoring-network
+    profiles:
+      - all
+      - monitoring
+    volumes:
+      - type: volume
+        source: netbox-redis
+        target: /data
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 64m

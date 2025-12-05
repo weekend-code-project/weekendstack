@@ -78,3 +78,42 @@ services:
       - traefik.docker.network=shared-network
       - "com.docker.compose.service=homeassistant"
       - "description=Home Assistant - Smart Home Automation"
+
+  # =============================================================================
+  # NODE-RED - Flow-Based Automation
+  # =============================================================================
+  # A programming tool for wiring together hardware devices, APIs and online services.
+  # Uses a browser-based flow editor with a wide range of nodes.
+  # =============================================================================
+  nodered:
+    image: nodered/node-red:latest
+    container_name: nodered
+    networks:
+      - automation-network
+      - shared-network
+    profiles:
+      - all
+      - automation
+    ports:
+      - "${NODERED_PORT:-1880}:1880"
+    environment:
+      TZ: ${TIMEZONE:-UTC}
+    volumes:
+      - type: volume
+        source: nodered-data
+        target: /data
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: ${NODERED_MEMORY_LIMIT:-512m}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.nodered.rule=Host(`${NODERED_DOMAIN:-nodered.${BASE_DOMAIN}}`)
+      - traefik.http.routers.nodered.entrypoints=web,websecure
+      - traefik.http.routers.nodered.tls=true
+      - traefik.http.services.nodered.loadbalancer.server.port=1880
+      - traefik.docker.network=shared-network
+
+volumes:
+  nodered-data:

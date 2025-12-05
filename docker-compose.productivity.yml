@@ -603,6 +603,82 @@ services:
       - traefik.http.services.focalboard.loadbalancer.server.port=8000
       - traefik.docker.network=shared-network
 
+  # =============================================================================
+  # TRILIUM - Hierarchical Note-Taking
+  # =============================================================================
+  # A hierarchical note-taking application with focus on building large personal knowledge bases.
+  # =============================================================================
+  trilium:
+    image: zadam/trilium:latest
+    container_name: trilium
+    networks:
+      - productivity-network
+      - shared-network
+    profiles:
+      - all
+      - productivity
+    ports:
+      - "${TRILIUM_PORT:-8085}:8080"
+    environment:
+      TRILIUM_DATA_DIR: /home/node/trilium-data
+    volumes:
+      - type: volume
+        source: trilium-data
+        target: /home/node/trilium-data
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: ${TRILIUM_MEMORY_LIMIT:-512m}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.trilium.rule=Host(`${TRILIUM_DOMAIN:-trilium.${BASE_DOMAIN}}`)
+      - traefik.http.routers.trilium.entrypoints=web,websecure
+      - traefik.http.routers.trilium.tls=true
+      - traefik.http.services.trilium.loadbalancer.server.port=8080
+      - traefik.docker.network=shared-network
+
+  # =============================================================================
+  # VIKUNJA - Task & Project Management
+  # =============================================================================
+  # A self-hosted open-source to-do app and project management tool.
+  # =============================================================================
+  vikunja:
+    image: vikunja/vikunja:latest
+    container_name: vikunja
+    user: "0:0"
+    networks:
+      - productivity-network
+      - shared-network
+    profiles:
+      - all
+      - productivity
+    ports:
+      - "${VIKUNJA_PORT:-3456}:3456"
+    environment:
+      VIKUNJA_SERVICE_JWTSECRET: ${VIKUNJA_JWT_SECRET:-vikunja-jwt-secret-change-me}
+      VIKUNJA_SERVICE_PUBLICURL: "https://${VIKUNJA_DOMAIN:-vikunja.${BASE_DOMAIN}}"
+      VIKUNJA_SERVICE_FRONTENDURL: "https://${VIKUNJA_DOMAIN:-vikunja.${BASE_DOMAIN}}"
+      VIKUNJA_CORS_ENABLE: "false"
+      VIKUNJA_DATABASE_TYPE: sqlite
+      VIKUNJA_DATABASE_PATH: /app/vikunja/vikunja.db
+    volumes:
+      - type: volume
+        source: vikunja-data
+        target: /app/vikunja
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: ${VIKUNJA_MEMORY_LIMIT:-256m}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.vikunja.rule=Host(`${VIKUNJA_DOMAIN:-vikunja.${BASE_DOMAIN}}`)
+      - traefik.http.routers.vikunja.entrypoints=web,websecure
+      - traefik.http.routers.vikunja.tls=true
+      - traefik.http.services.vikunja.loadbalancer.server.port=3456
+      - traefik.docker.network=shared-network
+
 volumes:
   nocodb-db-data:
   n8n-db-data:
@@ -615,4 +691,6 @@ volumes:
   postiz-db-data:
   postiz-redis-data:
   focalboard-data:
+  trilium-data:
+  vikunja-data:
 
