@@ -15,6 +15,7 @@ volumes:
   # Core service databases
   coder-db-data:
   gitea-db-data:
+  vaultwarden-data:
 
 services:
   # =============================================================================
@@ -63,5 +64,41 @@ services:
       - traefik.docker.network=shared-network
       - "com.docker.compose.service=homer"
       - "description=Homer - Service Dashboard"
+
+  # =============================================================================
+  # VAULTWARDEN - Password Manager (Bitwarden Compatible)
+  # =============================================================================
+  vaultwarden:
+    image: vaultwarden/server:latest
+    container_name: vaultwarden
+    networks:
+      - core-network
+      - shared-network
+    profiles:
+      - all
+      - core
+    ports:
+      - "${VAULTWARDEN_PORT:-8222}:80"
+    environment:
+      DOMAIN: "https://${VAULTWARDEN_DOMAIN:-vault.${BASE_DOMAIN}}"
+      SIGNUPS_ALLOWED: ${VAULTWARDEN_SIGNUPS_ALLOWED:-true}
+      ADMIN_TOKEN: ${VAULTWARDEN_ADMIN_TOKEN:-}
+      WEBSOCKET_ENABLED: "true"
+    volumes:
+      - type: volume
+        source: vaultwarden-data
+        target: /data
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: ${VAULTWARDEN_MEMORY_LIMIT:-256m}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.vaultwarden.rule=Host(`${VAULTWARDEN_DOMAIN:-vault.${BASE_DOMAIN}}`)
+      - traefik.http.routers.vaultwarden.entrypoints=web,websecure
+      - traefik.http.routers.vaultwarden.tls=true
+      - traefik.http.services.vaultwarden.loadbalancer.server.port=80
+      - traefik.docker.network=shared-network
 
 
