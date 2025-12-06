@@ -28,7 +28,7 @@ links:
 #     productivity = is-success (green)
 #     dev = is-info (blue)
 #     media = is-link (purple)
-#     automation = is-link is-light (light purple)
+#     automation = is-success is-light (light green)
 #   Monitoring Section:
 #     containers = is-dark (dark gray)
 #     monitoring = is-primary (teal)
@@ -186,7 +186,7 @@ services:
         icon: "fas fa-project-diagram"
         subtitle: "Flow Automation"
         tag: "automation"
-        tagstyle: "is-link is-light"
+        tagstyle: "is-success is-light"
         url: "https://nodered.weekendcodeproject.dev"
         target: "_blank"
       - name: "Paperless-ngx"

@@ -41,7 +41,7 @@ links:
 #     containers = is-dark (dark gray)
 #     monitoring = is-primary (teal)
 #     network = is-black (black)
-#     automation = is-link is-light (light purple)
+#     automation = is-success is-light (light green)
 #     backup = is-info is-light (light blue)
 
 services:
@@ -247,7 +247,7 @@ services:
         icon: "fas fa-home"
         subtitle: "Home Automation"
         tag: "automation"
-        tagstyle: "is-link is-light"
+        tagstyle: "is-success is-light"
         url: "http://192.168.2.50:8123"
         target: "_blank"
       - name: "Portainer"
@@ -268,7 +268,7 @@ services:
         icon: "fas fa-project-diagram"
         subtitle: "Flow Automation"
         tag: "automation"
-        tagstyle: "is-link is-light"
+        tagstyle: "is-success is-light"
         url: "http://192.168.2.50:1880"
         target: "_blank"
       - name: "Pi-Hole"
