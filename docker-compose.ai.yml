@@ -395,8 +395,7 @@ services:
       - ai-network
       - shared-network
     profiles:
-      - ai
-      - all
+      - gpu
     ports:
       - "${PRIVATEGPT_PORT:-8501}:8080"
     environment:
