@@ -94,7 +94,7 @@ services:
         subtitle: "Speech-to-Text"
         tag: "ai"
         tagstyle: "is-info"
-        url: "http://192.168.2.50:9000"
+        url: "http://192.168.2.50:9002"
         target: "_blank"
       - name: "WhisperX"
         icon: "fas fa-microphone-lines"

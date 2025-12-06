@@ -239,7 +239,7 @@ services:
   # Provides OpenAI-compatible API endpoint
   # =============================================================================
   whisper:
-    image: onerahmet/openai-whisper-asr-webservice:latest-cpu
+    image: onerahmet/openai-whisper-asr-webservice:latest
     container_name: whisper
     restart: unless-stopped
     networks:
@@ -249,7 +249,7 @@ services:
       - ai
       - all
     ports:
-      - "${WHISPER_PORT:-9000}:9000"
+      - "${WHISPER_PORT:-9002}:9000"
     environment:
       - ASR_MODEL=${WHISPER_MODEL:-base}
       - ASR_ENGINE=${WHISPER_ENGINE:-openai_whisper}
@@ -276,7 +276,7 @@ services:
   # GPU recommended for best performance
   # =============================================================================
   whisperx:
-    image: jmorganca/whisperx:latest
+    image: ghcr.io/jim60105/whisperx:base
     container_name: whisperx
     restart: unless-stopped
     networks:
@@ -335,6 +335,11 @@ services:
       - ALLOW_SOCIAL_LOGIN=false
       - ENDPOINTS=${LIBRECHAT_ENDPOINTS:-openAI,ollama}
       - OLLAMA_BASE_URL=${OLLAMA_HOST:-http://host.docker.internal:11434}
+      # JWT secrets (required)
+      - JWT_SECRET=${LIBRECHAT_JWT_SECRET:-librechat-jwt-secret-change-me-in-production}
+      - JWT_REFRESH_SECRET=${LIBRECHAT_JWT_REFRESH_SECRET:-librechat-refresh-secret-change-me}
+      - CREDS_KEY=${LIBRECHAT_CREDS_KEY:-f34be427ebb29de8d88c107a71546019}
+      - CREDS_IV=${LIBRECHAT_CREDS_IV:-e2341419ec3dd3d19b13a1a87fafcbfb}
       # Add your API keys in .env
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
@@ -384,7 +389,7 @@ services:
   # No data leaves your server
   # =============================================================================
   privategpt:
-    image: zylonai/private-gpt:latest
+    image: zylon-ai/private-gpt:latest
     container_name: privategpt
     restart: unless-stopped
     networks:
