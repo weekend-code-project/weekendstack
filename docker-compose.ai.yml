@@ -486,5 +486,3 @@ networks:
     name: ai-network
     driver: bridge
     external: false
-  shared-network:
-    external: true
