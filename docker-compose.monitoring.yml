@@ -74,8 +74,8 @@ services:
   # =============================================================================
   # Shows available updates for running containers with a web dashboard.
   # Does NOT auto-update by default - you review and trigger updates manually.
-  # Authentication via Traefik basic auth middleware
-  # Default: admin / wud-admin-2024 (change WUD_AUTH_CREDENTIALS in .env)
+  # Authentication: Built-in basic auth + Traefik middleware for public access
+  # Default: admin / wud-admin-2024
   # =============================================================================
   wud:
     image: fmartinou/whats-up-docker:latest
@@ -92,6 +92,11 @@ services:
       - WUD_TRIGGER_DOCKERHUB_ENABLE=false
       - WUD_WATCHER_LOCAL_CRON=0 0 * * *
       - WUD_WATCHER_LOCAL_WATCHBYDEFAULT=true
+      # Built-in basic auth - Default: admin / admin
+      # Generate hash: docker run --rm httpd:2-alpine htpasswd -nbm USER PASS
+      # Copy hash part (after colon) to WUD_AUTH_HASH in .env (wrap in single quotes)
+      - WUD_AUTH_BASIC_MYAUTH_USER=${WUD_AUTH_USER:-admin}
+      - WUD_AUTH_BASIC_MYAUTH_HASH=${WUD_AUTH_HASH:-}
       - TZ=${TZ:-America/New_York}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -107,10 +112,6 @@ services:
       - traefik.http.routers.wud.tls=true
       - traefik.http.services.wud.loadbalancer.server.port=3000
       - traefik.docker.network=shared-network
-      # Basic auth middleware - default: admin / wud-admin-2024
-      # Generate new hash: docker run --rm httpd:2-alpine htpasswd -nb user password
-      - "traefik.http.routers.wud.middlewares=wud-auth"
-      - "traefik.http.middlewares.wud-auth.basicauth.users=${WUD_AUTH_CREDENTIALS:-admin:$$apr1$$L3Zv6XjP$$9qWALf6/.PVWt4v0.3ahw.}"
 
   # =============================================================================
   # UPTIME KUMA - Service Monitoring

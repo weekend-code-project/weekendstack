@@ -10,17 +10,17 @@ docker compose --profile monitoring up -d wud
 
 ## Access
 
-- **Local:** http://192.168.2.50:3002 (no auth required)
-- **External:** https://wud.weekendcodeproject.dev (requires authentication)
+- **Local:** http://192.168.2.50:3002
+- **External:** https://wud.weekendcodeproject.dev
+
+Both require authentication.
 
 ## Default Credentials
 
-When accessing via the public URL (Cloudflare tunnel), authentication is required:
-
 - **Username:** `admin`
-- **Password:** `wud-admin-2024`
+- **Password:** `admin`
 
-**Change these in production!** See "Changing the Password" below.
+⚠️ **Change these in production!** See "Changing the Password" below.
 
 ## Environment Variables
 
@@ -29,40 +29,47 @@ WUD_PORT=3002
 WUD_DOMAIN=wud.${BASE_DOMAIN}
 WUD_MEMORY_LIMIT=256m
 
-# Basic auth credentials (htpasswd format, $ escaped as $$)
-# Default: admin / wud-admin-2024
-WUD_AUTH_CREDENTIALS=admin:$$apr1$$L3Zv6XjP$$9qWALf6/.PVWt4v0.3ahw.
+# Authentication (htpasswd apr1/MD5 format)
+# Default: admin / admin
+WUD_AUTH_USER=admin
+WUD_AUTH_HASH='$apr1$riKwQzd1$/ATDPpfbknUNr4RurjIER0'
 ```
 
 ## Changing the Password
 
-Authentication is handled by Traefik's basic auth middleware using htpasswd format.
+WUD uses htpasswd MD5 (apr1) format for password hashes.
 
-### Step 1: Generate New Credentials
+### Step 1: Generate a New Hash
 
 ```bash
-docker run --rm httpd:2-alpine htpasswd -nb myuser mypassword
+docker run --rm httpd:2-alpine htpasswd -nbm myuser mypassword
 ```
 
-Output: `myuser:$apr1$xxxxx$yyyyy`
+Example output:
+```
+myuser:$apr1$Xyz123$AbCdEfGhIjKlMnOp
+```
 
-### Step 2: Escape the $ Characters
+### Step 2: Update .env File
 
-Replace every `$` with `$$` for docker-compose:
-
-`myuser:$$apr1$$xxxxx$$yyyyy`
-
-### Step 3: Update .env File
+Copy **only the hash part** (everything after the colon) and wrap it in single quotes:
 
 ```env
-WUD_AUTH_CREDENTIALS=myuser:$$apr1$$xxxxx$$yyyyy
+WUD_AUTH_USER=myuser
+WUD_AUTH_HASH='$apr1$Xyz123$AbCdEfGhIjKlMnOp'
 ```
 
-### Step 4: Restart WUD
+**Important:** The single quotes are required to prevent `$` from being interpreted as variables.
+
+### Step 3: Restart WUD
 
 ```bash
 docker compose --profile monitoring up -d wud
 ```
+
+### Step 4: Test Login
+
+Visit http://192.168.2.50:3002 and log in with your new credentials.
 
 ## How WUD Works
 
