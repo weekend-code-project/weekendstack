@@ -20,16 +20,19 @@ links:
     icon: "fas fa-globe"
     url: "#public"
 
-# Tag colors:
-#   CPU = is-warning (yellow) - CPU-based AI
-#   GPU = is-danger (red) - GPU-required AI
-#   productivity = is-success (green) - Apps category
-#   dev = is-info (blue) - Apps category
-#   media = is-link (purple) - Apps category
-#   personal = is-primary (teal) - Personal apps
-#   containers = is-dark (dark) - Monitoring: container management
-#   monitoring = is-primary (teal) - Monitoring: system/service
-#   backup = is-success (green) - Monitoring: backup solutions
+# Tag colors (all unique, no duplicates):
+#   AI Section:
+#     CPU = is-warning (yellow) - CPU-based AI
+#     GPU = is-danger (red) - GPU-required AI
+#   Apps Section:
+#     productivity = is-success (green)
+#     dev = is-info (blue)
+#     media = is-link (purple)
+#     automation = is-link is-light (light purple)
+#   Monitoring Section:
+#     containers = is-dark (dark gray)
+#     monitoring = is-primary (teal)
+#     backup = is-warning is-light (light yellow)
 
 services:
   - name: "AI Services"
@@ -183,7 +186,7 @@ services:
         icon: "fas fa-project-diagram"
         subtitle: "Flow Automation"
         tag: "automation"
-        tagstyle: "is-info"
+        tagstyle: "is-link is-light"
         url: "https://nodered.weekendcodeproject.dev"
         target: "_blank"
       - name: "Paperless-ngx"
@@ -221,22 +224,16 @@ services:
       - name: "Firefly III"
         icon: "fas fa-wallet"
         subtitle: "Personal Finance"
-        tag: "personal"
-        tagstyle: "is-primary"
         url: "https://firefly.weekendcodeproject.dev"
         target: "_blank"
       - name: "Mealie"
         icon: "fas fa-utensils"
         subtitle: "Meal Planning"
-        tag: "personal"
-        tagstyle: "is-primary"
         url: "https://mealie.weekendcodeproject.dev"
         target: "_blank"
       - name: "wger"
         icon: "fas fa-dumbbell"
         subtitle: "Workout Tracker"
-        tag: "personal"
-        tagstyle: "is-primary"
         url: "https://wger.weekendcodeproject.dev"
         target: "_blank"
 
@@ -247,7 +244,7 @@ services:
         icon: "fas fa-cloud-upload-alt"
         subtitle: "Backup Solution"
         tag: "backup"
-        tagstyle: "is-success"
+        tagstyle: "is-warning is-light"
         url: "https://duplicati.weekendcodeproject.dev"
         target: "_blank"
       - name: "Portainer"

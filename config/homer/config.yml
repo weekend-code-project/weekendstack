@@ -29,17 +29,20 @@ links:
     url: "#public" 
 
 # Services
-# Tag colors:
-#   CPU = is-warning (yellow) - CPU-based AI
-#   GPU = is-danger (red) - GPU-required AI
-#   productivity = is-success (green) - Apps category
-#   dev = is-info (blue) - Apps category
-#   media = is-link (purple) - Apps category
-#   containers = is-dark (dark) - Admin: container management
-#   monitoring = is-primary (teal) - Admin: system/service monitoring
-#   network = is-light (gray) - Admin: network infrastructure
-#   automation = is-info (blue) - Admin: automation tools
-#   backup = is-success (green) - Admin: backup solutions
+# Tag colors (all unique, no duplicates):
+#   AI Section:
+#     CPU = is-warning (yellow) - CPU-based AI
+#     GPU = is-danger (red) - GPU-required AI
+#   Apps Section:
+#     productivity = is-success (green)
+#     dev = is-info (blue)
+#     media = is-link (purple)
+#   Admin Section:
+#     containers = is-dark (dark gray)
+#     monitoring = is-primary (teal)
+#     network = is-black (black)
+#     automation = is-link is-light (light purple)
+#     backup = is-warning is-light (light yellow)
 
 services:
   - name: "AI Services"
@@ -237,14 +240,14 @@ services:
         icon: "fas fa-cloud-upload-alt"
         subtitle: "Backup Solution"
         tag: "backup"
-        tagstyle: "is-success"
+        tagstyle: "is-warning is-light"
         url: "http://192.168.2.50:8200"
         target: "_blank"
       - name: "Home Assistant"
         icon: "fas fa-home"
         subtitle: "Home Automation"
         tag: "automation"
-        tagstyle: "is-info"
+        tagstyle: "is-link is-light"
         url: "http://192.168.2.50:8123"
         target: "_blank"
       - name: "Portainer"
@@ -265,21 +268,21 @@ services:
         icon: "fas fa-project-diagram"
         subtitle: "Flow Automation"
         tag: "automation"
-        tagstyle: "is-info"
+        tagstyle: "is-link is-light"
         url: "http://192.168.2.50:1880"
         target: "_blank"
       - name: "Pi-Hole"
         icon: "fas fa-shield-alt"
         subtitle: "Ad Blocking DNS"
         tag: "network"
-        tagstyle: "is-light"
+        tagstyle: "is-black"
         url: "http://192.168.2.50:8088/admin"
         target: "_blank"
       - name: "Traefik"
         icon: "fas fa-route"
         subtitle: "Reverse Proxy"
         tag: "network"
-        tagstyle: "is-light"
+        tagstyle: "is-black"
         url: "http://192.168.2.50:8083"
         target: "_blank"
       - name: "Uptime Kuma"
