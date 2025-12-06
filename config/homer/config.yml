@@ -36,12 +36,12 @@ links:
 #   Apps Section:
 #     productivity = is-success (green)
 #     dev = is-info (blue)
-#     media = is-link (purple)
+#     media = is-primary (teal)
 #   Admin Section:
 #     containers = is-dark (dark gray)
-#     monitoring = is-primary (teal)
+#     monitoring = is-info (blue)
 #     network = is-black (black)
-#     automation = is-success is-light (light green)
+#     automation = is-link (purple)
 #     backup = is-info is-light (light blue)
 
 services:
@@ -154,14 +154,14 @@ services:
         icon: "fas fa-images"
         subtitle: "Photo Management"
         tag: "media"
-        tagstyle: "is-link"
+        tagstyle: "is-primary"
         url: "http://192.168.2.50:2283"
         target: "_blank"
       - name: "Kavita"
         icon: "fas fa-book"
         subtitle: "eBook/Manga Reader"
         tag: "media"
-        tagstyle: "is-link"
+        tagstyle: "is-primary"
         url: "http://192.168.2.50:5000"
         target: "_blank"
       - name: "n8n"
@@ -175,7 +175,7 @@ services:
         icon: "fas fa-music"
         subtitle: "Music Streaming"
         tag: "media"
-        tagstyle: "is-link"
+        tagstyle: "is-primary"
         url: "http://192.168.2.50:4533"
         target: "_blank"
       - name: "NocoDB"
@@ -247,7 +247,7 @@ services:
         icon: "fas fa-home"
         subtitle: "Home Automation"
         tag: "automation"
-        tagstyle: "is-success is-light"
+        tagstyle: "is-link"
         url: "http://192.168.2.50:8123"
         target: "_blank"
       - name: "Portainer"
@@ -261,14 +261,14 @@ services:
         icon: "fas fa-chart-line"
         subtitle: "System Monitoring"
         tag: "monitoring"
-        tagstyle: "is-primary"
+        tagstyle: "is-info"
         url: "http://192.168.2.50:19999"
         target: "_blank"
       - name: "Node-RED"
         icon: "fas fa-project-diagram"
         subtitle: "Flow Automation"
         tag: "automation"
-        tagstyle: "is-success is-light"
+        tagstyle: "is-link"
         url: "http://192.168.2.50:1880"
         target: "_blank"
       - name: "Pi-Hole"
@@ -289,7 +289,7 @@ services:
         icon: "fas fa-heartbeat"
         subtitle: "Service Monitoring"
         tag: "monitoring"
-        tagstyle: "is-primary"
+        tagstyle: "is-info"
         url: "http://192.168.2.50:3001"
         target: "_blank"
       - name: "What's Up Docker"

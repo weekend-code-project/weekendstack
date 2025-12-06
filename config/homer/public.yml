@@ -27,11 +27,11 @@ links:
 #   Apps Section:
 #     productivity = is-success (green)
 #     dev = is-info (blue)
-#     media = is-link (purple)
-#     automation = is-success is-light (light green)
+#     media = is-primary (teal)
+#     automation = is-link (purple)
 #   Monitoring Section:
 #     containers = is-dark (dark gray)
-#     monitoring = is-primary (teal)
+#     monitoring = is-info (blue)
 #     backup = is-info is-light (light blue)
 
 services:
@@ -151,14 +151,14 @@ services:
         icon: "fas fa-images"
         subtitle: "Photo Management"
         tag: "media"
-        tagstyle: "is-link"
+        tagstyle: "is-primary"
         url: "https://immich.weekendcodeproject.dev"
         target: "_blank"
       - name: "Kavita"
         icon: "fas fa-book"
         subtitle: "eBook/Manga Reader"
         tag: "media"
-        tagstyle: "is-link"
+        tagstyle: "is-primary"
         url: "https://kavita.weekendcodeproject.dev"
         target: "_blank"
       - name: "n8n"
@@ -172,7 +172,7 @@ services:
         icon: "fas fa-music"
         subtitle: "Music Streaming"
         tag: "media"
-        tagstyle: "is-link"
+        tagstyle: "is-primary"
         url: "https://music.weekendcodeproject.dev"
         target: "_blank"
       - name: "NocoDB"
@@ -186,7 +186,7 @@ services:
         icon: "fas fa-project-diagram"
         subtitle: "Flow Automation"
         tag: "automation"
-        tagstyle: "is-success is-light"
+        tagstyle: "is-link"
         url: "https://nodered.weekendcodeproject.dev"
         target: "_blank"
       - name: "Paperless-ngx"
@@ -258,14 +258,14 @@ services:
         icon: "fas fa-chart-line"
         subtitle: "System Monitoring"
         tag: "monitoring"
-        tagstyle: "is-primary"
+        tagstyle: "is-info"
         url: "https://netdata.weekendcodeproject.dev"
         target: "_blank"
       - name: "Uptime Kuma"
         icon: "fas fa-heartbeat"
         subtitle: "Service Monitoring"
         tag: "monitoring"
-        tagstyle: "is-primary"
+        tagstyle: "is-info"
         url: "https://uptime.weekendcodeproject.dev"
         target: "_blank"
       - name: "What's Up Docker"
