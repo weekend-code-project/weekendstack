@@ -32,7 +32,7 @@ links:
 #   Monitoring Section:
 #     containers = is-dark (dark gray)
 #     monitoring = is-primary (teal)
-#     backup = is-warning is-light (light yellow)
+#     backup = is-info is-light (light blue)
 
 services:
   - name: "AI Services"
@@ -244,7 +244,7 @@ services:
         icon: "fas fa-cloud-upload-alt"
         subtitle: "Backup Solution"
         tag: "backup"
-        tagstyle: "is-warning is-light"
+        tagstyle: "is-info is-light"
         url: "https://duplicati.weekendcodeproject.dev"
         target: "_blank"
       - name: "Portainer"
