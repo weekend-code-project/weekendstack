@@ -93,7 +93,6 @@ services:
       - shared-network
     profiles:
       - gpu
-      - ai
     ports:
       - "${STABLE_DIFFUSION_PORT:-7861}:7860"
     environment:
