@@ -125,15 +125,360 @@ services:
       - "traefik.http.routers.sdwebui.tls.certresolver=${TRAEFIK_CERT_RESOLVER:-letsencrypt}"
       - "traefik.http.services.sdwebui.loadbalancer.server.port=7860"
 
+  # =============================================================================
+  # LOCALAI - OpenAI-compatible Local LLM Server
+  # =============================================================================
+  # Drop-in replacement for OpenAI API, runs models locally
+  # Supports llama.cpp, whisper, stable diffusion, and more
+  # =============================================================================
+  localai:
+    image: localai/localai:latest-cpu
+    container_name: localai
+    restart: unless-stopped
+    networks:
+      - ai-network
+      - shared-network
+    profiles:
+      - ai
+      - all
+    ports:
+      - "${LOCALAI_PORT:-8084}:8080"
+    environment:
+      - DEBUG=${LOCALAI_DEBUG:-false}
+      - MODELS_PATH=/models
+      - THREADS=${LOCALAI_THREADS:-4}
+    volumes:
+      - type: volume
+        source: localai-models
+        target: /models
+    deploy:
+      resources:
+        limits:
+          memory: ${LOCALAI_MEMORY_LIMIT:-4g}
+    labels:
+      - traefik.enable=true
+      - "traefik.http.routers.localai.rule=Host(`${LOCALAI_DOMAIN:-localai.${BASE_DOMAIN}}`)"
+      - traefik.http.routers.localai.entrypoints=web,websecure
+      - traefik.http.routers.localai.tls=true
+      - traefik.http.services.localai.loadbalancer.server.port=8080
+      - traefik.docker.network=shared-network
+
+  # GPU version of LocalAI (uncomment to use)
+  # localai-gpu:
+  #   image: localai/localai:latest-gpu-nvidia-cuda-12
+  #   container_name: localai-gpu
+  #   restart: unless-stopped
+  #   networks:
+  #     - ai-network
+  #     - shared-network
+  #   profiles:
+  #     - gpu
+  #   ports:
+  #     - "${LOCALAI_PORT:-8081}:8080"
+  #   environment:
+  #     - DEBUG=${LOCALAI_DEBUG:-false}
+  #     - MODELS_PATH=/models
+  #   volumes:
+  #     - localai-models:/models
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: 1
+  #             capabilities: [gpu]
+
+  # =============================================================================
+  # ANYTHINGLLM - All-in-one AI Document Chat
+  # =============================================================================
+  # Chat with your documents using any LLM (Ollama, OpenAI, LocalAI, etc.)
+  # Built-in RAG, vector database, and document processing
+  # =============================================================================
+  anythingllm:
+    image: mintplexlabs/anythingllm:latest
+    container_name: anythingllm
+    restart: unless-stopped
+    networks:
+      - ai-network
+      - shared-network
+    profiles:
+      - ai
+      - all
+    ports:
+      - "${ANYTHINGLLM_PORT:-3003}:3001"
+    environment:
+      - STORAGE_DIR=/app/server/storage
+      - LLM_PROVIDER=${ANYTHINGLLM_LLM_PROVIDER:-ollama}
+      - OLLAMA_BASE_PATH=${OLLAMA_HOST:-http://host.docker.internal:11434}
+      - EMBEDDING_MODEL_PREF=${ANYTHINGLLM_EMBEDDING_MODEL:-nomic-embed-text}
+      - VECTOR_DB=${ANYTHINGLLM_VECTOR_DB:-lancedb}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - type: volume
+        source: anythingllm-data
+        target: /app/server/storage
+    cap_add:
+      - SYS_ADMIN
+    deploy:
+      resources:
+        limits:
+          memory: ${ANYTHINGLLM_MEMORY_LIMIT:-2g}
+    labels:
+      - traefik.enable=true
+      - "traefik.http.routers.anythingllm.rule=Host(`${ANYTHINGLLM_DOMAIN:-anythingllm.${BASE_DOMAIN}}`)"
+      - traefik.http.routers.anythingllm.entrypoints=web,websecure
+      - traefik.http.routers.anythingllm.tls=true
+      - traefik.http.services.anythingllm.loadbalancer.server.port=3001
+      - traefik.docker.network=shared-network
+
+  # =============================================================================
+  # WHISPER - Speech-to-Text API
+  # =============================================================================
+  # OpenAI Whisper for transcription and translation
+  # Provides OpenAI-compatible API endpoint
+  # =============================================================================
+  whisper:
+    image: onerahmet/openai-whisper-asr-webservice:latest-cpu
+    container_name: whisper
+    restart: unless-stopped
+    networks:
+      - ai-network
+      - shared-network
+    profiles:
+      - ai
+      - all
+    ports:
+      - "${WHISPER_PORT:-9000}:9000"
+    environment:
+      - ASR_MODEL=${WHISPER_MODEL:-base}
+      - ASR_ENGINE=${WHISPER_ENGINE:-openai_whisper}
+    volumes:
+      - type: volume
+        source: whisper-data
+        target: /root/.cache
+    deploy:
+      resources:
+        limits:
+          memory: ${WHISPER_MEMORY_LIMIT:-4g}
+    labels:
+      - traefik.enable=true
+      - "traefik.http.routers.whisper.rule=Host(`${WHISPER_DOMAIN:-whisper.${BASE_DOMAIN}}`)"
+      - traefik.http.routers.whisper.entrypoints=web,websecure
+      - traefik.http.routers.whisper.tls=true
+      - traefik.http.services.whisper.loadbalancer.server.port=9000
+      - traefik.docker.network=shared-network
+
+  # =============================================================================
+  # WHISPERX - Advanced Speech-to-Text with Speaker Diarization
+  # =============================================================================
+  # Enhanced Whisper with word-level timestamps and speaker identification
+  # GPU recommended for best performance
+  # =============================================================================
+  whisperx:
+    image: jmorganca/whisperx:latest
+    container_name: whisperx
+    restart: unless-stopped
+    networks:
+      - ai-network
+      - shared-network
+    profiles:
+      - gpu
+    ports:
+      - "${WHISPERX_PORT:-9001}:9000"
+    environment:
+      - WHISPER_MODEL=${WHISPERX_MODEL:-large-v2}
+      - HF_TOKEN=${HUGGINGFACE_TOKEN:-}
+    volumes:
+      - type: volume
+        source: whisper-data
+        target: /root/.cache
+    deploy:
+      resources:
+        limits:
+          memory: ${WHISPERX_MEMORY_LIMIT:-8g}
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    labels:
+      - traefik.enable=true
+      - "traefik.http.routers.whisperx.rule=Host(`${WHISPERX_DOMAIN:-whisperx.${BASE_DOMAIN}}`)"
+      - traefik.http.routers.whisperx.entrypoints=web,websecure
+      - traefik.http.routers.whisperx.tls=true
+      - traefik.http.services.whisperx.loadbalancer.server.port=9000
+      - traefik.docker.network=shared-network
+
+  # =============================================================================
+  # LIBRECHAT - Multi-Provider AI Chat Interface
+  # =============================================================================
+  # Feature-rich chat UI supporting OpenAI, Anthropic, Google, local models
+  # Includes conversation history, presets, plugins, and more
+  # =============================================================================
+  librechat:
+    image: ghcr.io/danny-avila/librechat:latest
+    container_name: librechat
+    restart: unless-stopped
+    networks:
+      - ai-network
+      - shared-network
+    profiles:
+      - ai
+      - all
+    ports:
+      - "${LIBRECHAT_PORT:-3080}:3080"
+    environment:
+      - HOST=0.0.0.0
+      - MONGO_URI=mongodb://librechat-db:27017/LibreChat
+      - ALLOW_REGISTRATION=${LIBRECHAT_ALLOW_REGISTRATION:-true}
+      - ALLOW_SOCIAL_LOGIN=false
+      - ENDPOINTS=${LIBRECHAT_ENDPOINTS:-openAI,ollama}
+      - OLLAMA_BASE_URL=${OLLAMA_HOST:-http://host.docker.internal:11434}
+      # Add your API keys in .env
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - type: volume
+        source: librechat-data
+        target: /app/data
+    depends_on:
+      - librechat-db
+    deploy:
+      resources:
+        limits:
+          memory: ${LIBRECHAT_MEMORY_LIMIT:-1g}
+    labels:
+      - traefik.enable=true
+      - "traefik.http.routers.librechat.rule=Host(`${LIBRECHAT_DOMAIN:-librechat.${BASE_DOMAIN}}`)"
+      - traefik.http.routers.librechat.entrypoints=web,websecure
+      - traefik.http.routers.librechat.tls=true
+      - traefik.http.services.librechat.loadbalancer.server.port=3080
+      - traefik.docker.network=shared-network
+
+  librechat-db:
+    image: mongo:latest
+    container_name: librechat-db
+    restart: unless-stopped
+    networks:
+      - ai-network
+    profiles:
+      - ai
+      - all
+    volumes:
+      - type: volume
+        source: librechat-data
+        target: /data/db
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  # =============================================================================
+  # PRIVATEGPT - Private Document Q&A
+  # =============================================================================
+  # 100% private, offline-capable document ingestion and Q&A
+  # No data leaves your server
+  # =============================================================================
+  privategpt:
+    image: zylonai/private-gpt:latest
+    container_name: privategpt
+    restart: unless-stopped
+    networks:
+      - ai-network
+      - shared-network
+    profiles:
+      - ai
+      - all
+    ports:
+      - "${PRIVATEGPT_PORT:-8501}:8080"
+    environment:
+      - PGPT_PROFILES=${PRIVATEGPT_PROFILES:-local}
+      - PGPT_EMBED_MODE=${PRIVATEGPT_EMBED_MODE:-huggingface}
+      - PGPT_LLM_MODE=${PRIVATEGPT_LLM_MODE:-ollama}
+      - PGPT_OLLAMA_API_BASE=${OLLAMA_HOST:-http://host.docker.internal:11434}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - type: volume
+        source: privategpt-data
+        target: /home/worker/app/local_data
+    deploy:
+      resources:
+        limits:
+          memory: ${PRIVATEGPT_MEMORY_LIMIT:-4g}
+    labels:
+      - traefik.enable=true
+      - "traefik.http.routers.privategpt.rule=Host(`${PRIVATEGPT_DOMAIN:-privategpt.${BASE_DOMAIN}}`)"
+      - traefik.http.routers.privategpt.entrypoints=web,websecure
+      - traefik.http.routers.privategpt.tls=true
+      - traefik.http.services.privategpt.loadbalancer.server.port=8080
+      - traefik.docker.network=shared-network
+
+  # =============================================================================
+  # COMFYUI - Node-based Stable Diffusion Interface
+  # =============================================================================
+  # Advanced node-based workflow for image generation
+  # Highly customizable with community nodes and models
+  # =============================================================================
+  comfyui:
+    image: yanwk/comfyui-boot:latest
+    container_name: comfyui
+    restart: unless-stopped
+    networks:
+      - ai-network
+      - shared-network
+    profiles:
+      - gpu
+    ports:
+      - "${COMFYUI_PORT:-8188}:8188"
+    environment:
+      - CLI_ARGS=${COMFYUI_ARGS:---listen 0.0.0.0 --port 8188}
+    volumes:
+      - type: volume
+        source: comfyui-data
+        target: /home/runner
+      - type: volume
+        source: comfyui-models
+        target: /home/runner/ComfyUI/models
+    deploy:
+      resources:
+        limits:
+          memory: ${COMFYUI_MEMORY_LIMIT:-8g}
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    labels:
+      - traefik.enable=true
+      - "traefik.http.routers.comfyui.rule=Host(`${COMFYUI_DOMAIN:-comfyui.${BASE_DOMAIN}}`)"
+      - traefik.http.routers.comfyui.entrypoints=web,websecure
+      - traefik.http.routers.comfyui.tls=true
+      - traefik.http.services.comfyui.loadbalancer.server.port=8188
+      - traefik.docker.network=shared-network
+
 # =============================================================================
 # VOLUMES AND NETWORKS
 # =============================================================================
 volumes:
   stable-diffusion-models:
   stable-diffusion-data:
+  localai-models:
+  anythingllm-data:
+  whisper-data:
+  librechat-data:
+  comfyui-data:
+  comfyui-models:
+  privategpt-data:
 
 networks:
   ai-network:
     name: ai-network
     driver: bridge
     external: false
+  shared-network:
+    external: true
