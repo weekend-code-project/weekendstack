@@ -10,8 +10,17 @@ docker compose --profile monitoring up -d wud
 
 ## Access
 
-- **Local:** http://192.168.2.50:3002
-- **External:** https://wud.weekendcodeproject.dev
+- **Local:** http://192.168.2.50:3002 (no auth required)
+- **External:** https://wud.weekendcodeproject.dev (requires authentication)
+
+## Default Credentials
+
+When accessing via the public URL (Cloudflare tunnel), authentication is required:
+
+- **Username:** `admin`
+- **Password:** `wud-admin-2024`
+
+**Change these in production!** See "Changing the Password" below.
 
 ## Environment Variables
 
@@ -19,6 +28,40 @@ docker compose --profile monitoring up -d wud
 WUD_PORT=3002
 WUD_DOMAIN=wud.${BASE_DOMAIN}
 WUD_MEMORY_LIMIT=256m
+
+# Basic auth credentials (htpasswd format, $ escaped as $$)
+# Default: admin / wud-admin-2024
+WUD_AUTH_CREDENTIALS=admin:$$apr1$$L3Zv6XjP$$9qWALf6/.PVWt4v0.3ahw.
+```
+
+## Changing the Password
+
+Authentication is handled by Traefik's basic auth middleware using htpasswd format.
+
+### Step 1: Generate New Credentials
+
+```bash
+docker run --rm httpd:2-alpine htpasswd -nb myuser mypassword
+```
+
+Output: `myuser:$apr1$xxxxx$yyyyy`
+
+### Step 2: Escape the $ Characters
+
+Replace every `$` with `$$` for docker-compose:
+
+`myuser:$$apr1$$xxxxx$$yyyyy`
+
+### Step 3: Update .env File
+
+```env
+WUD_AUTH_CREDENTIALS=myuser:$$apr1$$xxxxx$$yyyyy
+```
+
+### Step 4: Restart WUD
+
+```bash
+docker compose --profile monitoring up -d wud
 ```
 
 ## How WUD Works

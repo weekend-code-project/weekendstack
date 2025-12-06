@@ -74,6 +74,8 @@ services:
   # =============================================================================
   # Shows available updates for running containers with a web dashboard.
   # Does NOT auto-update by default - you review and trigger updates manually.
+  # Authentication via Traefik basic auth middleware
+  # Default: admin / wud-admin-2024 (change WUD_AUTH_CREDENTIALS in .env)
   # =============================================================================
   wud:
     image: fmartinou/whats-up-docker:latest
@@ -105,6 +107,10 @@ services:
       - traefik.http.routers.wud.tls=true
       - traefik.http.services.wud.loadbalancer.server.port=3000
       - traefik.docker.network=shared-network
+      # Basic auth middleware - default: admin / wud-admin-2024
+      # Generate new hash: docker run --rm httpd:2-alpine htpasswd -nb user password
+      - "traefik.http.routers.wud.middlewares=wud-auth"
+      - "traefik.http.middlewares.wud-auth.basicauth.users=${WUD_AUTH_CREDENTIALS:-admin:$$apr1$$L3Zv6XjP$$9qWALf6/.PVWt4v0.3ahw.}"
 
   # =============================================================================
   # UPTIME KUMA - Service Monitoring
