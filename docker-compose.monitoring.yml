@@ -70,33 +70,41 @@ services:
       - traefik.docker.network=shared-network
 
   # =============================================================================
-  # WATCHTOWER - Automatic Container Updates
+  # WHAT'S UP DOCKER (WUD) - Container Update Manager
   # =============================================================================
-  # Automatically updates running containers when new images are available.
+  # Shows available updates for running containers with a web dashboard.
+  # Does NOT auto-update by default - you review and trigger updates manually.
   # =============================================================================
-  watchtower:
-    image: containrrr/watchtower:latest
-    container_name: watchtower
+  wud:
+    image: fmartinou/whats-up-docker:latest
+    container_name: wud
     networks:
       - monitoring-network
+      - shared-network
     profiles:
       - all
       - monitoring
+    ports:
+      - "${WUD_PORT:-3002}:3000"
     environment:
-      WATCHTOWER_CLEANUP: "true"
-      WATCHTOWER_POLL_INTERVAL: 86400  # Check every 24 hours
-      WATCHTOWER_INCLUDE_STOPPED: "false"
-      WATCHTOWER_REVIVE_STOPPED: "false"
-      WATCHTOWER_NOTIFICATIONS: "shoutrrr"
-      WATCHTOWER_NOTIFICATION_URL: ${WATCHTOWER_NOTIFICATION_URL:-}
-      TZ: ${TZ:-America/New_York}
+      - WUD_TRIGGER_DOCKERHUB_ENABLE=false
+      - WUD_WATCHER_LOCAL_CRON=0 0 * * *
+      - WUD_WATCHER_LOCAL_WATCHBYDEFAULT=true
+      - TZ=${TZ:-America/New_York}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     restart: unless-stopped
     deploy:
       resources:
         limits:
-          memory: 64m
+          memory: ${WUD_MEMORY_LIMIT:-256m}
+    labels:
+      - traefik.enable=true
+      - "traefik.http.routers.wud.rule=Host(`${WUD_DOMAIN:-wud.${BASE_DOMAIN}}`)"
+      - traefik.http.routers.wud.entrypoints=web,websecure
+      - traefik.http.routers.wud.tls=true
+      - traefik.http.services.wud.loadbalancer.server.port=3000
+      - traefik.docker.network=shared-network
 
   # =============================================================================
   # UPTIME KUMA - Service Monitoring

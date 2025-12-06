@@ -7,7 +7,7 @@ This guide covers the monitoring and infrastructure management services.
 | Service | Port | Purpose |
 |---------|------|---------|
 | Dozzle | 9999 | Real-time Docker log viewer |
-| Watchtower | - | Automatic container updates |
+| WUD | 3002 | Container update manager with dashboard |
 | Uptime Kuma | 3001 | Status monitoring & alerting |
 | Netdata | 19999 | System metrics & performance |
 | Duplicati | 8200 | Backup solution |
@@ -46,28 +46,35 @@ Dozzle is configured for local access only and not exposed through Cloudflare tu
 
 ---
 
-## Watchtower
+## What's Up Docker (WUD)
 
-Automatic container update manager.
+Container update manager with a web dashboard. See [wud-setup.md](wud-setup.md) for detailed configuration.
+
+### Access
+- **Local:** http://192.168.2.50:3002
+- **External:** https://wud.weekendcodeproject.dev
 
 ### Environment Variables
 ```env
-WATCHTOWER_SCHEDULE=0 0 4 * * *    # Run at 4 AM daily
-WATCHTOWER_CLEANUP=true             # Remove old images
+WUD_PORT=3002
+WUD_DOMAIN=wud.${BASE_DOMAIN}
 ```
 
-### Configuration
-By default, Watchtower:
-- Checks for updates daily at 4 AM
-- Only updates containers with the label `com.centurylinklabs.watchtower.enable=true`
-- Cleans up old images after updates
-- Sends notifications via configured channels
+### Features
+- Visual dashboard showing all containers
+- Shows available updates with version comparison
+- Manual update triggers (you decide when to update)
+- Notification support (Discord, Slack, Email, etc.)
+- Does NOT auto-update by default
 
-### Enabling Updates for a Container
-Add this label to containers you want auto-updated:
-```yaml
-labels:
-  - "com.centurylinklabs.watchtower.enable=true"
+### How to Update Containers
+
+1. Check WUD dashboard for available updates
+2. Review changelogs for breaking changes
+3. Update via docker compose:
+```bash
+docker compose pull <service-name>
+docker compose up -d <service-name>
 ```
 
 ---
