@@ -156,9 +156,10 @@ services:
           memory: ${LOCALAI_MEMORY_LIMIT:-4g}
     labels:
       - traefik.enable=true
-      - "traefik.http.routers.localai.rule=Host(`${LOCALAI_DOMAIN:-localai.${BASE_DOMAIN}}`)"
+      - traefik.http.routers.localai.rule=Host(`${LOCALAI_DOMAIN:-localai.${BASE_DOMAIN}}`)"
       - traefik.http.routers.localai.entrypoints=web,websecure
       - traefik.http.routers.localai.tls=true
+      - traefik.http.routers.localai.middlewares=ai-services-auth@file
       - traefik.http.services.localai.loadbalancer.server.port=8080
       - traefik.docker.network=shared-network
 
@@ -225,9 +226,10 @@ services:
           memory: ${ANYTHINGLLM_MEMORY_LIMIT:-2g}
     labels:
       - traefik.enable=true
-      - "traefik.http.routers.anythingllm.rule=Host(`${ANYTHINGLLM_DOMAIN:-anythingllm.${BASE_DOMAIN}}`)"
+      - traefik.http.routers.anythingllm.rule=Host(`${ANYTHINGLLM_DOMAIN:-anythingllm.${BASE_DOMAIN}}`)"
       - traefik.http.routers.anythingllm.entrypoints=web,websecure
       - traefik.http.routers.anythingllm.tls=true
+      - traefik.http.routers.anythingllm.middlewares=ai-services-auth@file
       - traefik.http.services.anythingllm.loadbalancer.server.port=3001
       - traefik.docker.network=shared-network
 
@@ -262,9 +264,10 @@ services:
           memory: ${WHISPER_MEMORY_LIMIT:-4g}
     labels:
       - traefik.enable=true
-      - "traefik.http.routers.whisper.rule=Host(`${WHISPER_DOMAIN:-whisper.${BASE_DOMAIN}}`)"
+      - traefik.http.routers.whisper.rule=Host(`${WHISPER_DOMAIN:-whisper.${BASE_DOMAIN}}`)"
       - traefik.http.routers.whisper.entrypoints=web,websecure
       - traefik.http.routers.whisper.tls=true
+      - traefik.http.routers.whisper.middlewares=ai-services-auth@file
       - traefik.http.services.whisper.loadbalancer.server.port=9000
       - traefik.docker.network=shared-network
 
