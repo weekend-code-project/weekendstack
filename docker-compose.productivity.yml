@@ -679,6 +679,197 @@ services:
       - traefik.http.services.vikunja.loadbalancer.server.port=3456
       - traefik.docker.network=shared-network
 
+  # =============================================================================
+  # IT-TOOLS - Developer Utilities Collection
+  # =============================================================================
+  # A collection of handy online tools for developers: converters, encoders,
+  # formatters, generators, and many more.
+  # =============================================================================
+  it-tools:
+    image: corentinth/it-tools:latest
+    container_name: it-tools
+    networks:
+      - productivity-network
+      - shared-network
+    profiles:
+      - all
+      - productivity
+    ports:
+      - "${IT_TOOLS_PORT:-8091}:80"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: ${IT_TOOLS_MEMORY_LIMIT:-256m}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.it-tools.rule=Host(`${IT_TOOLS_DOMAIN:-it-tools.${BASE_DOMAIN}}`)
+      - traefik.http.routers.it-tools.entrypoints=web,websecure
+      - traefik.http.routers.it-tools.tls=true
+      - traefik.http.services.it-tools.loadbalancer.server.port=80
+      - traefik.docker.network=shared-network
+      - "com.docker.compose.service=it-tools"
+      - "description=IT-Tools - Developer Utilities Collection"
+
+  # =============================================================================
+  # EXCALIDRAW - Whiteboard Collaboration
+  # =============================================================================
+  # Virtual whiteboard for sketching hand-drawn like diagrams.
+  # =============================================================================
+  excalidraw:
+    image: excalidraw/excalidraw:latest
+    container_name: excalidraw
+    networks:
+      - productivity-network
+      - shared-network
+    profiles:
+      - all
+      - productivity
+    ports:
+      - "${EXCALIDRAW_PORT:-8092}:80"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: ${EXCALIDRAW_MEMORY_LIMIT:-256m}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.excalidraw.rule=Host(`${EXCALIDRAW_DOMAIN:-excalidraw.${BASE_DOMAIN}}`)
+      - traefik.http.routers.excalidraw.entrypoints=web,websecure
+      - traefik.http.routers.excalidraw.tls=true
+      - traefik.http.services.excalidraw.loadbalancer.server.port=80
+      - traefik.docker.network=shared-network
+      - "com.docker.compose.service=excalidraw"
+      - "description=Excalidraw - Whiteboard Collaboration"
+
+  # =============================================================================
+  # DOCMOST - Wiki/Documentation Platform
+  # =============================================================================
+  # Open-source collaborative wiki and documentation software.
+  # =============================================================================
+  docmost-db:
+    image: postgres:15-alpine
+    container_name: docmost-db
+    environment:
+      POSTGRES_DB: ${DOCMOST_DBNAME:-docmost}
+      POSTGRES_USER: ${DOCMOST_DBUSER:-docmost}
+      POSTGRES_PASSWORD: ${DOCMOST_DBPASS:-docmost_password_2024}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - type: volume
+        source: docmost-db-data
+        target: /var/lib/postgresql/data
+    networks:
+      - productivity-network
+      - shared-network
+    restart: unless-stopped
+    profiles:
+      - all
+      - productivity
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DOCMOST_DBUSER:-docmost} -d ${DOCMOST_DBNAME:-docmost}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  docmost-redis:
+    image: redis:7-alpine
+    container_name: docmost-redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - type: volume
+        source: docmost-redis-data
+        target: /data
+    networks:
+      - productivity-network
+      - shared-network
+    restart: unless-stopped
+    profiles:
+      - all
+      - productivity
+
+  docmost:
+    image: docmost/docmost:latest
+    container_name: docmost
+    depends_on:
+      docmost-db:
+        condition: service_healthy
+      docmost-redis:
+        condition: service_healthy
+    networks:
+      - productivity-network
+      - shared-network
+    profiles:
+      - all
+      - productivity
+    ports:
+      - "${DOCMOST_PORT:-8093}:3000"
+    environment:
+      APP_URL: "http://${HOST_IP:-localhost}:${DOCMOST_PORT:-8093}"
+      APP_SECRET: ${DOCMOST_SECRET:-docmost-secret-key-change-me-2024}
+      DATABASE_URL: "postgresql://${DOCMOST_DBUSER:-docmost}:${DOCMOST_DBPASS:-docmost_password_2024}@docmost-db:5432/${DOCMOST_DBNAME:-docmost}"
+      REDIS_URL: "redis://docmost-redis:6379"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: ${DOCMOST_MEMORY_LIMIT:-512m}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.docmost.rule=Host(`${DOCMOST_DOMAIN:-docmost.${BASE_DOMAIN}}`)
+      - traefik.http.routers.docmost.entrypoints=web,websecure
+      - traefik.http.routers.docmost.tls=true
+      - traefik.http.services.docmost.loadbalancer.server.port=3000
+      - traefik.docker.network=shared-network
+      - "com.docker.compose.service=docmost"
+      - "description=Docmost - Wiki/Documentation Platform"
+
+  # =============================================================================
+  # BYTESTASH - Code Snippet Manager
+  # =============================================================================
+  # A self-hosted web application designed to store, organize, and manage code snippets.
+  # =============================================================================
+  bytestash:
+    image: ghcr.io/jordan-dalby/bytestash:latest
+    container_name: bytestash
+    networks:
+      - productivity-network
+      - shared-network
+    profiles:
+      - all
+      - productivity
+    ports:
+      - "${BYTESTASH_PORT:-8094}:5000"
+    environment:
+      JWT_SECRET: ${BYTESTASH_JWT_SECRET:-bytestash-jwt-secret-change-me-2024}
+      BASE_PATH: ""
+    volumes:
+      - type: volume
+        source: bytestash-data
+        target: /data/snippets
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: ${BYTESTASH_MEMORY_LIMIT:-256m}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.bytestash.rule=Host(`${BYTESTASH_DOMAIN:-bytestash.${BASE_DOMAIN}}`)
+      - traefik.http.routers.bytestash.entrypoints=web,websecure
+      - traefik.http.routers.bytestash.tls=true
+      - traefik.http.services.bytestash.loadbalancer.server.port=5000
+      - traefik.docker.network=shared-network
+      - "com.docker.compose.service=bytestash"
+      - "description=ByteStash - Code Snippet Manager"
+
 volumes:
   nocodb-db-data:
   n8n-db-data:
@@ -693,4 +884,7 @@ volumes:
   focalboard-data:
   trilium-data:
   vikunja-data:
+  docmost-db-data:
+  docmost-redis-data:
+  bytestash-data:
 
