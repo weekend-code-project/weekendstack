@@ -706,6 +706,7 @@ services:
       - traefik.http.routers.it-tools.rule=Host(`${IT_TOOLS_DOMAIN:-it-tools.${BASE_DOMAIN}}`)
       - traefik.http.routers.it-tools.entrypoints=web,websecure
       - traefik.http.routers.it-tools.tls=true
+      - traefik.http.routers.it-tools.middlewares=it-tools-auth@file
       - traefik.http.services.it-tools.loadbalancer.server.port=80
       - traefik.docker.network=shared-network
       - "com.docker.compose.service=it-tools"
