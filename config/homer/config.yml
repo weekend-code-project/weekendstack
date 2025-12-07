@@ -234,13 +234,6 @@ services:
         tagstyle: "is-info"
         url: "http://192.168.2.50:8094"
         target: "_blank"
-      - name: "AppFlowy"
-        icon: "fas fa-sticky-note"
-        subtitle: "Notion Alternative"
-        tag: "productivity"
-        tagstyle: "is-success"
-        url: "http://192.168.2.50:8096"
-        target: "_blank"
 
   - name: "Personal"
     icon: "fa-solid fa-heart"

@@ -870,43 +870,6 @@ services:
       - "com.docker.compose.service=bytestash"
       - "description=ByteStash - Code Snippet Manager"
 
-  # =============================================================================
-  # APPFLOWY - Notion Alternative
-  # =============================================================================
-  # Open-source alternative to Notion. Notes, wikis, projects & more.
-  # =============================================================================
-  appflowy:
-    image: appflowyinc/appflowy_cloud:latest
-    container_name: appflowy
-    networks:
-      - productivity-network
-      - shared-network
-    profiles:
-      - all
-      - productivity
-    ports:
-      - "${APPFLOWY_PORT:-8096}:8000"
-    environment:
-      - RUST_LOG=info
-    volumes:
-      - type: volume
-        source: appflowy-data
-        target: /data
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: ${APPFLOWY_MEMORY_LIMIT:-512m}
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.appflowy.rule=Host(`${APPFLOWY_DOMAIN:-appflowy.${BASE_DOMAIN}}`)
-      - traefik.http.routers.appflowy.entrypoints=web,websecure
-      - traefik.http.routers.appflowy.tls=true
-      - traefik.http.services.appflowy.loadbalancer.server.port=8000
-      - traefik.docker.network=shared-network
-      - "com.docker.compose.service=appflowy"
-      - "description=AppFlowy - Notion Alternative"
-
 volumes:
   nocodb-db-data:
   n8n-db-data:
@@ -924,5 +887,4 @@ volumes:
   docmost-db-data:
   docmost-redis-data:
   bytestash-data:
-  appflowy-data:
 
