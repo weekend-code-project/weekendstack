@@ -245,6 +245,13 @@ services:
         tagstyle: "is-info"
         url: "https://bytestash.weekendcodeproject.dev"
         target: "_blank"
+      - name: "AppFlowy"
+        icon: "fas fa-sticky-note"
+        subtitle: "Notion Alternative"
+        tag: "productivity"
+        tagstyle: "is-success"
+        url: "https://appflowy.weekendcodeproject.dev"
+        target: "_blank"
 
   - name: "Personal"
     icon: "fa-solid fa-heart"
