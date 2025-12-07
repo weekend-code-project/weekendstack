@@ -1,242 +1,370 @@
-# Weekend Stack
+# 🏠 Weekend Stack
 
-A modular Docker Compose setup for running a complete self-hosted development and productivity environment with external domain access via Cloudflare Tunnel.
+A comprehensive self-hosted Docker stack for development, AI, productivity, media, home automation, and monitoring. Features **45+ services** organized into modular compose files with profile-based deployment.
+
+## 📦 Stack Overview
+
+### Service Categories
+
+| Category | Count | Description |
+|----------|-------|-------------|
+| **AI & ML** | 10 | LLM interfaces, search, image generation, speech processing |
+| **Development** | 5 | Code servers, Git hosting, developer tools |
+| **Productivity** | 11 | Document management, automation, collaboration |
+| **Media** | 3 | Photo, music, and ebook management |
+| **Personal** | 3 | Finance, recipes, fitness tracking |
+| **Monitoring** | 6 | Container logs, metrics, uptime monitoring |
+| **Networking** | 4 | Reverse proxy, DNS, tunneling |
+| **Automation** | 2 | Home automation and flow-based programming |
+
+---
+
+## 🤖 AI & Machine Learning Services
+
+| Service | Port | Description |
+|---------|------|-------------|
+| **Open WebUI** | 7005 | Chat interface for LLMs (connects to native Ollama) |
+| **LibreChat** | 3080 | Multi-provider AI chat interface |
+| **AnythingLLM** | 3001 | Desktop-style LLM workspace |
+| **LocalAI** | 8080 | Local AI model server (OpenAI-compatible API) |
+| **PrivateGPT** | 8001 | Private document Q&A with local models |
+| **SearXNG** | 7009 | Privacy-focused metasearch engine (🔒 auth required) |
+| **Stable Diffusion WebUI** | 7860 | AI image generation (requires NVIDIA GPU) |
+| **ComfyUI** | 8188 | Node-based image generation workflow |
+| **Whisper** | 9000 | Speech-to-text transcription API |
+| **WhisperX** | 9001 | Advanced speech recognition with alignment |
+
+## 💻 Development Services
+
+| Service | Port | Description |
+|---------|------|-------------|
+| **Coder** | 7080 | Cloud development environments (VS Code in browser) |
+| **Gitea** | 7000 (HTTP), 7001 (SSH) | Lightweight Git hosting with Actions |
+| **GitLab** | 7002 (HTTP), 7003 (SSH) | Full-featured DevOps platform |
+| **ByteStash** | 5010 | Code snippet manager |
+| **IT-Tools** | 8082 | Developer utilities collection (🔒 auth on public) |
+
+## 📋 Productivity Services
+
+| Service | Port | Description |
+|---------|------|-------------|
+| **Paperless-ngx** | 7010 | Document management with AI-powered OCR |
+| **NocoDB** | 7011 | No-code database (Airtable alternative) |
+| **n8n** | 7012 | Workflow automation platform |
+| **Activepieces** | 7013 | Workflow automation (Zapier alternative) |
+| **Vikunja** | 3456 | Task & project management (Todoist alternative) |
+| **Trilium** | 8084 | Hierarchical note-taking with scripting |
+| **Focalboard** | 8000 | Project boards (Trello/Notion alternative) |
+| **Docmost** | 3003 | Collaborative documentation wiki |
+| **Excalidraw** | 3002 | Collaborative whiteboard drawing |
+| **Postiz** | 5001 | Social media scheduling & management |
+| **Vaultwarden** | 8081 | Password manager (Bitwarden-compatible) |
+
+## 🎬 Media Services
+
+| Service | Port | Description |
+|---------|------|-------------|
+| **Immich** | 2283 | Photo & video backup (Google Photos alternative) |
+| **Navidrome** | 4533 | Music streaming server (Subsonic-compatible) |
+| **Kavita** | 5000 | Ebook, comic, and manga reader |
+
+## 👤 Personal Services
+
+| Service | Port | Description |
+|---------|------|-------------|
+| **Firefly III** | 8085 | Personal finance manager |
+| **Mealie** | 9090 | Recipe manager & meal planner |
+| **wger** | 8086 | Workout & fitness tracker |
+
+## 📊 Monitoring Services
+
+| Service | Port | Description |
+|---------|------|-------------|
+| **Portainer** | 9000 (HTTP), 9443 (HTTPS) | Docker container management UI |
+| **Dozzle** | 9999 | Real-time container log viewer |
+| **What's Up Docker (WUD)** | 3000 | Docker update notifications |
+| **Netdata** | 19999 | Real-time system & container metrics |
+| **Uptime Kuma** | 3001 | Service uptime monitoring |
+| **Duplicati** | 8200 | Backup solution for all services |
+
+## 🌐 Networking & Infrastructure
+
+| Service | Port | Description |
+|---------|------|-------------|
+| **Traefik** | 80, 443, 8083 (dashboard) | Reverse proxy with automatic SSL |
+| **Pi-Hole** | 7053 (DNS), 5353 (admin) | Network-wide ad blocking |
+| **Cloudflare Tunnel** | - | Secure public HTTPS access (no port forwarding) |
+| **Homer** | 8080 | Service dashboard (local & public versions) |
+| **Docker Registry** | 5000 | Local container image cache |
+
+## 🏠 Home Automation
+
+| Service | Port | Description |
+|---------|------|-------------|
+| **Home Assistant** | 8123 | Home automation platform |
+| **Node-RED** | 1880 | Flow-based automation programming |
+
+---
 
 ## 🚀 Quick Start
 
-### 1. Prerequisites
-- Docker and Docker Compose installed
-- 8GB RAM minimum (16GB recommended)
-- 50GB free disk space
+### Prerequisites
 
-### 2. Setup Environment
+- Docker 24+ and Docker Compose v2+
+- 8GB+ RAM (16GB+ recommended for AI services)
+- 100GB+ disk space (SSD recommended)
+- NVIDIA GPU with drivers (optional, for image generation)
+
+### 1. Clone and Configure
+
 ```bash
-# Copy the example environment file
+git clone https://github.com/weekend-code-project/weekendstack.git
+cd weekendstack
+
+# Copy example environment
 cp .env.example .env
 
-# Edit .env and customize:
-# - COMPUTER_NAME: Used in service hostnames
-# - BASE_DOMAIN: Your domain name
-# - SSH_KEY_DIR: Absolute path to your ~/.ssh directory
-# - Service passwords and secrets (search for "change-me")
+# Edit configuration (set passwords, domains, API keys)
+nano .env
 ```
 
-### 3. Start the Stack
+### 2. Start Services
+
 ```bash
-# Start all services with default profiles
+# Start ALL services (default)
 docker compose up -d
 
-# Or start specific profiles only
-docker compose --profile ai up -d                    # AI services only
-docker compose --profile productivity up -d          # Productivity services only
-docker compose --profile all up -d                   # Everything (default)
+# Start by profile (for selective deployment)
+docker compose --profile dev up -d           # Development tools only
+docker compose --profile ai up -d            # AI services only
+docker compose --profile productivity up -d  # Productivity apps only
+docker compose --profile media up -d         # Media services only
+docker compose --profile monitoring up -d    # Monitoring stack
+docker compose --profile automation up -d    # Home automation
+docker compose --profile networking up -d    # Network infrastructure
+
+# Combine profiles
+docker compose --profile dev --profile ai up -d
 ```
 
-### 4. Access Services
+### 3. Access Services
 
-**Local Access (Direct Ports):**
-- **Coder IDE**: http://localhost:7080
-- **Gitea**: http://localhost:7001
-- **Open WebUI**: http://localhost:3000
-- **SearXNG**: http://localhost:4000 (requires auth)
-- **Paperless**: http://localhost:8082
-- **NocoDB**: http://localhost:8090
-- **N8N**: http://localhost:5678
-- **Traefik Dashboard**: http://localhost:8083/dashboard/
-- **Pi-Hole**: http://localhost:8088/admin (internal only)
+All services accessible at `http://SERVER_IP:PORT`. Default: `192.168.2.50`
 
-**External Access (via Cloudflare Tunnel):**
-- https://coder.example.com
-- https://gitea.example.com
-- https://chat.example.com
-- https://search.example.com
-- https://paperless.example.com
-- https://n8n.example.com
+**Dashboards:**
+- **Homer (Local)**: http://192.168.2.50:8080 - All services overview
+- **Traefik**: http://192.168.2.50:8083/dashboard/ - Routing status
+- **Portainer**: http://192.168.2.50:9000 - Container management
 
-## 📦 Services Included
+---
 
-### Development & Infrastructure
-- **Coder** - Cloud development environments
-- **Gitea** - Self-hosted Git with Actions support
-- **Docker Registry** - Container image cache
-- **Traefik** - Reverse proxy and load balancer
-- **Cloudflare Tunnel** - Secure external access
+## 🗂️ Project Structure
 
-### Networking
-- **Pi-Hole** - Network-wide ad blocking and DNS (internal only)
+```
+weekendstack/
+├── docker-compose.yml           # Main orchestrator (includes all modules)
+├── docker-compose.core.yml      # Core services (Coder, databases)
+├── docker-compose.ai.yml        # AI/ML services
+├── docker-compose.dev.yml       # Development tools (Gitea, GitLab)
+├── docker-compose.productivity.yml  # Productivity apps
+├── docker-compose.media.yml     # Media services
+├── docker-compose.personal.yml  # Personal apps
+├── docker-compose.networking.yml    # Network infrastructure
+├── docker-compose.automation.yml    # Home automation
+├── docker-compose.monitoring.yml    # Monitoring stack
+│
+├── config/                      # Service configurations
+│   ├── cloudflare/             # Tunnel configuration
+│   ├── homer/                  # Dashboard configs
+│   │   ├── config.yml          # Local dashboard
+│   │   └── public.yml          # Public dashboard
+│   ├── traefik/                # Reverse proxy
+│   │   ├── config.yml          # Static config
+│   │   └── auth/               # Basic auth files (gitignored)
+│   └── coder/                  # Development templates
+│
+├── files/                       # Service data volumes
+│   ├── n8n/
+│   ├── nocodb/
+│   ├── open-webui/
+│   ├── paperless/
+│   └── ...
+│
+├── docs/                        # Additional documentation
+│   ├── architecture.md
+│   ├── network-architecture.md
+│   ├── traefik-setup.md
+│   └── ...
+│
+└── .env                         # Environment configuration (not in git)
+```
 
-### AI Services
-- **Open WebUI** - AI chat interface (connects to native Ollama)
-- **SearXNG** - Privacy-focused meta search engine (with basic auth)
-- **Stable Diffusion** - AI image generation (requires GPU, optional)
+---
 
-### Productivity
-- **Paperless-ngx** - Document management with OCR
-- **NocoDB** - Airtable alternative (spreadsheet-database hybrid)
-- **N8N** - Workflow automation platform
-- **Activepieces** - Alternative workflow automation
+## 🔧 Configuration
+
+### Environment Variables
+
+Copy `.env.example` to `.env` and configure:
+
+```bash
+# Server identification
+COMPUTER_NAME=weekendpc
+BASE_DOMAIN=yourdomain.com
+SERVER_IP=192.168.2.50
+
+# Cloudflare Tunnel (for public access)
+CLOUDFLARE_TUNNEL_TOKEN=your-tunnel-token
+
+# Service passwords (change all defaults!)
+CODER_ADMIN_PASSWORD=secure-password
+GITEA_ADMIN_PASSWORD=secure-password
+PAPERLESS_ADMIN_PASSWORD=secure-password
+# ... see .env.example for all options
+```
+
+### Traefik Authentication
+
+Services exposed publicly use basic auth. Auth files are stored in `config/traefik/auth/` (gitignored):
+
+```bash
+# Generate password hash
+htpasswd -nb admin your-password > config/traefik/auth/hashed_password-servicename
+
+# Create middleware file
+cat > config/traefik/auth/dynamic-servicename.yaml << EOF
+http:
+  middlewares:
+    servicename-auth:
+      basicAuth:
+        usersFile: /auth/hashed_password-servicename
+EOF
+```
+
+### Public vs Local Access
+
+| Access Type | Method | URL Pattern |
+|-------------|--------|-------------|
+| **Local** | Direct port | `http://192.168.2.50:PORT` |
+| **Public** | Cloudflare Tunnel | `https://service.yourdomain.com` |
+
+Public services are routed through Cloudflare Tunnel with Traefik handling SSL termination and authentication.
+
+---
 
 ## 🏗️ Architecture
 
-### Data Storage Strategy
-- **Database State**: Docker-managed volumes (e.g., \`paperless-db-data\`, \`paperless-data\`)
-- **Application Files**: Host bind mounts under \`./files/\` for user-facing content
-- **Configuration**: \`./config/\` for service configs (Traefik auth, Cloudflare tunnel)
-
 ### Network Design
-- **Isolated Networks**: Each service group has its own network
-- **Shared Network**: Common network for inter-service communication
-- **Traefik Integration**: All services route through Traefik for unified access
 
-### Compose File Organization
 ```
-docker-compose.yml              # Main file (includes all others)
-├── docker-compose.core.yml     # Core infrastructure (databases)
-├── docker-compose.networking.yml  # Traefik, Cloudflare Tunnel, Pi-Hole
-├── docker-compose.dev.yml      # Coder, Gitea, Registry
-├── docker-compose.ai.yml       # Open WebUI, SearXNG, Stable Diffusion
-├── docker-compose.productivity.yml  # Paperless, NocoDB, N8N, Activepieces
-└── docker-compose.override.yml # Local overrides (optional)
-```
-
-## ⚙️ Configuration
-
-### Key Environment Variables
-
-**Identity & Paths:**
-```bash
-COMPUTER_NAME=dev-workstation
-BASE_DOMAIN=example.com
-FILES_BASE_DIR=./files
-CONFIG_BASE_DIR=./config
-SSH_KEY_DIR=/home/yourusername/.ssh  # MUST be absolute path
+Internet
+    │
+    ▼
+Cloudflare Tunnel ──────► Traefik (Reverse Proxy)
+                               │
+                               ▼
+              ┌────────────────┼────────────────┐
+              │                │                │
+         shared-network   ai-network    productivity-network
+              │                │                │
+         ┌────┴────┐      ┌────┴────┐      ┌────┴────┐
+         │ Homer   │      │Open WebUI│     │Paperless │
+         │ Coder   │      │LibreChat │     │ NocoDB   │
+         │ Gitea   │      │ SearXNG  │     │   N8N    │
+         └─────────┘      └──────────┘     └──────────┘
 ```
 
-**Service Control (via profiles):**
-```bash
-COMPOSE_PROFILES=all  # Options: all, ai, productivity, development, monitoring
-```
+### Service Dependencies
 
-**Security:**
-- All services have configurable passwords in \`.env\`
-- Traefik auth files stored in \`${CONFIG_BASE_DIR}/traefik/auth\`
-- SearXNG protected with basic auth (username/password in \`.env\`)
+Most services are self-contained with their own databases:
+- **Paperless**: PostgreSQL + Redis
+- **NocoDB**: PostgreSQL
+- **n8n**: PostgreSQL
+- **Gitea**: PostgreSQL
+- **Coder**: PostgreSQL
 
-## 🎯 Common Use Cases
+Shared services:
+- **Traefik**: Handles all HTTP/HTTPS routing
+- **Homer**: Displays all service links
+- **Cloudflare Tunnel**: Exposes selected services publicly
 
-### Development Workflow
-1. **Coder**: Create cloud development environments with full IDE access
-2. **Gitea**: Host Git repositories with Actions for CI/CD
-3. **N8N**: Automate deployment and notification workflows
+---
 
-### Document Management
-1. **Paperless-ngx**: Upload documents to \`./files/paperless/consume/\`
-2. Documents are automatically OCR'd and indexed
-3. Access via web UI or integrate with N8N for automation
+## 📡 Public Access Setup
 
-### AI Integration
-1. **Install Ollama natively** on your host (required - not containerized)
-2. **Open WebUI** connects to \`http://host.docker.internal:11434\`
-3. **SearXNG** provides privacy-focused search with basic auth protection
+### Cloudflare Tunnel Configuration
 
-## 🔧 Service Management
+1. Create a tunnel in Cloudflare Zero Trust dashboard
+2. Get your tunnel token
+3. Configure in `.env`:
+   ```bash
+   CLOUDFLARE_TUNNEL_TOKEN=your-token
+   ```
+4. Configure routes in `config/cloudflare/config.yml`:
+   ```yaml
+   ingress:
+     - hostname: coder.yourdomain.com
+       service: http://traefik:80
+     - hostname: chat.yourdomain.com
+       service: http://traefik:80
+     - service: http_status:404
+   ```
 
-### Start/Stop Services
-```bash
-# Start all services
-docker compose up -d
+### Homer Public Dashboard
 
-# Stop all services
-docker compose down
+A separate public dashboard is available at `https://home.yourdomain.com` showing only publicly accessible services with authentication indicators.
 
-# Restart a specific service
-docker compose restart paperless-ngx
-
-# View service logs
-docker compose logs -f coder
-docker compose logs -f traefik | grep searxng
-```
-
-### Profile Management
-```bash
-# Start only AI services
-docker compose --profile ai up -d
-
-# Start multiple profiles
-docker compose --profile ai --profile productivity up -d
-
-# Check what's running
-docker compose ps
-```
-
-### Data Management
-```bash
-# Backup data (everything in ./files/ and Docker volumes)
-tar -czf backup-$(date +%Y%m%d).tar.gz files/
-
-# Reset a service (removes data!)
-docker compose stop paperless-ngx paperless-db paperless-redis
-docker volume rm wcp-coder_paperless-data wcp-coder_paperless-db-data
-docker compose up -d paperless-ngx
-```
-
-## �� Security Configuration
-
-### Traefik Basic Auth
-Protected services use htpasswd-based authentication:
-
-1. Auth files are in \`config/traefik/auth/\`
-2. Create new auth with: \`htpasswd -nbB username password > config/traefik/auth/hashed_password-service\`
-3. Create dynamic config: \`config/traefik/auth/dynamic-service.yaml\`
-4. Add middleware label to service in compose file
-
-**Example (SearXNG is already configured):**
-```yaml
-labels:
-  - traefik.http.routers.searxng.middlewares=searxng-auth@file
-```
-
-### Cloudflare Tunnel Setup
-1. Configure tunnel credentials in \`config/cloudflare/config.yml\`
-2. Place credentials JSON in \`config/cloudflare/.cloudflared/\`
-3. Set \`TUNNEL_NAME\` and \`TUNNEL_CREDENTIALS_FILE\` in \`.env\`
+---
 
 ## 🐛 Troubleshooting
 
 ### Service Won't Start
+
 ```bash
 # Check service logs
 docker compose logs service-name
 
-# Check if ports are in use
-sudo netstat -tulpn | grep :7080
+# Check all service health
+docker compose ps
 
-# Verify compose file syntax
+# Verify compose configuration
 docker compose config
 ```
 
+### Port Conflicts
+
+```bash
+# Check what's using a port
+sudo netstat -tulpn | grep :7080
+
+# Or with ss
+sudo ss -tulpn | grep :7080
+```
+
 ### Permission Issues
+
 ```bash
 # Fix ownership for bind-mounted directories
 sudo chown -R $USER:$USER ./files ./config
 
-# Specific services requiring specific UIDs:
-# N8N runs as UID 1000
-sudo chown -R 1000:1000 ./files/n8n
+# Services with specific UID requirements:
+sudo chown -R 1000:1000 ./files/n8n           # n8n runs as UID 1000
+sudo chown -R 1000:1000 ./files/paperless     # Paperless runs as UID 1000
 ```
 
-### Database Connection Issues
-```bash
-# Check database health
-docker compose ps
+### Database Issues
 
-# All database containers should show "(healthy)"
-# If not, check logs:
+```bash
+# Check database health (should show "healthy")
+docker compose ps | grep -E "(db|redis|postgres)"
+
+# View database logs
 docker compose logs paperless-db
 docker compose logs coder-database
 ```
 
 ### Traefik Routing Issues
+
 ```bash
 # Check Traefik dashboard
 open http://localhost:8083/dashboard/
@@ -244,81 +372,92 @@ open http://localhost:8083/dashboard/
 # View Traefik logs
 docker compose logs traefik
 
-# Verify service labels
-docker compose config | grep -A 10 "service-name:"
+# Test service routing
+curl -I http://localhost:80 -H "Host: service.yourdomain.com"
 ```
 
-### SearXNG Authentication
-- **Issue**: Can't access SearXNG
-- **Solution**: Check credentials in \`.env\`:
-  ```bash
-  SEARXNG_AUTH_USER=searx
-  SEARXNG_AUTH_PASSWORD=your-password
-  ```
-- Auth file is at \`config/traefik/auth/hashed_password-searxng\`
+---
 
 ## 📊 Resource Requirements
 
-**Minimum:**
-- CPU: 4 cores
-- RAM: 8GB
-- Disk: 50GB
-- OS: Linux, macOS, Windows (WSL2)
+### Minimum Specs
+- **CPU**: 4 cores
+- **RAM**: 8GB
+- **Disk**: 50GB
+- **OS**: Linux (Ubuntu 22.04+ recommended)
 
-**Recommended:**
-- CPU: 8+ cores
-- RAM: 16GB+
-- Disk: 100GB+ (SSD recommended)
+### Recommended Specs
+- **CPU**: 8+ cores
+- **RAM**: 32GB (for AI services)
+- **Disk**: 500GB+ SSD
+- **GPU**: NVIDIA RTX 3060+ (for image generation)
 
-**Per-Service Limits (configurable in \`.env\`):**
-- Databases: 512MB-1GB each
-- Coder: 2GB
-- Paperless: 2GB
-- N8N: 2GB
-- NocoDB: 2GB
-- Open WebUI: 2GB
-- Stable Diffusion: 6GB (GPU required)
+### Per-Service Memory Limits
 
-## 🚢 Deployment Patterns
+| Service | Default Limit |
+|---------|--------------|
+| Databases | 512MB-1GB |
+| Coder | 4GB |
+| Paperless | 2GB |
+| Open WebUI | 2GB |
+| Stable Diffusion | 8GB+ (GPU VRAM) |
+| LocalAI | 4GB+ |
 
-### Single Host (Development)
-- Run everything on one machine
-- Use default profiles (\`all\`)
-- Access via localhost ports
+---
 
-### Multi-Host (Production)
-- Split services across hosts by profile
-- Use Traefik on dedicated proxy host
-- Configure external domains
+## 🔄 Backup Strategy
 
-### GPU Workstation
-- Enable \`gpu\` profile for Stable Diffusion
-- Requires NVIDIA GPU with Docker runtime
-- Configure via \`docker-compose.gpu.yml\`
+### Duplicati (Built-in)
+Access at http://SERVER_IP:8200 to configure automated backups of:
+- `/opt/stacks/weekendstack/files/` - All service data
+- `/opt/stacks/weekendstack/config/` - Configuration files
+
+### Manual Backup
+
+```bash
+# Stop services
+docker compose down
+
+# Backup data
+tar -czvf weekendstack-backup-$(date +%Y%m%d).tar.gz files/ config/ .env
+
+# Restart
+docker compose up -d
+```
+
+---
 
 ## 📚 Additional Documentation
 
-See \`docs/\` directory for:
-- Architecture deep-dive
-- Network configuration
-- Service integration guides
-- Migration and upgrade procedures
+See `docs/` directory for detailed guides:
+- [Architecture Overview](docs/architecture.md)
+- [Network Architecture](docs/network-architecture.md)
+- [Traefik Setup](docs/traefik-setup.md)
+- [Coder Templates Guide](docs/coder-templates-guide.md)
+- [AI Services Integration](docs/ai-services-integration.md)
+- [Paperless Integration](docs/paperless-integration.md)
+- [SSH Keys Setup](docs/ssh-keys-setup.md)
+
+---
 
 ## 🤝 Contributing
 
-Contributions welcome! Please:
-1. Test changes locally with \`docker compose config\`
-2. Update \`.env.example\` for new variables
-3. Document changes in README
-4. Keep commit messages clear
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/new-service`
+3. Test changes locally: `docker compose config`
+4. Update documentation (this README + relevant docs/)
+5. Submit a pull request
+
+---
 
 ## 📄 License
 
-This project configuration is provided as-is for self-hosted deployments. Individual services maintain their own licenses.
+This project configuration is provided as-is for self-hosted deployments. Individual services maintain their own licenses - refer to each service's documentation for licensing details.
 
 ---
 
 **Quick Links:**
-- [Configuration Reference](.env.example)
-- [Issue Tracker](https://github.com/weekend-code-project/weekendstack/issues)
-- [Coder Templates](config/coder/templates/)
+- [Environment Template](.env.example)
+- [Homer Dashboard](http://192.168.2.50:8080)
+- [Traefik Dashboard](http://192.168.2.50:8083/dashboard/)
+- [Documentation](docs/)
