@@ -467,6 +467,62 @@ services:
       - traefik.http.services.comfyui.loadbalancer.server.port=8188
       - traefik.docker.network=shared-network
 
+  # =============================================================================
+  # DIFFRHYTHM - AI Music Generation (GPU Required)
+  # =============================================================================
+  # Full-length song generation with latent diffusion
+  # Can generate up to ~5 minute songs from lyrics and style prompts
+  # Supports text-to-music, reference audio, and instrumental generation
+  # Requires NVIDIA GPU with 8GB+ VRAM minimum
+  # =============================================================================
+  diffrhythm:
+    build:
+      context: ./config/diffrhythm
+      dockerfile: Dockerfile
+    image: diffrhythm:local
+    container_name: diffrhythm
+    restart: unless-stopped
+    networks:
+      - ai-network
+      - shared-network
+    profiles:
+      - gpu
+    ports:
+      - "${DIFFRHYTHM_PORT:-7870}:7860"
+    environment:
+      - GRADIO_SERVER_NAME=0.0.0.0
+      - GRADIO_SERVER_PORT=7860
+    volumes:
+      - type: volume
+        source: diffrhythm-models
+        target: /app/models
+      - type: bind
+        source: ${FILES_BASE_DIR:-./files}/diffrhythm/output
+        target: /app/output
+        bind:
+          create_host_path: true
+      - type: bind
+        source: ${FILES_BASE_DIR:-./files}/diffrhythm/input
+        target: /app/input
+        bind:
+          create_host_path: true
+    deploy:
+      resources:
+        limits:
+          memory: ${DIFFRHYTHM_MEMORY_LIMIT:-12g}
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    labels:
+      - traefik.enable=true
+      - "traefik.http.routers.diffrhythm.rule=Host(`${DIFFRHYTHM_DOMAIN:-diffrhythm.${BASE_DOMAIN}}`)"
+      - traefik.http.routers.diffrhythm.entrypoints=web,websecure
+      - traefik.http.routers.diffrhythm.tls=true
+      - traefik.http.services.diffrhythm.loadbalancer.server.port=7860
+      - traefik.docker.network=shared-network
+
 # =============================================================================
 # VOLUMES AND NETWORKS
 # =============================================================================
@@ -480,6 +536,7 @@ volumes:
   comfyui-data:
   comfyui-models:
   privategpt-data:
+  diffrhythm-models:
 
 networks:
   ai-network:

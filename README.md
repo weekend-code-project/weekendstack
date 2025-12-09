@@ -8,7 +8,7 @@ A comprehensive self-hosted Docker stack for development, AI, productivity, medi
 
 | Category | Count | Description |
 |----------|-------|-------------|
-| **AI & ML** | 10 | LLM interfaces, search, image generation, speech processing |
+| **AI & ML** | 11 | LLM interfaces, search, image/music generation, speech processing |
 | **Development** | 5 | Code servers, Git hosting, developer tools |
 | **Productivity** | 11 | Document management, automation, collaboration |
 | **Media** | 3 | Photo, music, and ebook management |
@@ -31,6 +31,7 @@ A comprehensive self-hosted Docker stack for development, AI, productivity, medi
 | **SearXNG** | 7009 | Privacy-focused metasearch engine (🔒 auth required) |
 | **Stable Diffusion WebUI** | 7860 | AI image generation (requires NVIDIA GPU) |
 | **ComfyUI** | 8188 | Node-based image generation workflow |
+| **DiffRhythm** | 7870 | AI music generation from lyrics (requires NVIDIA GPU) |
 | **Whisper** | 9000 | Speech-to-text transcription API |
 | **WhisperX** | 9001 | Advanced speech recognition with alignment |
 
