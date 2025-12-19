@@ -19,8 +19,6 @@ networks:
   monitoring-network:
     name: monitoring-network
     driver: bridge
-  shared-network:
-    external: true
 
 volumes:
   uptime-kuma-data:

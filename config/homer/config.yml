@@ -8,27 +8,23 @@ logo: "logo.png"
 # icon: "fas fa-skull-crossbones" # Optional icon
 
 header: true
-footer: '<p>Created with <span class="has-text-danger">❤️</span> with <a href="https://bulma.io/">Bulma</a>, <a href="https://vuejs.org/">Vue.js</a> & <a href="https://fontawesome.com/">font awesome</a> // Fork me on <a href="https://github.com/bastienwirtz/homer"><i class="fab fa-github-alt"></i></a></p>' # set false if you want to hide it.
+footer: '<p>Created with <span class="has-text-danger">❤️</span> with <a href="https://bulma.io/">Bulma</a>, <a href="https://vuejs.org/">Vue.js</a> & <a href="https://fontawesome.com/">font awesome</a> // Fork me on <a href="https://github.com/bastienwirtz/homer"><i class="fab fa-github-alt"></i></a></p>'
 
-# Optional theme customization
 theme: default
 
-# Optional message
 message:
   style: "is-info"
   title: "Weekend Stack Dashboard"
   content: "Your self-hosted services running on the local network"
 
-# Optional navbar
 links:
   - name: "Local"
     icon: "fas fa-home"
     url: "#"
   - name: "Public"
     icon: "fas fa-globe"
-    url: "#public" 
+    url: "#public"
 
-# Services
 # Tag colors (all unique, no duplicates):
 #   AI Section:
 #     CPU = is-warning (yellow) - CPU-based AI
@@ -44,11 +40,11 @@ links:
 #     automation = is-link (purple)
 #     backup = is-info is-light (light blue)
 
-services:
-  - name: "AI Services"
+x-service-sections:
+  ai_local: &section_ai_local
+    name: "AI Services"
     icon: "fa-solid fa-brain"
     items:
-      # CPU-based (alphabetical)
       - name: "AnythingLLM"
         icon: "fas fa-file-contract"
         subtitle: "Document Chat & RAG"
@@ -91,7 +87,6 @@ services:
         tagstyle: "is-warning"
         url: "http://192.168.2.50:9002"
         target: "_blank"
-      # GPU-based (alphabetical)
       - name: "ComfyUI"
         icon: "fas fa-palette"
         subtitle: "Node-based Image Gen"
@@ -128,10 +123,10 @@ services:
         url: "http://192.168.2.50:9001"
         target: "_blank"
 
-  - name: "Local Applications"
+  apps_local: &section_apps_local
+    name: "Local Applications"
     icon: "fa-solid fa-server"
     items:
-      # Dev (alphabetical)
       - name: "ByteStash"
         icon: "fas fa-code"
         subtitle: "Code Snippet Manager"
@@ -167,7 +162,6 @@ services:
         tagstyle: "is-info"
         url: "http://192.168.2.50:8091"
         target: "_blank"
-      # Media (alphabetical)
       - name: "Immich"
         icon: "fas fa-images"
         subtitle: "Photo Management"
@@ -189,7 +183,6 @@ services:
         tagstyle: "is-primary"
         url: "http://192.168.2.50:4533"
         target: "_blank"
-      # Productivity (alphabetical)
       - name: "Activepieces"
         icon: "fas fa-puzzle-piece"
         subtitle: "Business Automation"
@@ -268,7 +261,8 @@ services:
         url: "http://192.168.2.50:3456"
         target: "_blank"
 
-  - name: "Personal"
+  personal_local: &section_personal_local
+    name: "Personal"
     icon: "fa-solid fa-heart"
     items:
       - name: "Firefly III"
@@ -287,10 +281,10 @@ services:
         url: "http://192.168.2.50:8089"
         target: "_blank"
 
-  - name: "Local Admin"
+  admin_local: &section_admin_local
+    name: "Local Admin"
     icon: "fa-solid fa-shield-halved"
     items:
-      # Automation (alphabetical)
       - name: "Home Assistant"
         icon: "fas fa-home"
         subtitle: "Home Automation"
@@ -305,7 +299,6 @@ services:
         tagstyle: "is-link"
         url: "http://192.168.2.50:1880"
         target: "_blank"
-      # Backup (alphabetical)
       - name: "Duplicati"
         icon: "fas fa-cloud-upload-alt"
         subtitle: "Backup Solution"
@@ -313,7 +306,6 @@ services:
         tagstyle: "is-info is-light"
         url: "http://192.168.2.50:8200"
         target: "_blank"
-      # Containers (alphabetical)
       - name: "Dozzle"
         icon: "fas fa-scroll"
         subtitle: "Docker Logs"
@@ -335,7 +327,6 @@ services:
         tagstyle: "is-dark"
         url: "http://192.168.2.50:3002"
         target: "_blank"
-      # Monitoring (alphabetical)
       - name: "Netdata"
         icon: "fas fa-chart-line"
         subtitle: "System Monitoring"
@@ -350,7 +341,6 @@ services:
         tagstyle: "is-info"
         url: "http://192.168.2.50:3001"
         target: "_blank"
-      # Network (alphabetical)
       - name: "Pi-Hole"
         icon: "fas fa-shield-alt"
         subtitle: "Ad Blocking DNS"
@@ -365,3 +355,9 @@ services:
         tagstyle: "is-black"
         url: "http://192.168.2.50:8083"
         target: "_blank"
+
+services:
+  - *section_ai_local
+  - *section_apps_local
+  - *section_personal_local
+  - *section_admin_local

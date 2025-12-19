@@ -16,8 +16,6 @@ networks:
     name: personal-network
     driver: bridge
     external: false
-  shared-network:
-    external: true
 
 services:
   # ====================================================================

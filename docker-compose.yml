@@ -35,7 +35,8 @@ include:
   - docker-compose.networking.yml
   - docker-compose.automation.yml
   - docker-compose.media.yml
-  # - docker-compose.monitoring.yml       # Will be created in future phase
+  - docker-compose.personal.yml
+  - docker-compose.monitoring.yml
 
 # Shared network for inter-service communication
 networks:

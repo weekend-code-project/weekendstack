@@ -34,11 +34,11 @@ links:
 #     monitoring = is-info (blue)
 #     backup = is-info is-light (light blue)
 
-services:
-  - name: "AI Services"
+x-service-sections:
+  ai_public: &section_ai_public
+    name: "AI Services"
     icon: "fa-solid fa-brain"
     items:
-      # CPU-based (alphabetical)
       - name: "AnythingLLM"
         icon: "fas fa-file-contract"
         subtitle: "Document Chat (🔒 Auth)"
@@ -81,7 +81,6 @@ services:
         tagstyle: "is-warning"
         url: "https://whisper.weekendcodeproject.dev"
         target: "_blank"
-      # GPU-based (alphabetical)
       - name: "ComfyUI"
         icon: "fas fa-palette"
         subtitle: "Node-based Image Gen"
@@ -111,10 +110,10 @@ services:
         url: "https://whisperx.weekendcodeproject.dev"
         target: "_blank"
 
-  - name: "Public Applications"
+  apps_public: &section_apps_public
+    name: "Public Applications"
     icon: "fa-solid fa-globe"
     items:
-      # Dev (alphabetical)
       - name: "ByteStash"
         icon: "fas fa-code"
         subtitle: "Code Snippet Manager"
@@ -150,7 +149,6 @@ services:
         tagstyle: "is-info"
         url: "https://it-tools.weekendcodeproject.dev"
         target: "_blank"
-      # Media (alphabetical)
       - name: "Immich"
         icon: "fas fa-images"
         subtitle: "Photo Management"
@@ -172,7 +170,6 @@ services:
         tagstyle: "is-primary"
         url: "https://music.weekendcodeproject.dev"
         target: "_blank"
-      # Productivity (alphabetical)
       - name: "Activepieces"
         icon: "fas fa-puzzle-piece"
         subtitle: "Business Automation"
@@ -258,7 +255,8 @@ services:
         url: "https://vikunja.weekendcodeproject.dev"
         target: "_blank"
 
-  - name: "Personal"
+  personal_public: &section_personal_public
+    name: "Personal"
     icon: "fa-solid fa-heart"
     items:
       - name: "Firefly III"
@@ -277,10 +275,10 @@ services:
         url: "https://wger.weekendcodeproject.dev"
         target: "_blank"
 
-  - name: "Monitoring"
+  monitoring_public: &section_monitoring_public
+    name: "Monitoring"
     icon: "fa-solid fa-chart-line"
     items:
-      # Backup (alphabetical)
       - name: "Duplicati"
         icon: "fas fa-cloud-upload-alt"
         subtitle: "Backup Solution"
@@ -288,7 +286,6 @@ services:
         tagstyle: "is-info is-light"
         url: "https://duplicati.weekendcodeproject.dev"
         target: "_blank"
-      # Containers (alphabetical)
       - name: "Portainer"
         icon: "fas fa-ship"
         subtitle: "Container Management"
@@ -303,7 +300,6 @@ services:
         tagstyle: "is-dark"
         url: "https://wud.weekendcodeproject.dev"
         target: "_blank"
-      # Monitoring (alphabetical)
       - name: "Netdata"
         icon: "fas fa-chart-line"
         subtitle: "System Monitoring"
@@ -318,3 +314,9 @@ services:
         tagstyle: "is-info"
         url: "https://uptime.weekendcodeproject.dev"
         target: "_blank"
+
+services:
+  - *section_ai_public
+  - *section_apps_public
+  - *section_personal_public
+  - *section_monitoring_public

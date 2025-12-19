@@ -19,7 +19,7 @@ volumes:
 
 services:
   # =============================================================================
-  # HOMER - SERVICE DASHBOARD / LANDING PAGE
+  # HOMER (LOCAL) - SERVICE DASHBOARD / LANDING PAGE
   # =============================================================================
   # A simple, lightweight dashboard to access all services from one place.
   # Access at http://${HOST_IP}:8080 (LOCAL NETWORK ONLY - not exposed via tunnel)

@@ -148,6 +148,11 @@ docker compose --profile networking up -d    # Network infrastructure
 docker compose --profile dev --profile ai up -d
 ```
 
+#### Profile Reference
+- The `x-default-profile` includes both `all` and `gpu`, so `docker compose --profile all up -d` is the quickest "no-gpu" launch.
+- Check [`docs/profile-matrix.md`](docs/profile-matrix.md) for a full service × profile table before adding new toggles like `dev-gitea` or `dev-gitlab`.
+- Mix and match profiles for targeted stacks, e.g. `docker compose --profile dev --profile networking up -d` (Coder + Traefik) or `docker compose --profile productivity --profile personal up -d` (office + lifestyle).
+
 ### 3. Access Services
 
 All services accessible at `http://SERVER_IP:PORT`. Default: `192.168.2.50`
@@ -314,6 +319,21 @@ Shared services:
 ### Homer Public Dashboard
 
 A separate public dashboard is available at `https://home.yourdomain.com` showing only publicly accessible services with authentication indicators.
+
+| Service        | Compose profile(s) | Config file                   | Access |
+|----------------|--------------------|-------------------------------|--------|
+| `homer`        | `core`, `all`      | `config/homer/config.yml`     | `http://${HOST_IP}:${HOMER_PORT}` |
+| `homer-public` | `networking`, `all`| `config/homer/public.yml`     | `https://${HOMER_PUBLIC_DOMAIN:-home.${BASE_DOMAIN}}` via Traefik |
+
+```bash
+# Run only the local dashboard
+docker compose --profile core up -d homer
+
+# Run only the public dashboard (requires Traefik/Cloudflare profiles)
+docker compose --profile networking up -d homer-public
+```
+
+Using `COMPOSE_PROFILES=all` (the repository default) starts both containers so the local LAN homepage and the public tunnel homepage stay in sync without manual config swaps.
 
 ---
 

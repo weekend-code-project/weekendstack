@@ -2,15 +2,14 @@
 
 GitLab CE provides a complete DevOps platform including Git repository hosting, CI/CD pipelines, issue tracking, and more.
 
-## ⚠️ HTTPS Required
+## Access
 
-**GitLab requires HTTPS** for the web interface to function properly. The WebCrypto API used by GitLab is only available in secure contexts (HTTPS or localhost).
+**Use the HTTPS URL even from your local network:**
+- **Recommended:** https://gitlab.weekendcodeproject.dev
 
-**You must access GitLab via the Cloudflare tunnel:**
-- ✅ https://gitlab.weekendcodeproject.dev (works)
-- ❌ http://192.168.2.50:8929 (will not work from remote machines)
+GitLab's authentication and session management requires HTTPS to function properly. While the container is accessible on port 8929 locally, attempting to use it via HTTP will fail during login due to HTTPS redirects in the application logic.
 
-The local HTTP URL will only work if you're accessing from the Docker host itself via `http://localhost:8929`.
+The Cloudflare tunnel URL works from anywhere (local network or internet) and provides the proper HTTPS experience GitLab expects.
 
 ## Configuration
 
@@ -35,13 +34,6 @@ docker compose --profile gitlab up -d
 
 GitLab takes **3-5 minutes** to fully initialize on first start.
 
-## Access
-
-| Type | URL | Notes |
-|------|-----|-------|
-| Public (recommended) | https://gitlab.weekendcodeproject.dev | Full functionality |
-| Local (Docker host only) | http://localhost:8929 | Only works on the server itself |
-
 ## Initial Root Password
 
 After GitLab is healthy, retrieve the initial root password:
@@ -57,17 +49,6 @@ Login with:
 > ⚠️ The initial password file is automatically deleted after 24 hours. Change the root password immediately.
 
 ## Troubleshooting
-
-### Chrome Redirects HTTP to HTTPS
-
-If Chrome automatically redirects `http://192.168.2.50:8929` to HTTPS, it's due to HSTS (HTTP Strict Transport Security) caching from accessing GitLab through the Cloudflare tunnel.
-
-**Fix:**
-1. Open `chrome://net-internals/#hsts`
-2. Scroll to "Delete domain security policies"
-3. Enter `192.168.2.50` and click **Delete**
-
-**Alternative:** Use an incognito window which doesn't have cached HSTS policies.
 
 ### GitLab Won't Start
 

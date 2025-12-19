@@ -499,7 +499,7 @@ services:
       - productivity
 
   postiz:
-    image: ghcr.io/gitroomhq/postiz-app:latest
+    image: ghcr.io/gitroomhq/postiz-app:v2.10.1
     container_name: postiz
     depends_on:
       postiz-db:
@@ -517,7 +517,9 @@ services:
       MAIN_URL: ${POSTIZ_PROTOCOL:-https}://${POSTIZ_DOMAIN:-postiz-${COMPUTER_NAME}.${BASE_DOMAIN}}
       FRONTEND_URL: ${POSTIZ_PROTOCOL:-https}://${POSTIZ_DOMAIN:-postiz-${COMPUTER_NAME}.${BASE_DOMAIN}}
       NEXT_PUBLIC_BACKEND_URL: ${POSTIZ_PROTOCOL:-https}://${POSTIZ_DOMAIN:-postiz-${COMPUTER_NAME}.${BASE_DOMAIN}}/api
+      BACKEND_URL: http://localhost:3000
       BACKEND_INTERNAL_URL: http://localhost:3000
+      NEXT_PUBLIC_BACKEND_INTERNAL_URL: http://localhost:3000
       NEXTAUTH_URL: ${POSTIZ_PROTOCOL:-https}://${POSTIZ_DOMAIN:-postiz-${COMPUTER_NAME}.${BASE_DOMAIN}}
       NEXTAUTH_SECRET: ${POSTIZ_NEXTAUTH_SECRET:-postiz-nextauth-secret-change-me-2024}
       JWT_SECRET: ${POSTIZ_JWT_SECRET:-postiz-jwt-secret-change-me-2024}
@@ -541,6 +543,10 @@ services:
       - type: bind
         source: ${FILES_BASE_DIR:-./files}/postiz/uploads
         target: /app/public/uploads
+      - type: bind
+        source: ./config/postiz/nginx.conf
+        target: /etc/nginx/nginx.conf
+        read_only: true
     networks:
       - productivity-network
       - shared-network

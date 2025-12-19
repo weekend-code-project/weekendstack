@@ -44,6 +44,18 @@ Landing page with links to all services. Supports multiple tabs (Local/Public).
 - `config/homer/config.yml` - Local dashboard configuration
 - `config/homer/public.yml` - Public dashboard configuration
 
+**Compose services:**
+- `homer` (profiles `core`, `all`) mounts `config.yml` and exposes the dashboard on the LAN at `http://${HOST_IP}:${HOMER_PORT}`.
+- `homer-public` (profiles `networking`, `all`) mounts `public.yml`, joins `shared-network`, and is routed externally through Traefik/Cloudflare at `https://${HOMER_PUBLIC_DOMAIN:-home.${BASE_DOMAIN}}`.
+
+```bash
+# Local-only dashboard
+docker compose --profile core up -d homer
+
+# Public dashboard via Traefik / Cloudflare
+docker compose --profile networking up -d homer-public
+```
+
 ### Traefik - Reverse Proxy
 **Port:** 8083 (Dashboard) | **Domain:** Various
 

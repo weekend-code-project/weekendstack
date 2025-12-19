@@ -80,6 +80,8 @@ services:
     profiles:
       - all
       - dev
+      - networking
+      - proxy
     user: root
     restart: unless-stopped
     volumes:
