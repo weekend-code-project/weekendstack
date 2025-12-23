@@ -101,12 +101,12 @@ services:
       DHCP_ACTIVE: "false"
     volumes:
       - type: bind
-        source: ${FILES_BASE_DIR:-./files}/pihole/etc-pihole
+        source: ${CONFIG_BASE_DIR:-./config}/pihole/etc-pihole
         target: /etc/pihole
         bind:
           create_host_path: true
       - type: bind
-        source: ${FILES_BASE_DIR:-./files}/pihole/etc-dnsmasq.d
+        source: ${CONFIG_BASE_DIR:-./config}/pihole/etc-dnsmasq.d
         target: /etc/dnsmasq.d
         bind:
           create_host_path: true

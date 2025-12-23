@@ -1,0 +1,17 @@
+http:
+  middlewares:
+    lab-catchall-redirect:
+      redirectRegex:
+        regex: "^https?://[^/]+(.*)$"
+        replacement: "http://home.lab$1"
+        permanent: false
+
+  routers:
+    lab-catchall:
+      entryPoints:
+        - web
+      rule: "HostRegexp(`^[a-z0-9-]+\\.lab$`) && !Host(`home.lab`)"
+      middlewares:
+        - lab-catchall-redirect
+      service: noop@internal
+      priority: 1

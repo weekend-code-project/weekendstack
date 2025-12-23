@@ -32,6 +32,7 @@ services:
     restart: unless-stopped
     networks:
       - core-network
+      - shared-network
     profiles:
       - all
       - core
@@ -55,7 +56,12 @@ services:
       timeout: 10s
       retries: 3
     labels:
-      - traefik.enable=false
+      - traefik.enable=true
+      # Local-only dashboard route
+      - traefik.http.routers.home.entrypoints=web
+      - traefik.http.routers.home.rule=Host(`home.lab`)
+      - traefik.http.services.home.loadbalancer.server.port=8080
+      - traefik.docker.network=shared-network
       - "com.docker.compose.service=homer"
       - "description=Homer - Service Dashboard (Local Only)"
 
@@ -90,10 +96,15 @@ services:
           memory: ${VAULTWARDEN_MEMORY_LIMIT:-256m}
     labels:
       - traefik.enable=true
-      - traefik.http.routers.vaultwarden.rule=Host(`${VAULTWARDEN_DOMAIN:-vault.${BASE_DOMAIN}}`)
-      - traefik.http.routers.vaultwarden.entrypoints=web,websecure
+      - traefik.http.routers.vaultwarden.rule=Host(`vaultwarden.${BASE_DOMAIN}`) || Host(`vault.${BASE_DOMAIN}`)
+      - traefik.http.routers.vaultwarden.entrypoints=websecure
       - traefik.http.routers.vaultwarden.tls=true
       - traefik.http.services.vaultwarden.loadbalancer.server.port=80
       - traefik.docker.network=shared-network
+
+      # Local HTTP access for *.lab
+      - traefik.http.routers.vaultwarden-http.entrypoints=web
+      - traefik.http.routers.vaultwarden-http.rule=Host(`vaultwarden.lab`) || Host(`vault.lab`)
+      - traefik.http.routers.vaultwarden-http.service=vaultwarden
 
 

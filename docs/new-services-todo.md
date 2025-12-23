@@ -238,8 +238,8 @@ PIHOLE_DNS2=1.0.0.1
 ```
 
 #### Volume Mounts:
-- `${FILES_BASE_DIR}/pihole/etc-pihole` → `/etc/pihole`
-- `${FILES_BASE_DIR}/pihole/etc-dnsmasq.d` → `/etc/dnsmasq.d`
+- `${CONFIG_BASE_DIR}/pihole/etc-pihole` → `/etc/pihole`
+- `${CONFIG_BASE_DIR}/pihole/etc-dnsmasq.d` → `/etc/dnsmasq.d`
 
 #### Port Mappings:
 - `53:53/tcp` - DNS TCP

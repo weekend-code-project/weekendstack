@@ -19,6 +19,37 @@ networks:
 
 services:
   # =============================================================================
+  # HOME ASSISTANT PERMISSIONS INIT
+  # =============================================================================
+  # One-shot container to ensure the bind-mounted /config is owned by the same
+  # UID/GID that Home Assistant runs as. This avoids root-owned files (e.g.
+  # /config/.storage/auth) that can prevent Home Assistant from starting.
+  #
+  # This keeps the stack self-contained: no host sudo/manual chown needed.
+  # =============================================================================
+  homeassistant-perms:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: homeassistant-perms
+    user: "0:0"
+    networks:
+      - automation-network
+    profiles:
+      - all
+      - automation
+    volumes:
+      - type: bind
+        source: ${FILES_BASE_DIR:-./files}/homeassistant/config
+        target: /config
+        bind:
+          create_host_path: true
+    entrypoint:
+      - sh
+      - -lc
+      - |
+        chown -R "${HOMEASSISTANT_UID:-1000}:${HOMEASSISTANT_GID:-1000}" /config
+    restart: "no"
+
+  # =============================================================================
   # HOME ASSISTANT - SMART HOME AUTOMATION PLATFORM
   # =============================================================================
   # Home Assistant is a powerful home automation platform that puts local control
@@ -36,10 +67,14 @@ services:
   homeassistant:
     image: ghcr.io/home-assistant/home-assistant:stable
     container_name: homeassistant
+    user: "${HOMEASSISTANT_UID:-1000}:${HOMEASSISTANT_GID:-1000}"
     restart: unless-stopped
     networks:
       - automation-network
       - shared-network
+    depends_on:
+      homeassistant-perms:
+        condition: service_completed_successfully
     profiles:
       - all
       - automation
@@ -64,16 +99,18 @@ services:
         limits:
           memory: ${HOMEASSISTANT_MEMORY_LIMIT:-2g}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8123/api/"]
+      test: ["CMD", "curl", "-f", "http://localhost:8123/"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 60s
     labels:
       - traefik.enable=${HOMEASSISTANT_TRAEFIK_ENABLE:-true}
-      - "traefik.http.routers.homeassistant.rule=Host(`${HOMEASSISTANT_DOMAIN:-home-${COMPUTER_NAME}.${BASE_DOMAIN}}`)"
-      - traefik.http.routers.homeassistant.entrypoints=web,websecure
+      - "traefik.http.routers.homeassistant.rule=Host(`homeassistant.${BASE_DOMAIN}`)"
+      - traefik.http.routers.homeassistant.entrypoints=websecure
       - traefik.http.routers.homeassistant.tls=true
+      - "traefik.http.routers.homeassistant-http.rule=Host(`homeassistant.lab`)"
+      - traefik.http.routers.homeassistant-http.entrypoints=web
       - traefik.http.services.homeassistant.loadbalancer.server.port=8123
       - traefik.docker.network=shared-network
       - "com.docker.compose.service=homeassistant"
@@ -109,9 +146,11 @@ services:
           memory: ${NODERED_MEMORY_LIMIT:-512m}
     labels:
       - traefik.enable=true
-      - traefik.http.routers.nodered.rule=Host(`${NODERED_DOMAIN:-nodered.${BASE_DOMAIN}}`)
-      - traefik.http.routers.nodered.entrypoints=web,websecure
+      - traefik.http.routers.nodered.rule=Host(`nodered.${BASE_DOMAIN}`)
+      - traefik.http.routers.nodered.entrypoints=websecure
       - traefik.http.routers.nodered.tls=true
+      - traefik.http.routers.nodered-http.rule=Host(`nodered.lab`)
+      - traefik.http.routers.nodered-http.entrypoints=web
       - traefik.http.services.nodered.loadbalancer.server.port=1880
       - traefik.docker.network=shared-network
 

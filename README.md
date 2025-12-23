@@ -93,7 +93,7 @@ A comprehensive self-hosted Docker stack for development, AI, productivity, medi
 | Service | Port | Description |
 |---------|------|-------------|
 | **Traefik** | 80, 443, 8083 (dashboard) | Reverse proxy with automatic SSL |
-| **Pi-Hole** | 7053 (DNS), 5353 (admin) | Network-wide ad blocking |
+| **Pi-Hole** | 53 (DNS), 8088 (admin) | Network-wide ad blocking |
 | **Cloudflare Tunnel** | - | Secure public HTTPS access (no port forwarding) |
 | **Homer** | 8080 | Service dashboard (local & public versions) |
 | **Docker Registry** | 5000 | Local container image cache |

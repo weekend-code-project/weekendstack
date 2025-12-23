@@ -39,7 +39,7 @@ services:
       TZ: ${TZ:-America/New_York}
       MAX_WORKERS: 1
       WEB_CONCURRENCY: 1
-      BASE_URL: "https://${MEALIE_DOMAIN:-mealie.${BASE_DOMAIN}}"
+      BASE_URL: "https://mealie.${BASE_DOMAIN}"
     volumes:
       - type: volume
         source: mealie-data
@@ -51,11 +51,15 @@ services:
           memory: ${MEALIE_MEMORY_LIMIT:-512m}
     labels:
       - traefik.enable=true
-      - traefik.http.routers.mealie.rule=Host(`${MEALIE_DOMAIN:-mealie.${BASE_DOMAIN}}`)
-      - traefik.http.routers.mealie.entrypoints=web,websecure
+      - traefik.http.routers.mealie.rule=Host(`mealie.${BASE_DOMAIN}`)
+      - traefik.http.routers.mealie.entrypoints=websecure
       - traefik.http.routers.mealie.tls=true
       - traefik.http.services.mealie.loadbalancer.server.port=9000
       - traefik.docker.network=shared-network
+
+      - traefik.http.routers.mealie-http.entrypoints=web
+      - traefik.http.routers.mealie-http.rule=Host(`mealie.lab`)
+      - traefik.http.routers.mealie-http.service=mealie
 
   # ====================================================================
   # FIREFLY III - Personal Finance Manager
@@ -76,7 +80,7 @@ services:
       DB_CONNECTION: sqlite
       TZ: ${TZ:-America/New_York}
       TRUSTED_PROXIES: "**"
-      APP_URL: "https://${FIREFLY_DOMAIN:-firefly.${BASE_DOMAIN}}"
+      APP_URL: "https://firefly.${BASE_DOMAIN}"
     volumes:
       - type: volume
         source: firefly-upload
@@ -88,11 +92,15 @@ services:
           memory: ${FIREFLY_MEMORY_LIMIT:-512m}
     labels:
       - traefik.enable=true
-      - traefik.http.routers.firefly.rule=Host(`${FIREFLY_DOMAIN:-firefly.${BASE_DOMAIN}}`)
-      - traefik.http.routers.firefly.entrypoints=web,websecure
+      - traefik.http.routers.firefly.rule=Host(`firefly.${BASE_DOMAIN}`)
+      - traefik.http.routers.firefly.entrypoints=websecure
       - traefik.http.routers.firefly.tls=true
       - traefik.http.services.firefly.loadbalancer.server.port=8080
       - traefik.docker.network=shared-network
+
+      - traefik.http.routers.firefly-http.entrypoints=web
+      - traefik.http.routers.firefly-http.rule=Host(`firefly.lab`)
+      - traefik.http.routers.firefly-http.service=firefly
 
   # ====================================================================
   # WGER - Workout & Fitness Tracker
@@ -110,8 +118,8 @@ services:
     environment:
       SECRET_KEY: ${WGER_SECRET_KEY:-wger-secret-key-change-me-in-production}
       DJANGO_DEBUG: "False"
-      WGER_INSTANCE: "https://${WGER_DOMAIN:-wger.${BASE_DOMAIN}}"
-      SITE_URL: "https://${WGER_DOMAIN:-wger.${BASE_DOMAIN}}"
+      WGER_INSTANCE: "https://wger.${BASE_DOMAIN}"
+      SITE_URL: "https://wger.${BASE_DOMAIN}"
       TIME_ZONE: ${TZ:-America/New_York}
       ALLOW_REGISTRATION: "True"
       ALLOW_GUEST_USERS: "False"
@@ -162,11 +170,15 @@ services:
           memory: 64m
     labels:
       - traefik.enable=true
-      - traefik.http.routers.wger.rule=Host(`${WGER_DOMAIN:-wger.${BASE_DOMAIN}}`)
-      - traefik.http.routers.wger.entrypoints=web,websecure
+      - traefik.http.routers.wger.rule=Host(`wger.${BASE_DOMAIN}`)
+      - traefik.http.routers.wger.entrypoints=websecure
       - traefik.http.routers.wger.tls=true
       - traefik.http.services.wger.loadbalancer.server.port=80
       - traefik.docker.network=shared-network
+
+      - traefik.http.routers.wger-http.entrypoints=web
+      - traefik.http.routers.wger-http.rule=Host(`wger.lab`)
+      - traefik.http.routers.wger-http.service=wger
 
 volumes:
   mealie-data:

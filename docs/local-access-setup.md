@@ -258,6 +258,58 @@ Consult your router's documentation for specific instructions.
 
 ### Accessing Services Locally
 
+#### List All `.lab` Service URLs (Recommended)
+
+Generate a current list of local URLs directly from the Traefik router rules in your compose files:
+
+```bash
+python3 tools/list_lab_urls.py
+```
+
+To include both local `.lab` and public `${BASE_DOMAIN}` hostnames:
+
+```bash
+python3 tools/list_lab_urls.py --all
+```
+
+Markdown table output (useful for pasting into notes):
+
+```bash
+python3 tools/list_lab_urls.py --format markdown
+```
+
+#### One-Command Health Check (DNS + Traefik)
+
+This checks:
+- Whether `traefik` and `pihole` are up
+- Whether ports `53/80/443` are listening on the host
+- Whether Pi-hole answers a direct DNS query for a `.lab` hostname
+- Whether Traefik responds when you send the correct `Host:` header
+
+```bash
+bash tools/diagnose_lab.sh coder.lab
+```
+
+---
+
+## Common Gotchas (When It “Works Sometimes”)
+
+### 1) Secondary DNS Causes Split Behavior
+
+If DHCP hands out **two DNS servers** (e.g. Pi-hole + `1.1.1.1`), some clients will randomly use the secondary server. Since `1.1.1.1` does not know your private `.lab` wildcard, you’ll see intermittent failures like:
+- `nslookup coder.lab 192.168.2.50` works
+- But `curl http://coder.lab` or a browser sometimes says “cannot resolve”
+
+**Recommended:** on the LAN you want `.lab` to work on, use **Pi-hole as the only DNS server**.
+
+### 2) VLAN / IoT Network Can’t Reach Pi-hole or Traefik
+
+If your phone/PC is on a different network (IoT/Guest/VLAN) it may be blocked from reaching:
+- Pi-hole: UDP/TCP `53` to `192.168.2.50`
+- Traefik: TCP `80/443` to `192.168.2.50`
+
+**Recommended:** either set that network’s DNS to Pi-hole too, and allow traffic to the ports above, or accept that `.lab` only works on your main LAN.
+
 Once configured, simply use the `.lab` domain in your browser:
 
 - **GitLab:** https://gitlab.lab

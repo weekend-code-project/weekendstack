@@ -171,11 +171,16 @@ services:
           memory: ${CODER_MEMORY_LIMIT:-1g}
     labels:
       - traefik.enable=true
-      - traefik.http.routers.coder.entrypoints=web,websecure
-      - traefik.http.routers.coder.rule=Host(`${CODER_DOMAIN:-coder-${COMPUTER_NAME}.${BASE_DOMAIN}}`)
+      - traefik.http.routers.coder.entrypoints=websecure
+      - traefik.http.routers.coder.rule=Host(`coder.${BASE_DOMAIN}`)
       - traefik.http.routers.coder.tls=true
       - traefik.http.services.coder.loadbalancer.server.port=7080
       - traefik.docker.network=shared-network
+
+      # Local HTTP access (no TLS) for *.lab
+      - traefik.http.routers.coder-http.entrypoints=web
+      - traefik.http.routers.coder-http.rule=Host(`coder.lab`)
+      - traefik.http.routers.coder-http.service=coder
 
   # =============================================================================
   # GITEA GIT REPOSITORY HOSTING WITH CI/CD
@@ -234,11 +239,15 @@ services:
           memory: ${GITEA_MEMORY_LIMIT:-2g}
     labels:
       - traefik.enable=true
-      - traefik.http.routers.gitea.entrypoints=web,websecure
-      - traefik.http.routers.gitea.rule=Host(`${GITEA_DOMAIN:-git-${COMPUTER_NAME}.${BASE_DOMAIN}}`)
+      - traefik.http.routers.gitea.entrypoints=websecure
+      - traefik.http.routers.gitea.rule=Host(`gitea.${BASE_DOMAIN}`)
       - traefik.http.routers.gitea.tls=true
       - traefik.http.services.gitea.loadbalancer.server.port=3000
       - traefik.docker.network=shared-network
+
+      - traefik.http.routers.gitea-http.entrypoints=web
+      - traefik.http.routers.gitea-http.rule=Host(`gitea.lab`)
+      - traefik.http.routers.gitea-http.service=gitea
 
   registry-cache:
     image: registry:2
@@ -260,8 +269,15 @@ services:
         target: /var/lib/registry
     labels:
       - traefik.enable=true
-      - traefik.http.routers.registry.rule=Host(`${REGISTRY_DOMAIN:-registry-${COMPUTER_NAME}.${BASE_DOMAIN}}`)
+      - traefik.http.routers.registry.rule=Host(`registry.${BASE_DOMAIN}`)
+      - traefik.http.routers.registry.entrypoints=websecure
+      - traefik.http.routers.registry.tls=true
+
+      - traefik.http.routers.registry-http.rule=Host(`registry.lab`)
+      - traefik.http.routers.registry-http.entrypoints=web
+      - traefik.http.routers.registry-http.service=registry
       - traefik.http.services.registry.loadbalancer.server.port=5000
+      - traefik.docker.network=shared-network
 
   # ====================================================================
   # GITLAB CE - Complete DevOps Platform
@@ -312,11 +328,15 @@ services:
           memory: ${GITLAB_MEMORY_LIMIT:-4g}
     labels:
       - traefik.enable=true
-      - traefik.http.routers.gitlab.entrypoints=web,websecure
+      - traefik.http.routers.gitlab.entrypoints=websecure
       - traefik.http.routers.gitlab.rule=Host(`gitlab.${BASE_DOMAIN}`)
       - traefik.http.routers.gitlab.tls=true
       - traefik.http.services.gitlab.loadbalancer.server.port=80
       - traefik.docker.network=shared-network
+
+      - traefik.http.routers.gitlab-http.entrypoints=web
+      - traefik.http.routers.gitlab-http.rule=Host(`gitlab.lab`)
+      - traefik.http.routers.gitlab-http.service=gitlab
 
 volumes:
   coder-db-data:

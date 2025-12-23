@@ -18,7 +18,7 @@ The following variables are available in `.env`:
 ```bash
 # Pi-Hole Configuration
 PIHOLE_PORT_WEB=8088          # Web admin interface port
-PIHOLE_PORT_DNS=5353          # DNS server port (default 53 may conflict with systemd-resolved)
+PIHOLE_PORT_DNS=53            # DNS server port (recommended; required for macOS + most routers)
 PIHOLE_MEMORY_LIMIT=512m      # Container memory limit
 PIHOLE_WEBPASSWORD=your-password-here  # Admin panel password
 PIHOLE_DNS1=1.1.1.1           # Primary upstream DNS (Cloudflare)
@@ -43,24 +43,28 @@ Login with the password set in `PIHOLE_WEBPASSWORD`.
 
 ## Port Configuration
 
+### Important: macOS requires DNS on port 53
+
+macOS network settings let you set a DNS **server IP**, but not a custom DNS **port**. That means if you want your Mac to use Pi-hole for `.lab` lookups in normal apps (Safari/Chrome/etc), Pi-hole must be reachable at:
+
+- UDP/TCP `53` on `192.168.2.50`
+
+If you run Pi-hole on a non-standard port (like `5353`), you can still test with `dig -p 5353`, but macOS won’t use it as its system DNS resolver.
+
 ### Default Ports
 
 | Port | Protocol | Purpose |
 |------|----------|---------|
 | 8088 | TCP | Web admin interface |
-| 5353 | TCP/UDP | DNS server |
+| 53 | TCP/UDP | DNS server |
 
 ### Port 53 Conflict (systemd-resolved)
 
 On most Linux systems, `systemd-resolved` uses port 53. You have two options:
 
-#### Option A: Use Alternate Port (Default)
+#### Option A: Keep Port 53 (Recommended)
 
-Pi-Hole runs on port 5353 by default in this stack. Devices must be configured to use this non-standard port, or you can set up port forwarding on your router.
-
-#### Option B: Disable systemd-resolved Stub Listener
-
-If you want Pi-Hole to use the standard port 53:
+This is the best option if you want router-wide DNS and/or macOS clients to work cleanly.
 
 1. Edit `/etc/systemd/resolved.conf`:
    ```ini
@@ -73,12 +77,29 @@ If you want Pi-Hole to use the standard port 53:
    sudo systemctl restart systemd-resolved
    ```
 
-3. Update `.env`:
+3. Ensure `.env` uses:
    ```bash
    PIHOLE_PORT_DNS=53
    ```
 
 4. Recreate the container:
+   ```bash
+   docker compose --profile networking up -d pihole --force-recreate
+   ```
+
+#### Option B: Use an Alternate Port (Not Recommended for macOS/routers)
+
+If you cannot free port 53 on the host, you can map Pi-hole DNS to a different host port (e.g. `5353`). Be aware:
+
+- Most consumer routers only support DNS on port `53`
+- macOS will not use a custom DNS port for normal resolution
+
+1. Update `.env`:
+   ```bash
+   PIHOLE_PORT_DNS=5353
+   ```
+
+2. Recreate the container:
    ```bash
    docker compose --profile networking up -d pihole --force-recreate
    ```
@@ -90,7 +111,7 @@ If you want Pi-Hole to use the standard port 53:
 Configure your device's DNS settings to point to your server's IP address and the configured DNS port.
 
 - **DNS Server:** `<your-server-ip>`
-- **Port:** `5353` (or `53` if you disabled systemd-resolved)
+- **Port:** `53`
 
 ### For Entire Network (Router Configuration)
 
@@ -100,6 +121,33 @@ Configure your device's DNS settings to point to your server's IP address and th
 4. If using non-standard port (5353), check if your router supports custom DNS ports
 
 > **Note:** Most consumer routers only support standard port 53 for DNS. If using port 5353, you'll need to configure devices individually or set up a port forward.
+
+## macOS (Ethernet/Wi‑Fi) - Force Pi-hole as DNS
+
+Goal: make your Mac use only `192.168.2.50` for DNS so `*.lab` resolves 100% consistently.
+
+1. Set DNS on the active interface (GUI):
+   - System Settings → Network → (Ethernet) → Details… → DNS
+   - Add `192.168.2.50`
+   - Remove any other DNS servers
+
+2. Ensure macOS is actually using it:
+   ```bash
+   scutil --dns | sed -n '1,200p'
+   ```
+   Look for `nameserver[...] : 192.168.2.50`. If you see other resolvers, something else is still providing DNS (VPN profile, Secure DNS/DoH, etc.).
+
+3. Deterministic DNS test (bypasses macOS resolver caching):
+   ```bash
+   dig @192.168.2.50 gitlab.lab +short
+   dig @192.168.2.50 random123.lab +short
+   ```
+   Expected output: `192.168.2.50`.
+
+4. Flush DNS cache (optional, helps after changes):
+   ```bash
+   sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder
+   ```
 
 ## Configuration Options
 
@@ -137,8 +185,8 @@ Pi-Hole data is stored in bind mounts:
 
 | Host Path | Container Path | Purpose |
 |-----------|----------------|---------|
-| `./files/pihole/etc-pihole` | `/etc/pihole` | Pi-Hole configuration and lists |
-| `./files/pihole/etc-dnsmasq.d` | `/etc/dnsmasq.d` | dnsmasq configuration |
+| `./config/pihole/etc-pihole` | `/etc/pihole` | Pi-Hole configuration and lists |
+| `./config/pihole/etc-dnsmasq.d` | `/etc/dnsmasq.d` | dnsmasq configuration |
 
 Directories are created automatically by Docker when the container starts.
 
@@ -168,10 +216,10 @@ docker logs pihole
 
 ```bash
 # Test DNS query through Pi-Hole
-dig @<your-server-ip> -p 5353 google.com
+dig @<your-server-ip> google.com
 
 # Check if Pi-Hole is blocking ads
-dig @<your-server-ip> -p 5353 ads.google.com
+dig @<your-server-ip> ads.google.com
 ```
 
 ### Reset Admin Password

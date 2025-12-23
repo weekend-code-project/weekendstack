@@ -52,11 +52,15 @@ services:
           memory: ${IMMICH_MEMORY_LIMIT:-2g}
     labels:
       - traefik.enable=true
-      - traefik.http.routers.immich.rule=Host(`${IMMICH_DOMAIN:-immich.${BASE_DOMAIN}}`)
-      - traefik.http.routers.immich.entrypoints=web,websecure
+      - traefik.http.routers.immich.rule=Host(`immich.${BASE_DOMAIN}`)
+      - traefik.http.routers.immich.entrypoints=websecure
       - traefik.http.routers.immich.tls=true
       - traefik.http.services.immich.loadbalancer.server.port=2283
       - traefik.docker.network=shared-network
+
+      - traefik.http.routers.immich-http.entrypoints=web
+      - traefik.http.routers.immich-http.rule=Host(`immich.lab`)
+      - traefik.http.routers.immich-http.service=immich
 
   immich-machine-learning:
     image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-release}
@@ -152,11 +156,15 @@ services:
           memory: ${KAVITA_MEMORY_LIMIT:-512m}
     labels:
       - traefik.enable=true
-      - traefik.http.routers.kavita.rule=Host(`${KAVITA_DOMAIN:-kavita.${BASE_DOMAIN}}`)
-      - traefik.http.routers.kavita.entrypoints=web,websecure
+      - traefik.http.routers.kavita.rule=Host(`kavita.${BASE_DOMAIN}`)
+      - traefik.http.routers.kavita.entrypoints=websecure
       - traefik.http.routers.kavita.tls=true
       - traefik.http.services.kavita.loadbalancer.server.port=5000
       - traefik.docker.network=shared-network
+
+      - traefik.http.routers.kavita-http.entrypoints=web
+      - traefik.http.routers.kavita-http.rule=Host(`kavita.lab`)
+      - traefik.http.routers.kavita-http.service=kavita
 
   # ====================================================================
   # NAVIDROME - Music Streaming Server
@@ -197,11 +205,15 @@ services:
           memory: ${NAVIDROME_MEMORY_LIMIT:-512m}
     labels:
       - traefik.enable=true
-      - traefik.http.routers.navidrome.rule=Host(`${NAVIDROME_DOMAIN:-music.${BASE_DOMAIN}}`)
-      - traefik.http.routers.navidrome.entrypoints=web,websecure
+      - traefik.http.routers.navidrome.rule=Host(`navidrome.${BASE_DOMAIN}`) || Host(`music.${BASE_DOMAIN}`)
+      - traefik.http.routers.navidrome.entrypoints=websecure
       - traefik.http.routers.navidrome.tls=true
       - traefik.http.services.navidrome.loadbalancer.server.port=4533
       - traefik.docker.network=shared-network
+
+      - traefik.http.routers.navidrome-http.entrypoints=web
+      - traefik.http.routers.navidrome-http.rule=Host(`navidrome.lab`)
+      - traefik.http.routers.navidrome-http.service=navidrome
 
 volumes:
   immich-upload:
