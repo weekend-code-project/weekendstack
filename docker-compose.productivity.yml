@@ -289,7 +289,7 @@ services:
       
       # Security
       PAPERLESS_ALLOWED_HOSTS: paperless.${BASE_DOMAIN},paperless.lab,localhost,127.0.0.1
-      PAPERLESS_CORS_ALLOWED_HOSTS: https://paperless.${BASE_DOMAIN},http://paperless.lab,http://192.168.2.50:${PAPERLESS_PORT:-8082}
+      PAPERLESS_CORS_ALLOWED_HOSTS: https://paperless.${BASE_DOMAIN},http://paperless.lab,http://${HOST_IP}:${PAPERLESS_PORT:-8082}
       
     volumes:
       - type: volume

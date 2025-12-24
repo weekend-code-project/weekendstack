@@ -128,7 +128,7 @@ Goal: make your Mac use only `192.168.2.50` for DNS so `*.lab` resolves 100% con
 
 1. Set DNS on the active interface (GUI):
    - System Settings → Network → (Ethernet) → Details… → DNS
-   - Add `192.168.2.50`
+   - Add your server IP (the value of `HOST_IP` in `.env`)
    - Remove any other DNS servers
 
 2. Ensure macOS is actually using it:
@@ -142,7 +142,18 @@ Goal: make your Mac use only `192.168.2.50` for DNS so `*.lab` resolves 100% con
    dig @192.168.2.50 gitlab.lab +short
    dig @192.168.2.50 random123.lab +short
    ```
-   Expected output: `192.168.2.50`.
+   Expected output: your server IP (the value of `HOST_IP`).
+
+## Local DNS for `*.lab`
+
+This repo is designed so a fresh checkout does not require editing dnsmasq files to match your LAN.
+
+- On startup, the `pihole-dnsmasq-init` compose service generates a wildcard so `*.lab` resolves to `HOST_IP`.
+- If you change `HOST_IP`, just recreate Pi-hole (or rerun the `networking` profile) and the rule updates.
+
+Traefik note:
+- With the `networking` profile running, Traefik listens on port 80 and routes `http://<service>.lab`.
+- Unknown `*.lab` hostnames are redirected to `http://home.lab/` to avoid a Traefik 404.
 
 4. Flush DNS cache (optional, helps after changes):
    ```bash

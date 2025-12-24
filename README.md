@@ -144,23 +144,32 @@ docker compose --profile monitoring up -d    # Monitoring stack
 docker compose --profile automation up -d    # Home automation
 docker compose --profile networking up -d    # Network infrastructure
 
+# Optional: secure public HTTPS access via Cloudflare Tunnel
+docker compose --profile external up -d
+
 # Combine profiles
 docker compose --profile dev --profile ai up -d
 ```
 
 #### Profile Reference
-- The `x-default-profile` includes both `all` and `gpu`, so `docker compose --profile all up -d` is the quickest "no-gpu" launch.
+- The default profile is `all`. GPU services are opt-in via `--profile gpu`.
 - Check [`docs/profile-matrix.md`](docs/profile-matrix.md) for a full service × profile table before adding new toggles like `dev-gitea` or `dev-gitlab`.
 - Mix and match profiles for targeted stacks, e.g. `docker compose --profile dev --profile networking up -d` (Coder + Traefik) or `docker compose --profile productivity --profile personal up -d` (office + lifestyle).
 
 ### 3. Access Services
 
-All services accessible at `http://SERVER_IP:PORT`. Default: `192.168.2.50`
+All services are accessible at `http://HOST_IP:PORT` (set `HOST_IP` in `.env`).
+
+Local DNS (`*.lab`) works when the `networking` profile is running and your router/DHCP hands out Pi-hole as the DNS server. Pi-hole will generate a wildcard so `*.lab` resolves to `HOST_IP`.
+
+Notes:
+- `*.lab` is meant for **local HTTP access** (no TLS). If a `*.lab` hostname has no matching router (or the service is down), Traefik redirects to `http://home.lab/`.
+- Public HTTPS hostnames are controlled by `BASE_DOMAIN` (for example: `coder.${BASE_DOMAIN}`). Don’t use `coder.example.com` unless you’ve actually set `BASE_DOMAIN=example.com` and configured external DNS/tunnel for it.
 
 **Dashboards:**
-- **Homer (Local)**: http://192.168.2.50:8080 - All services overview
-- **Traefik**: http://192.168.2.50:8083/dashboard/ - Routing status
-- **Portainer**: http://192.168.2.50:9000 - Container management
+- **Homer (Local)**: http://HOST_IP:8080 - All services overview
+- **Traefik**: http://HOST_IP:8083/dashboard/ - Routing status
+- **Portainer**: http://HOST_IP:9000 - Container management
 
 ---
 
@@ -217,10 +226,10 @@ Copy `.env.example` to `.env` and configure:
 # Server identification
 COMPUTER_NAME=weekendpc
 BASE_DOMAIN=yourdomain.com
-SERVER_IP=192.168.2.50
+HOST_IP=192.168.2.50
 
 # Cloudflare Tunnel (for public access)
-CLOUDFLARE_TUNNEL_TOKEN=your-tunnel-token
+# See config/cloudflare/config.yml.example and run with: docker compose --profile external up -d
 
 # Service passwords (change all defaults!)
 CODER_ADMIN_PASSWORD=secure-password
@@ -429,7 +438,7 @@ curl -I http://localhost:80 -H "Host: service.yourdomain.com"
 ## 🔄 Backup Strategy
 
 ### Duplicati (Built-in)
-Access at http://SERVER_IP:8200 to configure automated backups of:
+Access at http://HOST_IP:8200 to configure automated backups of:
 - `/opt/stacks/weekendstack/files/` - All service data
 - `/opt/stacks/weekendstack/config/` - Configuration files
 
@@ -479,6 +488,6 @@ This project configuration is provided as-is for self-hosted deployments. Indivi
 
 **Quick Links:**
 - [Environment Template](.env.example)
-- [Homer Dashboard](http://192.168.2.50:8080)
-- [Traefik Dashboard](http://192.168.2.50:8083/dashboard/)
+- [Homer Dashboard](http://home.lab)
+- [Traefik Dashboard](http://traefik.lab/dashboard/)
 - [Documentation](docs/)

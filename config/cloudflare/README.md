@@ -36,7 +36,7 @@ cloudflared tunnel create weekendstack
 ```
 This creates:
 - A tunnel with the name `weekendstack`
-- A credentials file with a UUID (e.g., `30b7532b-ad2e-4474-bd2a-ddd07fabac80.json`)
+- A credentials file with a UUID (e.g., `YOUR-TUNNEL-UUID.json`)
 
 **Important:** Copy the tunnel UUID from the output - you'll need it for the config file.
 
@@ -54,7 +54,7 @@ Edit `config.yml` and update:
 Example:
 ```yaml
 tunnel: weekendstack
-credentials-file: /etc/cloudflared/.cloudflared/30b7532b-ad2e-4474-bd2a-ddd07fabac80.json
+credentials-file: /etc/cloudflared/.cloudflared/YOUR-TUNNEL-UUID.json
 
 ingress:
   - hostname: "*.yourdomain.com"
@@ -70,7 +70,7 @@ ingress:
 mkdir -p .cloudflared
 
 # Copy your credentials file (replace UUID with your actual UUID)
-cp ~/.cloudflared/30b7532b-ad2e-4474-bd2a-ddd07fabac80.json .cloudflared/
+cp ~/.cloudflared/YOUR-TUNNEL-UUID.json .cloudflared/
 ```
 
 ### 5. Create DNS Records
@@ -96,7 +96,11 @@ BASE_DOMAIN=yourdomain.com
 
 ### 7. Start the Stack
 ```bash
+# Start the local stack
 docker compose up -d
+
+# Start the Cloudflare tunnel (opt-in)
+docker compose --profile external up -d
 ```
 
 ## Verify Setup

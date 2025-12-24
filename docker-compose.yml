@@ -12,7 +12,8 @@
 #   - all: Default profile that includes every service
 #   - dev: Coder platform + socat proxy
 #   - proxy: Traefik reverse proxy + Cloudflare tunnel (legacy)
-#   - networking: Traefik, Cloudflare tunnel, Pi-Hole
+#   - networking: Traefik + Pi-Hole (local DNS + reverse proxy)
+#   - external: Cloudflare tunnel (public HTTPS access)
 #   - dev-tools: Docker registry cache
 #   - ai: AI services (chat, search, image generation)
 #   - productivity: NocoDB, Paperless-ngx, N8N
@@ -21,11 +22,10 @@
 #   - monitoring: Uptime Kuma
 # =============================================================================
 
-# Set default profiles to include 'all' and 'gpu' if not specified
-# This makes `docker compose up` include GPU services by default.
+# Set default profiles to include 'all' if not specified.
+# GPU services are opt-in via: docker compose --profile gpu up -d
 x-default-profile: &default-profile
   - all
-  - gpu
 
 include:
   - docker-compose.core.yml

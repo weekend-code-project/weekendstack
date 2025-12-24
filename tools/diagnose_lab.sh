@@ -9,10 +9,10 @@ SERVER_IP=""
 PIHOLE_DNS_PORT=""
 PIHOLE_WEB_PORT=""
 if [[ -f "$REPO_ROOT/.env" ]]; then
-  HOST_IP="$(grep -E '^HOST_IP=' "$REPO_ROOT/.env" | head -n 1 | cut -d= -f2- | tr -d '"\r')"
-  SERVER_IP="$(grep -E '^SERVER_IP=' "$REPO_ROOT/.env" | head -n 1 | cut -d= -f2- | tr -d '"\r')"
-  PIHOLE_DNS_PORT="$(grep -E '^PIHOLE_PORT_DNS=' "$REPO_ROOT/.env" | head -n 1 | cut -d= -f2- | tr -d '"\r')"
-  PIHOLE_WEB_PORT="$(grep -E '^PIHOLE_PORT_WEB=' "$REPO_ROOT/.env" | head -n 1 | cut -d= -f2- | tr -d '"\r')"
+  HOST_IP="$(grep -E '^HOST_IP=' "$REPO_ROOT/.env" 2>/dev/null | head -n 1 | cut -d= -f2- | tr -d '"\r' || true)"
+  SERVER_IP="$(grep -E '^SERVER_IP=' "$REPO_ROOT/.env" 2>/dev/null | head -n 1 | cut -d= -f2- | tr -d '"\r' || true)"
+  PIHOLE_DNS_PORT="$(grep -E '^PIHOLE_PORT_DNS=' "$REPO_ROOT/.env" 2>/dev/null | head -n 1 | cut -d= -f2- | tr -d '"\r' || true)"
+  PIHOLE_WEB_PORT="$(grep -E '^PIHOLE_PORT_WEB=' "$REPO_ROOT/.env" 2>/dev/null | head -n 1 | cut -d= -f2- | tr -d '"\r' || true)"
 fi
 
 HOST_IP="${HOST_IP:-${SERVER_IP:-192.168.2.50}}"

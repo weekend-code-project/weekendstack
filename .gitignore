@@ -27,9 +27,7 @@ config/cloudflare/config.yml
 # Includes SSH keys, database data, uploads, etc.
 files/
 
-# Traefik configurations and auth
-config/traefik/config.yml  # Generated from template
-
+# Traefik auth secrets
 # Ignore all auth/secret files, but allow non-secret dynamic config we want tracked
 config/traefik/auth/*
 !config/traefik/auth/dynamic-lab-catchall.yaml

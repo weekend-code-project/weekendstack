@@ -10,7 +10,7 @@ http:
     lab-catchall:
       entryPoints:
         - web
-      rule: "HostRegexp(`^[a-z0-9-]+\\.lab$`) && !Host(`home.lab`)"
+      rule: "HostRegexp(`^[A-Za-z0-9-]+\\.lab$`) && !Host(`home.lab`)"
       middlewares:
         - lab-catchall-redirect
       service: noop@internal
