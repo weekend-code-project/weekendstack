@@ -1,0 +1,128 @@
+server:
+  port: 8080
+  proxied: true
+
+branding:
+  hide-footer: true
+  app-name: "Weekend Stack"
+
+pages:
+  - name: Home
+    columns:
+      - size: full
+        widgets:
+          - type: bookmarks
+            groups:
+              - title: Dashboards
+                links:
+                  - title: Glance
+                    url: /
+                  - title: Homer
+                    url: http://home.lab
+                  - title: Traefik
+                    url: http://traefik.lab/dashboard/
+
+              - title: AI Services
+                links:
+                  - title: AnythingLLM
+                    url: /go/anythingllm
+                  - title: LibreChat
+                    url: /go/librechat
+                  - title: LocalAI
+                    url: /go/localai
+                  - title: Open WebUI
+                    url: /go/openwebui
+                  - title: SearXNG
+                    url: /go/searxng
+                  - title: Whisper
+                    url: /go/whisper
+                  - title: ComfyUI
+                    url: /go/comfyui
+                  - title: DiffRhythm
+                    url: /go/diffrhythm
+                  - title: PrivateGPT
+                    url: /go/privategpt
+                  - title: Stable Diffusion
+                    url: /go/sdwebui
+                  - title: WhisperX
+                    url: /go/whisperx
+
+              - title: Local Applications
+                links:
+                  - title: ByteStash
+                    url: /go/bytestash
+                  - title: Coder
+                    url: /go/coder
+                  - title: File Browser
+                    url: /go/filebrowser
+                  - title: Gitea
+                    url: /go/gitea
+                  - title: GitLab
+                    url: /go/gitlab
+                  - title: Hoarder
+                    url: /go/hoarder
+                  - title: IT-Tools
+                    url: /go/it-tools
+                  - title: Immich
+                    url: /go/immich
+                  - title: Kavita
+                    url: /go/kavita
+                  - title: Navidrome
+                    url: /go/navidrome
+                  - title: Activepieces
+                    url: /go/activepieces
+                  - title: Docmost
+                    url: /go/docmost
+                  - title: Excalidraw
+                    url: /go/excalidraw
+                  - title: Focalboard
+                    url: /go/focalboard
+                  - title: n8n
+                    url: /go/n8n
+                  - title: NocoDB
+                    url: /go/nocodb
+                  - title: Paperless-ngx
+                    url: /go/paperless
+                  - title: Postiz
+                    url: /go/postiz
+                  - title: Trilium
+                    url: /go/trilium
+                  - title: Vaultwarden
+                    url: /go/vaultwarden
+                  - title: Vikunja
+                    url: /go/vikunja
+
+              - title: Personal
+                links:
+                  - title: Firefly III
+                    url: /go/firefly
+                  - title: Mealie
+                    url: /go/mealie
+                  - title: wger
+                    url: /go/wger
+
+              - title: Local Admin
+                links:
+                  - title: Home Assistant
+                    url: /go/homeassistant
+                  - title: Node-RED
+                    url: /go/nodered
+                  - title: Duplicati
+                    url: /go/duplicati
+                  - title: Dozzle
+                    url: /go/dozzle
+                  - title: Portainer
+                    url: /go/portainer
+                  - title: What's Up Docker
+                    url: /go/wud
+                  - title: Netdata
+                    url: /go/netdata
+                  - title: Uptime Kuma
+                    url: /go/uptime-kuma
+                  - title: Pi-hole
+                    url: /go/pihole/admin
+                  - title: Traefik
+                    url: http://traefik.lab/dashboard/
+          - type: docker-containers
+            title: Containers
+            running-only: true

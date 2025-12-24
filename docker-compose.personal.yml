@@ -28,7 +28,6 @@ services:
       - personal-network
       - shared-network
     profiles:
-      - all
       - personal
     ports:
       - "${MEALIE_PORT:-9925}:9000"
@@ -71,7 +70,6 @@ services:
       - personal-network
       - shared-network
     profiles:
-      - all
       - personal
     ports:
       - "${FIREFLY_PORT:-8086}:8080"
@@ -111,7 +109,6 @@ services:
     networks:
       - personal-network
     profiles:
-      - all
       - personal
     expose:
       - "8000"
@@ -144,7 +141,6 @@ services:
       - personal-network
       - shared-network
     profiles:
-      - all
       - personal
     ports:
       - "${WGER_PORT:-8089}:80"

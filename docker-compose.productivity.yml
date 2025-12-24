@@ -62,7 +62,8 @@ services:
       NC_AUTH_JWT_SECRET: ${NOCODB_AUTH_JWT_SECRET}
       
       # Application Configuration
-      NC_PUBLIC_URL: https://nocodb.${BASE_DOMAIN}
+      # Default to local *.lab for LAN HTTP access; override to https://nocodb.${BASE_DOMAIN} later.
+      NC_PUBLIC_URL: ${NOCODB_PUBLIC_URL:-http://nocodb.lab}
       NC_DISABLE_TELE: true
       NC_REDIS_URL: ""
       
@@ -166,15 +167,17 @@ services:
       # Application Configuration
       N8N_HOST: 0.0.0.0
       N8N_PORT: 5678
-      N8N_PROTOCOL: https
-      WEBHOOK_URL: https://n8n.${BASE_DOMAIN}/
+      # Default to local *.lab for LAN HTTP access; override to https://n8n.${BASE_DOMAIN} later.
+      N8N_PROTOCOL: ${N8N_PROTOCOL:-http}
+      WEBHOOK_URL: ${N8N_WEBHOOK_URL:-http://n8n.lab/}
       GENERIC_TIMEZONE: ${TIMEZONE:-America/New_York}
       TZ: ${TIMEZONE:-America/New_York}
       
       # Security Configuration
       N8N_BASIC_AUTH_ACTIVE: false
       N8N_DISABLE_UI: false
-      N8N_SECURE_COOKIE: ${N8N_SECURE_COOKIE:-true}
+      # Cookies must not be marked secure on plain HTTP.
+      N8N_SECURE_COOKIE: ${N8N_SECURE_COOKIE:-false}
     volumes:
       - type: bind
         source: ${FILES_BASE_DIR:-./files}/n8n
@@ -271,7 +274,8 @@ services:
       PAPERLESS_REDIS: redis://paperless-redis:6379
       
       # Application Configuration
-      PAPERLESS_URL: https://paperless.${BASE_DOMAIN}
+      # Default to local *.lab for LAN HTTP access; override to https://paperless.${BASE_DOMAIN} later.
+      PAPERLESS_URL: ${PAPERLESS_URL:-http://paperless.lab}
       PAPERLESS_SECRET_KEY: ${PAPERLESS_SECRET_KEY:-paperless-secret-key-change-me-2024}
       PAPERLESS_TIME_ZONE: ${TIMEZONE:-UTC}
       PAPERLESS_OCR_LANGUAGE: eng
@@ -417,8 +421,9 @@ services:
       AP_REDIS_PORT: 6379
       
       # Application Configuration
-      AP_FRONTEND_URL: https://activepieces.${BASE_DOMAIN}
-      AP_WEBHOOK_URL: https://activepieces.${BASE_DOMAIN}
+      # Default to local *.lab for LAN HTTP access; override to https://activepieces.${BASE_DOMAIN} later.
+      AP_FRONTEND_URL: ${ACTIVEPIECES_FRONTEND_URL:-http://activepieces.lab}
+      AP_WEBHOOK_URL: ${ACTIVEPIECES_WEBHOOK_URL:-http://activepieces.lab}
       AP_ENCRYPTION_KEY: ${ACTIVEPIECES_ENCRYPTION_KEY:-activepieces-encryption-key-change-me-2024}
       AP_JWT_SECRET: ${ACTIVEPIECES_JWT_SECRET:-activepieces-jwt-secret-change-me-2024}
       
@@ -530,16 +535,17 @@ services:
       REDIS_URL: redis://postiz-redis:6379
       
       # Application Configuration
-      MAIN_URL: https://postiz.${BASE_DOMAIN}
-      FRONTEND_URL: https://postiz.${BASE_DOMAIN}
-      NEXT_PUBLIC_BACKEND_URL: https://postiz.${BASE_DOMAIN}/api
+      # Default to local *.lab for LAN HTTP access; override to https://postiz.${BASE_DOMAIN} later.
+      MAIN_URL: ${POSTIZ_MAIN_URL:-http://postiz.lab}
+      FRONTEND_URL: ${POSTIZ_FRONTEND_URL:-http://postiz.lab}
+      NEXT_PUBLIC_BACKEND_URL: ${POSTIZ_NEXT_PUBLIC_BACKEND_URL:-http://postiz.lab/api}
       BACKEND_URL: http://localhost:3000
       BACKEND_INTERNAL_URL: http://localhost:3000
       NEXT_PUBLIC_BACKEND_INTERNAL_URL: http://localhost:3000
-      NEXTAUTH_URL: https://postiz.${BASE_DOMAIN}
+      NEXTAUTH_URL: ${POSTIZ_NEXTAUTH_URL:-http://postiz.lab}
       NEXTAUTH_SECRET: ${POSTIZ_NEXTAUTH_SECRET:-postiz-nextauth-secret-change-me-2024}
       JWT_SECRET: ${POSTIZ_JWT_SECRET:-postiz-jwt-secret-change-me-2024}
-      BASE_URL: https://postiz.${BASE_DOMAIN}
+      BASE_URL: ${POSTIZ_BASE_URL:-http://postiz.lab}
       
       # Storage Configuration
       STORAGE_PROVIDER: local
@@ -861,7 +867,8 @@ services:
     ports:
       - "${DOCMOST_PORT:-8093}:3000"
     environment:
-      APP_URL: "https://docmost.${BASE_DOMAIN}"
+      # Default to local *.lab for LAN HTTP access; override to https://docmost.${BASE_DOMAIN} later.
+      APP_URL: ${DOCMOST_APP_URL:-http://docmost.lab}
       APP_SECRET: ${DOCMOST_SECRET:-docmost-secret-key-change-me-2024}
       DATABASE_URL: "postgresql://${DOCMOST_DBUSER:-docmost}:${DOCMOST_DBPASS:-docmost_password_2024}@docmost-db:5432/${DOCMOST_DBNAME:-docmost}"
       REDIS_URL: "redis://docmost-redis:6379"
@@ -883,6 +890,141 @@ services:
       - traefik.http.routers.docmost-http.service=docmost
       - "com.docker.compose.service=docmost"
       - "description=Docmost - Wiki/Documentation Platform"
+
+  # =============================================================================
+  # FILE BROWSER - Web file manager (scoped to ./files)
+  # =============================================================================
+  filebrowser:
+    image: filebrowser/filebrowser:s6
+    container_name: filebrowser
+    networks:
+      - productivity-network
+      - shared-network
+    profiles:
+      - all
+      - productivity
+    ports:
+      - "${FILEBROWSER_PORT:-8096}:80"
+    environment:
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      TZ: ${TIMEZONE:-UTC}
+    volumes:
+      # Persist File Browser config/DB outside of the browsable root.
+      - type: volume
+        source: filebrowser-config
+        target: /config
+      # Only expose the repo ./files directory in the UI.
+      - type: bind
+        source: ${FILES_BASE_DIR:-./files}
+        target: /srv
+        bind:
+          create_host_path: true
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: ${FILEBROWSER_MEMORY_LIMIT:-256m}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.filebrowser.rule=Host(`filebrowser.${BASE_DOMAIN}`)
+      - traefik.http.routers.filebrowser.entrypoints=websecure
+      - traefik.http.routers.filebrowser.tls=true
+      - traefik.http.services.filebrowser.loadbalancer.server.port=80
+      - traefik.docker.network=shared-network
+
+      - traefik.http.routers.filebrowser-http.entrypoints=web
+      - traefik.http.routers.filebrowser-http.rule=Host(`filebrowser.lab`)
+      - traefik.http.routers.filebrowser-http.service=filebrowser
+
+      - "com.docker.compose.service=filebrowser"
+      - "description=File Browser - Web File Manager (scoped to ./files)"
+
+  # =============================================================================
+  # HOARDER (KARAKEEP) - Bookmark everything app
+  # =============================================================================
+  hoarder:
+    image: ghcr.io/karakeep-app/karakeep:${HOARDER_VERSION:-release}
+    container_name: hoarder
+    networks:
+      - productivity-network
+      - shared-network
+    profiles:
+      - all
+      - productivity
+    ports:
+      - "${HOARDER_PORT:-3030}:3000"
+    restart: unless-stopped
+    depends_on:
+      - hoarder-chrome
+      - hoarder-meilisearch
+    environment:
+      MEILI_ADDR: http://hoarder-meilisearch:7700
+      BROWSER_WEB_URL: http://hoarder-chrome:9222
+      DATA_DIR: /data
+      # Defaults to local *.lab for LAN HTTP access; override later if you expose via HTTPS.
+      NEXTAUTH_URL: ${HOARDER_NEXTAUTH_URL:-http://hoarder.lab}
+      NEXTAUTH_SECRET: ${HOARDER_NEXTAUTH_SECRET:-hoarder-nextauth-secret-change-me-2024}
+      MEILI_MASTER_KEY: ${HOARDER_MEILI_MASTER_KEY:-hoarder-meili-master-key-change-me-2024}
+      # Optional: OPENAI_API_KEY for AI tagging
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    volumes:
+      - type: volume
+        source: hoarder-data
+        target: /data
+    deploy:
+      resources:
+        limits:
+          memory: ${HOARDER_MEMORY_LIMIT:-1g}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.hoarder.rule=Host(`hoarder.${BASE_DOMAIN}`)
+      - traefik.http.routers.hoarder.entrypoints=websecure
+      - traefik.http.routers.hoarder.tls=true
+
+      - traefik.http.routers.hoarder-http.entrypoints=web
+      - traefik.http.routers.hoarder-http.rule=Host(`hoarder.lab`)
+      - traefik.http.routers.hoarder-http.service=hoarder
+      - traefik.http.services.hoarder.loadbalancer.server.port=3000
+      - traefik.docker.network=shared-network
+      - "com.docker.compose.service=hoarder"
+      - "description=Hoarder (Karakeep) - Bookmark Everything"
+
+  hoarder-chrome:
+    image: gcr.io/zenika-hub/alpine-chrome:124
+    container_name: hoarder-chrome
+    restart: unless-stopped
+    networks:
+      - productivity-network
+    command:
+      - --no-sandbox
+      - --disable-gpu
+      - --disable-dev-shm-usage
+      - --remote-debugging-address=0.0.0.0
+      - --remote-debugging-port=9222
+      - --hide-scrollbars
+    deploy:
+      resources:
+        limits:
+          memory: ${HOARDER_CHROME_MEMORY_LIMIT:-512m}
+
+  hoarder-meilisearch:
+    image: getmeili/meilisearch:v1.13.3
+    container_name: hoarder-meilisearch
+    restart: unless-stopped
+    networks:
+      - productivity-network
+    environment:
+      MEILI_NO_ANALYTICS: "true"
+      MEILI_MASTER_KEY: ${HOARDER_MEILI_MASTER_KEY:-hoarder-meili-master-key-change-me-2024}
+    volumes:
+      - type: volume
+        source: hoarder-meilisearch
+        target: /meili_data
+    deploy:
+      resources:
+        limits:
+          memory: ${HOARDER_MEILI_MEMORY_LIMIT:-1g}
 
   # =============================================================================
   # BYTESTASH - Code Snippet Manager
@@ -943,4 +1085,7 @@ volumes:
   docmost-db-data:
   docmost-redis-data:
   bytestash-data:
+  filebrowser-config:
+  hoarder-data:
+  hoarder-meilisearch:
 

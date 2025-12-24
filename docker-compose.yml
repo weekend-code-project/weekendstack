@@ -9,7 +9,7 @@
 #   Add proxy services: docker compose --profile dev --profile proxy up -d
 #
 # Available profiles:
-#   - all: Default profile that includes every service
+#   - all: Default profile for most services (personal is opt-in)
 #   - dev: Coder platform + socat proxy
 #   - proxy: Traefik reverse proxy + Cloudflare tunnel (legacy)
 #   - networking: Traefik + Pi-Hole (local DNS + reverse proxy)
@@ -18,7 +18,7 @@
 #   - ai: AI services (chat, search, image generation)
 #   - productivity: NocoDB, Paperless-ngx, N8N
 #   - automation: Home Assistant
-#   - development: Gitea with Actions
+#   - personal: Mealie, Firefly III, wger (opt-in)
 #   - monitoring: Uptime Kuma
 # =============================================================================
 

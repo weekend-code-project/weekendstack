@@ -132,7 +132,8 @@ nano .env
 ### 2. Start Services
 
 ```bash
-# Start ALL services (default)
+# Start the default stack (profile `all`)
+# NOTE: personal services are opt-in (use `--profile personal`)
 docker compose up -d
 
 # Start by profile (for selective deployment)
@@ -149,6 +150,9 @@ docker compose --profile external up -d
 
 # Combine profiles
 docker compose --profile dev --profile ai up -d
+
+# Opt-in: personal services
+docker compose --profile personal up -d
 ```
 
 #### Profile Reference

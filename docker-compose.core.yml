@@ -66,6 +66,84 @@ services:
       - "description=Homer - Service Dashboard (Local Only)"
 
   # =============================================================================
+  # GLANCE - DASHBOARD / START PAGE
+  # =============================================================================
+  # YAML-configured dashboard with widgets (RSS, monitoring, docker status, etc.)
+  # Config: ./config/glance/glance.yml
+  # Local: http://glance.lab (Traefik)
+  # Optional: https://glance.${BASE_DOMAIN}
+  # =============================================================================
+  link-router:
+    build:
+      context: ./config/link-router
+    container_name: link-router
+    restart: unless-stopped
+    profiles:
+      - all
+      - core
+    environment:
+      LAB_DOMAIN: ${LAB_DOMAIN:-lab}
+      BASE_DOMAIN: ${BASE_DOMAIN}
+      LAB_SCHEME: ${LAB_SCHEME:-http}
+      EXTERNAL_SCHEME: ${EXTERNAL_SCHEME:-https}
+      PORT: 8080
+    networks:
+      - shared-network
+    labels:
+      - traefik.enable=true
+      # HTTPS (Tunnel / public)
+      - traefik.http.routers.link-router.rule=(Host(`glance.${LAB_DOMAIN:-lab}`) || Host(`glance.${BASE_DOMAIN}`)) && PathPrefix(`/go/`)
+      - traefik.http.routers.link-router.entrypoints=websecure
+      - traefik.http.routers.link-router.tls=${TRAEFIK_TLS_ENABLE:-true}
+      - traefik.http.routers.link-router.priority=100
+
+      # HTTP (Local .lab)
+      - traefik.http.routers.link-router-http.rule=(Host(`glance.${LAB_DOMAIN:-lab}`) || Host(`glance.${BASE_DOMAIN}`)) && PathPrefix(`/go/`)
+      - traefik.http.routers.link-router-http.entrypoints=web
+      - traefik.http.routers.link-router-http.priority=100
+      - traefik.http.routers.link-router-http.service=link-router
+
+      - traefik.http.services.link-router.loadbalancer.server.port=8080
+      - traefik.docker.network=shared-network
+
+  glance:
+    image: glanceapp/glance:latest
+    container_name: glance
+    restart: unless-stopped
+    networks:
+      - core-network
+      - shared-network
+    profiles:
+      - all
+      - core
+    ports:
+      - "${HOST_IP:-192.168.2.50}:${GLANCE_PORT:-8098}:8080"
+    volumes:
+      - type: bind
+        source: ./config/glance/glance.yml
+        target: /app/config/glance.yml
+        read_only: true
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    deploy:
+      resources:
+        limits:
+          memory: ${GLANCE_MEMORY_LIMIT:-256m}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.glance.entrypoints=websecure
+      - traefik.http.routers.glance.rule=Host(`glance.${BASE_DOMAIN}`)
+      - traefik.http.routers.glance.tls=true
+      - traefik.http.services.glance.loadbalancer.server.port=8080
+      - traefik.docker.network=shared-network
+
+      - traefik.http.routers.glance-http.entrypoints=web
+      - traefik.http.routers.glance-http.rule=Host(`glance.lab`)
+      - traefik.http.routers.glance-http.service=glance
+
+      - "com.docker.compose.service=glance"
+      - "description=Glance - Dashboard / Start Page"
+
+  # =============================================================================
   # VAULTWARDEN - Password Manager (Bitwarden Compatible)
   # =============================================================================
   vaultwarden:

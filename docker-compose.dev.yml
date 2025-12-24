@@ -48,6 +48,7 @@ services:
       - shared-network
     profiles:
       - all
+      - dev
       - development
     environment:
       POSTGRES_USER: ${GITEA_DBUSER}
@@ -194,6 +195,7 @@ services:
       - shared-network
     profiles:
       - all
+      - dev
       - development
     environment:
       USER_UID: "1000"
@@ -205,7 +207,9 @@ services:
       GITEA__database__PASSWD: ${GITEA_DBPASS}
       GITEA__server__DOMAIN: ${BASE_DOMAIN}
       GITEA__server__HTTP_PORT: "3000"
-      GITEA__server__ROOT_URL: "http://${BASE_DOMAIN}:${GITEA_PORT}/"
+      # Default to the local *.lab hostname so gitea.lab works without redirect loops.
+      # Override in .env if you prefer https://gitea.${BASE_DOMAIN}/.
+      GITEA__server__ROOT_URL: ${GITEA_ROOT_URL:-http://gitea.lab/}
       GITEA__server__DISABLE_SSH: "true"
       GITEA__server__SSH_PORT: ${GITEA_SSH_PORT}
       GITEA__server__SSH_LISTEN_PORT: 22
