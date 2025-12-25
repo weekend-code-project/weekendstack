@@ -1,6 +1,6 @@
 # Local Access Setup Guide
 
-This guide explains how to access your Weekend Stack services locally without going through the Cloudflare tunnel, using dual-domain routing with Traefik.
+This guide explains how to access your Weekend Stack services locally without going through the Cloudflare tunnel.
 
 ## Overview
 
@@ -15,7 +15,7 @@ After implementing this setup, each service will be accessible via **two domains
    - Routes directly to your local Traefik instance
    - Only accessible from your local network
    - Faster response times (no internet roundtrip)
-   - No bandwidth usage on your internet connection
+   - Intended for **local HTTP** by default (no TLS)
 
 > **Note:** We use `.lab` instead of `.local` because `.local` is reserved for mDNS/Bonjour and can cause conflicts.
 
@@ -39,11 +39,11 @@ GitLab Container
 │  Local Access (from your home network)                      │
 └─────────────────────────────────────────────────────────────┘
 
-https://gitlab.lab
+http://gitlab.lab
     ↓
 Router DNS (*.lab → 192.168.2.50) or /etc/hosts lookup
     ↓
-Traefik (192.168.2.50:443)
+Traefik (192.168.2.50:80)
     ↓
 GitLab Container (same container!)
 ```
@@ -63,39 +63,7 @@ GitLab Container (same container!)
 
 ---
 
-## Implementation Plan
-
-### Phase 1: Update Traefik Labels (Server-Side)
-
-All service definitions in the Docker Compose files need updated Traefik labels to accept both domains.
-
-**Current Label:**
-```yaml
-- traefik.http.routers.gitlab.rule=Host(`gitlab.${BASE_DOMAIN}`)
-```
-
-**New Label:**
-```yaml
-- traefik.http.routers.gitlab.rule=Host(`gitlab.${BASE_DOMAIN}`) || Host(`gitlab.lab`)
-```
-
-**Services to Update:**
-- Development: gitlab, gitea, coder
-- Productivity: postiz, nocodb, paperless-ngx, n8n, focalboard, trilium, vikunja, docmost, activepieces, bytestash, excalidraw, it-tools
-- Personal: mealie, firefly, wger
-- Monitoring: dozzle, wud, uptime-kuma, netdata, portainer, duplicati, netbox
-- Media: immich-server, kavita, navidrome
-- AI: open-webui, librechat, anythingllm, searxng, localai
-- Core: homer, vaultwarden
-- Networking: traefik (dashboard), pihole
-- Automation: homeassistant, nodered
-
-After updating labels, restart services:
-```bash
-docker compose up -d --force-recreate
-```
-
-### Phase 2: DNS Configuration
+## DNS Configuration
 
 Choose **ONE** of the following options:
 
@@ -310,13 +278,13 @@ If your phone/PC is on a different network (IoT/Guest/VLAN) it may be blocked fr
 
 **Recommended:** either set that network’s DNS to Pi-hole too, and allow traffic to the ports above, or accept that `.lab` only works on your main LAN.
 
-Once configured, simply use the `.lab` domain in your browser:
+Once configured, use the `.lab` domain in your browser (HTTP):
 
-- **GitLab:** https://gitlab.lab
-- **Mealie:** https://mealie.lab
-- **Firefly:** https://firefly.lab
-- **Open WebUI:** https://chat.lab
-- **Portainer:** https://portainer.lab
+- **GitLab:** http://gitlab.lab
+- **Mealie:** http://mealie.lab
+- **Firefly:** http://firefly.lab
+- **Open WebUI:** http://chat.lab
+- **Portainer:** http://portainer.lab
 
 ### Accessing Services Remotely
 

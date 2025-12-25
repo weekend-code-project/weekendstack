@@ -1,6 +1,6 @@
 api:
   dashboard: true
-  insecure: true # Keep this for testing, remove in production
+  insecure: false
 
 log:
   level: DEBUG # Set to DEBUG to see logs

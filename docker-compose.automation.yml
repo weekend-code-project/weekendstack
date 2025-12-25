@@ -8,7 +8,7 @@
 #   docker compose --profile automation up -d
 #
 # Data Storage:
-#   Configuration and state stored under ./files/homeassistant/
+#   Configuration and state stored under ./data/homeassistant/
 # =============================================================================
 
 networks:
@@ -38,7 +38,7 @@ services:
       - automation
     volumes:
       - type: bind
-        source: ${FILES_BASE_DIR:-./files}/homeassistant/config
+        source: ${DATA_BASE_DIR:-./data}/homeassistant/config
         target: /config
         bind:
           create_host_path: true
@@ -84,7 +84,7 @@ services:
       TZ: ${TIMEZONE:-UTC}
     volumes:
       - type: bind
-        source: ${FILES_BASE_DIR:-./files}/homeassistant/config
+        source: ${DATA_BASE_DIR:-./data}/homeassistant/config
         target: /config
         bind:
           create_host_path: true
@@ -106,9 +106,6 @@ services:
       start_period: 60s
     labels:
       - traefik.enable=${HOMEASSISTANT_TRAEFIK_ENABLE:-true}
-      - "traefik.http.routers.homeassistant.rule=Host(`homeassistant.${BASE_DOMAIN}`)"
-      - traefik.http.routers.homeassistant.entrypoints=websecure
-      - traefik.http.routers.homeassistant.tls=true
       - "traefik.http.routers.homeassistant-http.rule=Host(`homeassistant.lab`)"
       - traefik.http.routers.homeassistant-http.entrypoints=web
       - traefik.http.services.homeassistant.loadbalancer.server.port=8123
@@ -146,9 +143,6 @@ services:
           memory: ${NODERED_MEMORY_LIMIT:-512m}
     labels:
       - traefik.enable=true
-      - traefik.http.routers.nodered.rule=Host(`nodered.${BASE_DOMAIN}`)
-      - traefik.http.routers.nodered.entrypoints=websecure
-      - traefik.http.routers.nodered.tls=true
       - traefik.http.routers.nodered-http.rule=Host(`nodered.lab`)
       - traefik.http.routers.nodered-http.entrypoints=web
       - traefik.http.services.nodered.loadbalancer.server.port=1880

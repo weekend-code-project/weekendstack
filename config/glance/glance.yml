@@ -13,15 +13,6 @@ pages:
         widgets:
           - type: bookmarks
             groups:
-              - title: Dashboards
-                links:
-                  - title: Glance
-                    url: /
-                  - title: Homer
-                    url: http://home.lab
-                  - title: Traefik
-                    url: http://traefik.lab/dashboard/
-
               - title: AI Services
                 links:
                   - title: AnythingLLM
@@ -100,29 +91,37 @@ pages:
                     url: /go/mealie
                   - title: wger
                     url: /go/wger
-
-              - title: Local Admin
-                links:
-                  - title: Home Assistant
-                    url: /go/homeassistant
-                  - title: Node-RED
-                    url: /go/nodered
-                  - title: Duplicati
-                    url: /go/duplicati
-                  - title: Dozzle
-                    url: /go/dozzle
-                  - title: Portainer
-                    url: /go/portainer
-                  - title: What's Up Docker
-                    url: /go/wud
-                  - title: Netdata
-                    url: /go/netdata
-                  - title: Uptime Kuma
-                    url: /go/uptime-kuma
-                  - title: Pi-hole
-                    url: /go/pihole/admin
-                  - title: Traefik
-                    url: http://traefik.lab/dashboard/
           - type: docker-containers
             title: Containers
             running-only: true
+
+  - name: Local Admin
+    columns:
+      - size: full
+        widgets:
+          - type: bookmarks
+            groups:
+              - title: Local Admin (LAN only)
+                links:
+                  - title: Cockpit
+                    url: http://cockpit.lab
+                  - title: Home Assistant
+                    url: http://homeassistant.lab
+                  - title: Node-RED
+                    url: http://nodered.lab
+                  - title: Duplicati
+                    url: http://duplicati.lab
+                  - title: Dozzle
+                    url: http://dozzle.lab
+                  - title: Portainer
+                    url: http://portainer.lab
+                  - title: What's Up Docker
+                    url: http://wud.lab
+                  - title: Netdata
+                    url: http://netdata.lab
+                  - title: Uptime Kuma
+                    url: http://uptime-kuma.lab
+                  - title: Pi-hole
+                    url: http://pihole.lab/admin
+                  - title: Traefik
+                    url: http://traefik.lab/dashboard/

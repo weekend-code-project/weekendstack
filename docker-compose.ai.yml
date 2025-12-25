@@ -22,7 +22,7 @@ services:
       - "${OPENWEBUI_PORT:-3000}:8080"
     volumes:
       - type: bind
-        source: ${FILES_BASE_DIR:-./files}/open-webui
+        source: ${DATA_BASE_DIR:-./data}/open-webui
         target: /app/backend/data
     environment:
       - OLLAMA_BASE_URL=${OLLAMA_HOST:-http://host.docker.internal:11434}
@@ -81,10 +81,10 @@ services:
       - traefik.http.routers.searxng.tls=true
       - "traefik.http.routers.searxng-http.rule=Host(`searxng.lab`)"
       - traefik.http.routers.searxng-http.entrypoints=web
+      - traefik.http.routers.searxng-http.priority=21
       - traefik.http.services.searxng.loadbalancer.server.port=8080
       - traefik.docker.network=shared-network
       - traefik.http.routers.searxng.middlewares=searxng-auth@file
-      - traefik.http.routers.searxng-http.middlewares=searxng-auth@file
 
   # =============================================================================
   # STABLE DIFFUSION - IMAGE GENERATION (GPU Required)
@@ -171,7 +171,7 @@ services:
       - traefik.http.routers.localai.middlewares=ai-services-auth@file
       - "traefik.http.routers.localai-http.rule=Host(`localai.lab`)"
       - traefik.http.routers.localai-http.entrypoints=web
-      - traefik.http.routers.localai-http.middlewares=ai-services-auth@file
+      - traefik.http.routers.localai-http.priority=21
       - traefik.http.services.localai.loadbalancer.server.port=8080
       - traefik.docker.network=shared-network
 
@@ -244,7 +244,7 @@ services:
       - traefik.http.routers.anythingllm.middlewares=ai-services-auth@file
       - "traefik.http.routers.anythingllm-http.rule=Host(`anythingllm.lab`)"
       - traefik.http.routers.anythingllm-http.entrypoints=web
-      - traefik.http.routers.anythingllm-http.middlewares=ai-services-auth@file
+      - traefik.http.routers.anythingllm-http.priority=21
       - traefik.http.services.anythingllm.loadbalancer.server.port=3001
       - traefik.docker.network=shared-network
 
@@ -285,7 +285,7 @@ services:
       - traefik.http.routers.whisper.middlewares=ai-services-auth@file
       - "traefik.http.routers.whisper-http.rule=Host(`whisper.lab`)"
       - traefik.http.routers.whisper-http.entrypoints=web
-      - traefik.http.routers.whisper-http.middlewares=ai-services-auth@file
+      - traefik.http.routers.whisper-http.priority=21
       - traefik.http.services.whisper.loadbalancer.server.port=9000
       - traefik.docker.network=shared-network
 

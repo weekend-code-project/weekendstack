@@ -92,10 +92,10 @@ A comprehensive self-hosted Docker stack for development, AI, productivity, medi
 
 | Service | Port | Description |
 |---------|------|-------------|
-| **Traefik** | 80, 443, 8083 (dashboard) | Reverse proxy with automatic SSL |
+| **Traefik** | 80, 443 | Reverse proxy with automatic SSL (dashboard via `http://traefik.lab/dashboard/`) |
 | **Pi-Hole** | 53 (DNS), 8088 (admin) | Network-wide ad blocking |
 | **Cloudflare Tunnel** | - | Secure public HTTPS access (no port forwarding) |
-| **Homer** | 8080 | Service dashboard (local & public versions) |
+| **Glance** | 8098 | YAML dashboard with widgets and smart links |
 | **Docker Registry** | 5000 | Local container image cache |
 
 ## 🏠 Home Automation
@@ -167,13 +167,20 @@ All services are accessible at `http://HOST_IP:PORT` (set `HOST_IP` in `.env`).
 Local DNS (`*.lab`) works when the `networking` profile is running and your router/DHCP hands out Pi-hole as the DNS server. Pi-hole will generate a wildcard so `*.lab` resolves to `HOST_IP`.
 
 Notes:
-- `*.lab` is meant for **local HTTP access** (no TLS). If a `*.lab` hostname has no matching router (or the service is down), Traefik redirects to `http://home.lab/`.
+- `*.lab` is meant for **local HTTP access** (no TLS). If a `*.lab` hostname has no matching router (or the service is down), Traefik redirects to `http://glance.lab/`.
 - Public HTTPS hostnames are controlled by `BASE_DOMAIN` (for example: `coder.${BASE_DOMAIN}`). Don’t use `coder.example.com` unless you’ve actually set `BASE_DOMAIN=example.com` and configured external DNS/tunnel for it.
 
 **Dashboards:**
-- **Homer (Local)**: http://HOST_IP:8080 - All services overview
-- **Traefik**: http://HOST_IP:8083/dashboard/ - Routing status
+- **Glance**: http://glance.lab - Dashboard / start page
+- **Traefik**: http://traefik.lab/dashboard/ - Routing status
 - **Portainer**: http://HOST_IP:9000 - Container management
+- **Cockpit**: http://cockpit.lab - Server management (local only)
+
+Setup docs:
+- [docs/glance-setup.md](docs/glance-setup.md)
+- [docs/go-links-setup.md](docs/go-links-setup.md)
+- [docs/filebrowser-setup.md](docs/filebrowser-setup.md)
+- [docs/hoarder-setup.md](docs/hoarder-setup.md)
 
 ---
 
@@ -194,9 +201,6 @@ weekendstack/
 │
 ├── config/                      # Service configurations
 │   ├── cloudflare/             # Tunnel configuration
-│   ├── homer/                  # Dashboard configs
-│   │   ├── config.yml          # Local dashboard
-│   │   └── public.yml          # Public dashboard
 │   ├── traefik/                # Reverse proxy
 │   │   ├── config.yml          # Static config
 │   │   └── auth/               # Basic auth files (gitignored)
@@ -287,7 +291,7 @@ Cloudflare Tunnel ──────► Traefik (Reverse Proxy)
          shared-network   ai-network    productivity-network
               │                │                │
          ┌────┴────┐      ┌────┴────┐      ┌────┴────┐
-         │ Homer   │      │Open WebUI│     │Paperless │
+         │ Glance  │      │Open WebUI│     │Paperless │
          │ Coder   │      │LibreChat │     │ NocoDB   │
          │ Gitea   │      │ SearXNG  │     │   N8N    │
          └─────────┘      └──────────┘     └──────────┘
@@ -304,7 +308,7 @@ Most services are self-contained with their own databases:
 
 Shared services:
 - **Traefik**: Handles all HTTP/HTTPS routing
-- **Homer**: Displays all service links
+- **Glance**: Dashboard / start page
 - **Cloudflare Tunnel**: Exposes selected services publicly
 
 ---
@@ -328,25 +332,6 @@ Shared services:
        service: http://traefik:80
      - service: http_status:404
    ```
-
-### Homer Public Dashboard
-
-A separate public dashboard is available at `https://home.yourdomain.com` showing only publicly accessible services with authentication indicators.
-
-| Service        | Compose profile(s) | Config file                   | Access |
-|----------------|--------------------|-------------------------------|--------|
-| `homer`        | `core`, `all`      | `config/homer/config.yml`     | `http://${HOST_IP}:${HOMER_PORT}` |
-| `homer-public` | `networking`, `all`| `config/homer/public.yml`     | `https://${HOMER_PUBLIC_DOMAIN:-home.${BASE_DOMAIN}}` via Traefik |
-
-```bash
-# Run only the local dashboard
-docker compose --profile core up -d homer
-
-# Run only the public dashboard (requires Traefik/Cloudflare profiles)
-docker compose --profile networking up -d homer-public
-```
-
-Using `COMPOSE_PROFILES=all` (the repository default) starts both containers so the local LAN homepage and the public tunnel homepage stay in sync without manual config swaps.
 
 ---
 
@@ -492,6 +477,6 @@ This project configuration is provided as-is for self-hosted deployments. Indivi
 
 **Quick Links:**
 - [Environment Template](.env.example)
-- [Homer Dashboard](http://home.lab)
+- [Glance Dashboard](http://glance.lab)
 - [Traefik Dashboard](http://traefik.lab/dashboard/)
 - [Documentation](docs/)

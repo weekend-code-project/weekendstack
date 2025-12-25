@@ -3,14 +3,14 @@ http:
     lab-catchall-redirect:
       redirectRegex:
         regex: "^https?://[^/]+(.*)$"
-        replacement: "http://home.lab$1"
+        replacement: "http://glance.lab$1"
         permanent: false
 
   routers:
     lab-catchall:
       entryPoints:
         - web
-      rule: "HostRegexp(`^[A-Za-z0-9-]+\\.lab$`) && !Host(`home.lab`)"
+      rule: "HostRegexp(`^[A-Za-z0-9-]+\\.lab$`) && !Host(`glance.lab`)"
       middlewares:
         - lab-catchall-redirect
       service: noop@internal

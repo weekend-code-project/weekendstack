@@ -160,7 +160,7 @@ services:
         source: ${CODER_TEMPLATE_DIR}
         target: /templates
       - type: bind
-        source: ${SSH_KEY_DIR:-./files/ssh}
+        source: ${SSH_KEY_DIR:-./config/ssh}
         target: /mnt/host-ssh
         read_only: true
       - type: bind
@@ -317,13 +317,13 @@ services:
       - "${GITLAB_SSH_PORT:-2222}:22"
     volumes:
       - type: bind
-        source: ${GITLAB_CONFIG_DIR:-./files/gitlab/config}
+        source: ${GITLAB_CONFIG_DIR:-./data/gitlab/config}
         target: /etc/gitlab
       - type: bind
-        source: ${GITLAB_LOGS_DIR:-./files/gitlab/logs}
+        source: ${GITLAB_LOGS_DIR:-./data/gitlab/logs}
         target: /var/log/gitlab
       - type: bind
-        source: ${GITLAB_DATA_DIR:-./files/gitlab/data}
+        source: ${GITLAB_DATA_DIR:-./data/gitlab/data}
         target: /var/opt/gitlab
     shm_size: '256m'
     deploy:

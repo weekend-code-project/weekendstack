@@ -73,7 +73,7 @@ services:
       
     volumes:
       - type: bind
-        source: ${FILES_BASE_DIR:-./files}/nocodb
+        source: ${DATA_BASE_DIR:-./data}/nocodb
         target: /usr/app/data
     networks:
       - productivity-network
@@ -180,7 +180,7 @@ services:
       N8N_SECURE_COOKIE: ${N8N_SECURE_COOKIE:-false}
     volumes:
       - type: bind
-        source: ${FILES_BASE_DIR:-./files}/n8n
+        source: ${DATA_BASE_DIR:-./data}/n8n
         target: /home/node/.n8n
     networks:
       - productivity-network
@@ -756,7 +756,6 @@ services:
 
       - traefik.http.routers.it-tools-http.entrypoints=web
       - traefik.http.routers.it-tools-http.rule=Host(`it-tools.lab`)
-      - traefik.http.routers.it-tools-http.middlewares=it-tools-auth@file
       - traefik.http.routers.it-tools-http.service=it-tools
       - "com.docker.compose.service=it-tools"
       - "description=IT-Tools - Developer Utilities Collection"
@@ -787,6 +786,7 @@ services:
       - traefik.http.routers.excalidraw.rule=Host(`excalidraw.${BASE_DOMAIN}`)
       - traefik.http.routers.excalidraw.entrypoints=websecure
       - traefik.http.routers.excalidraw.tls=true
+      - traefik.http.routers.excalidraw.middlewares=it-tools-auth@file
       - traefik.http.services.excalidraw.loadbalancer.server.port=80
       - traefik.docker.network=shared-network
 

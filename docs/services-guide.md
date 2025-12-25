@@ -21,43 +21,31 @@ docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
 | Category | Services | Profile |
 |----------|----------|---------|
-| **Core** | Homer, Traefik, Cloudflare Tunnel | `core` |
+| **Core** | Glance, Traefik, Cloudflare Tunnel | `core` |
 | **Development** | Coder, Gitea, GitLab | `dev` |
 | **AI** | Open WebUI, SearXNG | `ai` |
-| **Productivity** | n8n, Paperless, NocoDB, Activepieces, Focalboard, Trilium, Vikunja, Vaultwarden | `productivity` |
+| **Productivity** | n8n, Paperless, NocoDB, Activepieces, Hoarder, File Browser, Focalboard, Trilium, Vikunja, Vaultwarden | `productivity` |
 | **Automation** | Home Assistant, Node-RED | `automation` |
 | **Media** | Immich, Kavita, Navidrome | `media` |
 | **Personal** | Mealie, Firefly III, wger | `personal` |
-| **Monitoring** | Dozzle, Watchtower, Uptime Kuma, Netdata, Duplicati, Portainer | `monitoring` |
+| **Monitoring** | Cockpit, Dozzle, Watchtower, Uptime Kuma, Netdata, Duplicati, Portainer | `monitoring` |
 | **Networking** | Pi-Hole | `networking` |
 
 ---
 
 ## Core Services
 
-### Homer - Service Dashboard
-**Port:** 8080 | **Domain:** `dashboard.${BASE_DOMAIN}`
+### Glance - Dashboard / Start Page
+**Port:** 8098 | **Local Domain:** `glance.lab`
 
-Landing page with links to all services. Supports multiple tabs (Local/Public).
+YAML-configured dashboard used as the main start page.
 
-**Files:**
-- `config/homer/config.yml` - Local dashboard configuration
-- `config/homer/public.yml` - Public dashboard configuration
-
-**Compose services:**
-- `homer` (profiles `core`, `all`) mounts `config.yml` and exposes the dashboard on the LAN at `http://${HOST_IP}:${HOMER_PORT}`.
-- `homer-public` (profiles `networking`, `all`) mounts `public.yml`, joins `shared-network`, and is routed externally through Traefik/Cloudflare at `https://${HOMER_PUBLIC_DOMAIN:-home.${BASE_DOMAIN}}`.
-
-```bash
-# Local-only dashboard
-docker compose --profile core up -d homer
-
-# Public dashboard via Traefik / Cloudflare
-docker compose --profile networking up -d homer-public
-```
+Setup:
+- [docs/glance-setup.md](docs/glance-setup.md)
+- [docs/go-links-setup.md](docs/go-links-setup.md)
 
 ### Traefik - Reverse Proxy
-**Port:** 8083 (Dashboard) | **Domain:** Various
+**Ports:** 80/443 | **Local Dashboard:** `http://traefik.lab/dashboard/`
 
 Routes external traffic to internal services with automatic HTTPS.
 
@@ -65,7 +53,6 @@ Routes external traffic to internal services with automatic HTTPS.
 ```env
 TRAEFIK_HTTP_PORT=80
 TRAEFIK_HTTPS_PORT=443
-TRAEFIK_DASHBOARD_PORT=8083
 ```
 
 ### Cloudflare Tunnel
@@ -157,6 +144,18 @@ SEARXNG_SECRET_KEY=searxng-secret-key-change-me
 ---
 
 ## Productivity Services
+
+### File Browser - Repo Files UI
+Browse and manage the repo `files/` directory.
+
+Setup:
+- [docs/filebrowser-setup.md](docs/filebrowser-setup.md)
+
+### Hoarder (Karakeep) - Bookmark Everything
+Bookmark manager with local persistence.
+
+Setup:
+- [docs/hoarder-setup.md](docs/hoarder-setup.md)
 
 ### n8n - Workflow Automation
 **Port:** 5678 | **Domain:** `n8n.${BASE_DOMAIN}`
@@ -393,9 +392,7 @@ PIHOLE_WEBPASSWORD=pihole-admin-change-me
 | 5678 | n8n | |
 | 7001 | Gitea | |
 | 7080 | Coder | |
-| 8080 | Homer | |
 | 8082 | Paperless | |
-| 8083 | Traefik Dashboard | |
 | 8085 | Trilium | |
 | 8086 | Firefly III | |
 | 8087 | Activepieces | |
@@ -407,6 +404,7 @@ PIHOLE_WEBPASSWORD=pihole-admin-change-me
 | 8200 | Duplicati | |
 | 8222 | Vaultwarden | HTTPS only |
 | 8929 | GitLab | HTTPS only |
+| 9090 | Cockpit | Routed locally via `cockpit.lab` |
 | 9000 | Portainer | |
 | 9925 | Mealie | |
 | 9999 | Dozzle | |
