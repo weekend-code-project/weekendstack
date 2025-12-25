@@ -21,7 +21,7 @@ docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
 | Category | Services | Profile |
 |----------|----------|---------|
-| **Core** | Glance, Traefik, Cloudflare Tunnel | `core` |
+| **Core** | Glance, Traefik, Cloudflare Tunnel, Error Pages | `core` |
 | **Development** | Coder, Gitea, GitLab | `dev` |
 | **AI** | Open WebUI, SearXNG | `ai` |
 | **Productivity** | n8n, Paperless, NocoDB, Activepieces, Hoarder, File Browser, Focalboard, Trilium, Vikunja, Vaultwarden | `productivity` |
@@ -54,6 +54,25 @@ Routes external traffic to internal services with automatic HTTPS.
 TRAEFIK_HTTP_PORT=80
 TRAEFIK_HTTPS_PORT=443
 ```
+
+### Error Pages - Custom 404/Error Pages
+**Port:** 8080 (internal)
+
+Custom error pages for Traefik routing failures and backend errors.
+
+**Key Variables:**
+```env
+ERROR_PAGES_THEME=ghost
+ERROR_PAGES_SHOW_DETAILS=false
+```
+
+**Features:**
+- Custom 404 pages for non-existent routes
+- Fallback for all Traefik routing errors
+- 11 available themes (ghost, l7-light, l7-dark, shuffle, noise, hacker-terminal, cats, lost-in-space, app-down, connection, orient)
+
+**Setup:**
+- [docs/error-pages-setup.md](error-pages-setup.md)
 
 ### Cloudflare Tunnel
 Secure tunnel for external access without exposing ports.

@@ -13,8 +13,8 @@ A comprehensive self-hosted Docker stack for development, AI, productivity, medi
 | **Productivity** | 11 | Document management, automation, collaboration |
 | **Media** | 3 | Photo, music, and ebook management |
 | **Personal** | 3 | Finance, recipes, fitness tracking |
-| **Monitoring** | 6 | Container logs, metrics, uptime monitoring |
-| **Networking** | 4 | Reverse proxy, DNS, tunneling |
+| **Monitoring** | 7 | Container logs, metrics, uptime monitoring, server admin |
+| **Networking** | 5 | Reverse proxy, custom error pages, DNS, tunneling |
 | **Automation** | 2 | Home automation and flow-based programming |
 
 ---
@@ -81,10 +81,11 @@ A comprehensive self-hosted Docker stack for development, AI, productivity, medi
 
 | Service | Port | Description |
 |---------|------|-------------|
+| **Cockpit** | 9090 | Local-only server administration UI (🔒 local network only) |
 | **Portainer** | 9000 (HTTP), 9443 (HTTPS) | Docker container management UI |
 | **Dozzle** | 9999 | Real-time container log viewer |
-| **What's Up Docker (WUD)** | 3000 | Docker update notifications |
-| **Netdata** | 19999 | Real-time system & container metrics |
+| **What's Up Docker (WUD)** | 3000 | Docker update notifications (🔒 local network only) |
+| **Netdata** | 19999 | Real-time system & container metrics (🔒 local network only) |
 | **Uptime Kuma** | 3001 | Service uptime monitoring |
 | **Duplicati** | 8200 | Backup solution for all services |
 
@@ -93,6 +94,7 @@ A comprehensive self-hosted Docker stack for development, AI, productivity, medi
 | Service | Port | Description |
 |---------|------|-------------|
 | **Traefik** | 80, 443 | Reverse proxy with automatic SSL (dashboard via `http://traefik.lab/dashboard/`) |
+| **Error Pages** | 8080 | Custom 404/error pages for Traefik (ghost theme) |
 | **Pi-Hole** | 53 (DNS), 8088 (admin) | Network-wide ad blocking |
 | **Cloudflare Tunnel** | - | Secure public HTTPS access (no port forwarding) |
 | **Glance** | 8098 | YAML dashboard with widgets and smart links |

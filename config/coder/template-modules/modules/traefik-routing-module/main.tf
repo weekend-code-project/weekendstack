@@ -95,10 +95,14 @@ locals {
     "traefik.enable"         = "true"
     "traefik.docker.network" = "coder-network"
     
-    # Router configuration
+    # HTTPS Router configuration (external via tunnel)
     "traefik.http.routers.${lower(var.workspace_name)}.rule"        = "Host(`${lower(var.workspace_name)}.${var.domain}`)"
     "traefik.http.routers.${lower(var.workspace_name)}.entrypoints" = "websecure"
     "traefik.http.routers.${lower(var.workspace_name)}.tls"         = "true"
+    
+    # HTTP Router configuration (local .lab access)
+    "traefik.http.routers.${lower(var.workspace_name)}-http.rule"        = "Host(`${lower(var.workspace_name)}.lab`)"
+    "traefik.http.routers.${lower(var.workspace_name)}-http.entrypoints" = "web"
     
     # Service configuration (use exposed port)
     "traefik.http.services.${lower(var.workspace_name)}.loadbalancer.server.port" = var.exposed_port

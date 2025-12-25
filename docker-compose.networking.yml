@@ -143,6 +143,35 @@ services:
     command: tunnel --config /etc/cloudflared/config.yml run
 
   # =============================================================================
+  # ERROR PAGES - CUSTOM ERROR PAGES FOR TRAEFIK
+  # =============================================================================
+  # Provides custom error pages (404, 500, etc.) for Traefik
+  # Themes: ghost, l7-light, l7-dark, shuffle, noise, hacker-terminal, cats, lost-in-space, app-down, connection, orient
+  # Full list: https://github.com/tarampampam/error-pages
+  # =============================================================================
+  error-pages:
+    image: tarampampam/error-pages:latest
+    container_name: error-pages
+    restart: unless-stopped
+    networks:
+      - traefik-network
+      - shared-network
+    profiles:
+      - all
+      - networking
+    environment:
+      TEMPLATE_NAME: ${ERROR_PAGES_THEME:-ghost}
+      SHOW_DETAILS: ${ERROR_PAGES_SHOW_DETAILS:-false}
+    deploy:
+      resources:
+        limits:
+          memory: ${ERROR_PAGES_MEMORY_LIMIT:-64m}
+    labels:
+      - traefik.enable=true
+      - traefik.http.services.error-pages.loadbalancer.server.port=8080
+      - traefik.docker.network=shared-network
+
+  # =============================================================================
   # PI-HOLE - NETWORK-WIDE AD BLOCKING & DNS (INTERNAL ONLY)
   # =============================================================================
   # Pi-Hole provides DNS-level ad blocking for your entire network.

@@ -1,17 +1,19 @@
 http:
-  middlewares:
-    lab-catchall-redirect:
-      redirectRegex:
-        regex: "^https?://[^/]+(.*)$"
-        replacement: "http://glance.lab$1"
-        permanent: false
+  # Lab catchall redirect is disabled - unknown .lab routes now show custom 404 pages
+  # instead of redirecting to glance.lab
+  # middlewares:
+  #   lab-catchall-redirect:
+  #     redirectRegex:
+  #       regex: "^https?://[^/]+(.*)$"
+  #       replacement: "http://glance.lab$1"
+  #       permanent: false
 
-  routers:
-    lab-catchall:
-      entryPoints:
-        - web
-      rule: "HostRegexp(`^[A-Za-z0-9-]+\\.lab$`) && !Host(`glance.lab`)"
-      middlewares:
-        - lab-catchall-redirect
-      service: noop@internal
-      priority: 1
+  # routers:
+  #   lab-catchall:
+  #     entryPoints:
+  #       - web
+  #     rule: "HostRegexp(`^[A-Za-z0-9-]+\\.lab$`) && !Host(`glance.lab`)"
+  #     middlewares:
+  #       - lab-catchall-redirect
+  #     service: noop@internal
+  #     priority: 1
