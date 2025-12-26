@@ -9,94 +9,367 @@ branding:
 
 pages:
   - name: Home
+    hide-desktop-navigation: true
+    head-widgets:
+      - type: monitor
+        cache: 1m
+        title: Services
+        sites:
+          - title: Coder
+            url: http://192.168.2.50:7080
+            icon: si:coder
+          - title: Gitea
+            url: http://192.168.2.50:3001
+            icon: si:gitea
+          - title: GitLab
+            url: http://192.168.2.50:8929
+            icon: si:gitlab
+          - title: Immich
+            url: http://192.168.2.50:2283
+            icon: si:immich
+          - title: Vaultwarden
+            url: http://192.168.2.50:8222
+            icon: si:vaultwarden
+          - title: Open WebUI
+            url: http://192.168.2.50:3000
+            icon: si:openai
+    
     columns:
       - size: full
         widgets:
-          - type: search
-            autofocus: true
-
-          - type: monitor
-            cache: 1m
-            title: Services
-            sites:
-              - title: Coder
-                url: http://192.168.2.50:7080
-                icon: si:coder
-              - title: Gitea
-                url: http://192.168.2.50:3001
-                icon: si:gitea
-              - title: GitLab
-                url: http://192.168.2.50:8929
-                icon: si:gitlab
-              - title: Immich
-                url: http://192.168.2.50:2283
-                icon: si:immich
-              - title: Vaultwarden
-                url: http://192.168.2.50:8222
-                icon: si:vaultwarden
-              - title: Open WebUI
-                url: http://192.168.2.50:3000
-                icon: si:openai
-
           - type: docker-containers
             limit: 50
 
-          - type: bookmarks
-            groups:
-              - title: AI Services
-                links:
-                  - title: AnythingLLM
-                    url: /go/anythingllm
-                  - title: LibreChat
-                    url: /go/librechat
-                  - title: Open WebUI
-                    url: /go/openwebui
-                  - title: SearXNG
-                    url: /go/searxng
-                  - title: Stable Diffusion
-                    url: /go/sdwebui
-                  - title: ComfyUI
-                    url: /go/comfyui
-              - title: Productivity
-                links:
-                  - title: NocoDB
-                    url: /go/nocodb
-                  - title: Paperless-ngx
-                    url: /go/paperless
-                  - title: n8n
-                    url: /go/n8n
-                  - title: Focalboard
-                    url: /go/focalboard
-                  - title: Trilium
-                    url: /go/trilium
-                  - title: Vikunja
-                    url: /go/vikunja
-              - title: Media & Personal
-                links:
-                  - title: Immich
-                    url: /go/immich
-                  - title: Navidrome
-                    url: /go/navidrome
-                  - title: Kavita
-                    url: /go/kavita
-                  - title: Mealie
-                    url: /go/mealie
-                  - title: Firefly III
-                    url: /go/firefly
-                  - title: wger
-                    url: /go/wger
-              - title: Admin Tools
-                links:
-                  - title: Portainer
-                    url: http://portainer.lab
-                  - title: Traefik
-                    url: http://traefik.lab/dashboard/
-                  - title: Pi-hole
-                    url: http://pihole.lab/admin
-                  - title: Uptime Kuma
-                    url: http://uptime-kuma.lab
-                  - title: Home Assistant
-                    url: http://homeassistant.lab
+          - type: server-stats
+            servers:
+              - type: local
+                name: Docker VM
+
+          - type: custom-api
+            title: Immich Stats
+            cache: 1d
+            url: ${IMMICH_URL}/api/server/statistics
+            headers:
+              x-api-key: ${IMMICH_API_KEY}
+              Accept: application/json
+            template: |
+              <div class="flex justify-between text-center">
+                <div>
+                    <div class="color-highlight size-h3">{{ .JSON.Int "photos" | formatNumber }}</div>
+                    <div class="size-h6">PHOTOS</div>
+                </div>
+                <div>
+                    <div class="color-highlight size-h3">{{ .JSON.Int "videos" | formatNumber }}</div>
+                    <div class="size-h6">VIDEOS</div>
+                </div>
+                <div>
+                    <div class="color-highlight size-h3">{{ div (.JSON.Int "usage" | toFloat) 1073741824 | toInt | formatNumber }}GB</div>
+                    <div class="size-h6">USAGE</div>
+                </div>
+              </div>
+
+          - type: custom-api
+            title: Paperless-NGX
+            title-url: ${PAPERLESS_URL}
+            url: ${PAPERLESS_URL}/api/statistics/
+            headers:
+              Authorization: Token ${PAPERLESS_API_KEY}
+              Accept: application/json
+            cache: 5m
+            template: |
+              <div class="flex justify-between text-center">
+                  <div>
+                      <div class="color-highlight size-h3">{{ .JSON.Int "documents_total" | formatNumber }}</div>
+                      <div class="size-h5 uppercase">Documents</div>
+                  </div>
+                  <div>
+                      <div class="color-highlight size-h3">{{ .JSON.Int "documents_inbox" | formatNumber }}</div>
+                      <div class="size-h5 uppercase">Inbox</div>
+                  </div>
+                  <div>
+                      <div class="color-highlight size-h3">{{ .JSON.Int "character_count" | formatNumber }}</div>
+                      <div class="size-h5 uppercase">Characters</div>
+                  </div>
+              </div>
+
+          - type: split-column
+            max-columns: 2
+            widgets:
+              - type: custom-api
+                title: What's Up Docker?
+                cache: 1h
+                url: http://${WUD_URL}/api/containers/
+                method: GET
+                headers:
+                  Authorization: Basic YWRtaW46YWRtaW4=
+                template: |
+                  <style>
+                    .vertical-separator {
+                      width: 3px;
+                      height: 3.5rem;
+                      margin: 0 1rem;
+                      border-radius: 2px;
+                      align-self: center;
+                      background: linear-gradient(
+                        to bottom,
+                        transparent,
+                        rgba(255, 255, 255, 0.05) 20%,
+                        rgba(255, 255, 255, 0.05) 80%,
+                        transparent
+                      );
+                    }
+
+                    .container-info {
+                      display: flex;
+                      align-items: flex-start;
+                      justify-content: space-evenly;
+                      margin: 1rem 0;
+                      width: 100%;
+                    }
+
+                    .info-column {
+                      display: flex;
+                      flex-direction: column;
+                      align-items: center;
+                      min-width: 4rem;
+                    }
+
+                    .info-label {
+                      font-size: 1.20rem;
+                      opacity: 0.9;
+                      text-align: center;
+                    }
+
+                    .info-value {
+                      font-size: 1.4rem;
+                      margin-top: 0.25rem;
+                      text-align: center;
+                    }
+
+                    .info-count {
+                      font-size: 1.45rem !important;
+                    }
+
+                    @container widget (min-width: 550px) {
+                      .container-info {
+                        justify-content: flex-start;
+                        gap: 2rem;
+                        padding: 0.5rem;
+                      }
+
+                      .vertical-separator {
+                        align-self: flex-start;
+                        margin: 0 2rem;
+                      }
+
+                      .info-column {
+                        align-items: flex-start;
+                      }
+
+                      .info-label .info-value {
+                        text-align: left;
+                      }
+                    }
+                  </style>
+
+                  {{ $showInfo := true }}
+                  {{ $showList := true }}
+                  {{ $showAll := false }}
+                  {{ $showUpdateKind := true }}
+                  {{ $showUpdateTypes := false }}
+                  {{ $showLocalVersion := true }}
+                  {{ $hasUpdates := false }}
+
+                  {{ $containers := .JSON.Array "" }}
+                  {{ $total := len $containers }}
+                  {{ $updates := 0 }}
+                  {{ $running := 0 }}
+
+                  {{ range $containers }}
+                    {{ if .Bool "updateAvailable" }}
+                      {{ $updates = add $updates 1 }}
+                    {{ end }}
+                    {{ if eq (.String "status") "running" }}
+                      {{ $running = add $running 1 }}
+                    {{ end }}
+                  {{ end }}
+
+                  {{ if $showInfo }}
+                    <div class="container-info">
+                      <div class="info-column">
+                        <div class="info-label info-count">Updates</div>
+                        <div class="info-value info-count">{{ $updates }}</div>
+                      </div>
+
+                      <div class="vertical-separator"></div>
+
+                      <div class="info-column">
+                        <div class="info-label info-count">Total</div>
+                        <div class="info-value info-count">{{ $total }}</div>
+                      </div>
+
+                      <div class="vertical-separator"></div>
+
+                      <div class="info-column">
+                        <div class="info-label info-count">Running</div>
+                        <div class="info-value info-count">{{ $running }}</div>
+                      </div>
+                    </div>
+                  {{ end }}
+
+                    {{ if $showList }}
+                    <div style="height: 10px;"></div>
+                    <ul class="list list-gap-10 collapsible-container" data-collapse-after="3">
+                      {{ range $index, $container := $containers }}
+                        {{ if $container.Bool "updateAvailable" }}
+                          {{ $hasUpdates = true }}
+                          <li>
+                            <div class="flex flex-column">
+                              {{ $registryName := $container.String "image.registry.name" }}
+                              {{ $imageName := $container.String "image.name" }}
+                              {{ $hubSource := "#" }}
+                              {{ if eq $registryName "hub.public" }}
+                                {{ $hubSource = concat "https://hub.docker.com/r/" $imageName }}
+                              {{ else if eq $registryName "ghcr.public" }}
+                                {{ $hubSource = concat "https://github.com/" $imageName }}
+                              {{ end }}
+
+                              <div class="size-h4">
+                                {{ if eq ($container.String "status") "running" }}
+                                  <span class="status-dot color-positive">●</span>
+                                {{ else }}
+                                  <span class="status-dot color-negative">●</span>
+                                {{ end }}
+                                <a class="color-highlight text-truncate" href="{{ $hubSource }}" target="_blank" rel="noreferrer">{{ $container.String "name" }}</a>
+                              </div>
+
+                              <div class="container-info">
+                                <div class="info-column">
+                                  <div class="info-label">Watcher</div>
+                                  <div class="info-value">{{ $container.String "watcher" }}</div>
+                                </div>
+
+                                <div class="vertical-separator"></div>
+
+                                {{ if $showLocalVersion }}
+                                  <div class="info-column">
+                                    <div class="info-label">Version</div>
+                                    <div class="info-value">
+                                      {{ $localValue := $container.String "updateKind.localValue" }}
+                                      {{ if ge (len $localValue) 7 }}
+                                        {{ $isSha256 := eq (slice $localValue 0 7) "sha256:" }}
+                                        {{ if $isSha256 }}
+                                          {{ $shortDigest := slice $localValue 7 11 }}
+                                          <span>dig: {{ $shortDigest }}</span>
+                                        {{ else }}
+                                          <span>{{ $localValue }}</span>
+                                        {{ end }}
+                                      {{ else }}
+                                        <span>{{ $localValue }}</span>
+                                      {{ end }}
+                                    </div>
+                                  </div>
+                                {{ else }}
+                                  <div class="info-column">
+                                    <div class="info-label">Update</div>
+                                    <div class="info-value">
+                                      <span class="color-positive">Available</span>
+                                    </div>
+                                  </div>
+                                {{ end }}
+                                {{ if $showUpdateKind }}
+                                  <div class="vertical-separator"></div>
+                                  <div class="info-column">
+                                    <div class="info-label">Available</div>
+                                    <div class="info-value">
+                                      {{ $tagValue := $container.String "updateKind.remoteValue" }}
+                                      {{ if eq $tagValue "" }}
+                                        {{ $tagValue = "Unknown" }}
+                                      {{ end }}
+                                      {{ if ge (len $tagValue) 7 }}
+                                        {{ $isSha256 := eq (slice $tagValue 0 7) "sha256:" }}
+                                        {{ if $isSha256 }}
+                                          {{ $shortDigest := slice $tagValue 7 11 }}
+                                          <span>dig: {{ $shortDigest }}</span>
+                                        {{ else }}
+                                          <span>{{ $tagValue }}</span>
+                                        {{ end }}
+                                      {{ else }}
+                                        <span>{{ $tagValue }}</span>
+                                      {{ end }}
+                                    </div>
+                                  </div>
+                                {{ end }}
+                              </div>
+                            </div>
+                          </li>
+                        {{ end }}
+                      {{ end }}
+
+                      {{ if not $hasUpdates }}
+                        <li class="flex items-center justify-center">
+                          <span class="color-positive size-h4">All containers are up to date!</span>
+                        </li>
+                      {{ end }}
+                    </ul>
+                  {{ end }}
+
+              - type: bookmarks
+                groups:
+                  - title: AI Services
+                    links:
+                      - title: AnythingLLM
+                        url: /go/anythingllm
+                      - title: LibreChat
+                        url: /go/librechat
+                      - title: Open WebUI
+                        url: /go/openwebui
+                      - title: SearXNG
+                        url: /go/searxng
+                      - title: Stable Diffusion
+                        url: /go/sdwebui
+                      - title: ComfyUI
+                        url: /go/comfyui
+                  - title: Productivity
+                    links:
+                      - title: NocoDB
+                        url: /go/nocodb
+                      - title: Paperless-ngx
+                        url: /go/paperless
+                      - title: n8n
+                        url: /go/n8n
+                      - title: Focalboard
+                        url: /go/focalboard
+                      - title: Trilium
+                        url: /go/trilium
+                      - title: Vikunja
+                        url: /go/vikunja
+                  - title: Media & Personal
+                    links:
+                      - title: Immich
+                        url: /go/immich
+                      - title: Navidrome
+                        url: /go/navidrome
+                      - title: Kavita
+                        url: /go/kavita
+                      - title: Mealie
+                        url: /go/mealie
+                      - title: Firefly III
+                        url: /go/firefly
+                      - title: wger
+                        url: /go/wger
+                  - title: Admin Tools
+                    links:
+                      - title: Portainer
+                        url: http://portainer.lab
+                      - title: Traefik
+                        url: http://traefik.lab/dashboard/
+                      - title: Pi-hole
+                        url: http://pihole.lab/admin
+                      - title: Uptime Kuma
+                        url: http://uptime-kuma.lab
+                      - title: Home Assistant
+                        url: http://homeassistant.lab
 
           - type: split-column
             max-columns: 3

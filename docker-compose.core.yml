@@ -75,6 +75,19 @@ services:
       - core
     ports:
       - "${HOST_IP:-192.168.2.50}:${GLANCE_PORT:-8080}:8080"
+    environment:
+      CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID}
+      CLOUDFLARE_TUNNEL_ID: ${CLOUDFLARE_TUNNEL_ID}
+      CLOUDFLARE_API_KEY: ${CLOUDFLARE_API_KEY}
+      IMMICH_URL: ${IMMICH_URL}
+      IMMICH_API_KEY: ${IMMICH_API_KEY}
+      PAPERLESS_URL: ${PAPERLESS_URL}
+      PAPERLESS_API_KEY: ${PAPERLESS_API_KEY}
+      SPEEDTEST_URL: ${SPEEDTEST_URL}
+      SPEEDTEST_TRACKER_API_TOKEN: ${SPEEDTEST_TRACKER_API_TOKEN}
+      WUD_URL: ${WUD_URL}
+      WUD_AUTH_USER: ${WUD_AUTH_USER:-admin}
+      WUD_AUTH_PASSWORD: ${WUD_AUTH_PASSWORD:-admin}
     volumes:
       - type: bind
         source: ./config/glance/glance.yml
