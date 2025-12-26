@@ -26,6 +26,9 @@ services:
   nocodb-db:
     image: postgres:15-alpine
     container_name: nocodb-db
+    labels:
+      - glance.parent=nocodb
+      - glance.name=Database
     environment:
       POSTGRES_DB: ${NOCODB_DBNAME:-nocodb}
       POSTGRES_USER: ${NOCODB_DBUSER:-nocodb}
@@ -94,6 +97,13 @@ services:
         limits:
           memory: ${NOCODB_MEMORY_LIMIT}
     labels:
+      # Glance Configuration
+      - glance.id=nocodb
+      - glance.name=NocoDB
+      - glance.icon=si:airtable
+      - glance.url=http://nocodb.lab
+      - glance.description=Airtable Alternative Database
+      
       # Traefik Configuration for external access
       - traefik.enable=true
       - traefik.http.routers.nocodb.rule=Host(`nocodb.${BASE_DOMAIN}`)
@@ -118,6 +128,9 @@ services:
   n8n-db:
     image: postgres:15-alpine
     container_name: n8n-db
+    labels:
+      - glance.parent=n8n
+      - glance.name=Database
     environment:
       POSTGRES_DB: ${N8N_DBNAME:-n8n}
       POSTGRES_USER: ${N8N_DBUSER:-n8n}
@@ -193,6 +206,14 @@ services:
       - all
       - productivity
     labels:
+      # Glance Configuration
+      - glance.id=n8n
+      - glance.name=n8n
+      - glance.icon=si:n8n
+      - glance.url=http://n8n.lab
+      - glance.description=Workflow Automation
+      
+      # Traefik Configuration
       - traefik.enable=true
       - traefik.http.routers.n8n.rule=Host(`n8n.${BASE_DOMAIN}`)
       - traefik.http.routers.n8n.entrypoints=websecure
@@ -216,6 +237,9 @@ services:
   paperless-db:
     image: postgres:15-alpine
     container_name: paperless-db
+    labels:
+      - glance.parent=paperless
+      - glance.name=Database
     environment:
       POSTGRES_DB: ${PAPERLESS_DBNAME:-paperless}
       POSTGRES_USER: ${PAPERLESS_DBUSER:-paperless}
@@ -239,6 +263,9 @@ services:
   paperless-redis:
     image: redis:7-alpine
     container_name: paperless-redis
+    labels:
+      - glance.parent=paperless
+      - glance.name=Redis
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 30s
@@ -327,6 +354,13 @@ services:
       - all
       - productivity
     labels:
+      # Glance Configuration
+      - glance.id=paperless
+      - glance.name=Paperless-ngx
+      - glance.icon=si:files
+      - glance.url=http://paperless.lab
+      - glance.description=Document Management System
+      
       # Traefik Configuration for external access
       - traefik.enable=true
       - traefik.http.routers.paperless.rule=Host(`paperless.${BASE_DOMAIN}`)
@@ -351,6 +385,9 @@ services:
   activepieces-db:
     image: postgres:15-alpine
     container_name: activepieces-db
+    labels:
+      - glance.parent=activepieces
+      - glance.name=Database
     environment:
       POSTGRES_DB: ${ACTIVEPIECES_DBNAME:-activepieces}
       POSTGRES_USER: ${ACTIVEPIECES_DBUSER:-activepieces}
@@ -380,6 +417,9 @@ services:
   activepieces-redis:
     image: redis:7-alpine
     container_name: activepieces-redis
+    labels:
+      - glance.parent=activepieces
+      - glance.name=Redis
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -452,6 +492,13 @@ services:
       - all
       - productivity
     labels:
+      # Glance Configuration
+      - glance.id=activepieces
+      - glance.name=Activepieces
+      - glance.icon=si:zapier
+      - glance.url=http://activepieces.lab
+      - glance.description=Workflow Automation
+      
       # Traefik Configuration for external access
       - traefik.enable=true
       - traefik.http.routers.activepieces.rule=Host(`activepieces.${BASE_DOMAIN}`)
@@ -476,6 +523,9 @@ services:
   postiz-db:
     image: postgres:15-alpine
     container_name: postiz-db
+    labels:
+      - glance.parent=postiz
+      - glance.name=Database
     environment:
       POSTGRES_DB: ${POSTIZ_DBNAME:-postiz}
       POSTGRES_USER: ${POSTIZ_DBUSER:-postiz}
@@ -501,6 +551,9 @@ services:
   postiz-redis:
     image: redis:7-alpine
     container_name: postiz-redis
+    labels:
+      - glance.parent=postiz
+      - glance.name=Redis
     command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -587,6 +640,13 @@ services:
         limits:
           memory: ${POSTIZ_MEMORY_LIMIT:-2g}
     labels:
+      # Glance Configuration
+      - glance.id=postiz
+      - glance.name=Postiz
+      - glance.icon=si:hootsuite
+      - glance.url=http://postiz.lab
+      - glance.description=Social Media Management
+      
       # Traefik Configuration for external access
       - traefik.enable=true
       - traefik.http.routers.postiz.rule=Host(`postiz.${BASE_DOMAIN}`)
@@ -628,6 +688,14 @@ services:
         limits:
           memory: ${FOCALBOARD_MEMORY_LIMIT:-512m}
     labels:
+      # Glance Configuration
+      - glance.id=focalboard
+      - glance.name=Focalboard
+      - glance.icon=si:mattermost
+      - glance.url=http://focalboard.lab
+      - glance.description=Project Management
+      
+      # Traefik Configuration
       - traefik.enable=true
       - traefik.http.routers.focalboard.rule=Host(`focalboard.${BASE_DOMAIN}`)
       - traefik.http.routers.focalboard.entrypoints=websecure
@@ -667,6 +735,14 @@ services:
         limits:
           memory: ${TRILIUM_MEMORY_LIMIT:-512m}
     labels:
+      # Glance Configuration
+      - glance.id=trilium
+      - glance.name=Trilium
+      - glance.icon=si:trilium
+      - glance.url=http://trilium.lab
+      - glance.description=Note Taking
+      
+      # Traefik Configuration
       - traefik.enable=true
       - traefik.http.routers.trilium.rule=Host(`trilium.${BASE_DOMAIN}`)
       - traefik.http.routers.trilium.entrypoints=websecure
@@ -712,6 +788,14 @@ services:
         limits:
           memory: ${VIKUNJA_MEMORY_LIMIT:-256m}
     labels:
+      # Glance Configuration
+      - glance.id=vikunja
+      - glance.name=Vikunja
+      - glance.icon=si:vikunja
+      - glance.url=http://vikunja.lab
+      - glance.description=Task Management
+      
+      # Traefik Configuration
       - traefik.enable=true
       - traefik.http.routers.vikunja.rule=Host(`vikunja.${BASE_DOMAIN}`)
       - traefik.http.routers.vikunja.entrypoints=websecure
@@ -746,6 +830,14 @@ services:
         limits:
           memory: ${IT_TOOLS_MEMORY_LIMIT:-256m}
     labels:
+      # Glance Configuration
+      - glance.id=it-tools
+      - glance.name=IT-Tools
+      - glance.icon=si:docker
+      - glance.url=http://it-tools.lab
+      - glance.description=Developer Utilities
+      
+      # Traefik Configuration
       - traefik.enable=true
       - traefik.http.routers.it-tools.rule=Host(`it-tools.${BASE_DOMAIN}`)
       - traefik.http.routers.it-tools.entrypoints=websecure
@@ -782,6 +874,14 @@ services:
         limits:
           memory: ${EXCALIDRAW_MEMORY_LIMIT:-256m}
     labels:
+      # Glance Configuration
+      - glance.id=excalidraw
+      - glance.name=Excalidraw
+      - glance.icon=si:excalidraw
+      - glance.url=http://excalidraw.lab
+      - glance.description=Whiteboard
+      
+      # Traefik Configuration
       - traefik.enable=true
       - traefik.http.routers.excalidraw.rule=Host(`excalidraw.${BASE_DOMAIN}`)
       - traefik.http.routers.excalidraw.entrypoints=websecure
@@ -804,6 +904,9 @@ services:
   docmost-db:
     image: postgres:15-alpine
     container_name: docmost-db
+    labels:
+      - glance.parent=docmost
+      - glance.name=Database
     environment:
       POSTGRES_DB: ${DOCMOST_DBNAME:-docmost}
       POSTGRES_USER: ${DOCMOST_DBUSER:-docmost}
@@ -833,6 +936,9 @@ services:
   docmost-redis:
     image: redis:7-alpine
     container_name: docmost-redis
+    labels:
+      - glance.parent=docmost
+      - glance.name=Redis
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -878,6 +984,14 @@ services:
         limits:
           memory: ${DOCMOST_MEMORY_LIMIT:-512m}
     labels:
+      # Glance Configuration
+      - glance.id=docmost
+      - glance.name=Docmost
+      - glance.icon=si:readthedocs
+      - glance.url=http://docmost.lab
+      - glance.description=Wiki & Documentation
+      
+      # Traefik Configuration
       - traefik.enable=true
       - traefik.http.routers.docmost.rule=Host(`docmost.${BASE_DOMAIN}`)
       - traefik.http.routers.docmost.entrypoints=websecure
@@ -926,6 +1040,14 @@ services:
         limits:
           memory: ${FILEBROWSER_MEMORY_LIMIT:-256m}
     labels:
+      # Glance Configuration
+      - glance.id=filebrowser
+      - glance.name=File Browser
+      - glance.icon=si:files
+      - glance.url=http://filebrowser.lab
+      - glance.description=Web File Manager
+      
+      # Traefik Configuration
       - traefik.enable=true
       - traefik.http.routers.filebrowser.rule=Host(`filebrowser.${BASE_DOMAIN}`)
       - traefik.http.routers.filebrowser.entrypoints=websecure
@@ -977,6 +1099,14 @@ services:
         limits:
           memory: ${HOARDER_MEMORY_LIMIT:-1g}
     labels:
+      # Glance Configuration
+      - glance.id=hoarder
+      - glance.name=Hoarder
+      - glance.icon=si:pocket
+      - glance.url=http://hoarder.lab
+      - glance.description=Bookmark Manager
+      
+      # Traefik Configuration
       - traefik.enable=true
       - traefik.http.routers.hoarder.rule=Host(`hoarder.${BASE_DOMAIN}`)
       - traefik.http.routers.hoarder.entrypoints=websecure
@@ -993,6 +1123,9 @@ services:
   hoarder-chrome:
     image: gcr.io/zenika-hub/alpine-chrome:124
     container_name: hoarder-chrome
+    labels:
+      - glance.parent=hoarder
+      - glance.name=Browser
     restart: unless-stopped
     networks:
       - productivity-network
@@ -1011,6 +1144,9 @@ services:
   hoarder-meilisearch:
     image: getmeili/meilisearch:v1.13.3
     container_name: hoarder-meilisearch
+    labels:
+      - glance.parent=hoarder
+      - glance.name=Search Engine
     restart: unless-stopped
     networks:
       - productivity-network
@@ -1055,6 +1191,14 @@ services:
         limits:
           memory: ${BYTESTASH_MEMORY_LIMIT:-256m}
     labels:
+      # Glance Configuration
+      - glance.id=bytestash
+      - glance.name=ByteStash
+      - glance.icon=si:github
+      - glance.url=http://bytestash.lab
+      - glance.description=Code Snippets
+      
+      # Traefik Configuration
       - traefik.enable=true
       - traefik.http.routers.bytestash.rule=Host(`bytestash.${BASE_DOMAIN}`)
       - traefik.http.routers.bytestash.entrypoints=websecure

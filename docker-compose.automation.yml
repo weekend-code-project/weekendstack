@@ -30,6 +30,9 @@ services:
   homeassistant-perms:
     image: ghcr.io/home-assistant/home-assistant:stable
     container_name: homeassistant-perms
+    labels:
+      - glance.parent=homeassistant
+      - glance.name=Init Permissions
     user: "0:0"
     networks:
       - automation-network
@@ -105,6 +108,14 @@ services:
       retries: 3
       start_period: 60s
     labels:
+      # Glance Configuration
+      - glance.id=homeassistant
+      - glance.name=Home Assistant
+      - glance.icon=si:homeassistant
+      - glance.url=http://homeassistant.lab
+      - glance.description=Smart Home Automation
+      
+      # Traefik Configuration
       - traefik.enable=${HOMEASSISTANT_TRAEFIK_ENABLE:-true}
       - "traefik.http.routers.homeassistant-http.rule=Host(`homeassistant.lab`)"
       - traefik.http.routers.homeassistant-http.entrypoints=web

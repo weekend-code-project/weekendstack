@@ -35,6 +35,9 @@ services:
       LAN_DOMAIN: ${LAN_DOMAIN:-lan}
       LAN_DNS_SERVER: ${LAN_DNS_SERVER:-}
       ENABLE_LAN_DOMAIN_FORWARDING: ${ENABLE_LAN_DOMAIN_FORWARDING:-false}
+    labels:
+      - glance.parent=pihole
+      - glance.name=Init Container
     volumes:
       - type: bind
         source: ${CONFIG_BASE_DIR:-./config}/pihole/etc-dnsmasq.d
@@ -111,6 +114,14 @@ services:
     depends_on:
       - socat
     labels:
+      # Glance Configuration
+      - glance.id=traefik
+      - glance.name=Traefik
+      - glance.icon=si:traefikproxy
+      - glance.url=http://traefik.lab/dashboard/
+      - glance.description=Reverse Proxy
+      
+      # Traefik Configuration
       - traefik.enable=true
       # Local-only Traefik dashboard (HTTP, no TLS) on http://traefik.lab/dashboard/
       - traefik.http.routers.traefik-dashboard-http.rule=Host(`traefik.lab`)
@@ -130,6 +141,10 @@ services:
   cloudflare-tunnel:
     image: cloudflare/cloudflared:latest
     container_name: cloudflare-tunnel
+    labels:
+      - glance.parent=traefik
+      - glance.name=Cloudflare Tunnel
+      - glance.icon=si:cloudflare
     restart: unless-stopped
     networks:
       - traefik-network
@@ -167,6 +182,11 @@ services:
         limits:
           memory: ${ERROR_PAGES_MEMORY_LIMIT:-64m}
     labels:
+      # Glance Configuration
+      - glance.parent=traefik
+      - glance.name=Error Pages
+      
+      # Traefik Configuration
       - traefik.enable=true
       - traefik.http.services.error-pages.loadbalancer.server.port=8080
       - traefik.docker.network=shared-network
@@ -233,6 +253,14 @@ services:
       retries: 3
       start_period: 30s
     labels:
+      # Glance Configuration
+      - glance.id=pihole
+      - glance.name=Pi-hole
+      - glance.icon=si:pihole
+      - glance.url=http://pihole.lab/admin
+      - glance.description=DNS Ad Blocker
+      
+      # Traefik Configuration
       # Local-only Pi-hole admin (HTTP, no TLS) on http://pihole.lab/admin
       # This is NOT exposed via Cloudflare tunnel (router is web-only).
       - traefik.enable=true

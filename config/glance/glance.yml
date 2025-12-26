@@ -1,6 +1,7 @@
 server:
   port: 8080
   proxied: true
+  allow-potentially-dangerous-html: true
 
 branding:
   hide-footer: true
@@ -11,6 +12,35 @@ pages:
     columns:
       - size: full
         widgets:
+          - type: search
+            autofocus: true
+
+          - type: monitor
+            cache: 1m
+            title: Services
+            sites:
+              - title: Coder
+                url: http://192.168.2.50:7080
+                icon: si:coder
+              - title: Gitea
+                url: http://192.168.2.50:3001
+                icon: si:gitea
+              - title: GitLab
+                url: http://192.168.2.50:8929
+                icon: si:gitlab
+              - title: Immich
+                url: http://192.168.2.50:2283
+                icon: si:immich
+              - title: Vaultwarden
+                url: http://192.168.2.50:8222
+                icon: si:vaultwarden
+              - title: Open WebUI
+                url: http://192.168.2.50:3000
+                icon: si:openai
+
+          - type: docker-containers
+            limit: 50
+
           - type: bookmarks
             groups:
               - title: AI Services
@@ -19,109 +49,65 @@ pages:
                     url: /go/anythingllm
                   - title: LibreChat
                     url: /go/librechat
-                  - title: LocalAI
-                    url: /go/localai
                   - title: Open WebUI
                     url: /go/openwebui
                   - title: SearXNG
                     url: /go/searxng
-                  - title: Whisper
-                    url: /go/whisper
-                  - title: ComfyUI
-                    url: /go/comfyui
-                  - title: DiffRhythm
-                    url: /go/diffrhythm
-                  - title: PrivateGPT
-                    url: /go/privategpt
                   - title: Stable Diffusion
                     url: /go/sdwebui
-                  - title: WhisperX
-                    url: /go/whisperx
-
-              - title: Local Applications
+                  - title: ComfyUI
+                    url: /go/comfyui
+              - title: Productivity
                 links:
-                  - title: ByteStash
-                    url: /go/bytestash
-                  - title: Coder
-                    url: /go/coder
-                  - title: File Browser
-                    url: /go/filebrowser
-                  - title: Gitea
-                    url: /go/gitea
-                  - title: GitLab
-                    url: /go/gitlab
-                  - title: Hoarder
-                    url: /go/hoarder
-                  - title: IT-Tools
-                    url: /go/it-tools
-                  - title: Immich
-                    url: /go/immich
-                  - title: Kavita
-                    url: /go/kavita
-                  - title: Navidrome
-                    url: /go/navidrome
-                  - title: Activepieces
-                    url: /go/activepieces
-                  - title: Docmost
-                    url: /go/docmost
-                  - title: Excalidraw
-                    url: /go/excalidraw
-                  - title: Focalboard
-                    url: /go/focalboard
-                  - title: n8n
-                    url: /go/n8n
                   - title: NocoDB
                     url: /go/nocodb
                   - title: Paperless-ngx
                     url: /go/paperless
-                  - title: Postiz
-                    url: /go/postiz
+                  - title: n8n
+                    url: /go/n8n
+                  - title: Focalboard
+                    url: /go/focalboard
                   - title: Trilium
                     url: /go/trilium
-                  - title: Vaultwarden
-                    url: /go/vaultwarden
                   - title: Vikunja
                     url: /go/vikunja
-
-              - title: Personal
+              - title: Media & Personal
                 links:
-                  - title: Firefly III
-                    url: /go/firefly
+                  - title: Immich
+                    url: /go/immich
+                  - title: Navidrome
+                    url: /go/navidrome
+                  - title: Kavita
+                    url: /go/kavita
                   - title: Mealie
                     url: /go/mealie
+                  - title: Firefly III
+                    url: /go/firefly
                   - title: wger
                     url: /go/wger
-          - type: docker-containers
-            title: Containers
-            running-only: true
-
-  - name: Local Admin
-    columns:
-      - size: full
-        widgets:
-          - type: bookmarks
-            groups:
-              - title: Local Admin (LAN only)
+              - title: Admin Tools
                 links:
-                  - title: Cockpit
-                    url: http://cockpit.lab
-                  - title: Home Assistant
-                    url: http://homeassistant.lab
-                  - title: Node-RED
-                    url: http://nodered.lab
-                  - title: Duplicati
-                    url: http://duplicati.lab
-                  - title: Dozzle
-                    url: http://dozzle.lab
                   - title: Portainer
                     url: http://portainer.lab
-                  - title: What's Up Docker
-                    url: http://wud.lab
-                  - title: Netdata
-                    url: http://netdata.lab
-                  - title: Uptime Kuma
-                    url: http://uptime-kuma.lab
-                  - title: Pi-hole
-                    url: http://pihole.lab/admin
                   - title: Traefik
                     url: http://traefik.lab/dashboard/
+                  - title: Pi-hole
+                    url: http://pihole.lab/admin
+                  - title: Uptime Kuma
+                    url: http://uptime-kuma.lab
+                  - title: Home Assistant
+                    url: http://homeassistant.lab
+
+          - type: split-column
+            max-columns: 3
+            widgets:
+              - type: calendar
+                title: Calendar
+              
+              - type: to-do
+                title: Tasks
+              
+              - type: weather
+                location: New York, United States
+                units: imperial
+                hour-format: 12h

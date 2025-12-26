@@ -51,6 +51,14 @@ services:
         limits:
           memory: ${IMMICH_MEMORY_LIMIT:-2g}
     labels:
+      # Glance Configuration
+      - glance.id=immich
+      - glance.name=Immich
+      - glance.icon=si:immich
+      - glance.url=http://immich.lab
+      - glance.description=Image & Video Management
+      
+      # Traefik Configuration
       - traefik.enable=true
       - traefik.http.routers.immich.rule=Host(`immich.${BASE_DOMAIN}`)
       - traefik.http.routers.immich.entrypoints=websecure
@@ -65,6 +73,9 @@ services:
   immich-machine-learning:
     image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-release}
     container_name: immich-ml
+    labels:
+      - glance.parent=immich
+      - glance.name=Machine Learning
     networks:
       - media-network
     profiles:
@@ -83,6 +94,9 @@ services:
   immich-redis:
     image: redis:6.2-alpine
     container_name: immich-redis
+    labels:
+      - glance.parent=immich
+      - glance.name=Redis
     networks:
       - media-network
     profiles:
@@ -102,6 +116,9 @@ services:
   immich-db:
     image: tensorchord/pgvecto-rs:pg14-v0.2.0
     container_name: immich-db
+    labels:
+      - glance.parent=immich
+      - glance.name=Database
     networks:
       - media-network
     profiles:
@@ -155,6 +172,14 @@ services:
         limits:
           memory: ${KAVITA_MEMORY_LIMIT:-512m}
     labels:
+      # Glance Configuration
+      - glance.id=kavita
+      - glance.name=Kavita
+      - glance.icon=si:bookstack
+      - glance.url=http://kavita.lab
+      - glance.description=Comics & Manga
+      
+      # Traefik Configuration
       - traefik.enable=true
       - traefik.http.routers.kavita.rule=Host(`kavita.${BASE_DOMAIN}`)
       - traefik.http.routers.kavita.entrypoints=websecure
@@ -204,6 +229,14 @@ services:
         limits:
           memory: ${NAVIDROME_MEMORY_LIMIT:-512m}
     labels:
+      # Glance Configuration
+      - glance.id=navidrome
+      - glance.name=Navidrome
+      - glance.icon=si:docker
+      - glance.url=http://navidrome.lab
+      - glance.description=Music Streaming
+      
+      # Traefik Configuration
       - traefik.enable=true
       - traefik.http.routers.navidrome.rule=Host(`navidrome.${BASE_DOMAIN}`) || Host(`music.${BASE_DOMAIN}`)
       - traefik.http.routers.navidrome.entrypoints=websecure

@@ -49,6 +49,7 @@ services:
         limits:
           memory: ${MEALIE_MEMORY_LIMIT:-512m}
     labels:
+      # Traefik Configuration
       - traefik.enable=true
       - traefik.http.routers.mealie.rule=Host(`mealie.${BASE_DOMAIN}`)
       - traefik.http.routers.mealie.entrypoints=websecure
@@ -89,6 +90,14 @@ services:
         limits:
           memory: ${FIREFLY_MEMORY_LIMIT:-512m}
     labels:
+      # Glance Configuration
+      - glance.id=firefly
+      - glance.name=Firefly III
+      - glance.icon=si:moneygram
+      - glance.url=http://firefly.lab
+      - glance.description=Personal Finance
+      
+      # Traefik Configuration
       - traefik.enable=true
       - traefik.http.routers.firefly.rule=Host(`firefly.${BASE_DOMAIN}`)
       - traefik.http.routers.firefly.entrypoints=websecure
@@ -106,6 +115,12 @@ services:
   wger:
     image: wger/server:latest
     container_name: wger
+    labels:
+      - glance.id=wger
+      - glance.name=wger
+      - glance.icon=si:docker
+      - glance.url=http://wger.lab
+      - glance.description=Workout Manager
     networks:
       - personal-network
     profiles:
@@ -165,6 +180,12 @@ services:
         limits:
           memory: 64m
     labels:
+      # Glance Configuration
+      - glance.parent=wger
+      - glance.name=Nginx
+      - glance.icon=si:docker
+      
+      # Traefik Configuration
       - traefik.enable=true
       - traefik.http.routers.wger.rule=Host(`wger.${BASE_DOMAIN}`)
       - traefik.http.routers.wger.entrypoints=websecure

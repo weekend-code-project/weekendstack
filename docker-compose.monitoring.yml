@@ -63,6 +63,14 @@ services:
         limits:
           memory: ${COCKPIT_MEMORY_LIMIT:-256m}
     labels:
+      # Glance Configuration
+      - glance.id=cockpit
+      - glance.name=Cockpit
+      - glance.icon=si:cockpit
+      - glance.url=http://cockpit.lab
+      - glance.description=Server Management
+      
+      # Traefik Configuration
       - traefik.enable=true
       - traefik.http.routers.cockpit-http.rule=Host(`cockpit.lab`)
       - traefik.http.routers.cockpit-http.entrypoints=web
@@ -96,6 +104,14 @@ services:
         limits:
           memory: 128m
     labels:
+      # Glance Configuration
+      - glance.id=dozzle
+      - glance.name=Dozzle
+      - glance.icon=si:logstash
+      - glance.url=http://dozzle.lab
+      - glance.description=Log Viewer
+      
+      # Traefik Configuration
       - traefik.enable=true
       - traefik.http.routers.dozzle-http.rule=Host(`dozzle.lab`)
       - traefik.http.routers.dozzle-http.entrypoints=web
@@ -139,6 +155,14 @@ services:
         limits:
           memory: ${WUD_MEMORY_LIMIT:-256m}
     labels:
+      # Glance Configuration
+      - glance.id=wud
+      - glance.name=What's Up Docker
+      - glance.icon=si:docker
+      - glance.url=http://wud.lab
+      - glance.description=Update Manager
+      
+      # Traefik Configuration
       - traefik.enable=true
       - traefik.http.routers.wud-http.rule=Host(`wud.lab`)
       - traefik.http.routers.wud-http.entrypoints=web
@@ -172,6 +196,14 @@ services:
         limits:
           memory: 256m
     labels:
+      # Glance Configuration
+      - glance.id=uptime-kuma
+      - glance.name=Uptime Kuma
+      - glance.icon=si:statuspage
+      - glance.url=http://uptime-kuma.lab
+      - glance.description=Uptime Monitoring
+      
+      # Traefik Configuration
       - traefik.enable=true
       - traefik.http.routers.uptime-kuma-http.rule=Host(`uptime-kuma.lab`)
       - traefik.http.routers.uptime-kuma-http.entrypoints=web
@@ -228,6 +260,14 @@ services:
         limits:
           memory: 512m
     labels:
+      # Glance Configuration
+      - glance.id=netdata
+      - glance.name=Netdata
+      - glance.icon=si:netdata
+      - glance.url=http://netdata.lab
+      - glance.description=System Monitoring
+      
+      # Traefik Configuration
       - traefik.enable=true
       - traefik.http.routers.netdata-http.rule=Host(`netdata.lab`)
       - traefik.http.routers.netdata-http.entrypoints=web
@@ -269,6 +309,14 @@ services:
         limits:
           memory: 512m
     labels:
+      # Glance Configuration
+      - glance.id=duplicati
+      - glance.name=Duplicati
+      - glance.icon=si:duplicati
+      - glance.url=http://duplicati.lab
+      - glance.description=Backup Solution
+      
+      # Traefik Configuration
       - traefik.enable=true
       - traefik.http.routers.duplicati-http.rule=Host(`duplicati.lab`)
       - traefik.http.routers.duplicati-http.entrypoints=web
@@ -303,6 +351,14 @@ services:
         limits:
           memory: 256m
     labels:
+      # Glance Configuration
+      - glance.id=portainer
+      - glance.name=Portainer
+      - glance.icon=si:portainer
+      - glance.url=http://portainer.lab
+      - glance.description=Container Management
+      
+      # Traefik Configuration
       - traefik.enable=true
       - traefik.http.routers.portainer-http.rule=Host(`portainer.lab`)
       - traefik.http.routers.portainer-http.entrypoints=web
@@ -351,6 +407,14 @@ services:
         limits:
           memory: 1g
     labels:
+      # Glance Configuration
+      - glance.id=netbox
+      - glance.name=NetBox
+      - glance.icon=si:cilium
+      - glance.url=http://netbox.lab
+      - glance.description=IPAM & DCIM
+      
+      # Traefik Configuration
       - traefik.enable=true
       - traefik.http.routers.netbox-http.rule=Host(`netbox.lab`)
       - traefik.http.routers.netbox-http.entrypoints=web
@@ -360,6 +424,9 @@ services:
   netbox-postgres:
     image: postgres:15-alpine
     container_name: netbox-postgres
+    labels:
+      - glance.parent=netbox
+      - glance.name=Database
     networks:
       - monitoring-network
     profiles:
@@ -382,6 +449,9 @@ services:
   netbox-redis:
     image: redis:7-alpine
     container_name: netbox-redis
+    labels:
+      - glance.parent=netbox
+      - glance.name=Redis
     networks:
       - monitoring-network
     profiles:

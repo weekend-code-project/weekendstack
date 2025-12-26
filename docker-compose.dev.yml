@@ -11,6 +11,9 @@ services:
   database:
     image: postgres:16
     container_name: coder-database
+    labels:
+      - glance.parent=coder
+      - glance.name=Database
     restart: unless-stopped
     networks:
       - coder-network
@@ -42,6 +45,9 @@ services:
   gitea-db:
     image: postgres:16
     container_name: gitea-database
+    labels:
+      - glance.parent=gitea
+      - glance.name=Database
     restart: unless-stopped
     networks:
       - coder-network
@@ -74,6 +80,9 @@ services:
   socat:
     image: alpine/socat
     container_name: coder-socat
+    labels:
+      - glance.parent=coder
+      - glance.name=Docker Proxy
     command: "tcp-listen:2375,fork,reuseaddr unix-connect:/var/run/docker.sock"
     networks:
       - coder-network
@@ -94,6 +103,9 @@ services:
   coder-init:
     image: alpine:latest
     container_name: coder-init
+    labels:
+      - glance.parent=coder
+      - glance.name=Init
     profiles:
       - all
       - dev
@@ -171,6 +183,14 @@ services:
         limits:
           memory: ${CODER_MEMORY_LIMIT:-1g}
     labels:
+      # Glance labels
+      - glance.id=coder
+      - glance.name=Coder
+      - glance.icon=si:coder
+      - glance.url=http://coder.lab
+      - glance.description=Cloud Development Environment
+      
+      # Traefik labels
       - traefik.enable=true
       - traefik.http.routers.coder.entrypoints=websecure
       - traefik.http.routers.coder.rule=Host(`coder.${BASE_DOMAIN}`)
@@ -241,8 +261,14 @@ services:
       resources:
         limits:
           memory: ${GITEA_MEMORY_LIMIT:-2g}
-    labels:
-      - traefik.enable=true
+    labels:      # Glance Configuration
+      - glance.id=gitea
+      - glance.name=Gitea
+      - glance.icon=si:gitea
+      - glance.url=http://gitea.lab
+      - glance.description=Git Repository Hosting
+      
+      # Traefik Configuration      - traefik.enable=true
       - traefik.http.routers.gitea.entrypoints=websecure
       - traefik.http.routers.gitea.rule=Host(`gitea.${BASE_DOMAIN}`)
       - traefik.http.routers.gitea.tls=true
@@ -272,6 +298,11 @@ services:
         source: ${REGISTRY_DATA_DIR}
         target: /var/lib/registry
     labels:
+      # Glance Configuration
+      - glance.parent=coder
+      - glance.name=Registry Cache
+      
+      # Traefik Configuration
       - traefik.enable=true
       - traefik.http.routers.registry.rule=Host(`registry.${BASE_DOMAIN}`)
       - traefik.http.routers.registry.entrypoints=websecure
@@ -331,6 +362,14 @@ services:
         limits:
           memory: ${GITLAB_MEMORY_LIMIT:-4g}
     labels:
+      # Glance Configuration
+      - glance.id=gitlab
+      - glance.name=GitLab
+      - glance.icon=si:gitlab
+      - glance.url=http://gitlab.lab
+      - glance.description=DevOps Platform
+      
+      # Traefik Configuration
       - traefik.enable=true
       - traefik.http.routers.gitlab.entrypoints=websecure
       - traefik.http.routers.gitlab.rule=Host(`gitlab.${BASE_DOMAIN}`)

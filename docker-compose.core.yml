@@ -23,8 +23,7 @@ services:
   # =============================================================================
   # YAML-configured dashboard with widgets (RSS, monitoring, docker status, etc.)
   # Config: ./config/glance/glance.yml
-  # Local: http://glance.lab (Traefik)
-  # Optional: https://glance.${BASE_DOMAIN}
+  # Local: http://home.lab (Traefik) or http://192.168.2.50:8080
   # =============================================================================
   link-router:
     build:
@@ -43,6 +42,11 @@ services:
     networks:
       - shared-network
     labels:
+      # Glance Configuration
+      - glance.parent=glance
+      - glance.name=Link Router
+      
+      # Traefik Configuration
       - traefik.enable=true
       # HTTPS (Tunnel / public)
       - traefik.http.routers.link-router.rule=(Host(`glance.${LAB_DOMAIN:-lab}`) || Host(`glance.${BASE_DOMAIN}`)) && PathPrefix(`/go/`)
@@ -70,7 +74,7 @@ services:
       - all
       - core
     ports:
-      - "${HOST_IP:-192.168.2.50}:${GLANCE_PORT:-8098}:8080"
+      - "${HOST_IP:-192.168.2.50}:${GLANCE_PORT:-8080}:8080"
     volumes:
       - type: bind
         source: ./config/glance/glance.yml
@@ -82,16 +86,20 @@ services:
         limits:
           memory: ${GLANCE_MEMORY_LIMIT:-256m}
     labels:
+      # Glance Configuration
+      - glance.id=glance
+      - glance.name=Glance Dashboard
+      - glance.icon=si:homeassistant
+      - glance.url=http://home.lab
+      - glance.description=Dashboard
+      
+      # Traefik Configuration
       - traefik.enable=true
-      - traefik.http.routers.glance.entrypoints=websecure
-      - traefik.http.routers.glance.rule=Host(`glance.${BASE_DOMAIN}`)
-      - traefik.http.routers.glance.tls=true
+      # Local HTTP access only (no external tunnel)
+      - traefik.http.routers.glance-http.entrypoints=web
+      - traefik.http.routers.glance-http.rule=Host(`home.lab`)
       - traefik.http.services.glance.loadbalancer.server.port=8080
       - traefik.docker.network=shared-network
-
-      - traefik.http.routers.glance-http.entrypoints=web
-      - traefik.http.routers.glance-http.rule=Host(`glance.lab`)
-      - traefik.http.routers.glance-http.service=glance
 
       - "com.docker.compose.service=glance"
       - "description=Glance - Dashboard / Start Page"
@@ -126,6 +134,14 @@ services:
         limits:
           memory: ${VAULTWARDEN_MEMORY_LIMIT:-256m}
     labels:
+      # Glance Configuration
+      - glance.id=vaultwarden
+      - glance.name=Vaultwarden
+      - glance.icon=si:vaultwarden
+      - glance.url=http://vaultwarden.lab
+      - glance.description=Password Manager
+      
+      # Traefik Configuration
       - traefik.enable=true
       - traefik.http.routers.vaultwarden.rule=Host(`vaultwarden.${BASE_DOMAIN}`) || Host(`vault.${BASE_DOMAIN}`)
       - traefik.http.routers.vaultwarden.entrypoints=websecure

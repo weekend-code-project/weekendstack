@@ -35,6 +35,14 @@ services:
         limits:
           memory: ${OPENWEBUI_MEMORY_LIMIT:-2g}
     labels:
+      # Glance Configuration
+      - glance.id=open-webui
+      - glance.name=Open WebUI
+      - glance.icon=si:openai
+      - glance.url=http://openwebui.lab
+      - glance.description=AI Chat Interface
+      
+      # Traefik Configuration
       - traefik.enable=true
       - "traefik.http.routers.openwebui.rule=Host(`openwebui.${BASE_DOMAIN}`)"
       - traefik.http.routers.openwebui.entrypoints=websecure
@@ -75,6 +83,14 @@ services:
         limits:
           memory: ${SEARXNG_MEMORY_LIMIT:-1g}
     labels:
+      # Glance Configuration
+      - glance.id=searxng
+      - glance.name=SearXNG
+      - glance.icon=si:searxng
+      - glance.url=http://searxng.lab
+      - glance.description=Privacy Search
+      
+      # Traefik Configuration
       - traefik.enable=true
       - "traefik.http.routers.searxng.rule=Host(`searxng.${BASE_DOMAIN}`)"
       - traefik.http.routers.searxng.entrypoints=websecure
@@ -164,6 +180,14 @@ services:
         limits:
           memory: ${LOCALAI_MEMORY_LIMIT:-4g}
     labels:
+      # Glance Configuration
+      - glance.id=localai
+      - glance.name=LocalAI
+      - glance.icon=si:openai
+      - glance.url=http://localai.lab
+      - glance.description=Local LLM Server
+      
+      # Traefik Configuration
       - traefik.enable=true
       - "traefik.http.routers.localai.rule=Host(`localai.${BASE_DOMAIN}`)"
       - traefik.http.routers.localai.entrypoints=websecure
@@ -237,6 +261,14 @@ services:
         limits:
           memory: ${ANYTHINGLLM_MEMORY_LIMIT:-2g}
     labels:
+      # Glance Configuration
+      - glance.id=anythingllm
+      - glance.name=AnythingLLM
+      - glance.icon=si:openai
+      - glance.url=http://anythingllm.lab
+      - glance.description=AI Document Chat
+      
+      # Traefik Configuration
       - traefik.enable=true
       - "traefik.http.routers.anythingllm.rule=Host(`anythingllm.${BASE_DOMAIN}`)"
       - traefik.http.routers.anythingllm.entrypoints=websecure
@@ -278,6 +310,14 @@ services:
         limits:
           memory: ${WHISPER_MEMORY_LIMIT:-4g}
     labels:
+      # Glance Configuration
+      - glance.id=whisper
+      - glance.name=Whisper
+      - glance.icon=si:openai
+      - glance.url=http://whisper.lab
+      - glance.description=Speech-to-Text
+      
+      # Traefik Configuration
       - traefik.enable=true
       - "traefik.http.routers.whisper.rule=Host(`whisper.${BASE_DOMAIN}`)"
       - traefik.http.routers.whisper.entrypoints=websecure
@@ -379,6 +419,14 @@ services:
         limits:
           memory: ${LIBRECHAT_MEMORY_LIMIT:-1g}
     labels:
+      # Glance labels
+      - glance.id=librechat
+      - glance.name=LibreChat
+      - glance.icon=si:chatbot
+      - glance.url=http://librechat.lab
+      - glance.description=AI Chat Interface
+      
+      # Traefik labels
       - traefik.enable=true
       - "traefik.http.routers.librechat.rule=Host(`librechat.${BASE_DOMAIN}`)"
       - traefik.http.routers.librechat.entrypoints=websecure
@@ -391,6 +439,9 @@ services:
   librechat-db:
     image: mongo:latest
     container_name: librechat-db
+    labels:
+      - glance.parent=librechat
+      - glance.name=MongoDB
     restart: unless-stopped
     networks:
       - ai-network
