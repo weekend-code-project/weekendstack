@@ -101,7 +101,7 @@ services:
       - glance.id=nocodb
       - glance.name=NocoDB
       - glance.icon=si:airtable
-      - glance.url=http://nocodb.lab
+      - glance.url=/go/nocodb
       - glance.description=Airtable Alternative Database
       
       # Traefik Configuration for external access
@@ -210,7 +210,7 @@ services:
       - glance.id=n8n
       - glance.name=n8n
       - glance.icon=si:n8n
-      - glance.url=http://n8n.lab
+      - glance.url=/go/n8n
       - glance.description=Workflow Automation
       
       # Traefik Configuration
@@ -290,6 +290,9 @@ services:
       paperless-redis:
         condition: service_healthy
     environment:
+      # Host IP for ALLOWED_HOSTS
+      HOST_IP: ${HOST_IP}
+      
       # Database Configuration
       PAPERLESS_DBHOST: paperless-db
       PAPERLESS_DBPORT: 5432
@@ -319,7 +322,7 @@ services:
       PAPERLESS_CONSUMER_SUBDIRS_AS_TAGS: true
       
       # Security
-      PAPERLESS_ALLOWED_HOSTS: paperless.${BASE_DOMAIN},paperless.lab,localhost,127.0.0.1
+      PAPERLESS_ALLOWED_HOSTS: paperless.${BASE_DOMAIN},paperless.lab,localhost,127.0.0.1,${HOST_IP}
       PAPERLESS_CORS_ALLOWED_HOSTS: https://paperless.${BASE_DOMAIN},http://paperless.lab,http://${HOST_IP}:${PAPERLESS_PORT:-8082}
       
     volumes:
@@ -357,8 +360,8 @@ services:
       # Glance Configuration
       - glance.id=paperless
       - glance.name=Paperless-ngx
-      - glance.icon=si:files
-      - glance.url=http://paperless.lab
+      - glance.icon=si:docker
+      - glance.url=/go/paperless
       - glance.description=Document Management System
       
       # Traefik Configuration for external access
@@ -496,7 +499,7 @@ services:
       - glance.id=activepieces
       - glance.name=Activepieces
       - glance.icon=si:zapier
-      - glance.url=http://activepieces.lab
+      - glance.url=/go/activepieces
       - glance.description=Workflow Automation
       
       # Traefik Configuration for external access
@@ -644,7 +647,7 @@ services:
       - glance.id=postiz
       - glance.name=Postiz
       - glance.icon=si:hootsuite
-      - glance.url=http://postiz.lab
+      - glance.url=/go/postiz
       - glance.description=Social Media Management
       
       # Traefik Configuration for external access
@@ -692,7 +695,7 @@ services:
       - glance.id=focalboard
       - glance.name=Focalboard
       - glance.icon=si:mattermost
-      - glance.url=http://focalboard.lab
+      - glance.url=/go/focalboard
       - glance.description=Project Management
       
       # Traefik Configuration
@@ -739,7 +742,7 @@ services:
       - glance.id=trilium
       - glance.name=Trilium
       - glance.icon=si:trilium
-      - glance.url=http://trilium.lab
+      - glance.url=/go/trilium
       - glance.description=Note Taking
       
       # Traefik Configuration
@@ -792,7 +795,7 @@ services:
       - glance.id=vikunja
       - glance.name=Vikunja
       - glance.icon=si:vikunja
-      - glance.url=http://vikunja.lab
+      - glance.url=/go/vikunja
       - glance.description=Task Management
       
       # Traefik Configuration
@@ -834,7 +837,7 @@ services:
       - glance.id=it-tools
       - glance.name=IT-Tools
       - glance.icon=si:docker
-      - glance.url=http://it-tools.lab
+      - glance.url=/go/it-tools
       - glance.description=Developer Utilities
       
       # Traefik Configuration
@@ -878,7 +881,7 @@ services:
       - glance.id=excalidraw
       - glance.name=Excalidraw
       - glance.icon=si:excalidraw
-      - glance.url=http://excalidraw.lab
+      - glance.url=/go/excalidraw
       - glance.description=Whiteboard
       
       # Traefik Configuration
@@ -988,7 +991,7 @@ services:
       - glance.id=docmost
       - glance.name=Docmost
       - glance.icon=si:readthedocs
-      - glance.url=http://docmost.lab
+      - glance.url=/go/docmost
       - glance.description=Wiki & Documentation
       
       # Traefik Configuration
@@ -1043,8 +1046,8 @@ services:
       # Glance Configuration
       - glance.id=filebrowser
       - glance.name=File Browser
-      - glance.icon=si:files
-      - glance.url=http://filebrowser.lab
+      - glance.icon=si:docker
+      - glance.url=/go/filebrowser
       - glance.description=Web File Manager
       
       # Traefik Configuration
@@ -1103,7 +1106,7 @@ services:
       - glance.id=hoarder
       - glance.name=Hoarder
       - glance.icon=si:pocket
-      - glance.url=http://hoarder.lab
+      - glance.url=/go/hoarder
       - glance.description=Bookmark Manager
       
       # Traefik Configuration
@@ -1195,7 +1198,7 @@ services:
       - glance.id=bytestash
       - glance.name=ByteStash
       - glance.icon=si:github
-      - glance.url=http://bytestash.lab
+      - glance.url=/go/bytestash
       - glance.description=Code Snippets
       
       # Traefik Configuration

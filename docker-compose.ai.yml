@@ -39,7 +39,7 @@ services:
       - glance.id=open-webui
       - glance.name=Open WebUI
       - glance.icon=si:openai
-      - glance.url=http://openwebui.lab
+      - glance.url=/go/openwebui
       - glance.description=AI Chat Interface
       
       # Traefik Configuration
@@ -87,7 +87,7 @@ services:
       - glance.id=searxng
       - glance.name=SearXNG
       - glance.icon=si:searxng
-      - glance.url=http://searxng.lab
+      - glance.url=/go/searxng
       - glance.description=Privacy Search
       
       # Traefik Configuration
@@ -184,7 +184,7 @@ services:
       - glance.id=localai
       - glance.name=LocalAI
       - glance.icon=si:openai
-      - glance.url=http://localai.lab
+      - glance.url=/go/localai
       - glance.description=Local LLM Server
       
       # Traefik Configuration
@@ -265,7 +265,7 @@ services:
       - glance.id=anythingllm
       - glance.name=AnythingLLM
       - glance.icon=si:openai
-      - glance.url=http://anythingllm.lab
+      - glance.url=/go/anythingllm
       - glance.description=AI Document Chat
       
       # Traefik Configuration
@@ -314,7 +314,7 @@ services:
       - glance.id=whisper
       - glance.name=Whisper
       - glance.icon=si:openai
-      - glance.url=http://whisper.lab
+      - glance.url=/go/whisper
       - glance.description=Speech-to-Text
       
       # Traefik Configuration
@@ -423,7 +423,7 @@ services:
       - glance.id=librechat
       - glance.name=LibreChat
       - glance.icon=si:chatbot
-      - glance.url=http://librechat.lab
+      - glance.url=/go/librechat
       - glance.description=AI Chat Interface
       
       # Traefik labels

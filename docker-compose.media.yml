@@ -55,7 +55,7 @@ services:
       - glance.id=immich
       - glance.name=Immich
       - glance.icon=si:immich
-      - glance.url=http://immich.lab
+      - glance.url=/go/immich
       - glance.description=Image & Video Management
       
       # Traefik Configuration
@@ -176,7 +176,7 @@ services:
       - glance.id=kavita
       - glance.name=Kavita
       - glance.icon=si:bookstack
-      - glance.url=http://kavita.lab
+      - glance.url=/go/kavita
       - glance.description=Comics & Manga
       
       # Traefik Configuration
@@ -233,7 +233,7 @@ services:
       - glance.id=navidrome
       - glance.name=Navidrome
       - glance.icon=si:docker
-      - glance.url=http://navidrome.lab
+      - glance.url=/go/navidrome
       - glance.description=Music Streaming
       
       # Traefik Configuration

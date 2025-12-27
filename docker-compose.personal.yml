@@ -49,6 +49,13 @@ services:
         limits:
           memory: ${MEALIE_MEMORY_LIMIT:-512m}
     labels:
+      # Glance Configuration
+      - glance.id=mealie
+      - glance.name=Mealie
+      - glance.icon=si:docker
+      - glance.url=/go/mealie
+      - glance.description=Recipe Manager
+      
       # Traefik Configuration
       - traefik.enable=true
       - traefik.http.routers.mealie.rule=Host(`mealie.${BASE_DOMAIN}`)
@@ -93,8 +100,8 @@ services:
       # Glance Configuration
       - glance.id=firefly
       - glance.name=Firefly III
-      - glance.icon=si:moneygram
-      - glance.url=http://firefly.lab
+      - glance.icon=si:docker
+      - glance.url=/go/firefly
       - glance.description=Personal Finance
       
       # Traefik Configuration
@@ -117,9 +124,9 @@ services:
     container_name: wger
     labels:
       - glance.id=wger
-      - glance.name=wger
+      - glance.name=Wger
       - glance.icon=si:docker
-      - glance.url=http://wger.lab
+      - glance.url=/go/wger
       - glance.description=Workout Manager
     networks:
       - personal-network

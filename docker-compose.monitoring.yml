@@ -67,7 +67,7 @@ services:
       - glance.id=cockpit
       - glance.name=Cockpit
       - glance.icon=si:cockpit
-      - glance.url=http://cockpit.lab
+      - glance.url=/go/cockpit
       - glance.description=Server Management
       
       # Traefik Configuration
@@ -108,7 +108,7 @@ services:
       - glance.id=dozzle
       - glance.name=Dozzle
       - glance.icon=si:logstash
-      - glance.url=http://dozzle.lab
+      - glance.url=/go/dozzle
       - glance.description=Log Viewer
       
       # Traefik Configuration
@@ -159,7 +159,7 @@ services:
       - glance.id=wud
       - glance.name=What's Up Docker
       - glance.icon=si:docker
-      - glance.url=http://wud.lab
+      - glance.url=/go/wud
       - glance.description=Update Manager
       
       # Traefik Configuration
@@ -200,7 +200,7 @@ services:
       - glance.id=uptime-kuma
       - glance.name=Uptime Kuma
       - glance.icon=si:statuspage
-      - glance.url=http://uptime-kuma.lab
+      - glance.url=/go/uptime-kuma
       - glance.description=Uptime Monitoring
       
       # Traefik Configuration
@@ -264,7 +264,7 @@ services:
       - glance.id=netdata
       - glance.name=Netdata
       - glance.icon=si:netdata
-      - glance.url=http://netdata.lab
+      - glance.url=/go/netdata
       - glance.description=System Monitoring
       
       # Traefik Configuration
@@ -313,7 +313,7 @@ services:
       - glance.id=duplicati
       - glance.name=Duplicati
       - glance.icon=si:duplicati
-      - glance.url=http://duplicati.lab
+      - glance.url=/go/duplicati
       - glance.description=Backup Solution
       
       # Traefik Configuration
@@ -355,7 +355,7 @@ services:
       - glance.id=portainer
       - glance.name=Portainer
       - glance.icon=si:portainer
-      - glance.url=http://portainer.lab
+      - glance.url=/go/portainer
       - glance.description=Container Management
       
       # Traefik Configuration
@@ -411,7 +411,7 @@ services:
       - glance.id=netbox
       - glance.name=NetBox
       - glance.icon=si:cilium
-      - glance.url=http://netbox.lab
+      - glance.url=/go/netbox
       - glance.description=IPAM & DCIM
       
       # Traefik Configuration

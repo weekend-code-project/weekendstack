@@ -34,6 +34,7 @@ services:
       - all
       - core
     environment:
+      HOST_IP: ${HOST_IP:-192.168.2.50}
       LAB_DOMAIN: ${LAB_DOMAIN:-lab}
       BASE_DOMAIN: ${BASE_DOMAIN}
       LAB_SCHEME: ${LAB_SCHEME:-http}
@@ -54,8 +55,8 @@ services:
       - traefik.http.routers.link-router.tls=${TRAEFIK_TLS_ENABLE:-true}
       - traefik.http.routers.link-router.priority=100
 
-      # HTTP (Local .lab)
-      - traefik.http.routers.link-router-http.rule=(Host(`glance.${LAB_DOMAIN:-lab}`) || Host(`glance.${BASE_DOMAIN}`)) && PathPrefix(`/go/`)
+      # HTTP (Local .lab and IP access)
+      - traefik.http.routers.link-router-http.rule=PathPrefix(`/go/`)
       - traefik.http.routers.link-router-http.entrypoints=web
       - traefik.http.routers.link-router-http.priority=100
       - traefik.http.routers.link-router-http.service=link-router
@@ -73,9 +74,12 @@ services:
     profiles:
       - all
       - core
-    ports:
-      - "${HOST_IP:-192.168.2.50}:${GLANCE_PORT:-8080}:8080"
+    # Port removed - access via Traefik on port 80 instead
+    # Emergency fallback: uncomment to enable direct access on port 8080
+    # ports:
+    #   - "${HOST_IP:-192.168.2.50}:${GLANCE_PORT:-8080}:8080"
     environment:
+      HOST_IP: ${HOST_IP:-192.168.2.50}
       CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID}
       CLOUDFLARE_TUNNEL_ID: ${CLOUDFLARE_TUNNEL_ID}
       CLOUDFLARE_API_KEY: ${CLOUDFLARE_API_KEY}
@@ -103,14 +107,14 @@ services:
       - glance.id=glance
       - glance.name=Glance Dashboard
       - glance.icon=si:homeassistant
-      - glance.url=http://home.lab
+      - glance.url=/go/home
       - glance.description=Dashboard
       
       # Traefik Configuration
       - traefik.enable=true
       # Local HTTP access only (no external tunnel)
       - traefik.http.routers.glance-http.entrypoints=web
-      - traefik.http.routers.glance-http.rule=Host(`home.lab`)
+      - traefik.http.routers.glance-http.rule=Host(`home.lab`) || Host(`${HOST_IP}`)
       - traefik.http.services.glance.loadbalancer.server.port=8080
       - traefik.docker.network=shared-network
 
@@ -151,7 +155,7 @@ services:
       - glance.id=vaultwarden
       - glance.name=Vaultwarden
       - glance.icon=si:vaultwarden
-      - glance.url=http://vaultwarden.lab
+      - glance.url=/go/vaultwarden
       - glance.description=Password Manager
       
       # Traefik Configuration

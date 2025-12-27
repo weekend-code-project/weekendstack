@@ -187,7 +187,7 @@ services:
       - glance.id=coder
       - glance.name=Coder
       - glance.icon=si:coder
-      - glance.url=http://coder.lab
+      - glance.url=/go/coder
       - glance.description=Cloud Development Environment
       
       # Traefik labels
@@ -261,14 +261,16 @@ services:
       resources:
         limits:
           memory: ${GITEA_MEMORY_LIMIT:-2g}
-    labels:      # Glance Configuration
+    labels:
+      # Glance Configuration
       - glance.id=gitea
       - glance.name=Gitea
       - glance.icon=si:gitea
-      - glance.url=http://gitea.lab
+      - glance.url=/go/gitea
       - glance.description=Git Repository Hosting
       
-      # Traefik Configuration      - traefik.enable=true
+      # Traefik Configuration
+      - traefik.enable=true
       - traefik.http.routers.gitea.entrypoints=websecure
       - traefik.http.routers.gitea.rule=Host(`gitea.${BASE_DOMAIN}`)
       - traefik.http.routers.gitea.tls=true
@@ -366,7 +368,7 @@ services:
       - glance.id=gitlab
       - glance.name=GitLab
       - glance.icon=si:gitlab
-      - glance.url=http://gitlab.lab
+      - glance.url=/go/gitlab
       - glance.description=DevOps Platform
       
       # Traefik Configuration

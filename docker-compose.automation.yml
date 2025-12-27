@@ -112,7 +112,7 @@ services:
       - glance.id=homeassistant
       - glance.name=Home Assistant
       - glance.icon=si:homeassistant
-      - glance.url=http://homeassistant.lab
+      - glance.url=/go/homeassistant
       - glance.description=Smart Home Automation
       
       # Traefik Configuration
@@ -153,6 +153,10 @@ services:
         limits:
           memory: ${NODERED_MEMORY_LIMIT:-512m}
     labels:
+      # Glance Configuration - Hidden, nested under Home Assistant
+      - glance.parent=homeassistant
+      - glance.name=Node-RED
+      
       - traefik.enable=true
       - traefik.http.routers.nodered-http.rule=Host(`nodered.lab`)
       - traefik.http.routers.nodered-http.entrypoints=web
