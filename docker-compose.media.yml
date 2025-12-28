@@ -53,6 +53,7 @@ services:
     labels:
       # Glance Configuration
       - glance.id=immich
+      - glance.group=Media
       - glance.name=Immich
       - glance.icon=si:immich
       - glance.url=/go/immich
@@ -174,6 +175,7 @@ services:
     labels:
       # Glance Configuration
       - glance.id=kavita
+      - glance.group=Media
       - glance.name=Kavita
       - glance.icon=si:bookstack
       - glance.url=/go/kavita
@@ -231,6 +233,7 @@ services:
     labels:
       # Glance Configuration
       - glance.id=navidrome
+      - glance.group=Media
       - glance.name=Navidrome
       - glance.icon=si:docker
       - glance.url=/go/navidrome

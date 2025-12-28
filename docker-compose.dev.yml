@@ -185,6 +185,7 @@ services:
     labels:
       # Glance labels
       - glance.id=coder
+      - glance.group=Dev
       - glance.name=Coder
       - glance.icon=si:coder
       - glance.url=/go/coder
@@ -264,6 +265,7 @@ services:
     labels:
       # Glance Configuration
       - glance.id=gitea
+      - glance.group=Dev
       - glance.name=Gitea
       - glance.icon=si:gitea
       - glance.url=/go/gitea
@@ -366,6 +368,7 @@ services:
     labels:
       # Glance Configuration
       - glance.id=gitlab
+      - glance.group=Dev
       - glance.name=GitLab
       - glance.icon=si:gitlab
       - glance.url=/go/gitlab

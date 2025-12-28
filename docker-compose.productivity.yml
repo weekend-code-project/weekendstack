@@ -99,6 +99,7 @@ services:
     labels:
       # Glance Configuration
       - glance.id=nocodb
+      - glance.group=Productivity
       - glance.name=NocoDB
       - glance.icon=si:airtable
       - glance.url=/go/nocodb
@@ -208,6 +209,7 @@ services:
     labels:
       # Glance Configuration
       - glance.id=n8n
+      - glance.group=Productivity
       - glance.name=n8n
       - glance.icon=si:n8n
       - glance.url=/go/n8n
@@ -359,6 +361,7 @@ services:
     labels:
       # Glance Configuration
       - glance.id=paperless
+      - glance.group=Productivity
       - glance.name=Paperless-ngx
       - glance.icon=si:docker
       - glance.url=/go/paperless
@@ -497,6 +500,7 @@ services:
     labels:
       # Glance Configuration
       - glance.id=activepieces
+      - glance.group=Productivity
       - glance.name=Activepieces
       - glance.icon=si:zapier
       - glance.url=/go/activepieces
@@ -645,6 +649,7 @@ services:
     labels:
       # Glance Configuration
       - glance.id=postiz
+      - glance.group=Productivity
       - glance.name=Postiz
       - glance.icon=si:hootsuite
       - glance.url=/go/postiz
@@ -693,6 +698,7 @@ services:
     labels:
       # Glance Configuration
       - glance.id=focalboard
+      - glance.group=Productivity
       - glance.name=Focalboard
       - glance.icon=si:mattermost
       - glance.url=/go/focalboard
@@ -740,6 +746,7 @@ services:
     labels:
       # Glance Configuration
       - glance.id=trilium
+      - glance.group=Productivity
       - glance.name=Trilium
       - glance.icon=si:trilium
       - glance.url=/go/trilium
@@ -793,6 +800,7 @@ services:
     labels:
       # Glance Configuration
       - glance.id=vikunja
+      - glance.group=Productivity
       - glance.name=Vikunja
       - glance.icon=si:vikunja
       - glance.url=/go/vikunja
@@ -835,6 +843,7 @@ services:
     labels:
       # Glance Configuration
       - glance.id=it-tools
+      - glance.group=Productivity
       - glance.name=IT-Tools
       - glance.icon=si:docker
       - glance.url=/go/it-tools
@@ -879,6 +888,7 @@ services:
     labels:
       # Glance Configuration
       - glance.id=excalidraw
+      - glance.group=Productivity
       - glance.name=Excalidraw
       - glance.icon=si:excalidraw
       - glance.url=/go/excalidraw
@@ -989,6 +999,7 @@ services:
     labels:
       # Glance Configuration
       - glance.id=docmost
+      - glance.group=Productivity
       - glance.name=Docmost
       - glance.icon=si:readthedocs
       - glance.url=/go/docmost
@@ -1045,6 +1056,7 @@ services:
     labels:
       # Glance Configuration
       - glance.id=filebrowser
+      - glance.group=Productivity
       - glance.name=File Browser
       - glance.icon=si:docker
       - glance.url=/go/filebrowser
@@ -1104,6 +1116,7 @@ services:
     labels:
       # Glance Configuration
       - glance.id=hoarder
+      - glance.group=Productivity
       - glance.name=Hoarder
       - glance.icon=si:pocket
       - glance.url=/go/hoarder
@@ -1196,6 +1209,7 @@ services:
     labels:
       # Glance Configuration
       - glance.id=bytestash
+      - glance.group=Productivity
       - glance.name=ByteStash
       - glance.icon=si:github
       - glance.url=/go/bytestash

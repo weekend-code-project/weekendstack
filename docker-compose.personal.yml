@@ -51,6 +51,7 @@ services:
     labels:
       # Glance Configuration
       - glance.id=mealie
+      - glance.group=Personal
       - glance.name=Mealie
       - glance.icon=si:docker
       - glance.url=/go/mealie
@@ -99,6 +100,7 @@ services:
     labels:
       # Glance Configuration
       - glance.id=firefly
+      - glance.group=Personal
       - glance.name=Firefly III
       - glance.icon=si:docker
       - glance.url=/go/firefly
@@ -124,6 +126,7 @@ services:
     container_name: wger
     labels:
       - glance.id=wger
+      - glance.group=Personal
       - glance.name=Wger
       - glance.icon=si:docker
       - glance.url=/go/wger

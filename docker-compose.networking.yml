@@ -116,10 +116,12 @@ services:
     labels:
       # Glance Configuration
       - glance.id=traefik
+      - glance.group=Networking
       - glance.name=Traefik
       - glance.icon=si:traefikproxy
       - glance.url=/go/traefik
       - glance.description=Reverse Proxy
+      - glance.hide=true
       
       # Traefik Configuration
       - traefik.enable=true
@@ -253,10 +255,12 @@ services:
     labels:
       # Glance Configuration
       - glance.id=pihole
+      - glance.group=Networking
       - glance.name=Pi-hole
       - glance.icon=si:pihole
       - glance.url=/go/pihole
       - glance.description=DNS Ad Blocker
+      - glance.hide=true
       
       # Traefik Configuration
       # Local-only Pi-hole admin (HTTP, no TLS) on http://pihole.lab/admin

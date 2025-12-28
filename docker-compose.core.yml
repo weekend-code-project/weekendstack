@@ -105,6 +105,7 @@ services:
     labels:
       # Glance Configuration
       - glance.id=glance
+      - glance.group=Core
       - glance.name=Glance Dashboard
       - glance.icon=si:homeassistant
       - glance.url=/go/home
@@ -153,6 +154,7 @@ services:
     labels:
       # Glance Configuration
       - glance.id=vaultwarden
+      - glance.group=Core
       - glance.name=Vaultwarden
       - glance.icon=si:vaultwarden
       - glance.url=/go/vaultwarden

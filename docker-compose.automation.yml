@@ -110,6 +110,7 @@ services:
     labels:
       # Glance Configuration
       - glance.id=homeassistant
+      - glance.group=Automation
       - glance.name=Home Assistant
       - glance.icon=si:homeassistant
       - glance.url=/go/homeassistant

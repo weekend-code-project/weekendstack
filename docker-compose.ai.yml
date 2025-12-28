@@ -37,6 +37,7 @@ services:
     labels:
       # Glance Configuration
       - glance.id=open-webui
+      - glance.group=AI
       - glance.name=Open WebUI
       - glance.icon=si:openai
       - glance.url=/go/openwebui
@@ -85,6 +86,7 @@ services:
     labels:
       # Glance Configuration
       - glance.id=searxng
+      - glance.group=AI
       - glance.name=SearXNG
       - glance.icon=si:searxng
       - glance.url=/go/searxng
@@ -182,6 +184,7 @@ services:
     labels:
       # Glance Configuration
       - glance.id=localai
+      - glance.group=AI
       - glance.name=LocalAI
       - glance.icon=si:openai
       - glance.url=/go/localai
@@ -263,6 +266,7 @@ services:
     labels:
       # Glance Configuration
       - glance.id=anythingllm
+      - glance.group=AI
       - glance.name=AnythingLLM
       - glance.icon=si:openai
       - glance.url=/go/anythingllm
@@ -312,6 +316,7 @@ services:
     labels:
       # Glance Configuration
       - glance.id=whisper
+      - glance.group=AI
       - glance.name=Whisper
       - glance.icon=si:openai
       - glance.url=/go/whisper
@@ -421,6 +426,7 @@ services:
     labels:
       # Glance labels
       - glance.id=librechat
+      - glance.group=AI
       - glance.name=LibreChat
       - glance.icon=si:chatbot
       - glance.url=/go/librechat
