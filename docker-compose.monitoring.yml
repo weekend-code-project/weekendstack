@@ -179,6 +179,13 @@ services:
   # Tracks your internet speed over time with scheduled tests
   # Default: Tests run every hour, stores historical data
   # =============================================================================
+  # =============================================================================
+  # SPEEDTEST TRACKER - Internet Speed Monitoring
+  # =============================================================================
+  # Web UI with scheduled tests and API for Glance widget
+  # Requires one-time setup: http://192.168.2.50:8765/admin/login
+  # Default: admin@example.com / password
+  # =============================================================================
   speedtest-tracker:
     image: lscr.io/linuxserver/speedtest-tracker:latest
     container_name: speedtest-tracker
@@ -197,10 +204,9 @@ services:
       DB_CONNECTION: sqlite
       APP_KEY: base64:02KsGT9QvDav6HUStRvjqDjUqFKa96RDS7SibKfZ1VI=
       APP_URL: http://${HOST_IP}:${SPEEDTEST_PORT:-8765}
+      SPEEDTEST_SCHEDULE: ${SPEEDTEST_SCHEDULE:-0 * * * *}
     volumes:
-      - type: volume
-        source: speedtest-data
-        target: /config
+      - speedtest-data:/config
     restart: unless-stopped
     deploy:
       resources:

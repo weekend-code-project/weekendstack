@@ -10,6 +10,332 @@ branding:
 pages:
   - name: Home
     slug: home
+    hide-desktop-navigation: true
+    head-widgets:
+      - type: bookmarks
+        groups:
+          - title: AI Services
+            links:
+              - title: Open-WebUI
+                url: /go-external/open-webui
+                icon: si:openai
+              - title: AnythingLLM
+                url: /go-external/anythingllm
+                icon: si:openai
+              - title: LocalAI
+                url: /go-external/localai
+                icon: si:openai
+              - title: LibreChat
+                url: /go-external/librechat
+                icon: si:chatbot
+          - title: Development
+            links:
+              - title: Coder
+                url: /go-external/coder
+                icon: si:coder
+              - title: Gitea
+                url: /go-external/gitea
+                icon: si:gitea
+              - title: GitLab
+                url: /go-external/gitlab
+                icon: si:gitlab
+              - title: ByteStash
+                url: /go-external/bytestash
+                icon: si:bookstack
+          - title: Personal
+            links:
+              - title: Mealie
+                url: /go-external/mealie
+                icon: si:chef
+              - title: Firefly III
+                url: /go-external/firefly
+                icon: si:fireflyiii
+              - title: Immich
+                url: /go-external/immich
+                icon: si:googlephotos
+              - title: Navidrome
+                url: /go-external/navidrome
+                icon: si:musicbrainz
+          - title: Productivity
+            links:
+              - title: Vaultwarden
+                url: /go-external/vaultwarden
+                icon: si:bitwarden
+              - title: Paperless
+                url: /go-external/paperless
+                icon: si:files
+              - title: Vikunja
+                url: /go-external/vikunja
+                icon: si:todoist
+              - title: Focalboard
+                url: /go-external/focalboard
+                icon: si:trello
+    columns:
+      - size: full
+        widgets:
+          - type: monitor
+            cache: 1m
+            title: Monitoring Services
+            sites:
+              - title: Cockpit
+                url: /go/cockpit
+                check-url: http://${HOST_IP}:80
+                icon: si:cockpit
+              - title: Dozzle
+                url: /go/dozzle
+                check-url: http://${HOST_IP}:9999
+                icon: si:docker
+              - title: NetData
+                url: /go/netdata
+                check-url: http://${HOST_IP}:19999
+                icon: si:netdata
+              - title: Portainer
+                url: /go/portainer
+                check-url: http://${HOST_IP}:9000
+                icon: si:portainer
+              - title: Uptime Kuma
+                url: /go/uptime-kuma
+                check-url: http://${HOST_IP}:3001
+                icon: si:uptimekuma
+              - title: WUD
+                url: /go/wud
+                check-url: http://${HOST_IP}:3002
+                icon: si:docker
+              - title: Speedtest
+                url: /go/speedtest
+                check-url: http://${HOST_IP}:8765
+                icon: si:speedtest
+              - title: Duplicati
+                url: /go/duplicati
+                check-url: http://${HOST_IP}:8200
+                icon: si:docker
+              - title: NetBox
+                url: /go/netbox
+                check-url: http://${HOST_IP}:8484/login/
+                icon: si:docker
+              - title: Traefik
+                url: /go/traefik
+                check-url: http://${HOST_IP}:80
+                icon: si:traefikproxy
+              - title: Pi-hole
+                url: /go/pihole
+                check-url: http://${HOST_IP}:8088/admin/
+                icon: si:pihole
+          - type: docker-containers
+            limit: 50
+
+      - size: small
+        widgets:
+          - type: server-stats
+            servers:
+              - type: local
+                name: Docker VM
+
+          - type: custom-api
+            cache: 5m
+            title: Immich Stats
+            title-url: http://192.168.2.50:2283
+            url: http://192.168.2.50:2283/api/server-info/stats
+            headers:
+              x-api-key: "your_immich_api_key_here"
+            template: |
+              {{ $photos := .JSON.Int "photos" }}
+              {{ $videos := .JSON.Int "videos" }}
+              {{ $usage := .JSON.Int "usage" }}
+              <div style="display: flex; justify-content: space-around; margin: 1rem 0;">
+                <div style="text-align: center;">
+                  <div style="font-size: 1.4rem;">{{ $photos }}</div>
+                  <div style="font-size: 0.9rem; opacity: 0.8;">Photos</div>
+                </div>
+                <div style="text-align: center;">
+                  <div style="font-size: 1.4rem;">{{ $videos }}</div>
+                  <div style="font-size: 0.9rem; opacity: 0.8;">Videos</div>
+                </div>
+                <div style="text-align: center;">
+                  <div style="font-size: 1.4rem;">{{ add $photos $videos }}</div>
+                  <div style="font-size: 0.9rem; opacity: 0.8;">Total</div>
+                </div>
+              </div>
+          - type: custom-api
+            cache: 5m
+            title: Kavita Latest
+            title-url: http://192.168.2.50:5000
+            url: http://192.168.2.50:5000/api/Series/recently-updated?pageSize=5
+            headers:
+              Authorization: "Bearer kavita_api_key_here"
+            template: |
+              {{ range .JSON.Array "" }}
+                <li>
+                  <div class="size-h4">{{ .String "name" }}</div>
+                  <div style="font-size: 0.9rem; opacity: 0.8;">{{ .String "libraryName" }}</div>
+                </li>
+              {{ end }}
+          - type: custom-api
+            cache: 5m
+            title: Navidrome Stats
+            title-url: http://192.168.2.50:4533
+            url: http://192.168.2.50:4533/rest/getUser.view?u=admin&p=admin&v=1.16.1&c=glance&f=json
+            template: |
+              {{ $artists := .JSON.Int "subsonic-response.user.artistCount" }}
+              {{ $albums := .JSON.Int "subsonic-response.user.albumCount" }}
+              {{ $songs := .JSON.Int "subsonic-response.user.trackCount" }}
+              <div style="display: flex; justify-content: space-around; margin: 1rem 0;">
+                <div style="text-align: center;">
+                  <div style="font-size: 1.4rem;">{{ $artists }}</div>
+                  <div style="font-size: 0.9rem; opacity: 0.8;">Artists</div>
+                </div>
+                <div style="text-align: center;">
+                  <div style="font-size: 1.4rem;">{{ $albums }}</div>
+                  <div style="font-size: 0.9rem; opacity: 0.8;">Albums</div>
+                </div>
+                <div style="text-align: center;">
+                  <div style="font-size: 1.4rem;">{{ $songs }}</div>
+                  <div style="font-size: 0.9rem; opacity: 0.8;">Songs</div>
+                </div>
+              </div>
+
+          - type: custom-api
+            title: Latest Speedtest
+            cache: 5m
+            url: http://speedtest-tracker:80/api/speedtest/latest
+            template: |
+              {{ $data := .JSON.Get "data" }}
+              {{ if $data }}
+                <div style="display: flex; justify-content: space-around; padding: 1rem 0;">
+                  <div style="text-align: center;">
+                    <div style="font-size: 1.6rem; font-weight: bold;" class="color-primary">{{ $data.String "download" }}</div>
+                    <div style="font-size: 0.9rem; opacity: 0.8;">↓ Mbps</div>
+                  </div>
+                  <div style="text-align: center;">
+                    <div style="font-size: 1.6rem; font-weight: bold;" class="color-primary">{{ $data.String "upload" }}</div>
+                    <div style="font-size: 0.9rem; opacity: 0.8;">↑ Mbps</div>
+                  </div>
+                  <div style="text-align: center;">
+                    <div style="font-size: 1.6rem; font-weight: bold;">{{ $data.String "ping" }}</div>
+                    <div style="font-size: 0.9rem; opacity: 0.8;">Ping (ms)</div>
+                  </div>
+                </div>
+                <div style="text-align: center; font-size: 0.85rem; opacity: 0.7; margin-top: 0.5rem;">
+                  Last test: {{ $data.String "created_at" }}
+                </div>
+              {{ else }}
+                <div style="text-align: center; padding: 1rem; opacity: 0.7;">
+                  No speedtest results yet. Tests run automatically every hour.
+                </div>
+              {{ end }}
+
+          - type: custom-api
+            title: What's Up Docker?
+            title-url: http://192.168.2.50:3002
+            cache: 1h
+            url: http://wud:3000/api/containers/
+            method: GET
+            headers:
+              Authorization: "Basic YWRtaW46YWRtaW4="
+            template: |
+              {{/* WUD Monitor v2.1 */}}
+              {{ $showInfo := true }}
+              {{ $showList := true }}
+              {{ $showAll := false }}
+              {{ $showUpdateKind := true }}
+              {{ $showUpdateTypes := false }}
+              {{ $showLocalVersion := true }}
+              {{ $hasUpdates := false }}
+
+              {{ $containers := .JSON.Array "" }}
+              {{ $total := len $containers }}
+              {{ $updates := 0 }}
+              {{ $running := 0 }}
+
+              {{ range $containers }}
+                {{ if .Bool "updateAvailable" }}
+                  {{ $updates = add $updates 1 }}
+                {{ end }}
+                {{ if eq (.String "status") "running" }}
+                  {{ $running = add $running 1 }}
+                {{ end }}
+              {{ end }}
+
+              {{ if $showInfo }}
+                <div style="display: flex; justify-content: space-around; margin: 1rem 0;">
+                  <div style="text-align: center;">
+                    <div style="font-size: 1.4rem;">{{ $updates }}</div>
+                    <div style="font-size: 0.9rem; opacity: 0.8;">Updates</div>
+                  </div>
+                  <div style="text-align: center;">
+                    <div style="font-size: 1.4rem;">{{ $total }}</div>
+                    <div style="font-size: 0.9rem; opacity: 0.8;">Total</div>
+                  </div>
+                  <div style="text-align: center;">
+                    <div style="font-size: 1.4rem;">{{ $running }}</div>
+                    <div style="font-size: 0.9rem; opacity: 0.8;">Running</div>
+                  </div>
+                </div>
+              {{ end }}
+
+              {{ if $showList }}
+                <ul class="list list-gap-10 collapsible-container" data-collapse-after="5">
+                  {{ range $containers }}
+                    {{ if .Bool "updateAvailable" }}
+                      {{ $hasUpdates = true }}
+                      <li>
+                        <div class="size-h4">
+                          {{ if eq (.String "status") "running" }}
+                            <span class="color-positive">●</span>
+                          {{ else }}
+                            <span class="color-negative">●</span>
+                          {{ end }}
+                          <a href="http://192.168.2.50:3002" target="_blank" style="color: inherit; text-decoration: none;">{{ .String "name" }}</a>
+                        </div>
+                        <div style="display: flex; gap: 1rem; margin-top: 0.25rem; font-size: 0.9rem; opacity: 0.8;">
+                          {{ if $showLocalVersion }}
+                            <div>
+                              {{ $localValue := .String "updateKind.localValue" }}
+                              {{ if ge (len $localValue) 7 }}
+                                {{ $isSha256 := eq (slice $localValue 0 7) "sha256:" }}
+                                {{ if $isSha256 }}
+                                  {{ $shortDigest := slice $localValue 7 11 }}
+                                  <span>{{ $shortDigest }}</span>
+                                {{ else }}
+                                  <span>{{ $localValue }}</span>
+                                {{ end }}
+                              {{ else }}
+                                <span>{{ $localValue }}</span>
+                              {{ end }}
+                            </div>
+                          {{ end }}
+                          {{ if $showUpdateKind }}
+                            <div>
+                              →
+                              {{ $tagValue := .String "updateKind.remoteValue" }}
+                              {{ if ge (len $tagValue) 7 }}
+                                {{ $isSha256 := eq (slice $tagValue 0 7) "sha256:" }}
+                                {{ if $isSha256 }}
+                                  {{ $shortDigest := slice $tagValue 7 11 }}
+                                  <span class="color-primary">{{ $shortDigest }}</span>
+                                {{ else }}
+                                  <span class="color-primary">{{ $tagValue }}</span>
+                                {{ end }}
+                              {{ else }}
+                                <span class="color-primary">{{ $tagValue }}</span>
+                              {{ end }}
+                            </div>
+                          {{ end }}
+                        </div>
+                      </li>
+                    {{ end }}
+                  {{ end }}
+
+                  {{ if not $hasUpdates }}
+                    <li class="flex items-center justify-center">
+                      <span class="color-positive size-h4">All containers are up to date!</span>
+                    </li>
+                  {{ end }}
+                </ul>
+              {{ end }}
+
+  - name: Old Home (Backup)
+    slug: old-home
     width: slim
     hide-desktop-navigation: true
     center-vertically: true
@@ -79,6 +405,272 @@ pages:
                   - title: Focalboard
                     url: /go/focalboard
 
+  - name: New Home
+    slug: new-home
+    columns:
+      - size: full
+        widgets:
+          - type: monitor
+            cache: 1m
+            title: Monitoring Services
+            sites:
+              - title: Cockpit
+                url: /go/cockpit
+                check-url: http://${HOST_IP}:80
+                icon: si:cockpit
+              - title: Dozzle
+                url: /go/dozzle
+                check-url: http://${HOST_IP}:9999
+                icon: si:docker
+              - title: NetData
+                url: /go/netdata
+                check-url: http://${HOST_IP}:19999
+                icon: si:netdata
+              - title: Portainer
+                url: /go/portainer
+                check-url: http://${HOST_IP}:9000
+                icon: si:portainer
+              - title: Uptime Kuma
+                url: /go/uptime-kuma
+                check-url: http://${HOST_IP}:3001
+                icon: si:uptimekuma
+              - title: WUD
+                url: /go/wud
+                check-url: http://${HOST_IP}:3002
+                icon: si:docker
+              - title: Speedtest
+                url: /go/speedtest
+                check-url: http://${HOST_IP}:8765
+                icon: si:speedtest
+              - title: Duplicati
+                url: /go/duplicati
+                check-url: http://${HOST_IP}:8200
+                icon: si:docker
+              - title: NetBox
+                url: /go/netbox
+                check-url: http://${HOST_IP}:8484/login/
+                icon: si:docker
+              - title: Traefik
+                url: /go/traefik
+                check-url: http://${HOST_IP}:80
+                icon: si:traefikproxy
+              - title: Pi-hole
+                url: /go/pihole
+                check-url: http://${HOST_IP}:8088/admin/
+                icon: si:pihole
+          - type: docker-containers
+            limit: 50
+
+      - size: small
+        widgets:
+          - type: server-stats
+            servers:
+              - type: local
+                name: Docker VM
+
+          - type: custom-api
+            cache: 5m
+            title: Immich Stats
+            title-url: http://192.168.2.50:2283
+            url: http://192.168.2.50:2283/api/server-info/stats
+            headers:
+              x-api-key: "your_immich_api_key_here"
+            template: |
+              {{ $photos := .JSON.Int "photos" }}
+              {{ $videos := .JSON.Int "videos" }}
+              {{ $usage := .JSON.Int "usage" }}
+              <div style="display: flex; justify-content: space-around; margin: 1rem 0;">
+                <div style="text-align: center;">
+                  <div style="font-size: 1.4rem;">{{ $photos }}</div>
+                  <div style="font-size: 0.9rem; opacity: 0.8;">Photos</div>
+                </div>
+                <div style="text-align: center;">
+                  <div style="font-size: 1.4rem;">{{ $videos }}</div>
+                  <div style="font-size: 0.9rem; opacity: 0.8;">Videos</div>
+                </div>
+                <div style="text-align: center;">
+                  <div style="font-size: 1.4rem;">{{ add $photos $videos }}</div>
+                  <div style="font-size: 0.9rem; opacity: 0.8;">Total</div>
+                </div>
+              </div>
+          - type: custom-api
+            cache: 5m
+            title: Kavita Latest
+            title-url: http://192.168.2.50:5000
+            url: http://192.168.2.50:5000/api/Series/recently-updated?pageSize=5
+            headers:
+              Authorization: "Bearer kavita_api_key_here"
+            template: |
+              {{ range .JSON.Array "" }}
+                <li>
+                  <div class="size-h4">{{ .String "name" }}</div>
+                  <div style="font-size: 0.9rem; opacity: 0.8;">{{ .String "libraryName" }}</div>
+                </li>
+              {{ end }}
+          - type: custom-api
+            cache: 5m
+            title: Navidrome Stats
+            title-url: http://192.168.2.50:4533
+            url: http://192.168.2.50:4533/rest/getUser.view?u=admin&p=admin&v=1.16.1&c=glance&f=json
+            template: |
+              {{ $artists := .JSON.Int "subsonic-response.user.artistCount" }}
+              {{ $albums := .JSON.Int "subsonic-response.user.albumCount" }}
+              {{ $songs := .JSON.Int "subsonic-response.user.trackCount" }}
+              <div style="display: flex; justify-content: space-around; margin: 1rem 0;">
+                <div style="text-align: center;">
+                  <div style="font-size: 1.4rem;">{{ $artists }}</div>
+                  <div style="font-size: 0.9rem; opacity: 0.8;">Artists</div>
+                </div>
+                <div style="text-align: center;">
+                  <div style="font-size: 1.4rem;">{{ $albums }}</div>
+                  <div style="font-size: 0.9rem; opacity: 0.8;">Albums</div>
+                </div>
+                <div style="text-align: center;">
+                  <div style="font-size: 1.4rem;">{{ $songs }}</div>
+                  <div style="font-size: 0.9rem; opacity: 0.8;">Songs</div>
+                </div>
+              </div>
+
+          - type: custom-api
+            title: Latest Speedtest
+            cache: 5m
+            url: http://speedtest-tracker:80/api/speedtest/latest
+            template: |
+              {{ $data := .JSON.Get "data" }}
+              {{ if $data }}
+                <div style="display: flex; justify-content: space-around; padding: 1rem 0;">
+                  <div style="text-align: center;">
+                    <div style="font-size: 1.6rem; font-weight: bold;" class="color-primary">{{ $data.String "download" }}</div>
+                    <div style="font-size: 0.9rem; opacity: 0.8;">↓ Mbps</div>
+                  </div>
+                  <div style="text-align: center;">
+                    <div style="font-size: 1.6rem; font-weight: bold;" class="color-primary">{{ $data.String "upload" }}</div>
+                    <div style="font-size: 0.9rem; opacity: 0.8;">↑ Mbps</div>
+                  </div>
+                  <div style="text-align: center;">
+                    <div style="font-size: 1.6rem; font-weight: bold;">{{ $data.String "ping" }}</div>
+                    <div style="font-size: 0.9rem; opacity: 0.8;">Ping (ms)</div>
+                  </div>
+                </div>
+                <div style="text-align: center; font-size: 0.85rem; opacity: 0.7; margin-top: 0.5rem;">
+                  Last test: {{ $data.String "created_at" }}
+                </div>
+              {{ else }}
+                <div style="text-align: center; padding: 1rem; opacity: 0.7;">
+                  No speedtest results yet. Tests run automatically every hour.
+                </div>
+              {{ end }}
+
+          - type: custom-api
+            title: What's Up Docker?
+            title-url: http://192.168.2.50:3002
+            cache: 1h
+            url: http://wud:3000/api/containers/
+            method: GET
+            headers:
+              Authorization: "Basic YWRtaW46YWRtaW4="
+            template: |
+              {{/* WUD Monitor v2.1 */}}
+              {{ $showInfo := true }}
+              {{ $showList := true }}
+              {{ $showAll := false }}
+              {{ $showUpdateKind := true }}
+              {{ $showUpdateTypes := false }}
+              {{ $showLocalVersion := true }}
+              {{ $hasUpdates := false }}
+
+              {{ $containers := .JSON.Array "" }}
+              {{ $total := len $containers }}
+              {{ $updates := 0 }}
+              {{ $running := 0 }}
+
+              {{ range $containers }}
+                {{ if .Bool "updateAvailable" }}
+                  {{ $updates = add $updates 1 }}
+                {{ end }}
+                {{ if eq (.String "status") "running" }}
+                  {{ $running = add $running 1 }}
+                {{ end }}
+              {{ end }}
+
+              {{ if $showInfo }}
+                <div style="display: flex; justify-content: space-around; margin: 1rem 0;">
+                  <div style="text-align: center;">
+                    <div style="font-size: 1.4rem;">{{ $updates }}</div>
+                    <div style="font-size: 0.9rem; opacity: 0.8;">Updates</div>
+                  </div>
+                  <div style="text-align: center;">
+                    <div style="font-size: 1.4rem;">{{ $total }}</div>
+                    <div style="font-size: 0.9rem; opacity: 0.8;">Total</div>
+                  </div>
+                  <div style="text-align: center;">
+                    <div style="font-size: 1.4rem;">{{ $running }}</div>
+                    <div style="font-size: 0.9rem; opacity: 0.8;">Running</div>
+                  </div>
+                </div>
+              {{ end }}
+
+              {{ if $showList }}
+                <ul class="list list-gap-10 collapsible-container" data-collapse-after="5">
+                  {{ range $containers }}
+                    {{ if .Bool "updateAvailable" }}
+                      {{ $hasUpdates = true }}
+                      <li>
+                        <div class="size-h4">
+                          {{ if eq (.String "status") "running" }}
+                            <span class="color-positive">●</span>
+                          {{ else }}
+                            <span class="color-negative">●</span>
+                          {{ end }}
+                          <a href="http://192.168.2.50:3002" target="_blank" style="color: inherit; text-decoration: none;">{{ .String "name" }}</a>
+                        </div>
+                        <div style="display: flex; gap: 1rem; margin-top: 0.25rem; font-size: 0.9rem; opacity: 0.8;">
+                          {{ if $showLocalVersion }}
+                            <div>
+                              {{ $localValue := .String "updateKind.localValue" }}
+                              {{ if ge (len $localValue) 7 }}
+                                {{ $isSha256 := eq (slice $localValue 0 7) "sha256:" }}
+                                {{ if $isSha256 }}
+                                  {{ $shortDigest := slice $localValue 7 11 }}
+                                  <span>{{ $shortDigest }}</span>
+                                {{ else }}
+                                  <span>{{ $localValue }}</span>
+                                {{ end }}
+                              {{ else }}
+                                <span>{{ $localValue }}</span>
+                              {{ end }}
+                            </div>
+                          {{ end }}
+                          {{ if $showUpdateKind }}
+                            <div>
+                              →
+                              {{ $tagValue := .String "updateKind.remoteValue" }}
+                              {{ if ge (len $tagValue) 7 }}
+                                {{ $isSha256 := eq (slice $tagValue 0 7) "sha256:" }}
+                                {{ if $isSha256 }}
+                                  {{ $shortDigest := slice $tagValue 7 11 }}
+                                  <span class="color-primary">{{ $shortDigest }}</span>
+                                {{ else }}
+                                  <span class="color-primary">{{ $tagValue }}</span>
+                                {{ end }}
+                              {{ else }}
+                                <span class="color-primary">{{ $tagValue }}</span>
+                              {{ end }}
+                            </div>
+                          {{ end }}
+                        </div>
+                      </li>
+                    {{ end }}
+                  {{ end }}
+
+                  {{ if not $hasUpdates }}
+                    <li class="flex items-center justify-center">
+                      <span class="color-positive size-h4">All containers are up to date!</span>
+                    </li>
+                  {{ end }}
+                </ul>
+              {{ end }}
+
   - name: Services
     slug: services
     head-widgets:
@@ -120,7 +712,7 @@ pages:
             icon: si:docker
           - title: NetBox
             url: /go/netbox
-            check-url: http://${HOST_IP}:8484
+            check-url: http://${HOST_IP}:8484/login/
             icon: si:docker
           - title: Traefik
             url: /go/traefik
@@ -128,7 +720,7 @@ pages:
             icon: si:traefikproxy
           - title: Pi-hole
             url: /go/pihole
-            check-url: http://${HOST_IP}:8088
+            check-url: http://${HOST_IP}:8088/admin/
             icon: si:pihole
     columns:
       - size: full
@@ -406,78 +998,6 @@ pages:
                   - title: Gitea
                     url: https://gitea.weekendcodeproject.dev
                     icon: si:gitea
-
-  - name: Monitoring
-    slug: monitoring
-    columns:
-      - size: full
-        widgets:
-          - type: monitor
-            cache: 1m
-            title: Monitoring Services
-            sites:
-              - title: Cockpit
-                url: /go/cockpit
-                check-url: http://${HOST_IP}:80
-                icon: si:cockpit
-              - title: Dozzle
-                url: /go/dozzle
-                check-url: http://${HOST_IP}:9999
-                icon: si:docker
-              - title: What's Up Docker
-                url: /go/wud
-                check-url: http://${HOST_IP}:3002
-                icon: si:docker
-              - title: Speedtest Tracker
-                url: /go/speedtest
-                check-url: http://${HOST_IP}:8765
-                icon: si:speedtest
-              - title: Uptime Kuma
-                url: /go/uptime-kuma
-                check-url: http://${HOST_IP}:3001
-                icon: si:uptimekuma
-              - title: NetData
-                url: /go/netdata
-                check-url: http://${HOST_IP}:19999
-                icon: si:netdata
-              - title: Duplicati
-                url: /go/duplicati
-                check-url: http://${HOST_IP}:8200
-                icon: si:docker
-              - title: Portainer
-                url: /go/portainer
-                check-url: http://${HOST_IP}:9000
-                icon: si:portainer
-              - title: NetBox
-                url: /go/netbox
-                check-url: http://${HOST_IP}:8484
-                icon: si:docker
-              - title: Traefik
-                url: /go/traefik
-                check-url: http://${HOST_IP}:80
-                icon: si:traefikproxy
-              - title: Pi-hole
-                url: /go/pihole
-                check-url: http://${HOST_IP}:8088
-                icon: si:pihole
-
-  - name: Personal
-    slug: networking
-    columns:
-      - size: full
-        widgets:
-          - type: monitor
-            cache: 1m
-            title: Network Services
-            sites:
-              - title: Traefik
-                url: /go/traefik
-                check-url: http://${HOST_IP}:80
-                icon: si:traefikproxy
-              - title: Pi-hole
-                url: /go/pihole
-                check-url: http://${HOST_IP}:8088
-                icon: si:pihole
 
   - name: Personal
     slug: personal

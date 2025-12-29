@@ -1,6 +1,12 @@
 import os
 import urllib.parse
+import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+
+# Global cache for tunnel availability check
+_tunnel_check_cache = {"available": True, "last_check": 0}
+TUNNEL_CHECK_INTERVAL = 30  # Check every 30 seconds
 
 
 def _env(name: str, default: str) -> str:
@@ -16,6 +22,7 @@ BASE_DOMAIN = _env("BASE_DOMAIN", "")
 LAB_SCHEME = _env("LAB_SCHEME", "http")
 EXTERNAL_SCHEME = _env("EXTERNAL_SCHEME", "https")
 HOST_IP = _env("HOST_IP", "192.168.2.50")
+FORCE_LINK_MODE = _env("FORCE_LINK_MODE", "").lower()  # Options: "local", "external", "" (auto-detect)
 
 # Port mappings for IP-based access (from docker ps output)
 PORT_MAP = {
@@ -65,6 +72,7 @@ PORT_MAP = {
     "dozzle": 9999,
     "wud": 3002,
     "homeassistant": 8123,
+    "speedtest": 8765,
     
     # Networking & Infrastructure  
     "traefik": None,  # Special: only accessible via traefik.lab (Host-based routing)
@@ -83,7 +91,45 @@ PORT_MAP = {
 }
 
 
+def is_tunnel_available() -> bool:
+    """Check if external tunnel is available by trying to reach BASE_DOMAIN"""
+    import time
+    
+    global _tunnel_check_cache
+    
+    # Use cached result if checked recently
+    now = time.time()
+    if now - _tunnel_check_cache["last_check"] < TUNNEL_CHECK_INTERVAL:
+        return _tunnel_check_cache["available"]
+    
+    # No BASE_DOMAIN configured = no tunnel
+    if not BASE_DOMAIN:
+        _tunnel_check_cache["available"] = False
+        _tunnel_check_cache["last_check"] = now
+        return False
+    
+    # Try to reach glance.BASE_DOMAIN
+    try:
+        test_url = f"{EXTERNAL_SCHEME}://glance.{BASE_DOMAIN}"
+        req = urllib.request.Request(test_url, method="HEAD")
+        with urllib.request.urlopen(req, timeout=2) as response:
+            available = response.status < 500
+    except Exception:
+        available = False
+    
+    _tunnel_check_cache["available"] = available
+    _tunnel_check_cache["last_check"] = now
+    return available
+
+
 def choose_mode(host: str) -> str:
+    # Check if mode is forced via environment variable
+    if FORCE_LINK_MODE == "local":
+        return "lab"
+    elif FORCE_LINK_MODE == "external":
+        return "external"
+    
+    # Auto-detect based on incoming Host header
     host = (host or "").strip().lower()
     if host.endswith(f".{LAB_DOMAIN}"):
         return "lab"
@@ -106,19 +152,25 @@ class Handler(BaseHTTPRequestHandler):
         parsed = urllib.parse.urlsplit(self.path)
         path = parsed.path or "/"
 
-        if not path.startswith("/go/"):
+        # Check for /go-external/ (force external) or /go/ (auto-detect)
+        force_external = False
+        if path.startswith("/go-external/"):
+            force_external = True
+            rest = path[len("/go-external/") :]
+        elif path.startswith("/go/"):
+            rest = path[len("/go/") :]
+        else:
             self.send_response(404)
             self.end_headers()
             return
 
-        rest = path[len("/go/") :]
         rest = rest.lstrip("/")
         if not rest:
             self.send_response(400)
             self.end_headers()
             return
 
-        # /go/<service>/<optional-path>
+        # /go/<service>/<optional-path> or /go-external/<service>/<optional-path>
         parts = rest.split("/", 1)
         service = parts[0].strip()
         tail = parts[1] if len(parts) > 1 else ""
@@ -129,7 +181,13 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         host = self.headers.get("Host", "")
-        mode = choose_mode(host)
+        
+        # If force_external and tunnel is available, use external mode
+        # Otherwise, fall back to auto-detection (respects IP/lab/external)
+        if force_external and is_tunnel_available():
+            mode = "external"
+        else:
+            mode = choose_mode(host)
 
         # Special handling for services that only work via .lab domain
         if service in ["traefik", "glance"]:
