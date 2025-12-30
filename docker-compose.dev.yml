@@ -193,16 +193,20 @@ services:
       
       # Traefik labels
       - traefik.enable=true
-      - traefik.http.routers.coder.entrypoints=websecure
-      - traefik.http.routers.coder.rule=Host(`coder.${BASE_DOMAIN}`)
-      - traefik.http.routers.coder.tls=true
-      - traefik.http.services.coder.loadbalancer.server.port=7080
-      - traefik.docker.network=shared-network
-
-      # Local HTTP access (no TLS) for *.lab
+      # External domain (HTTPS via Cloudflare)
+      - traefik.http.routers.coder-external.entrypoints=websecure
+      - traefik.http.routers.coder-external.rule=Host(`coder.${BASE_DOMAIN}`)
+      - traefik.http.routers.coder-external.tls=true
+      - traefik.http.routers.coder-external.service=coder
+      
+      # Local .lab domain (HTTP + HTTPS)
       - traefik.http.routers.coder.entrypoints=web,websecure
       - traefik.http.routers.coder.rule=Host(`coder.lab`)
       - traefik.http.routers.coder.service=coder
+      
+      # Service definition
+      - traefik.http.services.coder.loadbalancer.server.port=7080
+      - traefik.docker.network=shared-network
 
   # =============================================================================
   # GITEA GIT REPOSITORY HOSTING WITH CI/CD
