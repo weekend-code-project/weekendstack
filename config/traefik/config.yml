@@ -10,6 +10,10 @@ entryPoints:
     address: ":80"
   websecure:
     address: ":443"
+    http:
+      tls:
+        # Use locally generated certificates for .lab domains
+        certResolver: default
 
 providers:
   docker:
@@ -19,6 +23,17 @@ providers:
   file:
     directory: /traefik-auth
     watch: true
+
+# TLS configuration for local .lab domains
+tls:
+  certificates:
+    - certFile: /certs/cert.pem
+      keyFile: /certs/key.pem
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /certs/cert.pem
+        keyFile: /certs/key.pem
 
 ping:
   entryPoint: web

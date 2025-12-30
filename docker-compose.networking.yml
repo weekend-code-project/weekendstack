@@ -5,6 +5,7 @@
 # - Traefik: Reverse proxy and load balancer
 # - Cloudflare Tunnel: Secure external access
 # - Pi-Hole: Network-wide ad blocking and DNS (internal only)
+# - Cert Generator: Automatic local HTTPS certificate generation
 #
 # Usage:
 #   docker compose --profile networking up -d
@@ -12,6 +13,150 @@
 # =============================================================================
 
 services:
+  # =============================================================================
+  # CERT-GENERATOR - AUTOMATIC LOCAL HTTPS CERTIFICATE GENERATION
+  # =============================================================================
+  # Generates a local Certificate Authority (CA) and wildcard certificate for *.lab domains
+  # Runs once on startup to create certificates if they don't exist
+  # After first run, you need to manually trust the CA certificate (see docs/local-https-setup.md)
+  # =============================================================================
+  cert-generator:
+    image: alpine:3.20
+    container_name: cert-generator
+    restart: "no"
+    profiles:
+      - all
+      - networking
+      - setup
+    environment:
+      LAB_DOMAIN: ${LAB_DOMAIN:-lab}
+      CERT_VALID_DAYS: ${CERT_VALID_DAYS:-825}  # Chrome requirement: max 825 days
+      CA_VALID_DAYS: ${CA_VALID_DAYS:-3650}     # 10 years
+    volumes:
+      - type: bind
+        source: ./config/traefik/certs
+        target: /certs
+    labels:
+      - glance.parent=traefik
+      - glance.name=Cert Generator
+    command:
+      - /bin/sh
+      - -c
+      - |
+        set -e
+        
+        # Install OpenSSL
+        apk add --no-cache openssl
+        
+        cd /certs
+        
+        # Check if certificates already exist
+        if [ -f "ca-cert.pem" ] && [ -f "ca-key.pem" ] && [ -f "cert.pem" ] && [ -f "key.pem" ]; then
+          echo "✓ Certificates already exist, skipping generation"
+          echo ""
+          echo "To regenerate certificates:"
+          echo "  1. Delete files in ./config/traefik/certs/"
+          echo "  2. Run: docker compose up cert-generator"
+          exit 0
+        fi
+        
+        echo "=================================================="
+        echo "Generating Local HTTPS Certificates for *.$$LAB_DOMAIN"
+        echo "=================================================="
+        echo ""
+        
+        # Generate CA private key
+        echo "1. Generating Certificate Authority (CA) private key..."
+        openssl genrsa -out ca-key.pem 4096
+        
+        # Generate CA certificate
+        echo "2. Generating CA certificate (valid $$CA_VALID_DAYS days)..."
+        openssl req -new -x509 \
+          -days $$CA_VALID_DAYS \
+          -key ca-key.pem \
+          -out ca-cert.pem \
+          -subj "/C=US/ST=Local/L=Local/O=Weekend Stack/OU=IT/CN=Weekend Stack Local CA"
+        
+        # Generate server private key
+        echo "3. Generating server private key..."
+        openssl genrsa -out key.pem 4096
+        
+        # Generate certificate signing request (CSR)
+        echo "4. Generating certificate signing request..."
+        openssl req -new \
+          -key key.pem \
+          -out cert.csr \
+          -subj "/C=US/ST=Local/L=Local/O=Weekend Stack/OU=IT/CN=*.$$LAB_DOMAIN"
+        
+        # Create config for Subject Alternative Names (SAN)
+        cat > san.cnf <<EOF
+        [req]
+        distinguished_name = req_distinguished_name
+        req_extensions = v3_req
+        
+        [req_distinguished_name]
+        
+        [v3_req]
+        basicConstraints = CA:FALSE
+        keyUsage = nonRepudiation, digitalSignature, keyEncipherment
+        subjectAltName = @alt_names
+        
+        [alt_names]
+        DNS.1 = *.$$LAB_DOMAIN
+        DNS.2 = $$LAB_DOMAIN
+        EOF
+        
+        # Generate certificate signed by CA
+        echo "5. Generating wildcard certificate (valid $$CERT_VALID_DAYS days)..."
+        openssl x509 -req \
+          -in cert.csr \
+          -CA ca-cert.pem \
+          -CAkey ca-key.pem \
+          -CAcreateserial \
+          -out cert.pem \
+          -days $$CERT_VALID_DAYS \
+          -extensions v3_req \
+          -extfile san.cnf
+        
+        # Clean up temporary files
+        rm -f cert.csr san.cnf ca-cert.srl
+        
+        # Set permissions
+        chmod 600 ca-key.pem key.pem
+        chmod 644 ca-cert.pem cert.pem
+        
+        echo ""
+        echo "=================================================="
+        echo "✓ Certificate Generation Complete!"
+        echo "=================================================="
+        echo ""
+        echo "📁 Certificates saved to: ./config/traefik/certs/"
+        echo ""
+        echo "Files created:"
+        echo "  - ca-cert.pem     : Certificate Authority (CA) certificate"
+        echo "  - ca-key.pem      : CA private key (keep secure!)"
+        echo "  - cert.pem        : Wildcard certificate for *.$$LAB_DOMAIN"
+        echo "  - key.pem         : Server private key"
+        echo ""
+        echo "=================================================="
+        echo "⚠️  IMPORTANT: Manual Step Required"
+        echo "=================================================="
+        echo ""
+        echo "To enable HTTPS without browser warnings, you must"
+        echo "trust the CA certificate on your system/browser."
+        echo ""
+        echo "See detailed instructions:"
+        echo "  docs/local-https-setup.md"
+        echo ""
+        echo "Quick start (Linux):"
+        echo "  sudo cp config/traefik/certs/ca-cert.pem /usr/local/share/ca-certificates/weekendstack-ca.crt"
+        echo "  sudo update-ca-certificates"
+        echo ""
+        echo "Firefox users: Import ca-cert.pem in Firefox settings"
+        echo "(Settings → Privacy & Security → Certificates → View Certificates → Authorities → Import)"
+        echo ""
+        echo "=================================================="
+        echo ""
   # =============================================================================
   # PI-HOLE DNSMASQ INIT - GENERATE PORTABLE LOCAL DNS RULES
   # =============================================================================
@@ -108,12 +253,17 @@ services:
     volumes:
       - ${TRAEFIK_CONFIG_FILE}:/etc/traefik/traefik.yml:ro
       - ${TRAEFIK_AUTH_DIR}:/traefik-auth:ro
+      - type: bind
+        source: ./config/traefik/certs
+        target: /certs
+        read_only: true
     networks:
       - coder-network
       - traefik-network
       - shared-network
     depends_on:
       - socat
+      - cert-generator
     labels:
       # Glance Configuration
       - glance.id=traefik

@@ -1,0 +1,7 @@
+# Ignore all certificate files (contain sensitive keys)
+*.pem
+*.crt
+*.key
+*.csr
+*.srl
+*.cnf

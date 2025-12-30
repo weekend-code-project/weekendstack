@@ -183,6 +183,30 @@ Setup docs:
 - [docs/go-links-setup.md](docs/go-links-setup.md)
 - [docs/filebrowser-setup.md](docs/filebrowser-setup.md)
 - [docs/hoarder-setup.md](docs/hoarder-setup.md)
+- [docs/local-https-setup.md](docs/local-https-setup.md) - **Enable HTTPS for .lab domains**
+
+### 4. Optional: Enable Local HTTPS
+
+The stack includes automated certificate generation for secure local access:
+
+```bash
+# Generate certificates (runs automatically on first startup)
+docker compose up cert-generator
+
+# Trust the CA certificate (one-time, see docs)
+sudo cp config/traefik/certs/ca-cert.pem /usr/local/share/ca-certificates/weekendstack-ca.crt
+sudo update-ca-certificates
+
+# Restart Traefik to load certificates
+docker compose restart traefik
+```
+
+After trusting the CA, all `.lab` domains work with HTTPS:
+- `https://coder.lab` ✅
+- `https://glance.lab` ✅  
+- `https://nocodb.lab` ✅
+
+See [docs/local-https-setup.md](docs/local-https-setup.md) for detailed instructions including Firefox, Windows, and macOS setup.
 
 ---
 
