@@ -10,10 +10,6 @@ entryPoints:
     address: ":80"
   websecure:
     address: ":443"
-    http:
-      tls:
-        # Use locally generated certificates for .lab domains
-        certResolver: default
 
 providers:
   docker:
