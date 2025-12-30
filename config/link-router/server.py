@@ -43,6 +43,7 @@ PORT_MAP = {
     "librechat": 3080,
     "localai": 8084,
     "open-webui": 3000,
+    "openwebui": 3000,  # Alias
     "whisper": 9002,
     
     # Productivity
@@ -63,8 +64,10 @@ PORT_MAP = {
     "firefly": 8086,
     "mealie": 9925,
     "wger": 8089,
+    "resourcespace": 8099,
     
     # Monitoring
+    "cockpit": 9090,  # Cockpit web interface
     "portainer": 9000,
     "uptime-kuma": 3001,
     "uptimekuma": 3001,  # Alias
@@ -75,7 +78,7 @@ PORT_MAP = {
     "speedtest": 8765,
     
     # Networking & Infrastructure  
-    "traefik": None,  # Special: only accessible via traefik.lab (Host-based routing)
+    "traefik": 8081,  # Traefik API/dashboard (insecure mode)
     "pihole": "8088/admin",  # Special case: needs /admin path
     
     # Tools
@@ -189,9 +192,9 @@ class Handler(BaseHTTPRequestHandler):
         else:
             mode = choose_mode(host)
 
-        # Special handling for services that only work via .lab domain
-        if service in ["traefik", "glance"]:
-            # Always redirect to .lab domain for these services
+        # Special handling for services using Host-based routing
+        if service == "glance":
+            # Glance requires specific Host header - always use .lab domain
             target_host = f"{service}.{LAB_DOMAIN}"
             scheme = LAB_SCHEME
             target_path = "/" + tail if tail else "/"

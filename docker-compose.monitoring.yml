@@ -47,6 +47,8 @@ services:
   cockpit:
     image: quay.io/cockpit/ws:latest
     container_name: cockpit
+    ports:
+      - "${COCKPIT_PORT:-9090}:9090"
     networks:
       - monitoring-network
       - shared-network
@@ -165,7 +167,9 @@ services:
       - glance.name=What's Up Docker
       - glance.icon=si:docker
       - glance.url=/go/wud
-      - glance.description=Update Manager      - glance.hide=true      
+      - glance.description=Update Manager
+      - glance.hide=true
+      
       # Traefik Configuration
       - traefik.enable=true
       - traefik.http.routers.wud-http.rule=Host(`wud.lab`)

@@ -1229,6 +1229,110 @@ services:
       - "com.docker.compose.service=bytestash"
       - "description=ByteStash - Code Snippet Manager"
 
+  # =============================================================================
+  # RESOURCESPACE - Digital Asset Management System
+  # =============================================================================
+  # ResourceSpace is a mature, feature-rich open-source DAM system used by
+  # thousands of organizations worldwide. Perfect for managing photos, videos,
+  # documents, and other digital assets with metadata, workflows, and collections.
+  # =============================================================================
+  
+  resourcespace-db:
+    image: mariadb:10.11
+    container_name: resourcespace-db
+    labels:
+      - glance.parent=resourcespace
+      - glance.name=Database
+    environment:
+      MYSQL_ROOT_PASSWORD: ${RESOURCESPACE_DB_ROOT_PASSWORD:-resourcespace_root_2024}
+      MYSQL_DATABASE: ${RESOURCESPACE_DBNAME:-resourcespace}
+      MYSQL_USER: ${RESOURCESPACE_DBUSER:-resourcespace}
+      MYSQL_PASSWORD: ${RESOURCESPACE_DBPASS:-resourcespace_password_2024}
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    volumes:
+      - type: volume
+        source: resourcespace-db-data
+        target: /var/lib/mysql
+    networks:
+      - productivity-network
+      - shared-network
+    restart: unless-stopped
+    profiles:
+      - all
+      - productivity
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  resourcespace:
+    build:
+      context: ${CONFIG_BASE_DIR:-./config}/resourcespace
+      dockerfile: Dockerfile
+    container_name: resourcespace
+    depends_on:
+      resourcespace-db:
+        condition: service_healthy
+    environment:
+      TZ: ${TIMEZONE:-UTC}
+      
+    volumes:
+      - type: volume
+        source: resourcespace-data
+        target: /var/www/html/filestore
+      - type: bind
+        source: ${FILES_BASE_DIR:-./files}/resourcespace
+        target: /var/www/html/upload
+    networks:
+      - productivity-network
+      - shared-network
+    ports:
+      - "${RESOURCESPACE_PORT:-8099}:80"
+    restart: unless-stopped
+    profiles:
+      - all
+      - productivity
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    deploy:
+      resources:
+        limits:
+          memory: ${RESOURCESPACE_MEMORY_LIMIT:-2g}
+    labels:
+      # Glance Configuration
+      - glance.id=resourcespace
+      - glance.group=Productivity
+      - glance.name=ResourceSpace DAM
+      - glance.icon=si:docker
+      - glance.url=/go/resourcespace
+      - glance.description=Digital Asset Management
+      
+      # Traefik Configuration for external access
+      - traefik.enable=true
+      - traefik.http.routers.resourcespace.rule=Host(`resourcespace.${BASE_DOMAIN}`)
+      - traefik.http.routers.resourcespace.entrypoints=websecure
+      - traefik.http.routers.resourcespace.tls=true
+      - traefik.http.services.resourcespace.loadbalancer.server.port=80
+      - traefik.docker.network=shared-network
+
+      - traefik.http.routers.resourcespace-http.entrypoints=web
+      - traefik.http.routers.resourcespace-http.rule=Host(`resourcespace.lab`)
+      - traefik.http.routers.resourcespace-http.service=resourcespace
+      
+      # Additional labels for documentation
+      - "com.docker.compose.service=resourcespace"
+      - "com.docker.compose.project=${COMPOSE_PROJECT_NAME:-coder}"
+      - "description=ResourceSpace - Professional Digital Asset Management"
+
 volumes:
   nocodb-db-data:
   n8n-db-data:
@@ -1249,4 +1353,6 @@ volumes:
   filebrowser-config:
   hoarder-data:
   hoarder-meilisearch:
+  resourcespace-db-data:
+  resourcespace-data:
 

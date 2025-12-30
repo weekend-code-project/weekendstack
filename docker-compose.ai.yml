@@ -45,10 +45,10 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
-      - "traefik.http.routers.openwebui.rule=Host(`openwebui.${BASE_DOMAIN}`)"
+      - "traefik.http.routers.openwebui.rule=Host(`openwebui.${BASE_DOMAIN}`) || Host(`open-webui.${BASE_DOMAIN}`)"
       - traefik.http.routers.openwebui.entrypoints=websecure
       - traefik.http.routers.openwebui.tls=true
-      - "traefik.http.routers.openwebui-http.rule=Host(`openwebui.lab`)"
+      - "traefik.http.routers.openwebui-http.rule=Host(`openwebui.lab`) || Host(`open-webui.lab`)"
       - traefik.http.routers.openwebui-http.entrypoints=web
       - traefik.http.services.openwebui.loadbalancer.server.port=8080
       - traefik.docker.network=shared-network

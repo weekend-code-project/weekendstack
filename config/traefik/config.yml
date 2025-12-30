@@ -1,6 +1,6 @@
 api:
   dashboard: true
-  insecure: false
+  insecure: true  # Enable insecure API for direct IP access on port 8080
 
 log:
   level: DEBUG # Set to DEBUG to see logs

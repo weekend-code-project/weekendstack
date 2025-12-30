@@ -111,6 +111,7 @@ services:
       - glance.icon=si:homeassistant
       - glance.url=/go/home
       - glance.description=Dashboard
+      - glance.hide=true
       
       # Traefik Configuration
       - traefik.enable=true
