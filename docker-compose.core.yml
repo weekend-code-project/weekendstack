@@ -55,6 +55,13 @@ services:
       - traefik.http.routers.link-router.entrypoints=websecure
       - traefik.http.routers.link-router.tls=${TRAEFIK_TLS_ENABLE:-true}
       - traefik.http.routers.link-router.priority=100
+      
+      # HTTPS (Local .lab access - all domains)
+      - traefik.http.routers.link-router-https.rule=PathPrefix(`/go/`) || PathPrefix(`/go-external/`)
+      - traefik.http.routers.link-router-https.entrypoints=websecure
+      - traefik.http.routers.link-router-https.tls=true
+      - traefik.http.routers.link-router-https.priority=100
+      - traefik.http.routers.link-router-https.service=link-router
 
       # HTTP (Local .lab and IP access)
       - traefik.http.routers.link-router-http.rule=PathPrefix(`/go/`) || PathPrefix(`/go-external/`)
