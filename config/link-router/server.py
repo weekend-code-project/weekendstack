@@ -185,6 +185,10 @@ class Handler(BaseHTTPRequestHandler):
 
         host = self.headers.get("Host", "")
         
+        # Detect if incoming request is HTTPS by checking X-Forwarded-Proto header
+        forwarded_proto = self.headers.get("X-Forwarded-Proto", "").lower()
+        incoming_scheme = "https" if forwarded_proto == "https" else "http"
+        
         # If force_external and tunnel is available, use external mode
         # Otherwise, fall back to auto-detection (respects IP/lab/external)
         if force_external and is_tunnel_available():
@@ -196,11 +200,11 @@ class Handler(BaseHTTPRequestHandler):
         if service == "glance":
             # Glance requires specific Host header - always use .lab domain
             target_host = f"{service}.{LAB_DOMAIN}"
-            scheme = LAB_SCHEME
+            scheme = incoming_scheme  # Use the same scheme as incoming request
             target_path = "/" + tail if tail else "/"
         elif mode == "lab":
             target_host = f"{service}.{LAB_DOMAIN}"
-            scheme = LAB_SCHEME
+            scheme = incoming_scheme  # Use the same scheme as incoming request
             target_path = "/" + tail if tail else "/"
         elif mode == "ip":
             # Use IP:PORT format
@@ -208,7 +212,7 @@ class Handler(BaseHTTPRequestHandler):
             if port_or_path is None:
                 # Services with None port (like link-router, glance) - fallback to .lab
                 target_host = f"{service}.{LAB_DOMAIN}"
-                scheme = LAB_SCHEME
+                scheme = incoming_scheme  # Use the same scheme as incoming request
                 target_path = "/" + tail if tail else "/"
             else:
                 # Handle special case where port includes path (e.g., "8088/admin")
