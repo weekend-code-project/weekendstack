@@ -98,10 +98,18 @@ locals {
          echo "[NODE-TOOLING] nvm version: $(nvm --version)" | tee -a "$LOG_FILE"
     fi
 
-    # Run nvm install without redirection to see output in main log
-    nvm install "${var.node_version}"
-    nvm alias default "${var.node_version}"
-    nvm use default
+    # Handle special case: "lts" requires --lts flag
+    if [ "${var.node_version}" = "lts" ]; then
+        echo "[NODE-TOOLING] Installing latest LTS version..." | tee -a "$LOG_FILE"
+        nvm install --lts >> "$LOG_FILE" 2>&1
+        nvm alias default 'lts/*' >> "$LOG_FILE" 2>&1
+        nvm use default >> "$LOG_FILE" 2>&1
+    else
+        echo "[NODE-TOOLING] Installing Node.js ${var.node_version}..." | tee -a "$LOG_FILE"
+        nvm install "${var.node_version}" >> "$LOG_FILE" 2>&1
+        nvm alias default "${var.node_version}" >> "$LOG_FILE" 2>&1
+        nvm use default >> "$LOG_FILE" 2>&1
+    fi
 
     if ! command -v node &> /dev/null; then
         echo "[NODE-TOOLING] ERROR: Node not found after installation!" | tee -a "$LOG_FILE"
