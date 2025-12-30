@@ -57,9 +57,9 @@ services:
       - traefik.http.routers.link-router.priority=100
 
       # Local .lab and IP access (HTTP + HTTPS)
-      - traefik.http.routers.link-router-local.rule=PathPrefix(`/go/`) || PathPrefix(`/go-external/`)
+      - traefik.http.routers.link-router-local.rule=(Host(`home.lab`) || Host(`${HOST_IP}`)) && (PathPrefix(`/go/`) || PathPrefix(`/go-external/`))
       - traefik.http.routers.link-router-local.entrypoints=web,websecure
-      - traefik.http.routers.link-router-local.priority=100
+      - traefik.http.routers.link-router-local.priority=200
       - traefik.http.routers.link-router-local.service=link-router
 
       - traefik.http.services.link-router.loadbalancer.server.port=8080
