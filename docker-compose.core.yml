@@ -115,9 +115,16 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
-      # Local HTTP access only (no external tunnel)
+      # Local HTTP access
       - traefik.http.routers.glance-http.entrypoints=web
       - traefik.http.routers.glance-http.rule=Host(`home.lab`) || Host(`${HOST_IP}`)
+      - traefik.http.routers.glance-http.service=glance
+      # Local HTTPS access
+      - traefik.http.routers.glance-https.entrypoints=websecure
+      - traefik.http.routers.glance-https.rule=Host(`home.lab`)
+      - traefik.http.routers.glance-https.tls=true
+      - traefik.http.routers.glance-https.service=glance
+      # Service definition
       - traefik.http.services.glance.loadbalancer.server.port=8080
       - traefik.docker.network=shared-network
 
