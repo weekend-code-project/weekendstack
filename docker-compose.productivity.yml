@@ -113,9 +113,9 @@ services:
       - traefik.http.services.nocodb.loadbalancer.server.port=8080
       - traefik.docker.network=shared-network
 
-      - traefik.http.routers.nocodb-http.entrypoints=web
-      - traefik.http.routers.nocodb-http.rule=Host(`nocodb.lab`)
-      - traefik.http.routers.nocodb-http.service=nocodb
+      - traefik.http.routers.nocodb.entrypoints=web,websecure
+      - traefik.http.routers.nocodb.rule=Host(`nocodb.lab`)
+      - traefik.http.routers.nocodb.service=nocodb
       
       # Additional labels for documentation
       - "com.docker.compose.service=nocodb"
@@ -223,9 +223,9 @@ services:
       - traefik.http.services.n8n.loadbalancer.server.port=5678
       - traefik.docker.network=shared-network
 
-      - traefik.http.routers.n8n-http.entrypoints=web
-      - traefik.http.routers.n8n-http.rule=Host(`n8n.lab`)
-      - traefik.http.routers.n8n-http.service=n8n
+      - traefik.http.routers.n8n.entrypoints=web,websecure
+      - traefik.http.routers.n8n.rule=Host(`n8n.lab`)
+      - traefik.http.routers.n8n.service=n8n
       
       # Additional labels for documentation
       - "com.docker.compose.service=n8n"
@@ -375,9 +375,9 @@ services:
       - traefik.http.services.paperless.loadbalancer.server.port=8000
       - traefik.docker.network=shared-network
 
-      - traefik.http.routers.paperless-http.entrypoints=web
-      - traefik.http.routers.paperless-http.rule=Host(`paperless.lab`)
-      - traefik.http.routers.paperless-http.service=paperless
+      - traefik.http.routers.paperless.entrypoints=web,websecure
+      - traefik.http.routers.paperless.rule=Host(`paperless.lab`)
+      - traefik.http.routers.paperless.service=paperless
       
       # Additional labels for documentation
       - "com.docker.compose.service=paperless-ngx"
@@ -514,9 +514,9 @@ services:
       - traefik.http.services.activepieces.loadbalancer.server.port=80
       - traefik.docker.network=shared-network
 
-      - traefik.http.routers.activepieces-http.entrypoints=web
-      - traefik.http.routers.activepieces-http.rule=Host(`activepieces.lab`)
-      - traefik.http.routers.activepieces-http.service=activepieces
+      - traefik.http.routers.activepieces.entrypoints=web,websecure
+      - traefik.http.routers.activepieces.rule=Host(`activepieces.lab`)
+      - traefik.http.routers.activepieces.service=activepieces
       
       # Additional labels for documentation
       - "com.docker.compose.service=activepieces"
@@ -663,9 +663,9 @@ services:
       - traefik.http.services.postiz.loadbalancer.server.port=5000
       - traefik.docker.network=shared-network
 
-      - traefik.http.routers.postiz-http.entrypoints=web
-      - traefik.http.routers.postiz-http.rule=Host(`postiz.lab`)
-      - traefik.http.routers.postiz-http.service=postiz
+      - traefik.http.routers.postiz.entrypoints=web,websecure
+      - traefik.http.routers.postiz.rule=Host(`postiz.lab`)
+      - traefik.http.routers.postiz.service=postiz
       
       # Additional labels for documentation
       - "com.docker.compose.service=postiz"
@@ -712,9 +712,9 @@ services:
       - traefik.http.services.focalboard.loadbalancer.server.port=8000
       - traefik.docker.network=shared-network
 
-      - traefik.http.routers.focalboard-http.entrypoints=web
-      - traefik.http.routers.focalboard-http.rule=Host(`focalboard.lab`)
-      - traefik.http.routers.focalboard-http.service=focalboard
+      - traefik.http.routers.focalboard.entrypoints=web,websecure
+      - traefik.http.routers.focalboard.rule=Host(`focalboard.lab`)
+      - traefik.http.routers.focalboard.service=focalboard
 
   # =============================================================================
   # TRILIUM - Hierarchical Note-Taking
@@ -760,9 +760,9 @@ services:
       - traefik.http.services.trilium.loadbalancer.server.port=8080
       - traefik.docker.network=shared-network
 
-      - traefik.http.routers.trilium-http.entrypoints=web
-      - traefik.http.routers.trilium-http.rule=Host(`trilium.lab`)
-      - traefik.http.routers.trilium-http.service=trilium
+      - traefik.http.routers.trilium.entrypoints=web,websecure
+      - traefik.http.routers.trilium.rule=Host(`trilium.lab`)
+      - traefik.http.routers.trilium.service=trilium
 
   # =============================================================================
   # VIKUNJA - Task & Project Management
@@ -814,9 +814,9 @@ services:
       - traefik.http.services.vikunja.loadbalancer.server.port=3456
       - traefik.docker.network=shared-network
 
-      - traefik.http.routers.vikunja-http.entrypoints=web
-      - traefik.http.routers.vikunja-http.rule=Host(`vikunja.lab`)
-      - traefik.http.routers.vikunja-http.service=vikunja
+      - traefik.http.routers.vikunja.entrypoints=web,websecure
+      - traefik.http.routers.vikunja.rule=Host(`vikunja.lab`)
+      - traefik.http.routers.vikunja.service=vikunja
 
   # =============================================================================
   # IT-TOOLS - Developer Utilities Collection
@@ -903,9 +903,9 @@ services:
       - traefik.http.services.excalidraw.loadbalancer.server.port=80
       - traefik.docker.network=shared-network
 
-      - traefik.http.routers.excalidraw-http.entrypoints=web
-      - traefik.http.routers.excalidraw-http.rule=Host(`excalidraw.lab`)
-      - traefik.http.routers.excalidraw-http.service=excalidraw
+      - traefik.http.routers.excalidraw.entrypoints=web,websecure
+      - traefik.http.routers.excalidraw.rule=Host(`excalidraw.lab`)
+      - traefik.http.routers.excalidraw.service=excalidraw
       - "com.docker.compose.service=excalidraw"
       - "description=Excalidraw - Whiteboard Collaboration"
 
@@ -1013,9 +1013,9 @@ services:
       - traefik.http.services.docmost.loadbalancer.server.port=3000
       - traefik.docker.network=shared-network
 
-      - traefik.http.routers.docmost-http.entrypoints=web
-      - traefik.http.routers.docmost-http.rule=Host(`docmost.lab`)
-      - traefik.http.routers.docmost-http.service=docmost
+      - traefik.http.routers.docmost.entrypoints=web,websecure
+      - traefik.http.routers.docmost.rule=Host(`docmost.lab`)
+      - traefik.http.routers.docmost.service=docmost
       - "com.docker.compose.service=docmost"
       - "description=Docmost - Wiki/Documentation Platform"
 
@@ -1070,9 +1070,9 @@ services:
       - traefik.http.services.filebrowser.loadbalancer.server.port=80
       - traefik.docker.network=shared-network
 
-      - traefik.http.routers.filebrowser-http.entrypoints=web
-      - traefik.http.routers.filebrowser-http.rule=Host(`filebrowser.lab`)
-      - traefik.http.routers.filebrowser-http.service=filebrowser
+      - traefik.http.routers.filebrowser.entrypoints=web,websecure
+      - traefik.http.routers.filebrowser.rule=Host(`filebrowser.lab`)
+      - traefik.http.routers.filebrowser.service=filebrowser
 
       - "com.docker.compose.service=filebrowser"
       - "description=File Browser - Web File Manager (scoped to ./files)"
@@ -1128,9 +1128,9 @@ services:
       - traefik.http.routers.hoarder.entrypoints=websecure
       - traefik.http.routers.hoarder.tls=true
 
-      - traefik.http.routers.hoarder-http.entrypoints=web
-      - traefik.http.routers.hoarder-http.rule=Host(`hoarder.lab`)
-      - traefik.http.routers.hoarder-http.service=hoarder
+      - traefik.http.routers.hoarder.entrypoints=web,websecure
+      - traefik.http.routers.hoarder.rule=Host(`hoarder.lab`)
+      - traefik.http.routers.hoarder.service=hoarder
       - traefik.http.services.hoarder.loadbalancer.server.port=3000
       - traefik.docker.network=shared-network
       - "com.docker.compose.service=hoarder"
@@ -1223,9 +1223,9 @@ services:
       - traefik.http.services.bytestash.loadbalancer.server.port=5000
       - traefik.docker.network=shared-network
 
-      - traefik.http.routers.bytestash-http.entrypoints=web
-      - traefik.http.routers.bytestash-http.rule=Host(`bytestash.lab`)
-      - traefik.http.routers.bytestash-http.service=bytestash
+      - traefik.http.routers.bytestash.entrypoints=web,websecure
+      - traefik.http.routers.bytestash.rule=Host(`bytestash.lab`)
+      - traefik.http.routers.bytestash.service=bytestash
       - "com.docker.compose.service=bytestash"
       - "description=ByteStash - Code Snippet Manager"
 
@@ -1324,9 +1324,9 @@ services:
       - traefik.http.services.resourcespace.loadbalancer.server.port=80
       - traefik.docker.network=shared-network
 
-      - traefik.http.routers.resourcespace-http.entrypoints=web
-      - traefik.http.routers.resourcespace-http.rule=Host(`resourcespace.lab`)
-      - traefik.http.routers.resourcespace-http.service=resourcespace
+      - traefik.http.routers.resourcespace.entrypoints=web,websecure
+      - traefik.http.routers.resourcespace.rule=Host(`resourcespace.lab`)
+      - traefik.http.routers.resourcespace.service=resourcespace
       
       # Additional labels for documentation
       - "com.docker.compose.service=resourcespace"

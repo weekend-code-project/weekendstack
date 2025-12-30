@@ -77,8 +77,8 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
-      - traefik.http.routers.cockpit-http.rule=Host(`cockpit.lab`)
-      - traefik.http.routers.cockpit-http.entrypoints=web
+      - traefik.http.routers.cockpit.rule=Host(`cockpit.lab`)
+      - traefik.http.routers.cockpit.entrypoints=web,websecure
       - traefik.http.services.cockpit.loadbalancer.server.port=9090
       - traefik.docker.network=shared-network
 
@@ -119,8 +119,8 @@ services:
       - glance.hide=true
       # Traefik Configuration
       - traefik.enable=true
-      - traefik.http.routers.dozzle-http.rule=Host(`dozzle.lab`)
-      - traefik.http.routers.dozzle-http.entrypoints=web
+      - traefik.http.routers.dozzle.rule=Host(`dozzle.lab`)
+      - traefik.http.routers.dozzle.entrypoints=web,websecure
       - traefik.http.services.dozzle.loadbalancer.server.port=8080
       - traefik.docker.network=shared-network
 
@@ -172,8 +172,8 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
-      - traefik.http.routers.wud-http.rule=Host(`wud.lab`)
-      - traefik.http.routers.wud-http.entrypoints=web
+      - traefik.http.routers.wud.rule=Host(`wud.lab`)
+      - traefik.http.routers.wud.entrypoints=web,websecure
       - traefik.http.services.wud.loadbalancer.server.port=3000
       - traefik.docker.network=shared-network
 
@@ -227,8 +227,8 @@ services:
       - glance.hide=true
       # Traefik Configuration
       - traefik.enable=true
-      - traefik.http.routers.speedtest-http.rule=Host(`speedtest.lab`)
-      - traefik.http.routers.speedtest-http.entrypoints=web
+      - traefik.http.routers.speedtest.rule=Host(`speedtest.lab`)
+      - traefik.http.routers.speedtest.entrypoints=web,websecure
       - traefik.http.services.speedtest.loadbalancer.server.port=80
       - traefik.docker.network=shared-network
 
@@ -334,8 +334,8 @@ services:
       - glance.hide=true
       # Traefik Configuration
       - traefik.enable=true
-      - traefik.http.routers.netdata-http.rule=Host(`netdata.lab`)
-      - traefik.http.routers.netdata-http.entrypoints=web
+      - traefik.http.routers.netdata.rule=Host(`netdata.lab`)
+      - traefik.http.routers.netdata.entrypoints=web,websecure
       - traefik.http.services.netdata.loadbalancer.server.port=19999
       - traefik.docker.network=shared-network
 
@@ -384,8 +384,8 @@ services:
       - glance.hide=true
       # Traefik Configuration
       - traefik.enable=true
-      - traefik.http.routers.duplicati-http.rule=Host(`duplicati.lab`)
-      - traefik.http.routers.duplicati-http.entrypoints=web
+      - traefik.http.routers.duplicati.rule=Host(`duplicati.lab`)
+      - traefik.http.routers.duplicati.entrypoints=web,websecure
       - traefik.http.services.duplicati.loadbalancer.server.port=8200
       - traefik.docker.network=shared-network
 
@@ -428,8 +428,8 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
-      - traefik.http.routers.portainer-http.rule=Host(`portainer.lab`)
-      - traefik.http.routers.portainer-http.entrypoints=web
+      - traefik.http.routers.portainer.rule=Host(`portainer.lab`)
+      - traefik.http.routers.portainer.entrypoints=web,websecure
       - traefik.http.services.portainer.loadbalancer.server.port=9000
       - traefik.docker.network=shared-network
 
@@ -485,8 +485,8 @@ services:
       - glance.hide=true
       # Traefik Configuration
       - traefik.enable=true
-      - traefik.http.routers.netbox-http.rule=Host(`netbox.lab`)
-      - traefik.http.routers.netbox-http.entrypoints=web
+      - traefik.http.routers.netbox.rule=Host(`netbox.lab`)
+      - traefik.http.routers.netbox.entrypoints=web,websecure
       - traefik.http.services.netbox.loadbalancer.server.port=8080
       - traefik.docker.network=shared-network
 

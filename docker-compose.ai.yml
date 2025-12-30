@@ -48,8 +48,8 @@ services:
       - "traefik.http.routers.openwebui.rule=Host(`openwebui.${BASE_DOMAIN}`) || Host(`open-webui.${BASE_DOMAIN}`)"
       - traefik.http.routers.openwebui.entrypoints=websecure
       - traefik.http.routers.openwebui.tls=true
-      - "traefik.http.routers.openwebui-http.rule=Host(`openwebui.lab`) || Host(`open-webui.lab`)"
-      - traefik.http.routers.openwebui-http.entrypoints=web
+      - "traefik.http.routers.openwebui.rule=Host(`openwebui.lab`) || Host(`open-webui.lab`)"
+      - traefik.http.routers.openwebui.entrypoints=web,websecure
       - traefik.http.services.openwebui.loadbalancer.server.port=8080
       - traefik.docker.network=shared-network
 
@@ -97,8 +97,8 @@ services:
       - "traefik.http.routers.searxng.rule=Host(`searxng.${BASE_DOMAIN}`)"
       - traefik.http.routers.searxng.entrypoints=websecure
       - traefik.http.routers.searxng.tls=true
-      - "traefik.http.routers.searxng-http.rule=Host(`searxng.lab`)"
-      - traefik.http.routers.searxng-http.entrypoints=web
+      - "traefik.http.routers.searxng.rule=Host(`searxng.lab`)"
+      - traefik.http.routers.searxng.entrypoints=web,websecure
       - traefik.http.routers.searxng-http.priority=21
       - traefik.http.services.searxng.loadbalancer.server.port=8080
       - traefik.docker.network=shared-network
@@ -146,7 +146,7 @@ services:
       - "traefik.http.routers.sdwebui.entrypoints=websecure"
       - "traefik.http.routers.sdwebui.tls=${TRAEFIK_TLS_ENABLE:-true}"
       - "traefik.http.routers.sdwebui.tls.certresolver=${TRAEFIK_CERT_RESOLVER:-letsencrypt}"
-      - "traefik.http.routers.sdwebui-http.rule=Host(`sdwebui.lab`)"
+      - "traefik.http.routers.sdwebui.rule=Host(`sdwebui.lab`)"
       - "traefik.http.routers.sdwebui-http.entrypoints=web"
       - "traefik.http.services.sdwebui.loadbalancer.server.port=7860"
       - "traefik.docker.network=shared-network"
@@ -196,8 +196,8 @@ services:
       - traefik.http.routers.localai.entrypoints=websecure
       - traefik.http.routers.localai.tls=true
       - traefik.http.routers.localai.middlewares=ai-services-auth@file
-      - "traefik.http.routers.localai-http.rule=Host(`localai.lab`)"
-      - traefik.http.routers.localai-http.entrypoints=web
+      - "traefik.http.routers.localai.rule=Host(`localai.lab`)"
+      - traefik.http.routers.localai.entrypoints=web,websecure
       - traefik.http.routers.localai-http.priority=21
       - traefik.http.services.localai.loadbalancer.server.port=8080
       - traefik.docker.network=shared-network
@@ -278,8 +278,8 @@ services:
       - traefik.http.routers.anythingllm.entrypoints=websecure
       - traefik.http.routers.anythingllm.tls=true
       - traefik.http.routers.anythingllm.middlewares=ai-services-auth@file
-      - "traefik.http.routers.anythingllm-http.rule=Host(`anythingllm.lab`)"
-      - traefik.http.routers.anythingllm-http.entrypoints=web
+      - "traefik.http.routers.anythingllm.rule=Host(`anythingllm.lab`)"
+      - traefik.http.routers.anythingllm.entrypoints=web,websecure
       - traefik.http.routers.anythingllm-http.priority=21
       - traefik.http.services.anythingllm.loadbalancer.server.port=3001
       - traefik.docker.network=shared-network
@@ -328,8 +328,8 @@ services:
       - traefik.http.routers.whisper.entrypoints=websecure
       - traefik.http.routers.whisper.tls=true
       - traefik.http.routers.whisper.middlewares=ai-services-auth@file
-      - "traefik.http.routers.whisper-http.rule=Host(`whisper.lab`)"
-      - traefik.http.routers.whisper-http.entrypoints=web
+      - "traefik.http.routers.whisper.rule=Host(`whisper.lab`)"
+      - traefik.http.routers.whisper.entrypoints=web,websecure
       - traefik.http.routers.whisper-http.priority=21
       - traefik.http.services.whisper.loadbalancer.server.port=9000
       - traefik.docker.network=shared-network
@@ -372,8 +372,8 @@ services:
       - "traefik.http.routers.whisperx.rule=Host(`whisperx.${BASE_DOMAIN}`)"
       - traefik.http.routers.whisperx.entrypoints=websecure
       - traefik.http.routers.whisperx.tls=true
-      - "traefik.http.routers.whisperx-http.rule=Host(`whisperx.lab`)"
-      - traefik.http.routers.whisperx-http.entrypoints=web
+      - "traefik.http.routers.whisperx.rule=Host(`whisperx.lab`)"
+      - traefik.http.routers.whisperx.entrypoints=web,websecure
       - traefik.http.services.whisperx.loadbalancer.server.port=9000
       - traefik.docker.network=shared-network
 
@@ -437,8 +437,8 @@ services:
       - "traefik.http.routers.librechat.rule=Host(`librechat.${BASE_DOMAIN}`)"
       - traefik.http.routers.librechat.entrypoints=websecure
       - traefik.http.routers.librechat.tls=true
-      - "traefik.http.routers.librechat-http.rule=Host(`librechat.lab`)"
-      - traefik.http.routers.librechat-http.entrypoints=web
+      - "traefik.http.routers.librechat.rule=Host(`librechat.lab`)"
+      - traefik.http.routers.librechat.entrypoints=web,websecure
       - traefik.http.services.librechat.loadbalancer.server.port=3080
       - traefik.docker.network=shared-network
 
@@ -500,8 +500,8 @@ services:
       - "traefik.http.routers.privategpt.rule=Host(`privategpt.${BASE_DOMAIN}`)"
       - traefik.http.routers.privategpt.entrypoints=websecure
       - traefik.http.routers.privategpt.tls=true
-      - "traefik.http.routers.privategpt-http.rule=Host(`privategpt.lab`)"
-      - traefik.http.routers.privategpt-http.entrypoints=web
+      - "traefik.http.routers.privategpt.rule=Host(`privategpt.lab`)"
+      - traefik.http.routers.privategpt.entrypoints=web,websecure
       - traefik.http.services.privategpt.loadbalancer.server.port=8080
       - traefik.docker.network=shared-network
 
@@ -545,8 +545,8 @@ services:
       - "traefik.http.routers.comfyui.rule=Host(`comfyui.${BASE_DOMAIN}`)"
       - traefik.http.routers.comfyui.entrypoints=websecure
       - traefik.http.routers.comfyui.tls=true
-      - "traefik.http.routers.comfyui-http.rule=Host(`comfyui.lab`)"
-      - traefik.http.routers.comfyui-http.entrypoints=web
+      - "traefik.http.routers.comfyui.rule=Host(`comfyui.lab`)"
+      - traefik.http.routers.comfyui.entrypoints=web,websecure
       - traefik.http.services.comfyui.loadbalancer.server.port=8188
       - traefik.docker.network=shared-network
 
@@ -603,8 +603,8 @@ services:
       - "traefik.http.routers.diffrhythm.rule=Host(`diffrhythm.${BASE_DOMAIN}`)"
       - traefik.http.routers.diffrhythm.entrypoints=websecure
       - traefik.http.routers.diffrhythm.tls=true
-      - "traefik.http.routers.diffrhythm-http.rule=Host(`diffrhythm.lab`)"
-      - traefik.http.routers.diffrhythm-http.entrypoints=web
+      - "traefik.http.routers.diffrhythm.rule=Host(`diffrhythm.lab`)"
+      - traefik.http.routers.diffrhythm.entrypoints=web,websecure
       - traefik.http.services.diffrhythm.loadbalancer.server.port=7860
       - traefik.docker.network=shared-network
 

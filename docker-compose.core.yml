@@ -55,19 +55,12 @@ services:
       - traefik.http.routers.link-router.entrypoints=websecure
       - traefik.http.routers.link-router.tls=${TRAEFIK_TLS_ENABLE:-true}
       - traefik.http.routers.link-router.priority=100
-      
-      # HTTPS (Local .lab access - all domains)
-      - traefik.http.routers.link-router-https.rule=PathPrefix(`/go/`) || PathPrefix(`/go-external/`)
-      - traefik.http.routers.link-router-https.entrypoints=websecure
-      - traefik.http.routers.link-router-https.tls=true
-      - traefik.http.routers.link-router-https.priority=100
-      - traefik.http.routers.link-router-https.service=link-router
 
-      # HTTP (Local .lab and IP access)
-      - traefik.http.routers.link-router-http.rule=PathPrefix(`/go/`) || PathPrefix(`/go-external/`)
-      - traefik.http.routers.link-router-http.entrypoints=web
-      - traefik.http.routers.link-router-http.priority=100
-      - traefik.http.routers.link-router-http.service=link-router
+      # Local .lab and IP access (HTTP + HTTPS)
+      - traefik.http.routers.link-router-local.rule=PathPrefix(`/go/`) || PathPrefix(`/go-external/`)
+      - traefik.http.routers.link-router-local.entrypoints=web,websecure
+      - traefik.http.routers.link-router-local.priority=100
+      - traefik.http.routers.link-router-local.service=link-router
 
       - traefik.http.services.link-router.loadbalancer.server.port=8080
       - traefik.docker.network=shared-network
@@ -122,15 +115,9 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
-      # Local HTTP access
-      - traefik.http.routers.glance-http.entrypoints=web
-      - traefik.http.routers.glance-http.rule=Host(`home.lab`) || Host(`${HOST_IP}`)
-      - traefik.http.routers.glance-http.service=glance
-      # Local HTTPS access
-      - traefik.http.routers.glance-https.entrypoints=websecure
-      - traefik.http.routers.glance-https.rule=Host(`home.lab`)
-      - traefik.http.routers.glance-https.tls=true
-      - traefik.http.routers.glance-https.service=glance
+      - traefik.http.routers.glance.entrypoints=web,websecure
+      - traefik.http.routers.glance.rule=Host(`home.lab`) || Host(`${HOST_IP}`)
+      - traefik.http.routers.glance.service=glance
       # Service definition
       - traefik.http.services.glance.loadbalancer.server.port=8080
       - traefik.docker.network=shared-network
@@ -185,8 +172,8 @@ services:
       - traefik.docker.network=shared-network
 
       # Local HTTP access for *.lab
-      - traefik.http.routers.vaultwarden-http.entrypoints=web
-      - traefik.http.routers.vaultwarden-http.rule=Host(`vaultwarden.lab`) || Host(`vault.lab`)
-      - traefik.http.routers.vaultwarden-http.service=vaultwarden
+      - traefik.http.routers.vaultwarden.entrypoints=web,websecure
+      - traefik.http.routers.vaultwarden.rule=Host(`vaultwarden.lab`) || Host(`vault.lab`)
+      - traefik.http.routers.vaultwarden.service=vaultwarden
 
 

@@ -200,9 +200,9 @@ services:
       - traefik.docker.network=shared-network
 
       # Local HTTP access (no TLS) for *.lab
-      - traefik.http.routers.coder-http.entrypoints=web
-      - traefik.http.routers.coder-http.rule=Host(`coder.lab`)
-      - traefik.http.routers.coder-http.service=coder
+      - traefik.http.routers.coder.entrypoints=web,websecure
+      - traefik.http.routers.coder.rule=Host(`coder.lab`)
+      - traefik.http.routers.coder.service=coder
 
   # =============================================================================
   # GITEA GIT REPOSITORY HOSTING WITH CI/CD
@@ -279,9 +279,9 @@ services:
       - traefik.http.services.gitea.loadbalancer.server.port=3000
       - traefik.docker.network=shared-network
 
-      - traefik.http.routers.gitea-http.entrypoints=web
-      - traefik.http.routers.gitea-http.rule=Host(`gitea.lab`)
-      - traefik.http.routers.gitea-http.service=gitea
+      - traefik.http.routers.gitea.entrypoints=web,websecure
+      - traefik.http.routers.gitea.rule=Host(`gitea.lab`)
+      - traefik.http.routers.gitea.service=gitea
 
   registry-cache:
     image: registry:2
@@ -312,9 +312,9 @@ services:
       - traefik.http.routers.registry.entrypoints=websecure
       - traefik.http.routers.registry.tls=true
 
-      - traefik.http.routers.registry-http.rule=Host(`registry.lab`)
-      - traefik.http.routers.registry-http.entrypoints=web
-      - traefik.http.routers.registry-http.service=registry
+      - traefik.http.routers.registry.rule=Host(`registry.lab`)
+      - traefik.http.routers.registry.entrypoints=web,websecure
+      - traefik.http.routers.registry.service=registry
       - traefik.http.services.registry.loadbalancer.server.port=5000
       - traefik.docker.network=shared-network
 
@@ -377,22 +377,20 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
-      - traefik.http.routers.gitlab.entrypoints=websecure
-      - traefik.http.routers.gitlab.rule=Host(`gitlab.${BASE_DOMAIN}`)
-      - traefik.http.routers.gitlab.tls=true
+      # External domain (HTTPS via Cloudflare)
+      - traefik.http.routers.gitlab-external.entrypoints=websecure
+      - traefik.http.routers.gitlab-external.rule=Host(`gitlab.${BASE_DOMAIN}`)
+      - traefik.http.routers.gitlab-external.tls=true
+      - traefik.http.routers.gitlab-external.service=gitlab
+      
+      # Local .lab domain (HTTP + HTTPS)
+      - traefik.http.routers.gitlab.entrypoints=web,websecure
+      - traefik.http.routers.gitlab.rule=Host(`gitlab.lab`)
+      - traefik.http.routers.gitlab.service=gitlab
+      
+      # Service definition
       - traefik.http.services.gitlab.loadbalancer.server.port=80
       - traefik.docker.network=shared-network
-
-      # Local HTTPS access
-      - traefik.http.routers.gitlab-https.entrypoints=websecure
-      - traefik.http.routers.gitlab-https.rule=Host(`gitlab.lab`)
-      - traefik.http.routers.gitlab-https.tls=true
-      - traefik.http.routers.gitlab-https.service=gitlab
-
-      # Local HTTP access
-      - traefik.http.routers.gitlab-http.entrypoints=web
-      - traefik.http.routers.gitlab-http.rule=Host(`gitlab.lab`)
-      - traefik.http.routers.gitlab-http.service=gitlab
 
 volumes:
   coder-db-data:

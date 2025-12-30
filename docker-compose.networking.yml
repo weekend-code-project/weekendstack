@@ -418,8 +418,8 @@ services:
       # Local-only Pi-hole admin (HTTP, no TLS) on http://pihole.lab/admin
       # This is NOT exposed via Cloudflare tunnel (router is web-only).
       - traefik.enable=true
-      - traefik.http.routers.pihole-http.rule=Host(`pihole.lab`)
-      - traefik.http.routers.pihole-http.entrypoints=web
+      - traefik.http.routers.pihole.rule=Host(`pihole.lab`)
+      - traefik.http.routers.pihole.entrypoints=web,websecure
       - traefik.http.routers.pihole-http.middlewares=pihole-redirect
       - traefik.http.middlewares.pihole-redirect.redirectregex.regex=^https?://([^/]+)/?$$
       - traefik.http.middlewares.pihole-redirect.redirectregex.replacement=http://$$1/admin/

@@ -67,9 +67,9 @@ services:
       - traefik.http.services.immich.loadbalancer.server.port=2283
       - traefik.docker.network=shared-network
 
-      - traefik.http.routers.immich-http.entrypoints=web
-      - traefik.http.routers.immich-http.rule=Host(`immich.lab`)
-      - traefik.http.routers.immich-http.service=immich
+      - traefik.http.routers.immich.entrypoints=web,websecure
+      - traefik.http.routers.immich.rule=Host(`immich.lab`)
+      - traefik.http.routers.immich.service=immich
 
   immich-machine-learning:
     image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-release}
@@ -189,9 +189,9 @@ services:
       - traefik.http.services.kavita.loadbalancer.server.port=5000
       - traefik.docker.network=shared-network
 
-      - traefik.http.routers.kavita-http.entrypoints=web
-      - traefik.http.routers.kavita-http.rule=Host(`kavita.lab`)
-      - traefik.http.routers.kavita-http.service=kavita
+      - traefik.http.routers.kavita.entrypoints=web,websecure
+      - traefik.http.routers.kavita.rule=Host(`kavita.lab`)
+      - traefik.http.routers.kavita.service=kavita
 
   # ====================================================================
   # NAVIDROME - Music Streaming Server
@@ -247,9 +247,9 @@ services:
       - traefik.http.services.navidrome.loadbalancer.server.port=4533
       - traefik.docker.network=shared-network
 
-      - traefik.http.routers.navidrome-http.entrypoints=web
-      - traefik.http.routers.navidrome-http.rule=Host(`navidrome.lab`)
-      - traefik.http.routers.navidrome-http.service=navidrome
+      - traefik.http.routers.navidrome.entrypoints=web,websecure
+      - traefik.http.routers.navidrome.rule=Host(`navidrome.lab`)
+      - traefik.http.routers.navidrome.service=navidrome
 
 volumes:
   immich-upload:
