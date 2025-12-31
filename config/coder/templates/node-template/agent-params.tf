@@ -58,6 +58,9 @@ module "agent" {
     "# Phase 2 Module: node-tooling",
     module.node_tooling.tooling_install_script,
     "",
+    "# Phase 2b Module: node-modules-persistence",
+    module.node_modules_persistence.init_script,
+    "",
     "echo '[DEBUG] Phase 2 complete.'",
     "",
     "# Git Module: git-identity (always runs)",
@@ -82,11 +85,6 @@ module "agent" {
     "",
     "# Phase 6 Module: setup-server (Issue #32) - Conditional",
     try(module.setup_server[0].setup_server_script, "# Server disabled"),
-    "",
-    "# Node.js Modules",
-    # module.node_version.setup_script, # Removed
-    # module.node_tooling.tooling_install_script, # Moved to Phase 2
-    # module.node_modules_persistence.init_script, # Module not yet implemented
     "",
     "echo '[WORKSPACE] Workspace ready!'"
   ])
