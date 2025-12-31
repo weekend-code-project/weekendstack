@@ -32,10 +32,23 @@ resource "docker_image" "main" {
   keep_locally  = true
 }
 
+# Workspace secret for SSH password
+resource "random_password" "workspace_secret" {
+  length  = 16
+  special = true
+}
+
 # MySQL database password
 resource "random_password" "db_password" {
   length  = 32
   special = false
+}
+
+# Locals for base domain and paths
+locals {
+  actual_base_domain       = var.base_domain
+  resolved_ssh_key_dir     = trimspace(var.ssh_key_dir) != "" ? var.ssh_key_dir : "/home/docker/.ssh"
+  resolved_traefik_auth_dir = trimspace(var.traefik_auth_dir) != "" ? var.traefik_auth_dir : "/opt/stacks/weekendstack/config/traefik/auth"
 }
 
 # MySQL database container
@@ -112,9 +125,23 @@ resource "docker_container" "workspace" {
     read_only      = false
   }
   
+  # Mount SSH keys from host VM to workspace
+  volumes {
+    container_path = "/mnt/host-ssh"
+    host_path      = local.resolved_ssh_key_dir
+    read_only      = true
+  }
+  
+  # Mount Traefik auth directory
+  volumes {
+    container_path = "/traefik-auth"
+    host_path      = local.resolved_traefik_auth_dir
+    read_only      = false
+  }
+  
   # Traefik labels
   dynamic "labels" {
-    for_each = module.traefik[0].labels
+    for_each = try(module.traefik[0].traefik_labels, {})
     content {
       label = labels.key
       value = labels.value
@@ -129,4 +156,22 @@ resource "docker_volume" "home_volume" {
   lifecycle {
     ignore_changes = all
   }
+}
+
+# =============================================================================
+# Modules
+# =============================================================================
+
+# Module: init-shell
+module "init_shell" {
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/init-shell-module?ref=PLACEHOLDER"
+}
+
+# Module: code-server
+module "code_server" {
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/code-server-module?ref=PLACEHOLDER"
+  
+  agent_id              = module.agent.agent_id
+  workspace_start_count = data.coder_workspace.me.start_count
+  folder                = "/home/coder/workspace/wordpress"
 }
