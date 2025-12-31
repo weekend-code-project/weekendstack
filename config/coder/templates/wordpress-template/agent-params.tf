@@ -5,11 +5,9 @@
 # Collect custom metadata blocks from modules
 locals {
   ssh_metadata    = try(module.ssh[0].metadata_blocks, [])
-  git_metadata    = try(module.git_integration[0].metadata_blocks, [])
   
   all_custom_metadata = concat(
     local.ssh_metadata,
-    local.git_metadata,
     try(module.wordpress.metadata_blocks, [])
   )
 }
@@ -48,13 +46,6 @@ module "agent" {
     "",
     "# Git Module: git-identity (always runs)",
     module.git_identity.setup_script,
-    "",
-    "# Git Module: git-integration - Conditional clone",
-    try(module.git_integration[0].clone_script, "# Git clone disabled"),
-    "",
-    "# Git Module: Auto-detected CLI (GitHub or Gitea)",
-    try(module.github_cli[0].install_script, ""),
-    try(module.gitea_cli[0].install_script, ""),
     "",
     "# SSH Module - Conditional",
     try(module.ssh[0].ssh_copy_script, "# SSH disabled"),
