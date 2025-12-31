@@ -167,8 +167,8 @@ EOF
         Require all granted
     </Directory>
     
-    ErrorLog \${APACHE_LOG_DIR}/wordpress-error.log
-    CustomLog \${APACHE_LOG_DIR}/wordpress-access.log combined
+    ErrorLog $${APACHE_LOG_DIR}/wordpress-error.log
+    CustomLog $${APACHE_LOG_DIR}/wordpress-access.log combined
 </VirtualHost>
 EOF
     
