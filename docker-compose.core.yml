@@ -61,6 +61,7 @@ services:
       - traefik.http.routers.link-router-local.entrypoints=web,websecure
       - traefik.http.routers.link-router-local.priority=200
       - traefik.http.routers.link-router-local.service=link-router
+      - traefik.http.routers.link-router-local.tls=true
 
       - traefik.http.services.link-router.loadbalancer.server.port=8080
       - traefik.docker.network=shared-network
@@ -119,6 +120,7 @@ services:
       - "traefik.http.routers.glance.rule=(Host(`home.lab`) || Host(`${HOST_IP}`)) && !PathPrefix(`/go/`)"
       - traefik.http.routers.glance.priority=100
       - traefik.http.routers.glance.service=glance
+      - traefik.http.routers.glance.tls=true
       # Service definition
       - traefik.http.services.glance.loadbalancer.server.port=8080
       - traefik.docker.network=shared-network
