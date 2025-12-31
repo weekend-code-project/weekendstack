@@ -201,7 +201,7 @@ output "metadata_blocks" {
     },
     {
       display_name = "WordPress Status"
-      script       = "curl -s -o /dev/null -w '%{http_code}' http://localhost || echo 'N/A'"
+      script       = "curl -s -o /dev/null -w '%%{http_code}' http://localhost || echo 'N/A'"
       interval     = 60
       timeout      = 5
     },
