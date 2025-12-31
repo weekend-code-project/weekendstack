@@ -66,6 +66,7 @@ services:
       - traefik.docker.network=shared-network
 
       - traefik.http.routers.mealie.entrypoints=web,websecure
+      - traefik.http.routers.mealie.tls=true
       - traefik.http.routers.mealie.rule=Host(`mealie.lab`)
       - traefik.http.routers.mealie.service=mealie
 
@@ -115,6 +116,7 @@ services:
       - traefik.docker.network=shared-network
 
       - traefik.http.routers.firefly.entrypoints=web,websecure
+      - traefik.http.routers.firefly.tls=true
       - traefik.http.routers.firefly.rule=Host(`firefly.lab`)
       - traefik.http.routers.firefly.service=firefly
 
@@ -204,6 +206,7 @@ services:
       - traefik.docker.network=shared-network
 
       - traefik.http.routers.wger.entrypoints=web,websecure
+      - traefik.http.routers.wger.tls=true
       - traefik.http.routers.wger.rule=Host(`wger.lab`)
       - traefik.http.routers.wger.service=wger
 
