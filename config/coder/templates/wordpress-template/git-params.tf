@@ -5,7 +5,7 @@
 
 # Module: git-identity (basic git config)
 module "git_identity" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/git-identity-module?ref=PLACEHOLDER"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/git-identity-module?ref=feature/services-cleanup"
   
   git_author_name  = data.coder_workspace_owner.me.name
   git_author_email = data.coder_workspace_owner.me.email

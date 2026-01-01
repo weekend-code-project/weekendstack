@@ -34,13 +34,6 @@ data "coder_parameter" "workspace_secret" {
   default      = ""
   mutable      = true
   order        = 151
-  
-  validation {
-    min       = 0
-    max       = 64
-    monotonic = "increasing"
-    error     = "Suggested random password: ${random_password.workspace_secret.result}"
-  }
 }
 
 # Local values for Traefik configuration
@@ -53,7 +46,7 @@ locals {
 # Module: traefik (Reverse proxy routing)
 module "traefik" {
   count  = local.enable_traefik ? 1 : 0
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/traefik-routing-module?ref=PLACEHOLDER"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/traefik-routing-module?ref=feature/services-cleanup"
   
   agent_id              = module.agent.agent_id
   workspace_name        = data.coder_workspace.me.name

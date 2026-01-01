@@ -164,12 +164,12 @@ resource "docker_volume" "home_volume" {
 
 # Module: init-shell
 module "init_shell" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/init-shell-module?ref=PLACEHOLDER"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/init-shell-module?ref=feature/services-cleanup"
 }
 
 # Module: code-server
 module "code_server" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/code-server-module?ref=PLACEHOLDER"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/code-server-module?ref=feature/services-cleanup"
   
   agent_id              = module.agent.agent_id
   workspace_start_count = data.coder_workspace.me.start_count
