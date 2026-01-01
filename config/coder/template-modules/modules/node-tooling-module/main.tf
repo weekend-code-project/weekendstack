@@ -43,6 +43,12 @@ variable "node_version" {
   description = "Node.js version to install/use"
 }
 
+variable "legacy_peer_deps" {
+  type        = bool
+  default     = false
+  description = "Use --legacy-peer-deps flag for npm installations"
+}
+
 locals {
   tooling_script = <<-EOT
     # NODE TOOLING START
@@ -149,7 +155,8 @@ locals {
           yarn global add "$PKG" >> "$LOG_FILE" 2>&1 || sudo yarn global add "$PKG" >> "$LOG_FILE" 2>&1 || true
           ;;
         npm|*)
-          npm install -g "$PKG" >> "$LOG_FILE" 2>&1 || sudo npm install -g "$PKG" >> "$LOG_FILE" 2>&1 || true
+          NPM_FLAGS="${var.legacy_peer_deps ? "--legacy-peer-deps" : ""}"
+          npm install -g $NPM_FLAGS "$PKG" >> "$LOG_FILE" 2>&1 || sudo npm install -g $NPM_FLAGS "$PKG" >> "$LOG_FILE" 2>&1 || true
           ;;
       esac
     }
