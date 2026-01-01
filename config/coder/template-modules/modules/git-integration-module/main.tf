@@ -69,8 +69,21 @@ output "clone_script" {
       fi
       
       # Clone
-      mkdir -p "$WSDIR"
-      if git clone "$REPO" "$WSDIR" 2>&1 | grep -E "Cloning|done|error|fatal" | head -5; then
+      # Use mirror approach to handle existing non-empty workspace directory
+      MIRROR_DIR="/tmp/repo-mirror-$$"
+      rm -rf "$MIRROR_DIR"
+      
+      if git clone "$REPO" "$MIRROR_DIR" 2>&1 | grep -E "Cloning|done|error|fatal" | head -5; then
+        # Remove any existing files in workspace (but keep .persist symlinks)
+        cd "$WSDIR" || exit 0
+        find . -maxdepth 1 ! -name '.' ! -name '..' ! -name 'node_modules' -exec rm -rf {} + 2>/dev/null || true
+        
+        # Move cloned files to workspace
+        mv "$MIRROR_DIR"/.git "$WSDIR/" 2>/dev/null || true
+        mv "$MIRROR_DIR"/* "$WSDIR/" 2>/dev/null || true
+        mv "$MIRROR_DIR"/.[!.]* "$WSDIR/" 2>/dev/null || true
+        rm -rf "$MIRROR_DIR"
+        
         cd "$WSDIR" || exit 0
         
         # Setup branches silently
