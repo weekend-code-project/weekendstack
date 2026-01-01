@@ -69,14 +69,15 @@ locals {
   use_custom_command = data.coder_parameter.use_custom_command.value
   
   # Robust default command that ensures nvm is loaded
-  nvm_load           = "export NVM_DIR=\"$HOME/.nvm\"; [ -s \"$NVM_DIR/nvm.sh\" ] && \\. \"$NVM_DIR/nvm.sh\""
-  default_command    = "${local.nvm_load}; nvm use default >/dev/null 2>&1; VITE_ALLOW_ALL_HOSTS=true npx vite --port=8080 --host 0.0.0.0"
+  nvm_load           = "export NVM_DIR=\"$HOME/.nvm\"; [ -s \"$NVM_DIR/nvm.sh\" ] && \\. \"$NVM_DIR/nvm.sh\"; nvm use default >/dev/null 2>&1"
+  default_command    = "VITE_ALLOW_ALL_HOSTS=true npx vite --port=8080 --host 0.0.0.0"
   
   custom_command     = trimspace(data.coder_parameter.startup_command.value)
 
   # Always regenerate the landing page and server command
   auto_generate_html = true
-  startup_command    = local.use_custom_command ? coalesce(local.custom_command != "" ? local.custom_command : null, local.default_command) : local.default_command
+  # Prefix any command with nvm loading to ensure npm/node are available
+  startup_command    = local.use_custom_command ? "${local.nvm_load}; ${coalesce(local.custom_command != "" ? local.custom_command : null, local.default_command)}" : "${local.nvm_load}; ${local.default_command}"
   has_server_config  = true  # Always run server (either default or custom)
 }
 
