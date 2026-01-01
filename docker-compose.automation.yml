@@ -120,7 +120,6 @@ services:
       - traefik.enable=${HOMEASSISTANT_TRAEFIK_ENABLE:-true}
       - "traefik.http.routers.homeassistant.rule=Host(`homeassistant.lab`)"
       - traefik.http.routers.homeassistant.entrypoints=web,websecure
-      - traefik.http.routers.homeassistant.tls=true
       - traefik.http.services.homeassistant.loadbalancer.server.port=8123
       - traefik.docker.network=shared-network
       - "com.docker.compose.service=homeassistant"
@@ -162,7 +161,6 @@ services:
       - traefik.enable=true
       - traefik.http.routers.nodered.rule=Host(`nodered.lab`)
       - traefik.http.routers.nodered.entrypoints=web,websecure
-      - traefik.http.routers.nodered.tls=true
       - traefik.http.services.nodered.loadbalancer.server.port=1880
       - traefik.docker.network=shared-network
 

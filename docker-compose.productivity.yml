@@ -114,7 +114,6 @@ services:
       - traefik.docker.network=shared-network
 
       - traefik.http.routers.nocodb.entrypoints=web,websecure
-      - traefik.http.routers.nocodb.tls=true
       - traefik.http.routers.nocodb.rule=Host(`nocodb.lab`)
       - traefik.http.routers.nocodb.service=nocodb
       
@@ -225,7 +224,6 @@ services:
       - traefik.docker.network=shared-network
 
       - traefik.http.routers.n8n.entrypoints=web,websecure
-      - traefik.http.routers.n8n.tls=true
       - traefik.http.routers.n8n.rule=Host(`n8n.lab`)
       - traefik.http.routers.n8n.service=n8n
       
@@ -378,7 +376,6 @@ services:
       - traefik.docker.network=shared-network
 
       - traefik.http.routers.paperless.entrypoints=web,websecure
-      - traefik.http.routers.paperless.tls=true
       - traefik.http.routers.paperless.rule=Host(`paperless.lab`)
       - traefik.http.routers.paperless.service=paperless
       
@@ -518,7 +515,6 @@ services:
       - traefik.docker.network=shared-network
 
       - traefik.http.routers.activepieces.entrypoints=web,websecure
-      - traefik.http.routers.activepieces.tls=true
       - traefik.http.routers.activepieces.rule=Host(`activepieces.lab`)
       - traefik.http.routers.activepieces.service=activepieces
       
@@ -668,7 +664,6 @@ services:
       - traefik.docker.network=shared-network
 
       - traefik.http.routers.postiz.entrypoints=web,websecure
-      - traefik.http.routers.postiz.tls=true
       - traefik.http.routers.postiz.rule=Host(`postiz.lab`)
       - traefik.http.routers.postiz.service=postiz
       
@@ -718,7 +713,6 @@ services:
       - traefik.docker.network=shared-network
 
       - traefik.http.routers.focalboard.entrypoints=web,websecure
-      - traefik.http.routers.focalboard.tls=true
       - traefik.http.routers.focalboard.rule=Host(`focalboard.lab`)
       - traefik.http.routers.focalboard.service=focalboard
 
@@ -767,7 +761,6 @@ services:
       - traefik.docker.network=shared-network
 
       - traefik.http.routers.trilium.entrypoints=web,websecure
-      - traefik.http.routers.trilium.tls=true
       - traefik.http.routers.trilium.rule=Host(`trilium.lab`)
       - traefik.http.routers.trilium.service=trilium
 
@@ -822,7 +815,6 @@ services:
       - traefik.docker.network=shared-network
 
       - traefik.http.routers.vikunja.entrypoints=web,websecure
-      - traefik.http.routers.vikunja.tls=true
       - traefik.http.routers.vikunja.rule=Host(`vikunja.lab`)
       - traefik.http.routers.vikunja.service=vikunja
 
@@ -912,7 +904,6 @@ services:
       - traefik.docker.network=shared-network
 
       - traefik.http.routers.excalidraw.entrypoints=web,websecure
-      - traefik.http.routers.excalidraw.tls=true
       - traefik.http.routers.excalidraw.rule=Host(`excalidraw.lab`)
       - traefik.http.routers.excalidraw.service=excalidraw
       - "com.docker.compose.service=excalidraw"
@@ -1023,7 +1014,6 @@ services:
       - traefik.docker.network=shared-network
 
       - traefik.http.routers.docmost.entrypoints=web,websecure
-      - traefik.http.routers.docmost.tls=true
       - traefik.http.routers.docmost.rule=Host(`docmost.lab`)
       - traefik.http.routers.docmost.service=docmost
       - "com.docker.compose.service=docmost"
@@ -1081,7 +1071,6 @@ services:
       - traefik.docker.network=shared-network
 
       - traefik.http.routers.filebrowser.entrypoints=web,websecure
-      - traefik.http.routers.filebrowser.tls=true
       - traefik.http.routers.filebrowser.rule=Host(`filebrowser.lab`)
       - traefik.http.routers.filebrowser.service=filebrowser
 
@@ -1140,7 +1129,6 @@ services:
       - traefik.http.routers.hoarder.tls=true
 
       - traefik.http.routers.hoarder.entrypoints=web,websecure
-      - traefik.http.routers.hoarder.tls=true
       - traefik.http.routers.hoarder.rule=Host(`hoarder.lab`)
       - traefik.http.routers.hoarder.service=hoarder
       - traefik.http.services.hoarder.loadbalancer.server.port=3000
@@ -1236,7 +1224,6 @@ services:
       - traefik.docker.network=shared-network
 
       - traefik.http.routers.bytestash.entrypoints=web,websecure
-      - traefik.http.routers.bytestash.tls=true
       - traefik.http.routers.bytestash.rule=Host(`bytestash.lab`)
       - traefik.http.routers.bytestash.service=bytestash
       - "com.docker.compose.service=bytestash"
@@ -1338,7 +1325,6 @@ services:
       - traefik.docker.network=shared-network
 
       - traefik.http.routers.resourcespace.entrypoints=web,websecure
-      - traefik.http.routers.resourcespace.tls=true
       - traefik.http.routers.resourcespace.rule=Host(`resourcespace.lab`)
       - traefik.http.routers.resourcespace.service=resourcespace
       

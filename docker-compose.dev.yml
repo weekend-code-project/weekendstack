@@ -201,7 +201,6 @@ services:
       
       # Local .lab domain (HTTP + HTTPS)
       - traefik.http.routers.coder.entrypoints=web,websecure
-      - traefik.http.routers.coder.tls=true
       - traefik.http.routers.coder.rule=Host(`coder.lab`)
       - traefik.http.routers.coder.service=coder
       
@@ -285,7 +284,6 @@ services:
       - traefik.docker.network=shared-network
 
       - traefik.http.routers.gitea.entrypoints=web,websecure
-      - traefik.http.routers.gitea.tls=true
       - traefik.http.routers.gitea.rule=Host(`gitea.lab`)
       - traefik.http.routers.gitea.service=gitea
 
@@ -320,7 +318,6 @@ services:
 
       - traefik.http.routers.registry.rule=Host(`registry.lab`)
       - traefik.http.routers.registry.entrypoints=web,websecure
-      - traefik.http.routers.registry.tls=true
       - traefik.http.routers.registry.service=registry
       - traefik.http.services.registry.loadbalancer.server.port=5000
       - traefik.docker.network=shared-network
@@ -392,7 +389,6 @@ services:
       
       # Local .lab domain (HTTP + HTTPS)
       - traefik.http.routers.gitlab.entrypoints=web,websecure
-      - traefik.http.routers.gitlab.tls=true
       - traefik.http.routers.gitlab.rule=Host(`gitlab.lab`)
       - traefik.http.routers.gitlab.service=gitlab
       

@@ -59,7 +59,6 @@ services:
       # Local .lab and IP access (HTTP + HTTPS)
       - "traefik.http.routers.link-router-local.rule=(Host(`home.lab`) || Host(`${HOST_IP}`)) && (PathPrefix(`/go/`) || PathPrefix(`/go-external/`))"
       - traefik.http.routers.link-router-local.entrypoints=web,websecure
-      - traefik.http.routers.link-router-local.tls=true
       - traefik.http.routers.link-router-local.priority=200
       - traefik.http.routers.link-router-local.service=link-router
       - traefik.http.routers.link-router-local.tls=true
@@ -118,7 +117,6 @@ services:
       # Traefik Configuration
       - traefik.enable=true
       - traefik.http.routers.glance.entrypoints=web,websecure
-      - traefik.http.routers.glance.tls=true
       - "traefik.http.routers.glance.rule=(Host(`home.lab`) || Host(`${HOST_IP}`)) && !PathPrefix(`/go/`)"
       - traefik.http.routers.glance.priority=100
       - traefik.http.routers.glance.service=glance
@@ -178,7 +176,6 @@ services:
 
       # Local HTTP access for *.lab
       - traefik.http.routers.vaultwarden.entrypoints=web,websecure
-      - traefik.http.routers.vaultwarden.tls=true
       - traefik.http.routers.vaultwarden.rule=Host(`vaultwarden.lab`) || Host(`vault.lab`)
       - traefik.http.routers.vaultwarden.service=vaultwarden
 

@@ -68,7 +68,6 @@ services:
       - traefik.docker.network=shared-network
 
       - traefik.http.routers.immich.entrypoints=web,websecure
-      - traefik.http.routers.immich.tls=true
       - traefik.http.routers.immich.rule=Host(`immich.lab`)
       - traefik.http.routers.immich.service=immich
 
@@ -191,7 +190,6 @@ services:
       - traefik.docker.network=shared-network
 
       - traefik.http.routers.kavita.entrypoints=web,websecure
-      - traefik.http.routers.kavita.tls=true
       - traefik.http.routers.kavita.rule=Host(`kavita.lab`)
       - traefik.http.routers.kavita.service=kavita
 
@@ -250,7 +248,6 @@ services:
       - traefik.docker.network=shared-network
 
       - traefik.http.routers.navidrome.entrypoints=web,websecure
-      - traefik.http.routers.navidrome.tls=true
       - traefik.http.routers.navidrome.rule=Host(`navidrome.lab`)
       - traefik.http.routers.navidrome.service=navidrome
 
