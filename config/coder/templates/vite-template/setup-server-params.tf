@@ -17,7 +17,7 @@ data "coder_parameter" "use_custom_command" {
   description  = "Enable custom server startup command (disables default static server)"
   type         = "bool"
   form_type    = "switch"
-  default      = "false"
+  default      = "true"
   mutable      = true
   order        = 20
 }
