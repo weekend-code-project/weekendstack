@@ -13,7 +13,7 @@ locals {
 }
 
 module "agent" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/coder-agent-module?ref=feature/services-cleanup"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/coder-agent-module?ref=v0.1.0"
   
   arch = data.coder_provisioner.me.arch
   os   = "linux"

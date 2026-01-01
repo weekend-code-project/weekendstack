@@ -46,7 +46,7 @@ locals {
 # Module: traefik (Reverse proxy routing)
 module "traefik" {
   count  = local.enable_traefik ? 1 : 0
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/traefik-routing-module?ref=feature/services-cleanup"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/traefik-routing-module?ref=v0.1.0"
   
   agent_id              = module.agent.agent_id
   workspace_name        = data.coder_workspace.me.name

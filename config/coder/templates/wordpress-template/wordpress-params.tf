@@ -33,7 +33,7 @@ data "coder_parameter" "php_version" {
 
 # WordPress setup module
 module "wordpress" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/wordpress-module?ref=feature/services-cleanup"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/wordpress-module?ref=v0.1.0"
   
   php_version    = data.coder_parameter.php_version.value
   db_host        = "mysql-${data.coder_workspace.me.name}"
