@@ -1,10 +1,10 @@
 # Local Access Setup Guide
 
-This guide explains how to access your Weekend Stack services locally without going through the Cloudflare tunnel.
+**Note:** This guide provides detailed technical background about local DNS configuration. For step-by-step setup instructions, see [dns-setup-guide.md](dns-setup-guide.md).
 
 ## Overview
 
-After implementing this setup, each service will be accessible via **two domains**:
+After implementing DNS configuration, each service is accessible via **two domains**:
 
 1. **Public Domain** (`*.weekendcodeproject.dev`): 
    - Routes through Cloudflare tunnel
@@ -15,9 +15,26 @@ After implementing this setup, each service will be accessible via **two domains
    - Routes directly to your local Traefik instance
    - Only accessible from your local network
    - Faster response times (no internet roundtrip)
-   - Intended for **local HTTP** by default (no TLS)
+   - Supports both HTTP and HTTPS (HTTPS requires certificate trust)
 
 > **Note:** We use `.lab` instead of `.local` because `.local` is reserved for mDNS/Bonjour and can cause conflicts.
+
+## Prerequisites
+
+Before accessing services via `.lab` domains, you **must** configure DNS:
+
+📖 **Setup Guide:** [docs/dns-setup-guide.md](dns-setup-guide.md)
+
+**Quick verification:**
+```bash
+# Test if DNS is working
+dig coder.lab
+# Should return: 192.168.2.50
+
+# If above fails, configure DNS first!
+```
+
+---
 
 ## How It Works
 
@@ -58,26 +75,38 @@ GitLab Container (same container!)
 ## Prerequisites
 
 - Weekend Stack running with Traefik
-- Server IP address: `192.168.2.50` (adjust if different)
-- Administrator access to client devices
+- Server IP address: `192.168.2.50` (adjust if different in your `.env`)
+- **DNS configured** - See [dns-setup-guide.md](dns-setup-guide.md)
 
 ---
 
-## DNS Configuration
+## DNS Configuration (Required)
 
-Choose **ONE** of the following options:
+**Your devices must be configured to resolve `.lab` domains to your server's IP address.**
+
+This is a **required step** - without DNS configuration, your browser won't be able to resolve addresses like `coder.lab`.
+
+📖 **Complete guide:** [docs/dns-setup-guide.md](dns-setup-guide.md)
+
+**Recommended approach:** Configure your router's DHCP to hand out your server's IP (`192.168.2.50`) as the DNS server. This uses the built-in Pi-hole service and works automatically for all devices on your network with wildcard support.
+
+**Alternative approaches:**
+- Configure each device individually to use Pi-hole
+- Add entries to `/etc/hosts` on each device (testing only, no wildcard support)
+
+**Quick router setup (UniFi example):**
+```
+Settings → Networks → LAN → DHCP Name Server → Manual
+DNS Server 1: 192.168.2.50
+```
+
+For detailed instructions for other routers and operating systems, see [dns-setup-guide.md](dns-setup-guide.md).
 
 ---
 
-#### Option A: UniFi Network (Recommended for UniFi Users)
+## Verification
 
-Configure wildcard DNS at the router level - all devices on your network automatically get the configuration!
-
-1. **Access UniFi Controller:**
-   - Navigate to your UniFi controller (typically https://unifi.ui.com or local controller)
-   - Go to **Settings** → **Networks**
-
-2. **Configure DNS:**
+After configuring DNS, verify it's working:
    - Select your LAN network (usually "Default")
    - Scroll to **DHCP Name Server**
    - Set to "Manual" if not already

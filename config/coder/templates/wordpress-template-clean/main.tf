@@ -112,7 +112,7 @@ resource "docker_container" "workspace" {
   
   # SSH port mapping
   dynamic "ports" {
-    for_each = try(module.ssh[0].docker_ports, null) != null ? [module.ssh[0].docker_ports] : []
+    for_each = local.ssh_docker_ports != null ? [local.ssh_docker_ports] : []
     content {
       internal = ports.value.internal
       external = ports.value.external
@@ -122,7 +122,7 @@ resource "docker_container" "workspace" {
   
   # Traefik routing labels
   dynamic "labels" {
-    for_each = try(module.traefik[0].traefik_labels, {})
+    for_each = local.traefik_labels
     content {
       label = labels.key
       value = labels.value

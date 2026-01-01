@@ -131,7 +131,31 @@ cp .env.example .env
 nano .env
 ```
 
-### 2. Start Services
+### 2. Configure DNS (Required)
+
+**⚠️ Services won't be accessible via `.lab` domains until DNS is configured.**
+
+Choose ONE method:
+- **Router-Level** (Recommended): Configure your router to resolve `*.lab` to your server IP
+- **Pi-hole**: Use the included Pi-hole service as your network DNS server
+- **/etc/hosts**: Add individual entries for testing (not recommended for production)
+
+**Quick setup:**
+```bash
+# For most users with UniFi/pfSense routers:
+# Set router DHCP to hand out 192.168.2.50 as DNS server
+# See detailed guide: docs/dns-setup-guide.md
+
+# For testing only (manual hosts file):
+echo "192.168.2.50 home.lab coder.lab gitlab.lab" | sudo tee -a /etc/hosts
+
+# Verify DNS is working:
+bash tools/diagnose_lab.sh
+```
+
+📖 **Full guide:** [docs/dns-setup-guide.md](docs/dns-setup-guide.md)
+
+### 3. Start Services
 
 ```bash
 # Start the default stack (profile `all`)
@@ -162,7 +186,30 @@ docker compose --profile personal up -d
 - Check [`docs/profile-matrix.md`](docs/profile-matrix.md) for a full service × profile table before adding new toggles like `dev-gitea` or `dev-gitlab`.
 - Mix and match profiles for targeted stacks, e.g. `docker compose --profile dev --profile networking up -d` (Coder + Traefik) or `docker compose --profile productivity --profile personal up -d` (office + lifestyle).
 
-### 3. Access Services
+### 4. Access Services
+
+**After configuring DNS** (step 2), all services are accessible via `.lab` domains:
+
+**Main Dashboards:**
+- **Glance**: http://home.lab - Main dashboard / start page
+- **Traefik**: http://traefik.lab/dashboard/ - Routing status
+- **Portainer**: http://portainer.lab - Container management
+- **Cockpit**: http://cockpit.lab - Server management (local only)
+
+**Quick Access:**
+- Development: http://coder.lab, http://gitlab.lab, http://gitea.lab
+- Productivity: http://nextcloud.lab, http://vikunja.lab, http://paperless.lab
+- AI: http://open-webui.lab, http://librechat.lab
+- Media: http://immich.lab, http://navidrome.lab, http://kavita.lab
+
+**Alternative Access Methods:**
+- Direct IP: `http://HOST_IP:PORT` (e.g., http://192.168.2.50:7080)
+- See [service tables](#-ai--machine-learning-services) for port numbers
+
+**Notes:**
+- `.lab` domains support both HTTP and HTTPS (see step 5 for HTTPS setup)
+- Public HTTPS hostnames use `BASE_DOMAIN` (e.g., `coder.${BASE_DOMAIN}`)
+- If DNS isn't working, see [docs/dns-setup-guide.md](docs/dns-setup-guide.md)
 
 All services are accessible at `http://HOST_IP:PORT` (set `HOST_IP` in `.env`).
 
@@ -179,13 +226,14 @@ Notes:
 - **Cockpit**: http://cockpit.lab - Server management (local only)
 
 Setup docs:
+- [docs/dns-setup-guide.md](docs/dns-setup-guide.md) - **DNS configuration (required)**
+- [docs/local-https-setup.md](docs/local-https-setup.md) - **Enable HTTPS for .lab domains**
 - [docs/glance-setup.md](docs/glance-setup.md)
 - [docs/go-links-setup.md](docs/go-links-setup.md)
 - [docs/filebrowser-setup.md](docs/filebrowser-setup.md)
 - [docs/hoarder-setup.md](docs/hoarder-setup.md)
-- [docs/local-https-setup.md](docs/local-https-setup.md) - **Enable HTTPS for .lab domains**
 
-### 4. Optional: Enable Local HTTPS
+### 5. Optional: Enable Local HTTPS
 
 The stack includes automated certificate generation for secure local access:
 

@@ -3,7 +3,7 @@
 # =============================================================================
 
 module "agent" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/coder-agent-module?ref=PLACEHOLDER"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/coder-agent-module?ref=v0.1.0"
   
   arch = data.coder_provisioner.me.arch
   os   = "linux"
@@ -22,14 +22,14 @@ module "agent" {
     "echo '[WORKSPACE] 🚀 Starting WordPress workspace ${data.coder_workspace.me.name}'",
     "",
     "# SSH Setup",
-    try(module.ssh[0].ssh_copy_script, "# SSH disabled"),
-    try(module.ssh[0].ssh_setup_script, ""),
+    local.ssh_copy_script,
+    local.ssh_setup_script,
     "",
     "# Traefik Auth Setup",
-    try(module.traefik[0].auth_setup_script, ""),
+    local.traefik_auth_script,
     "",
     "# WordPress Installation",
-    module.wordpress.setup_script,
+    local.wordpress_install_script,
     "",
     "echo '[WORKSPACE] ✅ WordPress workspace ready!'"
   ])
