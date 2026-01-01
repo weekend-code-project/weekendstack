@@ -27,7 +27,7 @@ data "coder_parameter" "startup_command" {
   display_name = "Server Startup Command"
   description  = "Custom command to run server at startup (uses vite.config.js settings)"
   type         = "string"
-  default      = "npm run dev"
+  default      = "npm run dev -- --host 0.0.0.0"
   mutable      = true
   order        = 21
   
@@ -70,7 +70,7 @@ locals {
   
   # Robust default command that ensures nvm is loaded
   nvm_load           = "export NVM_DIR=\"$HOME/.nvm\"; [ -s \"$NVM_DIR/nvm.sh\" ] && \\. \"$NVM_DIR/nvm.sh\"; nvm use default >/dev/null 2>&1"
-  default_command    = "VITE_ALLOW_ALL_HOSTS=true npx vite --port=8080 --host 0.0.0.0"
+  default_command    = "npx vite --port=8080 --host 0.0.0.0"
   
   custom_command     = trimspace(data.coder_parameter.startup_command.value)
 
@@ -106,7 +106,7 @@ module "setup_server" {
   
   # Custom instructions for Vite
   server_stop_command    = "pkill -f vite"
-  server_restart_command = "VITE_ALLOW_ALL_HOSTS=true npx vite --port=$PORT --host 0.0.0.0"
+  server_restart_command = "npx vite --port=$PORT --host 0.0.0.0"
   
   # Node is installed by node-tooling, no extra setup needed here
   pre_server_setup = ""
