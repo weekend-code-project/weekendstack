@@ -56,10 +56,6 @@ data "coder_parameter" "ssh_password" {
   default      = ""
   mutable      = true
   order        = 51
-  
-  styling = jsonencode({
-    disabled = !data.coder_parameter.ssh_enable.value
-  })
 }
 
 # Module: SSH (conditional - only loaded when enabled)

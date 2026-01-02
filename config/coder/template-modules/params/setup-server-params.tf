@@ -27,10 +27,6 @@ data "coder_parameter" "startup_command" {
   default      = "python3 -m http.server 8080 --bind 0.0.0.0"
   mutable      = true
   order        = 21
-  
-  styling = jsonencode({
-    disabled = !data.coder_parameter.use_custom_command.value
-  })
 }
 
 data "coder_parameter" "num_ports" {
