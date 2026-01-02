@@ -100,6 +100,15 @@ module "agent" {
     try(module.setup_server[0].setup_server_script, "echo '[SERVER] Disabled'"),
     "echo '[DEBUG] Server phase complete'",
     "",
+    "# Start Vite dev server directly (foreground, not backgrounded)",
+    "cd /home/coder/workspace",
+    "export PORT=$(echo \"$PORTS\" | cut -d',' -f1)",
+    "export NVM_DIR=\"$HOME/.nvm\"",
+    "[ -s \"$NVM_DIR/nvm.sh\" ] && \\. \"$NVM_DIR/nvm.sh\"",
+    "nvm use default >/dev/null 2>&1",
+    "echo '[VITE] Starting Vite dev server on port $PORT...'",
+    "exec npm run dev -- --host 0.0.0.0",
+    "",
     "echo '[WORKSPACE] Workspace ready!'"
   ])
 }
