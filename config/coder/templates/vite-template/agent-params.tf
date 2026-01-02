@@ -217,7 +217,7 @@ module "agent" {
     "    }",
     "  },",
     "  plugins: [react()],",
-    "}));",
+    "});",
     "VITE_EOF",
     "  echo '[VITE] Created basic workspace config with HMR'",
     "fi",
