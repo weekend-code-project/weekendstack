@@ -71,33 +71,35 @@ locals {
   # Construct the workspace URL for Vite's allowed hosts  
   workspace_domain = "${lower(data.coder_workspace.me.name)}.${var.base_domain}"
   
-  # Pre-server setup: Create vite config override to allow the workspace hostname
+  # Pre-server setup: Patch vite.config.ts to add HMR configuration
   vite_config_override = <<-SCRIPT
-    # Create Vite config override to allow workspace domain
-    cat > /home/coder/workspace/vite.config.local.js << 'VITE_EOF'
-import { defineConfig } from 'vite'
-import baseConfig from './vite.config.js'
-
-// Merge with base config and add allowed hosts
-export default defineConfig({
-  ...baseConfig,
-  server: {
-    ...baseConfig.server,
-    host: '0.0.0.0',
-    hmr: {
-      clientPort: 443,
-      host: '${local.workspace_domain}'
-    }
-  }
-})
-VITE_EOF
-    echo "[VITE-CONFIG] Created vite.config.local.js with HMR host: ${local.workspace_domain}"
+    # Patch vite.config.ts to add HMR configuration for Traefik routing
+    if [ -f /home/coder/workspace/vite.config.ts ]; then
+      # Backup original config
+      cp /home/coder/workspace/vite.config.ts /home/coder/workspace/vite.config.ts.backup
+      
+      # Use sed to modify the server configuration
+      # This adds hmr config after the port line
+      sed -i '/port: 8080,/a\    hmr: {\n      clientPort: 443,\n      host: "${local.workspace_domain}"\n    },' /home/coder/workspace/vite.config.ts
+      
+      echo "[VITE-CONFIG] ✓ Patched vite.config.ts with HMR host: ${local.workspace_domain}"
+    elif [ -f /home/coder/workspace/vite.config.js ]; then
+      # Backup original config
+      cp /home/coder/workspace/vite.config.js /home/coder/workspace/vite.config.js.backup
+      
+      # Use sed to modify the server configuration
+      sed -i '/port: 8080,/a\    hmr: {\n      clientPort: 443,\n      host: "${local.workspace_domain}"\n    },' /home/coder/workspace/vite.config.js
+      
+      echo "[VITE-CONFIG] ✓ Patched vite.config.js with HMR host: ${local.workspace_domain}"
+    else
+      echo "[VITE-CONFIG] ⚠ No vite.config.ts/js found, skipping HMR configuration"
+    fi
   SCRIPT
   
   # Robust default command that ensures nvm is loaded
   nvm_load           = "export NVM_DIR=\"$HOME/.nvm\"; [ -s \"$NVM_DIR/nvm.sh\" ] && \\. \"$NVM_DIR/nvm.sh\"; nvm use default >/dev/null 2>&1"
-  # Use the local vite config that has allowedHosts configured
-  default_command    = "npx vite --port=8080 --host 0.0.0.0 --config vite.config.local.js"
+  # Use npm run dev to respect project's package.json scripts
+  default_command    = "npm run dev -- --host 0.0.0.0"
   
   custom_command     = trimspace(data.coder_parameter.startup_command.value)
 
