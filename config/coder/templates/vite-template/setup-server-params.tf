@@ -75,17 +75,23 @@ locals {
   vite_config_override = <<-SCRIPT
     # Create Vite config override to allow workspace domain
     cat > /home/coder/workspace/vite.config.local.js << 'VITE_EOF'
-import { defineConfig, mergeConfig } from 'vite'
+import { defineConfig } from 'vite'
 import baseConfig from './vite.config.js'
 
-export default mergeConfig(baseConfig, defineConfig({
+// Merge with base config and add allowed hosts
+export default defineConfig({
+  ...baseConfig,
   server: {
+    ...baseConfig.server,
     host: '0.0.0.0',
-    allowedHosts: ['${local.workspace_domain}', 'localhost']
+    hmr: {
+      clientPort: 443,
+      host: '${local.workspace_domain}'
+    }
   }
-}))
+})
 VITE_EOF
-    echo "[VITE-CONFIG] Created vite.config.local.js with allowed host: ${local.workspace_domain}"
+    echo "[VITE-CONFIG] Created vite.config.local.js with HMR host: ${local.workspace_domain}"
   SCRIPT
   
   # Robust default command that ensures nvm is loaded
