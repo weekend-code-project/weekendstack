@@ -12,7 +12,7 @@ data "coder_parameter" "preview_link_mode" {
   type         = "string"
   default      = "traefik"
   mutable      = true
-  order        = 25
+  order        = 63
   
   option {
     name  = "External (Traefik)"
