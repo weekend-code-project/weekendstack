@@ -73,6 +73,9 @@ locals {
   
   # Pre-server setup: Patch vite.config.ts to add HMR configuration
   vite_config_override = <<-SCRIPT
+    # Remove any old vite.config.local.js from previous template versions
+    rm -f /home/coder/workspace/vite.config.local.js
+    
     # Patch vite.config.ts to add HMR configuration for Traefik routing
     if [ -f /home/coder/workspace/vite.config.ts ]; then
       # Backup original config
