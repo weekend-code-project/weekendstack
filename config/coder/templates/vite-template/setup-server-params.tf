@@ -25,15 +25,26 @@ data "coder_parameter" "use_custom_command" {
 data "coder_parameter" "startup_command" {
   name         = "startup_command"
   display_name = "Server Startup Command"
-  description  = "Custom command to run server at startup (default runs Vite with workspace config)"
+  description  = "Custom command to run server at startup (default: npx vite --host 0.0.0.0 --port 8080)"
   type         = "string"
-  default      = "npx vite --config vite.config.workspace.js"
+  default      = "npx vite --host 0.0.0.0 --port 8080"
   mutable      = true
   order        = 21
   
   styling = jsonencode({
     disabled = !data.coder_parameter.use_custom_command.value
   })
+}
+
+data "coder_parameter" "patch_allowed_hosts" {
+  name         = "patch_allowed_hosts"
+  display_name = "Allow Workspace Hostnames"
+  description  = "Patch Vite config at startup to allow workspace hostname and enable HMR"
+  type         = "bool"
+  form_type    = "switch"
+  default      = "true"
+  mutable      = true
+  order        = 22
 }
 
 # =============================================================================
@@ -45,7 +56,8 @@ locals {
   exposed_ports_list = ["8080"]
   
   # Determine server configuration
-  use_custom_command = data.coder_parameter.use_custom_command.value
+  use_custom_command   = data.coder_parameter.use_custom_command.value
+  patch_allowed_hosts  = data.coder_parameter.patch_allowed_hosts.value
   
   # Construct the workspace URL for Vite's allowed hosts  
   workspace_domain = "${lower(data.coder_workspace.me.name)}.${var.base_domain}"
@@ -55,8 +67,8 @@ locals {
   
   # Robust default command that ensures nvm is loaded
   nvm_load           = "export NVM_DIR=\"$HOME/.nvm\"; [ -s \"$NVM_DIR/nvm.sh\" ] && \\. \"$NVM_DIR/nvm.sh\"; nvm use default >/dev/null 2>&1"
-  # Use npm run dev to respect project's package.json scripts
-  default_command    = "npm run dev -- --host 0.0.0.0"
+  # Use a simple Vite dev command with explicit host/port
+  default_command    = "npx vite --host 0.0.0.0 --port 8080"
   
   custom_command     = trimspace(data.coder_parameter.startup_command.value)
 
