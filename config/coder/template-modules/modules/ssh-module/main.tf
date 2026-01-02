@@ -155,28 +155,6 @@ output "metadata_blocks" {
       script       = "echo ${local.resolved_ssh_port}"
       interval     = 60
       timeout      = 1
-    },
-    {
-      display_name = "SSH Command"
-      script       = "echo 'ssh -p ${local.resolved_ssh_port} coder@${var.host_ip}'"
-      interval     = 60
-      timeout      = 1
-    },
-    {
-      display_name = "VS Code SSH Config"
-      script       = <<-EOT
-        cat << 'SSH_CONFIG'
-Host ${var.workspace_name}
-  HostName ${var.host_ip}
-  User coder
-  Port ${local.resolved_ssh_port}
-  IdentityFile ~/.ssh/id_ed25519
-  IdentitiesOnly yes
-  RemoteCommand cd /home/coder/workspace && exec $$SHELL
-SSH_CONFIG
-      EOT
-      interval     = 60
-      timeout      = 1
     }
   ] : []
 }
