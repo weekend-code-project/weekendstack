@@ -92,9 +92,9 @@ locals {
 # Module Integration
 # =============================================================================
 
-# Call the setup-server module - always enabled if startup command is set
+# Call the setup-server module - DISABLED for vite-template (we handle startup in agent script)
 module "setup_server" {
-  count = local.has_server_config ? 1 : 0
+  count = 0  # Disabled - startup handled directly in agent-params.tf
   
   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/setup-server-module?ref=PLACEHOLDER"
   
