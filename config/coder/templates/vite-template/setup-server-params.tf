@@ -36,34 +36,13 @@ data "coder_parameter" "startup_command" {
   })
 }
 
-data "coder_parameter" "num_ports" {
-  name         = "num_ports"
-  display_name = "Number of Ports"
-  description  = "Number of ports to expose (each gets auto-assigned external port)"
-  type         = "number"
-  form_type    = "slider"
-  default      = 1
-  mutable      = true
-  order        = 22
-  
-  validation {
-    min = 1
-    max = 10
-  }
-}
-
 # =============================================================================
 # Local Variables
 # =============================================================================
 
 locals {
-  # Always use the user-specified number of ports
-  num_ports_value = data.coder_parameter.num_ports.value
-  
-  # Generate list of internal ports: [8080, 8081, 8082, ...]
-  exposed_ports_list = [
-    for i in range(local.num_ports_value) : tostring(8080 + i)
-  ]
+  # Single exposed port for Vite
+  exposed_ports_list = ["8080"]
   
   # Determine server configuration
   use_custom_command = data.coder_parameter.use_custom_command.value

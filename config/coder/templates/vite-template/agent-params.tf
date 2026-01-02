@@ -6,14 +6,12 @@
 # Collect custom metadata blocks from modules
 # This local is referenced by the overlaid metadata-params.tf
 locals {
-  docker_metadata = try(module.docker[0].metadata_blocks, [])
   ssh_metadata    = try(module.ssh[0].metadata_blocks, [])
   git_metadata    = try(module.git_integration[0].metadata_blocks, [])
   server_metadata = try(module.setup_server[0].metadata_blocks, [])
   
   # Combine all module metadata - add more as modules are added
   all_custom_metadata = concat(
-    local.docker_metadata,
     local.ssh_metadata,
     local.git_metadata,
     local.server_metadata,
