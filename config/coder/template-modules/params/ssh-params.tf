@@ -68,6 +68,7 @@ module "ssh" {
   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/ssh-module?ref=PLACEHOLDER"
   
   workspace_id       = data.coder_workspace.me.id
+  workspace_name     = data.coder_workspace.me.name
   workspace_password = data.coder_parameter.ssh_password.value != "" ? data.coder_parameter.ssh_password.value : random_password.workspace_secret.result
   ssh_enable_default = data.coder_parameter.ssh_enable.value
   host_ip            = var.host_ip

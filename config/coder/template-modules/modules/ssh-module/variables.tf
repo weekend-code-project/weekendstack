@@ -24,3 +24,9 @@ variable "host_ip" {
   type        = string
   default     = ""
 }
+
+variable "workspace_name" {
+  description = "Name of the workspace (for SSH config hostname)"
+  type        = string
+  default     = "workspace"
+}
