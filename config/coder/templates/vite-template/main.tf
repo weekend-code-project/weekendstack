@@ -76,6 +76,15 @@ resource "docker_container" "workspace" {
     read_only      = false
   }
   
+  # SSH port mapping (module always loaded, returns null when disabled)
+  dynamic "ports" {
+    for_each = try(module.ssh.docker_ports, null) != null ? [module.ssh.docker_ports] : []
+    content {
+      internal = ports.value.internal
+      external = ports.value.external
+      protocol = "tcp"
+    }
+  }
 
   # Server port mappings (conditional - only when server is configured)
   dynamic "ports" {

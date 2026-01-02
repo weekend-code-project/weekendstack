@@ -149,7 +149,7 @@ output "ssh_enabled" {
 
 output "metadata_blocks" {
   description = "Metadata blocks contributed by this module"
-  value = [
+  value = var.ssh_enable_default == true ? [
     {
       display_name = "SSH Port"
       script       = "echo ${local.resolved_ssh_port}"
@@ -178,13 +178,13 @@ SSH_CONFIG
       interval     = 60
       timeout      = 1
     }
-  ]
+  ] : []
 }
 
 output "docker_ports" {
   description = "Docker port mappings for SSH (internal 2222 -> external resolved_ssh_port)"
-  value = {
+  value = var.ssh_enable_default == true ? {
     internal = 2222
     external = tonumber(local.resolved_ssh_port)
-  }
+  } : null
 }
