@@ -76,16 +76,7 @@ resource "docker_container" "workspace" {
     read_only      = false
   }
   
-  # SSH port mapping (always check, module handles null when disabled)
-  dynamic "ports" {
-    for_each = try(module.ssh.docker_ports, null) != null ? [module.ssh.docker_ports] : []
-    content {
-      internal = ports.value.internal
-      external = ports.value.external
-      protocol = "tcp"
-    }
-  }
-  
+
   # Server port mappings (conditional - only when server is configured)
   dynamic "ports" {
     for_each = try(module.setup_server[0].docker_ports, [])
@@ -93,15 +84,6 @@ resource "docker_container" "workspace" {
       internal = ports.value.internal
       external = ports.value.external
       protocol = "tcp"
-    }
-  }
-  
-  # Traefik routing labels (conditional - only when Traefik module is enabled)
-  dynamic "labels" {
-    for_each = try(module.traefik[0].traefik_labels, {})
-    content {
-      label = labels.key
-      value = labels.value
     }
   }
 }

@@ -6,13 +6,11 @@
 # Collect custom metadata blocks from modules
 # This local is referenced by the overlaid metadata-params.tf
 locals {
-  ssh_metadata    = try(module.ssh.metadata_blocks, [])
   git_metadata    = try(module.git_integration[0].metadata_blocks, [])
   server_metadata = try(module.setup_server[0].metadata_blocks, [])
   
   # Combine all module metadata - add more as modules are added
   all_custom_metadata = concat(
-    local.ssh_metadata,
     local.git_metadata,
     local.server_metadata,
     try(module.node_tooling.metadata_blocks, [])
@@ -232,22 +230,9 @@ module "agent" {
     "echo '[DOCKER] Disabled for Vite template'",
     "echo '[DEBUG] Docker phase complete'",
     "",
-    "# Phase 5 Module: ssh (always loaded, conditionally runs)",
-    try(module.ssh.ssh_copy_script, "echo '[SSH] Disabled'"),
-    try(module.ssh.ssh_setup_script, ""),
-    "echo '[DEBUG] SSH phase complete'",
-    "",
-    "# Traefik Auth Setup (only runs when password is provided)",
-    "(",
-    "  set +e",
-    try(module.traefik[0].auth_setup_script, "  echo '[TRAEFIK] No auth configured'"),
-    "  TRAEFIK_EXIT=$?",
-    "  set -e",
-    "  if [ $TRAEFIK_EXIT -ne 0 ]; then",
-    "    echo '[TRAEFIK] Auth setup failed (non-critical, continuing...)'",
-    "  fi",
-    ")",
-    "echo '[DEBUG] Traefik phase complete'",
+    "# SSH Module: Disabled for Vite template (not needed for web dev)",
+    "echo '[SSH] Not available in Vite template'",
+    "echo '[DEBUG] SSH phase skipped'",
     "",
     "# Apply allowedHosts/HMR patch to existing Vite config (in-place)",
     "cd /home/coder/workspace",
