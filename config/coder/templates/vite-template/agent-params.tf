@@ -5,18 +5,14 @@
 
 # Collect custom metadata blocks from modules
 # This local is referenced by the overlaid metadata-params.tf
+# NOTE: Only include ALWAYS-LOADED modules (no count conditional) to prevent evaluation loops
+# Conditional modules (git_integration, github_cli, etc.) cannot be safely referenced here
+# as they create circular dependencies during parameter preview evaluation
 locals {
-  ssh_metadata    = try(module.ssh.metadata_blocks, [])
-  git_metadata    = try(module.git_integration[0].metadata_blocks, [])
-  server_metadata = try(module.setup_server[0].metadata_blocks, [])
-  
-  # Combine all module metadata - add more as modules are added
-  all_custom_metadata = concat(
-    local.ssh_metadata,
-    local.git_metadata,
-    local.server_metadata,
-    try(module.node_tooling.metadata_blocks, [])
-  )
+  # Only include modules that are always loaded (count = 1 or no count)
+  # SSH module is always loaded, just conditionally executes
+  # Git modules are conditional (count based on parameter) so excluded to prevent flickering
+  all_custom_metadata = []  # Empty for now - only use built-in metadata picker options
 }
 
 module "agent" {
