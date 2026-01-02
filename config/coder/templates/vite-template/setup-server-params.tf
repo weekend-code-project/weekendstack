@@ -68,15 +68,36 @@ locals {
   # Determine server configuration
   use_custom_command = data.coder_parameter.use_custom_command.value
   
+  # Construct the workspace URL for Vite's allowed hosts  
+  workspace_domain = "${lower(data.coder_workspace.me.name)}.${var.base_domain}"
+  
+  # Pre-server setup: Create vite config override to allow the workspace hostname
+  vite_config_override = <<-SCRIPT
+    # Create Vite config override to allow workspace domain
+    cat > /home/coder/workspace/vite.config.local.js << 'VITE_EOF'
+import { defineConfig, mergeConfig } from 'vite'
+import baseConfig from './vite.config.js'
+
+export default mergeConfig(baseConfig, defineConfig({
+  server: {
+    host: '0.0.0.0',
+    allowedHosts: ['${local.workspace_domain}', 'localhost']
+  }
+}))
+VITE_EOF
+    echo "[VITE-CONFIG] Created vite.config.local.js with allowed host: ${local.workspace_domain}"
+  SCRIPT
+  
   # Robust default command that ensures nvm is loaded
   nvm_load           = "export NVM_DIR=\"$HOME/.nvm\"; [ -s \"$NVM_DIR/nvm.sh\" ] && \\. \"$NVM_DIR/nvm.sh\"; nvm use default >/dev/null 2>&1"
-  default_command    = "npx vite --port=8080 --host 0.0.0.0"
+  # Use the local vite config that has allowedHosts configured
+  default_command    = "npx vite --port=8080 --host 0.0.0.0 --config vite.config.local.js"
   
   custom_command     = trimspace(data.coder_parameter.startup_command.value)
 
   # Always regenerate the landing page and server command
   auto_generate_html = true
-  # Prefix any command with nvm loading to ensure npm/node are available
+  # Prefix any command with nvm loading
   startup_command    = local.use_custom_command ? "${local.nvm_load}; ${coalesce(local.custom_command != "" ? local.custom_command : null, local.default_command)}" : "${local.nvm_load}; ${local.default_command}"
   has_server_config  = true  # Always run server (either default or custom)
 }
@@ -106,10 +127,10 @@ module "setup_server" {
   
   # Custom instructions for Vite
   server_stop_command    = "pkill -f vite"
-  server_restart_command = "npx vite --port=$PORT --host 0.0.0.0"
+  server_restart_command = "npx vite --port=$PORT --host 0.0.0.0 --config vite.config.local.js"
   
-  # Node is installed by node-tooling, no extra setup needed here
-  pre_server_setup = ""
+  # Create vite config override before starting server
+  pre_server_setup = local.vite_config_override
   
   # Workspace metadata
   workspace_name  = data.coder_workspace.me.name
