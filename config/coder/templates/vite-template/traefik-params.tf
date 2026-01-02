@@ -13,8 +13,8 @@ resource "coder_app" "preview" {
   display_name = "Preview"
   icon         = "/icon/coder.svg"
   url          = "https://${lower(data.coder_workspace.me.name)}.${var.base_domain}"
-  external     = true
   share        = "owner"
+  subdomain    = false
   
   healthcheck {
     url       = "https://${lower(data.coder_workspace.me.name)}.${var.base_domain}"
