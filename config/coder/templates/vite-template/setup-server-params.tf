@@ -25,9 +25,9 @@ data "coder_parameter" "use_custom_command" {
 data "coder_parameter" "startup_command" {
   name         = "startup_command"
   display_name = "Server Startup Command"
-  description  = "Custom command to run server at startup (default runs Vite dev server)"
+  description  = "Custom command to run server at startup (default runs Vite with workspace config)"
   type         = "string"
-  default      = "npm run dev -- --host 0.0.0.0"
+  default      = "npx vite --config vite.config.workspace.js"
   mutable      = true
   order        = 21
   
