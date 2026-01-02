@@ -1,24 +1,7 @@
 # =============================================================================
 # Traefik Parameters (Vite Template Override)
 # =============================================================================
-# OVERRIDE NOTE: Traefik auth disabled but preview button enabled
+# OVERRIDE NOTE: Traefik auth/routing disabled for Vite template
+# Preview button is provided by preview-params.tf using preview-link-module
 
-# No password protection parameter - auth disabled
-# Preview button provided via simple coder_app resource
-
-# Preview button for Vite dev server
-resource "coder_app" "preview" {
-  agent_id     = module.agent.agent_id
-  slug         = "preview"
-  display_name = "Preview"
-  icon         = "/icon/coder.svg"
-  url          = "https://${lower(data.coder_workspace.me.name)}.${var.base_domain}"
-  share        = "owner"
-  subdomain    = false
-  
-  healthcheck {
-    url       = "https://${lower(data.coder_workspace.me.name)}.${var.base_domain}"
-    interval  = 5
-    threshold = 6
-  }
-}
+# No Traefik parameters or module - completely disabled
