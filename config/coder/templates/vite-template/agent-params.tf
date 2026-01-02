@@ -276,7 +276,7 @@ module "agent" {
     "    if grep -q 'allowedHosts' \"$VITE_CONFIG\" 2>/dev/null; then",
     "      # If coder host not present, append it into the existing array (simple inline edit)",
     "      if ! grep -q \"$CODER_HOST\" \"$VITE_CONFIG\" 2>/dev/null; then",
-    "        sed -i -E \"s/(allowedHosts:\\s*\\[)([^\\]]*)(\\])\/\\1\\2, \\\"$CODER_HOST\\\"\\3/\" \"$VITE_CONFIG\" || true",
+    "        sed -i -E \"s|(allowedHosts:\\s*\\[)([^\\]]*)(\\])|\\1\\2, \\\"$CODER_HOST\\\"\\3|\" \"$VITE_CONFIG\" || true",
     "      fi",
     "    else",
     "      sed -i \"/server:\\s*{/a\\    // CODER_PATCH_ALLOWED_HOSTS\\n    allowedHosts: [\\\"$WORKSPACE_DOMAIN\\\", \\\"$CODER_HOST\\\"],\" \"$VITE_CONFIG\"",
