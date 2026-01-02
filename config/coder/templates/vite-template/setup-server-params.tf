@@ -30,10 +30,6 @@ data "coder_parameter" "startup_command" {
   default      = "npx vite --host 0.0.0.0 --port 8080"
   mutable      = true
   order        = 61
-  
-  styling = jsonencode({
-    disabled = !data.coder_parameter.use_custom_command.value
-  })
 }
 
 data "coder_parameter" "patch_allowed_hosts" {

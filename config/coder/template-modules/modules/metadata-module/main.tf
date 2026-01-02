@@ -85,6 +85,12 @@ locals {
       interval     = 60
       timeout      = 1
     }
+    ssh_port = {
+      display_name = "SSH Port"
+      script       = "if pgrep sshd >/dev/null 2>&1; then netstat -tlnp 2>/dev/null | grep sshd | awk '{print $4}' | grep -oE '[0-9]+$' | head -1 || echo 'N/A'; else echo 'Disabled'; fi"
+      interval     = 60
+      timeout      = 2
+    }
   }
 
   # Select only enabled blocks

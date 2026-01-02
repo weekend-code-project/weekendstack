@@ -147,16 +147,11 @@ output "ssh_enabled" {
   value       = var.ssh_enable_default
 }
 
+# SSH port metadata is now handled via the metadata picker in metadata-params.tf
+# This output is kept for compatibility but returns empty list
 output "metadata_blocks" {
-  description = "Metadata blocks contributed by this module"
-  value = var.ssh_enable_default == true ? [
-    {
-      display_name = "SSH Port"
-      script       = "echo ${local.resolved_ssh_port}"
-      interval     = 60
-      timeout      = 1
-    }
-  ] : []
+  description = "Metadata blocks contributed by this module (now handled via metadata picker)"
+  value = []
 }
 
 output "docker_ports" {

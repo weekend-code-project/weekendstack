@@ -68,6 +68,11 @@ data "coder_parameter" "metadata_blocks" {
     name  = "Uptime"
     value = "uptime"
   }
+
+  option {
+    name  = "SSH Port"
+    value = "ssh_port"
+  }
 }
 
 # Module: Metadata (always loaded, but content depends on selection)

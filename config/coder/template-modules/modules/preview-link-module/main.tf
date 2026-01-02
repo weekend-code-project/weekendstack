@@ -78,8 +78,8 @@ locals {
 # =============================================================================
 
 # 1. Internal (Coder Proxy) - Uses localhost, proxied through Coder
-resource "coder_app" "preview" {
-  count        = var.preview_mode == "internal" ? var.workspace_start_count : 0
+resource "coder_app" "preview_internal" {
+  count        = var.preview_mode == "internal" && var.workspace_start_count > 0 ? 1 : 0
   agent_id     = var.agent_id
   slug         = "preview"
   display_name = "Preview (Internal)"
@@ -97,10 +97,10 @@ resource "coder_app" "preview" {
 
 # 2. Traefik External - Direct external subdomain access
 resource "coder_app" "preview_traefik" {
-  count        = var.preview_mode == "traefik" ? var.workspace_start_count : 0
+  count        = var.preview_mode == "traefik" && var.workspace_start_count > 0 ? 1 : 0
   agent_id     = var.agent_id
-  slug         = "preview-traefik"
-  display_name = "Preview (Traefik)"
+  slug         = "preview"
+  display_name = "Preview (External)"
   icon         = "/icon/globe.svg"
   url          = local.traefik_url
   external     = true
@@ -108,9 +108,9 @@ resource "coder_app" "preview_traefik" {
 
 # 3. Custom URL - User-specified external URL
 resource "coder_app" "preview_custom" {
-  count        = var.preview_mode == "custom" && var.custom_preview_url != "" ? var.workspace_start_count : 0
+  count        = var.preview_mode == "custom" && var.custom_preview_url != "" && var.workspace_start_count > 0 ? 1 : 0
   agent_id     = var.agent_id
-  slug         = "preview-custom"
+  slug         = "preview"
   display_name = "Preview (Custom)"
   icon         = "/icon/link.svg"
   url          = var.custom_preview_url
