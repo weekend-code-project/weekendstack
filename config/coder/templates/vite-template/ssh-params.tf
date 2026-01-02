@@ -27,9 +27,8 @@ data "coder_parameter" "ssh_password" {
   # NO styling block - always visible to prevent UI flickering
 }
 
-# Module: SSH (conditional - only loaded when enabled)
+# Module: SSH (always loaded - handles enable/disable internally)
 module "ssh" {
-  count  = data.coder_parameter.ssh_enable.value ? 1 : 0
   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/ssh-module?ref=PLACEHOLDER"
   
   workspace_id       = data.coder_workspace.me.id

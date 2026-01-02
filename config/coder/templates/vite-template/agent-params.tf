@@ -6,7 +6,7 @@
 # Collect custom metadata blocks from modules
 # This local is referenced by the overlaid metadata-params.tf
 locals {
-  ssh_metadata    = try(module.ssh[0].metadata_blocks, [])
+  ssh_metadata    = try(module.ssh.metadata_blocks, [])
   git_metadata    = try(module.git_integration[0].metadata_blocks, [])
   server_metadata = try(module.setup_server[0].metadata_blocks, [])
   
@@ -232,9 +232,9 @@ module "agent" {
     "echo '[DOCKER] Disabled for Vite template'",
     "echo '[DEBUG] Docker phase complete'",
     "",
-    "# Phase 5 Module: ssh (Issue #33) - Conditional",
-    try(module.ssh[0].ssh_copy_script, "echo '[SSH] Disabled'"),
-    try(module.ssh[0].ssh_setup_script, ""),
+    "# Phase 5 Module: ssh (always loaded, conditionally runs)",
+    try(module.ssh.ssh_copy_script, "echo '[SSH] Disabled'"),
+    try(module.ssh.ssh_setup_script, ""),
     "echo '[DEBUG] SSH phase complete'",
     "",
     "# Traefik Auth Setup (only runs when password is provided)",
