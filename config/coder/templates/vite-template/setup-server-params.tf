@@ -101,8 +101,8 @@ VITE_EOF
   
   custom_command     = trimspace(data.coder_parameter.startup_command.value)
 
-  # Always regenerate the landing page and server command
-  auto_generate_html = true
+  # Disable auto HTML generation for Vite projects - Vite serves its own index.html
+  auto_generate_html = false
   # Prefix any command with nvm loading
   startup_command    = local.use_custom_command ? "${local.nvm_load}; ${coalesce(local.custom_command != "" ? local.custom_command : null, local.default_command)}" : "${local.nvm_load}; ${local.default_command}"
   has_server_config  = true  # Always run server (either default or custom)
