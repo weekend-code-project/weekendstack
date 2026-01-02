@@ -123,6 +123,8 @@ PROF
       sleep 1
       if pgrep sshd >/dev/null; then
         echo "[SSH] ✓ Enabled: ssh -p ${local.resolved_ssh_port} coder@${var.host_ip}"
+        # Write external port to file for metadata display
+        echo "${local.resolved_ssh_port}" > "$HOME/.ssh_external_port"
         # Only show password if it's auto-generated (starts with workspace UUID)
         if [[ "${var.workspace_password}" == "${var.workspace_id}"* ]]; then
           echo "[SSH] Password: ${var.workspace_password}"

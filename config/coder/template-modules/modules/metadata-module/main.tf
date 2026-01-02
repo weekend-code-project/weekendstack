@@ -87,9 +87,9 @@ locals {
     }
     ssh_port = {
       display_name = "SSH Port"
-      script       = "if pgrep sshd >/dev/null 2>&1; then ss -tlnp 2>/dev/null | grep ':2222 ' | grep -oE ':[0-9]+' | cut -d: -f2 | head -1 || netstat -tlnp 2>/dev/null | grep ':2222 ' | awk '{print $4}' | cut -d: -f2 | head -1 || echo '2222'; else echo 'Disabled'; fi"
-      interval     = 60
-      timeout      = 2
+      script       = "if [ -f $HOME/.ssh_external_port ]; then cat $HOME/.ssh_external_port; elif pgrep sshd >/dev/null 2>&1; then echo '2222'; else echo 'Disabled'; fi"
+      interval     = 10
+      timeout      = 1
     }
   }
 
