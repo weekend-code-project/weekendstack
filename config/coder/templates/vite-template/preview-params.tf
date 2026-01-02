@@ -17,7 +17,7 @@ data "coder_parameter" "preview_link_mode" {
   option {
     name  = "External (Traefik)"
     value = "traefik"
-    icon  = "/icon/globe.svg"
+    icon  = "/icon/desktop.svg"
   }
   
   option {

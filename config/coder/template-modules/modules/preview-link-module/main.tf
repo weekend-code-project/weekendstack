@@ -101,7 +101,7 @@ resource "coder_app" "preview_traefik" {
   agent_id     = var.agent_id
   slug         = "preview"
   display_name = "Preview (External)"
-  icon         = "/icon/globe.svg"
+  icon         = "/icon/desktop.svg"
   url          = local.traefik_url
   external     = true
 }
