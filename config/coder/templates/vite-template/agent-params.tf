@@ -273,7 +273,7 @@ module "agent" {
     "  return null;",
     "};",
     "",
-    "const patchLines = (indent = '  ') => `\\n' + indent + '// CODER_PATCH_ALLOWED_HOSTS\\n' + indent + 'host: \"0.0.0.0\",\\n' + indent + 'port: 8080,\\n' + indent + 'strictPort: false,\\n' + indent + 'allowedHosts: [\"' + domain + '\"],\\n' + indent + 'hmr: { host: \"' + domain + '\", clientPort: 443 },\\n';",
+    "const patchLines = (indent) => '\\n' + indent + '// CODER_PATCH_ALLOWED_HOSTS\\n' + indent + 'host: \"0.0.0.0\",\\n' + indent + 'port: 8080,\\n' + indent + 'strictPort: false,\\n' + indent + 'allowedHosts: [\"' + domain + '\"],\\n' + indent + 'hmr: { host: \"' + domain + '\", clientPort: 443 },\\n';",
     "const block = findServerBlock(src);",
     "if (block) {",
     "  const indentMatch = /\\n([ \\t]*)server\\s*:\\s*\\{/.exec(src.slice(0, block.open + 1));",
