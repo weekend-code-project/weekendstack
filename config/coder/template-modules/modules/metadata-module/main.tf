@@ -87,7 +87,7 @@ locals {
     }
     ssh_port = {
       display_name = "SSH Port"
-      script       = "if pgrep -x sshd >/dev/null 2>&1 || pgrep -x '/usr/sbin/sshd' >/dev/null 2>&1; then ss -tlnp 2>/dev/null | grep sshd | grep -oE ':[0-9]+' | grep -oE '[0-9]+' | head -1 || netstat -tlnp 2>/dev/null | grep ':22[0-9][0-9]' | awk '{print $4}' | grep -oE '[0-9]+$' | head -1 || echo 'N/A'; else echo 'Disabled'; fi"
+      script       = "if pgrep sshd >/dev/null 2>&1; then ss -tlnp 2>/dev/null | grep ':2222 ' | grep -oE ':[0-9]+' | cut -d: -f2 | head -1 || netstat -tlnp 2>/dev/null | grep ':2222 ' | awk '{print $4}' | cut -d: -f2 | head -1 || echo '2222'; else echo 'Disabled'; fi"
       interval     = 60
       timeout      = 2
     }
