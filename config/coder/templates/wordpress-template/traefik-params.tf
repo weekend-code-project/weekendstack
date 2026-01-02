@@ -1,62 +1,57 @@
 # =============================================================================
-# Traefik Parameters - WordPress Override
+# Traefik Routing Configuration
 # =============================================================================
 
 data "coder_parameter" "preview_mode" {
   name         = "preview_mode"
   display_name = "Preview Mode"
-  description  = "How to handle preview/routing"
+  description  = "How to access your workspace"
   type         = "string"
   default      = "traefik"
-  mutable      = true
-  order        = 150
-  
+  mutable      = false
+  order        = 90
+
   option {
-    name  = "Traefik (Reverse Proxy)"
+    name  = "External URL (Traefik)"
     value = "traefik"
   }
   option {
-    name  = "Direct Port"
-    value = "port"
-  }
-  option {
-    name  = "Disabled"
-    value = "none"
+    name  = "Internal Proxy (Coder)"
+    value = "coder"
   }
 }
 
-# Workspace secret for password protection
 data "coder_parameter" "workspace_secret" {
   name         = "workspace_secret"
   display_name = "Workspace Password (Optional)"
-  description  = "Password for accessing workspace via Traefik. Leave empty to use auto-generated password."
+  description  = "Leave blank for public access, or set a password to require authentication"
   type         = "string"
   default      = ""
   mutable      = true
-  order        = 151
+  order        = 91
 }
 
-# Local values for Traefik configuration
 locals {
-  preview_mode            = data.coder_parameter.preview_mode.value
-  enable_traefik          = local.preview_mode == "traefik"
-  workspace_secret_value  = data.coder_parameter.workspace_secret.value != "" ? data.coder_parameter.workspace_secret.value : random_password.workspace_secret.result
-}
-
-# Module: traefik (Reverse proxy routing)
-module "traefik" {
-  count  = local.enable_traefik ? 1 : 0
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/traefik-routing-module?ref=v0.1.0"
+  enable_traefik         = data.coder_parameter.preview_mode.value == "traefik"
+  workspace_secret_value = data.coder_parameter.workspace_secret.value != "" ? data.coder_parameter.workspace_secret.value : random_password.workspace_secret.result
+  preview_mode          = data.coder_parameter.preview_mode.value
   
-  agent_id              = module.agent.agent_id
-  workspace_name        = data.coder_workspace.me.name
-  workspace_owner       = data.coder_workspace_owner.me.name
-  workspace_id          = data.coder_workspace.me.id
-  workspace_owner_id    = data.coder_workspace_owner.me.id
-  workspace_start_count = data.coder_workspace.me.start_count
+  # Traefik labels for routing
+  traefik_labels = local.enable_traefik ? {
+    "traefik.enable" = "true"
+    "traefik.http.routers.${data.coder_workspace.me.name}.rule" = "Host(`${lower(data.coder_workspace.me.name)}.${var.base_domain}`)"
+    "traefik.http.routers.${data.coder_workspace.me.name}.entrypoints" = "websecure"
+    "traefik.http.routers.${data.coder_workspace.me.name}.tls" = "true"
+    "traefik.http.services.${data.coder_workspace.me.name}.loadbalancer.server.port" = "80"
+    "traefik.http.middlewares.${data.coder_workspace.me.name}-auth.basicauth.usersfile" = "/auth/${data.coder_workspace.me.name}.htpasswd"
+    "traefik.http.routers.${data.coder_workspace.me.name}.middlewares" = data.coder_parameter.workspace_secret.value != "" ? "${data.coder_workspace.me.name}-auth" : ""
+  } : {}
   
-  domain           = local.actual_base_domain
-  exposed_port     = 80  # WordPress runs on port 80 inside container
-  preview_mode     = local.preview_mode
-  workspace_secret = local.workspace_secret_value
+  # Auth setup script
+  traefik_auth_script = data.coder_parameter.workspace_secret.value != "" ? join("\n", [
+    "#!/bin/bash",
+    "echo '[Traefik] 🔒 Setting up password protection...'",
+    "sudo apt-get install -y apache2-utils > /dev/null 2>&1",
+    "echo '${local.workspace_secret_value}' | sudo htpasswd -ci /traefik-auth/${data.coder_workspace.me.name}.htpasswd ${data.coder_workspace_owner.me.name}"
+  ]) : "# No password protection"
 }

@@ -200,3 +200,17 @@ resource "random_password" "workspace_secret" {
   length  = 16
   special = true
 }
+
+# =============================================================================
+# Preview Links
+# =============================================================================
+
+# Traefik preview link for workspace
+resource "coder_app" "traefik_preview" {
+  agent_id     = module.agent.agent_id
+  slug         = "workspace"
+  display_name = "Workspace Preview"
+  icon         = "/icon/code.svg"
+  url          = "https://${lower(data.coder_workspace.me.name)}.${var.base_domain}"
+  external     = true
+}

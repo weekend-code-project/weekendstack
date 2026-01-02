@@ -329,9 +329,17 @@ HTML
     # Check if custom startup command is provided
     STARTUP_CMD="${var.startup_command}"
     if [ -n "$STARTUP_CMD" ] && [ "$STARTUP_CMD" != "" ]; then
-      nohup bash -c "$STARTUP_CMD" > /tmp/custom-server.log 2>&1 &
+      # Create wrapper script for proper background execution
+      cat > /tmp/startup-wrapper.sh << 'WRAPPER_EOF'
+#!/bin/bash
+exec $STARTUP_CMD
+WRAPPER_EOF
+      chmod +x /tmp/startup-wrapper.sh
+      
+      # Run wrapper script with nohup for process persistence
+      nohup /tmp/startup-wrapper.sh > /tmp/custom-server.log 2>&1 &
       echo $! > /tmp/custom-server.pid
-      sleep 1
+      sleep 3
       if ps -p $(cat /tmp/custom-server.pid) >/dev/null 2>&1; then
         echo "[SETUP-SERVER] ✓ Custom command: $STARTUP_CMD (PID: $(cat /tmp/custom-server.pid))"
       else

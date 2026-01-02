@@ -7,9 +7,6 @@ terraform {
     docker = {
       source = "kreuzwerker/docker"
     }
-    random = {
-      source = "hashicorp/random"
-    }
   }
 }
 
@@ -32,58 +29,85 @@ resource "docker_image" "main" {
   keep_locally  = true
 }
 
-# Workspace secret for SSH password
-resource "random_password" "workspace_secret" {
-  length  = 16
-  special = true
-}
+# =============================================================================
+# MySQL Database for WordPress
+# =============================================================================
 
-# MySQL database password
+# Random password for MySQL
 resource "random_password" "db_password" {
   length  = 32
   special = false
 }
 
-# Locals for base domain and paths
-locals {
-  actual_base_domain       = var.base_domain
-  resolved_ssh_key_dir     = trimspace(var.ssh_key_dir) != "" ? var.ssh_key_dir : "/home/docker/.ssh"
-  resolved_traefik_auth_dir = trimspace(var.traefik_auth_dir) != "" ? var.traefik_auth_dir : "/opt/stacks/weekendstack/config/traefik/auth"
+# MySQL data volume
+resource "docker_volume" "mysql_volume" {
+  name = "mysql-${data.coder_workspace.me.name}"
 }
 
-# MySQL database container
+# MySQL container
 resource "docker_container" "mysql" {
   count = data.coder_workspace.me.start_count
   image = "mysql:8.0"
-  name  = "coder-${data.coder_workspace_owner.me.name}-${lower(data.coder_workspace.me.name)}-mysql"
-  
+  name  = "mysql-${data.coder_workspace.me.name}"
+
   env = [
     "MYSQL_ROOT_PASSWORD=${random_password.db_password.result}",
     "MYSQL_DATABASE=wordpress",
     "MYSQL_USER=wordpress",
     "MYSQL_PASSWORD=${random_password.db_password.result}"
   ]
-  
-  # Connect to coder-network
+
   networks_advanced {
     name = "coder-network"
-    aliases = ["mysql-${data.coder_workspace.me.name}"]
   }
-  
-  # Persistent database storage
+
   volumes {
-    container_path = "/var/lib/mysql"
     volume_name    = docker_volume.mysql_volume.name
+    container_path = "/var/lib/mysql"
   }
+
+  restart = "unless-stopped"
 }
 
-# MySQL data volume
-resource "docker_volume" "mysql_volume" {
-  name = "coder-${data.coder_workspace.me.id}-mysql"
+# phpMyAdmin container for database management
+resource "docker_container" "phpmyadmin" {
+  count = data.coder_workspace.me.start_count
+  image = "phpmyadmin:latest"
+  name  = "pma-${data.coder_workspace.me.name}"
   
-  lifecycle {
-    ignore_changes = all
+  env = [
+    "PMA_HOST=mysql-${data.coder_workspace.me.name}",
+    "PMA_USER=root",
+    "PMA_PASSWORD=${random_password.db_password.result}",
+    "UPLOAD_LIMIT=50M"
+  ]
+  
+  networks_advanced {
+    name = "coder-network"
   }
+  
+  labels {
+    label = "traefik.enable"
+    value = "true"
+  }
+  labels {
+    label = "traefik.http.routers.${lower(data.coder_workspace.me.name)}-pma.rule"
+    value = "Host(`${lower(data.coder_workspace.me.name)}-pma.${var.base_domain}`)"
+  }
+  labels {
+    label = "traefik.http.routers.${lower(data.coder_workspace.me.name)}-pma.entrypoints"
+    value = "websecure"
+  }
+  labels {
+    label = "traefik.http.routers.${lower(data.coder_workspace.me.name)}-pma.tls"
+    value = "true"
+  }
+  labels {
+    label = "traefik.http.services.${lower(data.coder_workspace.me.name)}-pma.loadbalancer.server.port"
+    value = "80"
+  }
+  
+  restart = "unless-stopped"
 }
 
 # Workspace container
@@ -94,54 +118,52 @@ resource "docker_container" "workspace" {
   
   hostname = data.coder_workspace.me.name
   
-  # Required for Docker-in-Docker
-  privileged = true
-  
-  # Connect to coder-network for Traefik routing
   networks_advanced {
     name = "coder-network"
   }
   
-  # Use the docker gateway if the access URL is 127.0.0.1
   entrypoint = ["sh", "-c", replace(module.agent.agent_init_script, "/localhost|127\\.0\\.0\\.1/", "host.docker.internal")]
   
-  # Docker host
+  env = ["CODER_AGENT_TOKEN=${module.agent.agent_token}"]
+  
   host {
     host = "host.docker.internal"
     ip   = "host-gateway"
   }
   
-  env = [
-    "CODER_AGENT_TOKEN=${module.agent.agent_token}",
-    "DB_PASSWORD=${random_password.db_password.result}",
-    "DB_HOST=mysql-${data.coder_workspace.me.name}",
-    "PHP_VERSION=${data.coder_parameter.php_version.value}",
-    "WP_URL=https://${lower(data.coder_workspace.me.name)}.${var.base_domain}"
-  ]
-  
   volumes {
-    container_path = "/home/coder"
+    container_path = "/home/coder/"
     volume_name    = docker_volume.home_volume.name
     read_only      = false
   }
   
-  # Mount SSH keys from host VM to workspace
+  # Mount SSH keys from host
   volumes {
     container_path = "/mnt/host-ssh"
-    host_path      = local.resolved_ssh_key_dir
+    host_path      = var.ssh_key_dir
     read_only      = true
   }
   
   # Mount Traefik auth directory
   volumes {
     container_path = "/traefik-auth"
-    host_path      = local.resolved_traefik_auth_dir
+    host_path      = var.traefik_auth_dir
     read_only      = false
   }
   
-  # Traefik labels
+  # SSH port mapping
+  dynamic "ports" {
+    for_each = local.ssh_docker_ports != null ? [local.ssh_docker_ports] : []
+    content {
+      internal = ports.value.internal
+      external = ports.value.external
+      protocol = "tcp"
+    }
+  }
+  
+  # Traefik routing labels
   dynamic "labels" {
-    for_each = try(module.traefik[0].traefik_labels, {})
+    for_each = local.traefik_labels
     content {
       label = labels.key
       value = labels.value
@@ -149,29 +171,121 @@ resource "docker_container" "workspace" {
   }
 }
 
-# Home volume (persists user data)
+# Home volume
 resource "docker_volume" "home_volume" {
-  name = "coder-${data.coder_workspace.me.id}-home"
+  name = "coder-${data.coder_workspace_owner.me.name}-${lower(data.coder_workspace.me.name)}-home"
   
   lifecycle {
     ignore_changes = all
   }
+  
+  labels {
+    label = "coder.owner"
+    value = data.coder_workspace_owner.me.name
+  }
+  
+  labels {
+    label = "coder.owner_id"
+    value = data.coder_workspace_owner.me.id
+  }
+  
+  labels {
+    label = "coder.workspace_id"
+    value = data.coder_workspace.me.id
+  }
+  
+  labels {
+    label = "coder.workspace_name_at_creation"
+    value = data.coder_workspace.me.name
+  }
 }
 
 # =============================================================================
-# Modules
+# Phase 1 Modules: Zero Coder Dependencies (No UI Parameters)
 # =============================================================================
 
 # Module: init-shell
+# Issue #23 - Simplest baseline module (0 params, no deps)
+# Pure git module call with zero parameters and no Coder dependencies
 module "init_shell" {
   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/init-shell-module?ref=v0.1.0"
 }
 
+# Module: debug-domain (base domain local)
+# Issue #25 - Base domain config (0 params, uses var.base_domain)
+# Pure local variable definition with zero Coder dependencies
+locals {
+  actual_base_domain       = var.base_domain
+  resolved_ssh_key_dir     = trimspace(var.ssh_key_dir) != "" ? var.ssh_key_dir : "/home/docker/.ssh"
+  resolved_traefik_auth_dir = trimspace(var.traefik_auth_dir) != "" ? var.traefik_auth_dir : "/opt/stacks/weekendstack/config/traefik/auth"
+}
+
+# =============================================================================
+# Phase 2 Modules: Coder Data Sources Only (No UI Parameters)
+# =============================================================================
+
 # Module: code-server
+# Issue #24 - VS Code web IDE (0 params, depends on agent)
+# Uses Coder data sources but no UI parameters - tests data source integration
 module "code_server" {
   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/code-server-module?ref=v0.1.0"
   
   agent_id              = module.agent.agent_id
   workspace_start_count = data.coder_workspace.me.start_count
-  folder                = "/home/coder/workspace/wordpress"
+  folder                = "/home/coder/workspace"
+}
+
+# =============================================================================
+# Phase 3 Modules: Simple UI Parameters (Boolean Toggles)
+# =============================================================================
+
+# Module: docker (Issue #26)
+# Overlaid from docker-params.tf
+# Provides Docker-in-Docker with enable_docker boolean parameter
+
+# =============================================================================
+# Phase 4 Modules: Multi-Select Parameters
+# =============================================================================
+
+# Module: metadata (Issue #27)
+# Overlaid from metadata-params.tf
+# Provides resource monitoring metadata blocks (CPU, RAM, disk, etc.)
+
+# =============================================================================
+# Phase 5 Modules: Complex Conditional Parameters
+# =============================================================================
+
+# Module: ssh (Issue #33)
+# Overlaid from ssh-params.tf
+# Provides SSH server with enable toggle, port mode, and password configuration
+# VERY HIGH flickering risk: conditional parameters with disabled styling
+
+# Workspace secret for SSH password (if not manually set)
+resource "random_password" "workspace_secret" {
+  length  = 16
+  special = true
+}
+
+# =============================================================================
+# Preview Links
+# =============================================================================
+
+# WordPress site preview
+resource "coder_app" "wordpress" {
+  agent_id     = module.agent.agent_id
+  slug         = "wordpress"
+  display_name = "WordPress Site"
+  icon         = "https://cdn.worldvectorlogo.com/logos/wordpress-icon-1.svg"
+  url          = "https://${lower(data.coder_workspace.me.name)}.${var.base_domain}"
+  external     = true
+}
+
+# phpMyAdmin preview
+resource "coder_app" "phpmyadmin" {
+  agent_id     = module.agent.agent_id
+  slug         = "phpmyadmin"
+  display_name = "phpMyAdmin"
+  icon         = "https://www.phpmyadmin.net/static/images/logo.png"
+  url          = "https://${lower(data.coder_workspace.me.name)}-pma.${var.base_domain}"
+  external     = true
 }
