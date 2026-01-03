@@ -50,15 +50,6 @@ data "coder_parameter" "node_package_manager" {
   }
 }
 
-data "coder_parameter" "enable_typescript" {
-  name         = "enable_typescript"
-  display_name = "Install TypeScript"
-  type         = "bool"
-  default      = true
-  mutable      = true
-  order        = 103
-}
-
 
 
 # Module: node-tooling
@@ -66,7 +57,8 @@ data "coder_parameter" "enable_typescript" {
 module "node_tooling" {
   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/node-tooling-module?ref=PLACEHOLDER"
   
-  node_version      = data.coder_parameter.node_version.value
-  package_manager   = data.coder_parameter.node_package_manager.value
-  enable_typescript = data.coder_parameter.enable_typescript.value
+  node_version       = data.coder_parameter.node_version.value
+  package_manager    = data.coder_parameter.node_package_manager.value
+  enable_typescript  = false  # Handled by project package.json
+  enable_eslint      = false  # Handled by project package.json
 }

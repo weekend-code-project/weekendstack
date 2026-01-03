@@ -50,15 +50,6 @@ data "coder_parameter" "node_package_manager" {
   }
 }
 
-data "coder_parameter" "enable_typescript" {
-  name         = "enable_typescript"
-  display_name = "Install TypeScript"
-  type         = "bool"
-  default      = true
-  order        = 103
-}
-
-
 # Module: node-tooling
 # Installs Node.js, package managers, and tooling
 module "node_tooling" {
@@ -66,5 +57,6 @@ module "node_tooling" {
   
   node_version      = data.coder_parameter.node_version.value
   package_manager   = data.coder_parameter.node_package_manager.value
-  enable_typescript = data.coder_parameter.enable_typescript.value
+  enable_typescript = false  # Handled by project package.json
+  enable_eslint     = false  # Handled by project package.json
 }
