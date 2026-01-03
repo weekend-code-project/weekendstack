@@ -55,16 +55,11 @@ data "coder_parameter" "enable_typescript" {
   display_name = "Install TypeScript"
   type         = "bool"
   default      = true
+  mutable      = true
   order        = 103
 }
 
-data "coder_parameter" "enable_eslint" {
-  name         = "enable_eslint"
-  display_name = "Install ESLint"
-  type         = "bool"
-  default      = true
-  order        = 104
-}
+
 
 # Module: node-tooling
 # Installs Node.js, package managers, and tooling
@@ -74,5 +69,4 @@ module "node_tooling" {
   node_version      = data.coder_parameter.node_version.value
   package_manager   = data.coder_parameter.node_package_manager.value
   enable_typescript = data.coder_parameter.enable_typescript.value
-  enable_eslint     = data.coder_parameter.enable_eslint.value
 }

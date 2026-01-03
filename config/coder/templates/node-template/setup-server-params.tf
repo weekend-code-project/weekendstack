@@ -68,8 +68,9 @@ locals {
   # Determine server configuration
   use_custom_command = data.coder_parameter.use_custom_command.value
   
-  # Robust default command that ensures nvm is loaded
+  # Robust default command that ensures nvm is loaded and uses selected package manager
   nvm_load           = "export NVM_DIR=\"$HOME/.nvm\"; [ -s \"$NVM_DIR/nvm.sh\" ] && \\. \"$NVM_DIR/nvm.sh\""
+  pkg_mgr            = data.coder_parameter.node_package_manager.value
   default_command    = "${local.nvm_load}; nvm use default >/dev/null 2>&1; http-server -p 8080 -a 0.0.0.0"
   
   custom_command     = trimspace(data.coder_parameter.startup_command.value)
