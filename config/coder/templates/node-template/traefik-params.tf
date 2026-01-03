@@ -43,10 +43,10 @@ module "traefik" {
   workspace_owner       = data.coder_workspace_owner.me.name
   workspace_id          = data.coder_workspace.me.id
   workspace_owner_id    = data.coder_workspace_owner.me.id
-  workspace_start_count = data.coder_workspace.me.start_count
+  workspace_start_count = 0  # Disable preview button from traefik module
   
   domain           = local.actual_base_domain
   exposed_port     = element(local.exposed_ports_list, 0)
-  preview_mode     = "none"  # Disable preview button from traefik module
+  preview_mode     = "traefik"  # Use traefik mode for labels, but start_count=0 prevents button
   workspace_secret = local.workspace_secret_value
 }
