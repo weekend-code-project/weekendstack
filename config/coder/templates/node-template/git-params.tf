@@ -1,5 +1,5 @@
 # =============================================================================
-# Git Module (Vite Template Override)
+# Git Module (Node Template Override)
 # =============================================================================
 # Provides Git repository cloning with auto-detected CLI installation
 
