@@ -78,7 +78,7 @@ resource "docker_container" "workspace" {
   
   # SSH port mapping (conditional - only when SSH is enabled)
   dynamic "ports" {
-    for_each = try(module.ssh[0].docker_ports, null) != null ? [module.ssh[0].docker_ports] : []
+    for_each = try(module.ssh.docker_ports, null) != null ? [module.ssh.docker_ports] : []
     content {
       internal = ports.value.internal
       external = ports.value.external
