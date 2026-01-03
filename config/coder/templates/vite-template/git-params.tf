@@ -10,7 +10,7 @@ data "coder_parameter" "github_repo" {
   description  = "Git repository URL to clone (leave empty to skip). SSH recommended: git@github.com:user/repo.git"
   type         = "string"
   default      = ""
-  mutable      = false
+  mutable      = true
   order        = 60
   
   validation {
