@@ -1,8 +1,24 @@
 # =============================================================================
-# Git Module (Vite Template Override - DISABLED)
+# Git Module (Vite Template Override - SIMPLIFIED)
 # =============================================================================
-# OVERRIDE NOTE: Git functionality disabled to isolate parameter flickering issue
-# This prevents conditional git modules from being loaded during parameter preview
+# OVERRIDE NOTE: Only git identity is always loaded to prevent parameter flickering
+# Repository cloning is disabled to avoid conditional module issues
+
+# Parameter: Repository URL
+data "coder_parameter" "github_repo" {
+  name         = "github_repo"
+  display_name = "Repository URL"
+  description  = "Git repository URL to clone (leave empty to skip). SSH recommended: git@github.com:user/repo.git"
+  type         = "string"
+  default      = ""
+  mutable      = false
+  order        = 60
+  
+  validation {
+    regex = "^(https?://|git@|ssh://|).*$"
+    error = "Repository URL must be empty or a valid git URL (https://, git@, or ssh://)"
+  }
+}
 
 # Module: Git Identity (always loaded - sets up git config from workspace owner)
 module "git_identity" {
