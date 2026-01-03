@@ -10,13 +10,24 @@ data "coder_parameter" "github_repo" {
   description  = "Git repository URL to clone (leave empty to skip). SSH recommended: git@github.com:user/repo.git"
   type         = "string"
   default      = ""
-  mutable      = true
+  mutable      = false
   order        = 60
   
   validation {
     regex = "^(https?://|git@|ssh://|).*$"
     error = "Repository URL must be empty or a valid git URL (https://, git@, or ssh://)"
   }
+}
+
+# Parameter: Install GitHub CLI
+data "coder_parameter" "install_github_cli" {
+  name         = "install_github_cli"
+  display_name = "Install GitHub CLI"
+  description  = "Install GitHub CLI (gh) for GitHub integration"
+  type         = "bool"
+  default      = "true"
+  mutable      = true
+  order        = 61
 }
 
 # Auto-detect CLI and clone based on repo URL
@@ -44,8 +55,8 @@ locals {
     "git.weekendcodeproject.dev"
   ], local.repo_domain)
   
-  # Determine which CLI to install (if any)
-  use_github_cli = local.has_repo && local.is_github
+  # Determine which CLI to install
+  use_github_cli = data.coder_parameter.install_github_cli.value
   use_gitea_cli  = local.has_repo && local.is_gitea
 }
 
