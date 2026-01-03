@@ -68,10 +68,10 @@ module "agent" {
     "# Phase 3 Module: docker (Issue #26) - Conditional",
     try(module.docker[0].docker_setup_script, "# Docker disabled"),
     "",
-    # Phase 5 Module: ssh (always loaded, runs conditionally based on toggle)
+    "# Phase 5 Module: ssh (always loaded, runs conditionally based on toggle)",
     module.ssh.ssh_copy_script,
     module.ssh.ssh_setup_script,
-    "echo '[DEBUG] SSH phase complete'"
+    "echo '[DEBUG] SSH phase complete'",
     "",
     "# Traefik Auth Setup (only runs when password is provided)",
     try(module.traefik[0].auth_setup_script, ""),
