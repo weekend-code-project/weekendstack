@@ -330,32 +330,22 @@ HTML
     # Check if custom startup command is provided
     STARTUP_CMD="${var.startup_command}"
     if [ -n "$STARTUP_CMD" ] && [ "$STARTUP_CMD" != "" ]; then
-      echo "[SETUP-SERVER] Command to run: $STARTUP_CMD"
-      echo "[SETUP-SERVER] Python check: $(which python3 || echo 'not found')"
+      echo "[SETUP-SERVER] Starting custom server..."
+      echo "[SETUP-SERVER] Command: $STARTUP_CMD"
       
-      # Write command to a script file - use unquoted heredoc so variables expand
-      cat > /tmp/server-start.sh <<SERVERCMD
-#!/bin/bash
-cd /home/coder/workspace
-${var.startup_command}
-SERVERCMD
-      chmod +x /tmp/server-start.sh
-      
-      echo "[SETUP-SERVER] Script contents:"
-      cat /tmp/server-start.sh
-      
-      # Run the script in background
-      /tmp/server-start.sh > /tmp/custom-server.log 2>&1 &
+      # Run command in background with nohup for persistence
+      cd /home/coder/workspace
+      nohup bash -c '${var.startup_command}' > /tmp/custom-server.log 2>&1 &
       SERVER_PID=$!
       echo $SERVER_PID > /tmp/custom-server.pid
-      echo "[SETUP-SERVER] Started with PID: $SERVER_PID"
       
       sleep 2
       if ps -p $SERVER_PID >/dev/null 2>&1; then
-        echo "[SETUP-SERVER] ✓ Server running (PID: $SERVER_PID)"
+        echo "[SETUP-SERVER] ✓ Server running on port $PORT (PID: $SERVER_PID)"
       else
-        echo "[SETUP-SERVER] ✗ Server died - log contents:"
-        cat /tmp/custom-server.log || echo "(log is empty)"
+        echo "[SETUP-SERVER] ✗ Server failed to start"
+        echo "[SETUP-SERVER] ✗ Log output:"
+        cat /tmp/custom-server.log 2>&1 || echo "(no log)"
       fi
     elif [ "$AUTO_HTML" = "true" ]; then
       # Start default server in background
