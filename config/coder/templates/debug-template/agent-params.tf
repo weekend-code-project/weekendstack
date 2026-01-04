@@ -1,7 +1,10 @@
 # =============================================================================
-# Phase 0: NO AGENT PARAMS
+# Phase 0-1: Agent Configuration
 # =============================================================================
-# This file intentionally left minimal to prevent overlay of shared agent-params.tf
-# Agent is created inline in main.tf with zero parameters
+# This file provides the local variables needed by param files.
+# As modules are added via modules.txt, this may need updating.
 
-# Placeholder to prevent shared file overlay
+# Custom metadata blocks from modules (empty for Phase 0-1)
+locals {
+  all_custom_metadata = []  # No custom metadata blocks yet
+}

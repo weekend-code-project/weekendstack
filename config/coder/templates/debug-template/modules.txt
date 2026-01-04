@@ -1,0 +1,59 @@
+# =============================================================================
+# Debug Template - Module Configuration
+# =============================================================================
+# Format: module_name[:params][:override]
+#
+# module_name - Name of module in template-modules/modules/
+# :params     - Include parameter file (uses shared version)
+# :override   - Use template-local param file instead of shared
+#
+# Lines starting with # are comments/disabled modules
+# Uncomment lines to enable modules for testing
+
+# =============================================================================
+# Phase 0: Baseline (zero user parameters)
+# =============================================================================
+code-server
+
+# =============================================================================
+# Phase 1: Simple Parameters (uncomment to test)
+# =============================================================================
+# Add simple boolean and multi-select parameters
+# Expected: NO flickering (simple params don't cause issues)
+
+metadata:params
+docker:params
+
+# =============================================================================
+# Phase 2: SSH Module (HIGH RISK - conditional count)
+# =============================================================================
+# This module uses: count = parameter.value ? 1 : 0
+# Expected: Flickering LIKELY starts here
+
+#ssh:params
+
+# =============================================================================
+# Phase 3: Setup Server Module (HIGH RISK - styling.disabled)
+# =============================================================================
+# This module uses: styling.disabled based on parameter value
+# Expected: Flickering likely if not in Phase 2
+
+#setup-server:params
+
+# =============================================================================
+# Phase 4: Git Modules (conditional count)
+# =============================================================================
+
+#git-identity:params
+#git-integration:params
+#github-cli:params
+#gitea-cli:params
+
+# =============================================================================
+# Phase 5: Advanced Modules
+# =============================================================================
+
+#node-tooling:params
+#node-modules-persistence:params
+#preview-link:params
+#traefik:params

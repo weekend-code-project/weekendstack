@@ -219,30 +219,86 @@ TEMP_DIR="/tmp/coder-push-$$"
 mkdir -p "$TEMP_DIR"
 cp -r "$TEMPLATE_DIR" "$TEMP_DIR/$TEMPLATE_NAME"
 
-# Overlay shared params (do not override if file already exists in template)
-overlay_shared_params() {
-    local shared_dir="$1"
+# Process modules.txt if it exists (new config-based system)
+process_modules_config() {
+    local template_dir="$1"
     local dest_dir="$2"
-    if [[ ! -d "$shared_dir" ]]; then
-        log_warn "Shared params dir not found: $shared_dir (skipping overlay)"
-        return 0
+    local modules_file="$template_dir/modules.txt"
+    
+    if [[ ! -f "$modules_file" ]]; then
+        return 1  # No config file, use legacy overlay
     fi
+    
+    log "📋 Processing modules.txt configuration..."
     local count=0
-    for f in "$shared_dir"/*-params.tf; do
-        [[ -e "$f" ]] || continue
-        local base
-        base=$(basename "$f")
-        if [[ -f "$dest_dir/$base" ]]; then
-            log_warn "Skip overlay (template override present): $base"
-            continue
+    
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        # Skip comments and empty lines
+        [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+        
+        # Parse module:params:override format
+        IFS=: read -r module has_params is_override <<< "$line"
+        module=$(echo "$module" | xargs)  # trim whitespace
+        
+        log "  + Module: $module (params=${has_params:-no}, override=${is_override:-no})"
+        
+        # If params flag is set, copy param file
+        if [[ "$has_params" == "params" ]]; then
+            local param_file="${module}-params.tf"
+            
+            if [[ "$is_override" == "override" ]]; then
+                # Use template-local version (should already be in dest)
+                if [[ -f "$dest_dir/$param_file" ]]; then
+                    log_warn "    Using template override: $param_file"
+                else
+                    log_warn "    Override specified but $param_file not found in template!"
+                fi
+            else
+                # Copy from shared params
+                if [[ -f "$SHARED_PARAMS_DIR/$param_file" ]]; then
+                    cp "$SHARED_PARAMS_DIR/$param_file" "$dest_dir/$param_file"
+                    count=$((count+1))
+                    log "    ✓ Copied shared: $param_file"
+                else
+                    log_warn "    Shared param file not found: $param_file"
+                fi
+            fi
         fi
-        cp "$f" "$dest_dir/$base"
-        count=$((count+1))
-    done
-    log "📦 Overlay applied: $count shared param file(s) copied"
+    done < "$modules_file"
+    
+    log "📦 Config-based assembly: $count param file(s) copied"
+    return 0
 }
 
-overlay_shared_params "$SHARED_PARAMS_DIR" "$TEMP_DIR/$TEMPLATE_NAME"
+# Try config-based approach first, fall back to legacy overlay
+if ! process_modules_config "$TEMPLATE_DIR" "$TEMP_DIR/$TEMPLATE_NAME"; then
+    log "No modules.txt found, using legacy overlay method..."
+    
+    # Overlay shared params (do not override if file already exists in template)
+    overlay_shared_params() {
+        local shared_dir="$1"
+        local dest_dir="$2"
+        if [[ ! -d "$shared_dir" ]]; then
+            log_warn "Shared params dir not found: $shared_dir (skipping overlay)"
+            return 0
+        fi
+        local count=0
+        for f in "$shared_dir"/*-params.tf; do
+            [[ -e "$f" ]] || continue
+            local base
+            base=$(basename "$f")
+            if [[ -f "$dest_dir/$base" ]]; then
+                log_warn "Skip overlay (template override present): $base"
+                continue
+            fi
+            cp "$f" "$dest_dir/$base"
+            count=$((count+1))
+        done
+        log "📦 Overlay applied: $count shared param file(s) copied"
+    }
+    
+    overlay_shared_params "$SHARED_PARAMS_DIR" "$TEMP_DIR/$TEMPLATE_NAME"
+fi
 
 # Substitute ref in temp .tf files for this repository's git module sources
 substitute_ref_in_temp() {
