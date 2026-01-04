@@ -42,8 +42,8 @@ module "agent" {
   # No additional environment variables for Phase 1
   env_vars = {}
   
-  # Metadata blocks (empty for Phase 1, populated when metadata module added)
-  metadata_blocks = []
+  # PHASE 2: Restore metadata blocks
+  metadata_blocks = try(module.metadata[0].metadata_blocks, [])
   
   # Minimal startup script for Phase 1
   # Modules will add their scripts as they're enabled in modules.txt
