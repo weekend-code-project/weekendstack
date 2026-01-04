@@ -1,0 +1,37 @@
+# =============================================================================
+# Test Template - Module Configuration
+# =============================================================================
+# Starting with docker-style baseline to validate config system
+# Then incrementally add modules to identify flickering source
+#
+# Format: module_name[:params][:override]
+
+# =============================================================================
+# Phase 1: Core Modules (Baseline)
+# =============================================================================
+code-server
+
+# =============================================================================
+# Phase 2: Add Metadata (uncomment to test)
+# =============================================================================
+#metadata:params
+
+# =============================================================================
+# Phase 3: Add SSH (HIGH RISK - expect flickering)
+# =============================================================================
+#ssh:params
+
+# =============================================================================
+# Phase 4: Add Setup Server (if Phase 3 clean)
+# =============================================================================
+#setup-server:params
+
+# =============================================================================
+# Phase 5: Additional modules (if needed)
+# =============================================================================
+#git-identity:params
+#git-integration:params
+#github-cli:params
+#gitea-cli:params
+#preview-link:params
+#traefik:params
