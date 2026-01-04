@@ -96,13 +96,26 @@ resource "docker_container" "workspace" {
     }
   }
 
-  # Traefik routing labels
-  dynamic "labels" {
-    for_each = module.traefik.traefik_labels
-    content {
-      label = labels.key
-      value = labels.value
-    }
+  # Traefik routing labels for external access
+  labels {
+    label = "traefik.enable"
+    value = "true"
+  }
+  labels {
+    label = "traefik.http.routers.${lower(data.coder_workspace.me.name)}.rule"
+    value = "Host(`${lower(data.coder_workspace.me.name)}.${var.base_domain}`)"
+  }
+  labels {
+    label = "traefik.http.routers.${lower(data.coder_workspace.me.name)}.entrypoints"
+    value = "websecure"
+  }
+  labels {
+    label = "traefik.http.routers.${lower(data.coder_workspace.me.name)}.tls"
+    value = "true"
+  }
+  labels {
+    label = "traefik.http.services.${lower(data.coder_workspace.me.name)}.loadbalancer.server.port"
+    value = "8080"
   }
 }
 

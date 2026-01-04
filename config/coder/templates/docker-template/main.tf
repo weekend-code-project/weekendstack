@@ -96,9 +96,9 @@ resource "docker_container" "workspace" {
     }
   }
   
-  # Traefik routing labels (optional - returns {} if not defined)
+  # Traefik routing labels (conditional - only when Traefik module is enabled)
   dynamic "labels" {
-    for_each = try(module.traefik.traefik_labels, {})
+    for_each = try(module.traefik[0].traefik_labels, {})
     content {
       label = labels.key
       value = labels.value
@@ -199,4 +199,18 @@ module "code_server" {
 resource "random_password" "workspace_secret" {
   length  = 16
   special = true
+}
+
+# =============================================================================
+# Preview Links
+# =============================================================================
+
+# Traefik preview link for workspace
+resource "coder_app" "traefik_preview" {
+  agent_id     = module.agent.agent_id
+  slug         = "workspace"
+  display_name = "Workspace Preview"
+  icon         = "/icon/code.svg"
+  url          = "https://${lower(data.coder_workspace.me.name)}.${var.base_domain}"
+  external     = true
 }

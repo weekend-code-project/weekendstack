@@ -1,50 +1,7 @@
 # =============================================================================
-# Traefik Routing Parameters
+# Traefik Parameters (Vite Template Override)
 # =============================================================================
-# Provides Traefik routing labels and preview buttons
-# Vite template doesn't need authentication, so workspace_secret is always empty
+# OVERRIDE NOTE: Traefik auth/routing disabled for Vite template
+# Preview button is provided by preview-params.tf using preview-link-module
 
-# Parameter: Preview Mode
-data "coder_parameter" "preview_mode" {
-  name         = "preview_mode"
-  display_name = "Preview Mode"
-  description  = "How to access your Vite dev server"
-  type         = "string"
-  default      = "traefik"
-  mutable      = true
-  order        = 63
-  
-  option {
-    name  = "External (Traefik)"
-    value = "traefik"
-    icon  = "/icon/desktop.svg"
-  }
-  
-  option {
-    name  = "Internal (Coder Proxy)"
-    value = "internal"
-    icon  = "/icon/coder.svg"
-  }
-}
-
-# Locals for Traefik module
-locals {
-  traefik_auth_setup_script = module.traefik.auth_setup_script
-}
-
-# Traefik Routing Module (handles routing + preview, no auth for Vite)
-module "traefik" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/traefik-routing-module?ref=PLACEHOLDER"
-  
-  agent_id              = module.agent.agent_id
-  workspace_name        = data.coder_workspace.me.name
-  workspace_owner       = data.coder_workspace_owner.me.name
-  workspace_id          = data.coder_workspace.me.id
-  workspace_owner_id    = data.coder_workspace_owner.me.id
-  workspace_start_count = data.coder_workspace.me.start_count
-  
-  domain           = local.actual_base_domain
-  exposed_port     = element(local.exposed_ports_list, 0)
-  preview_mode     = data.coder_parameter.preview_mode.value
-  workspace_secret = ""  # Vite is always public, no auth
-}
+# No Traefik parameters or module - completely disabled

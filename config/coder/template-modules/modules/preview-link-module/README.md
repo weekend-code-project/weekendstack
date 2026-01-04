@@ -1,9 +1,5 @@
 # Preview Link Module
 
-> **⚠️ DEPRECATED**: This module is deprecated in favor of `traefik-routing-module` which now handles both routing labels AND preview buttons. Use `traefik-routing-module` for new templates.
->
-> **Migration**: Replace `preview-link-module` + `traefik-routing-module` calls with a single `traefik-routing-module` call that handles both functions.
-
 Creates Coder app buttons for accessing the workspace via different preview modes.
 
 ## Features

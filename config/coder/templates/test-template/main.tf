@@ -96,9 +96,9 @@ resource "docker_container" "workspace" {
     }
   }
   
-  # Traefik routing labels (optional - returns {} if not defined)
+  # Traefik routing labels (conditional - only when Traefik module is enabled)
   dynamic "labels" {
-    for_each = try(module.traefik.traefik_labels, {})
+    for_each = try(module.traefik[0].traefik_labels, {})
     content {
       label = labels.key
       value = labels.value
