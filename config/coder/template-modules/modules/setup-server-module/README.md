@@ -46,7 +46,7 @@ A reusable Terraform module for setting up development servers in Coder workspac
 
 module "setup_server" {  description  = "Toggle on to scaffold a static welcome page and run the static site server. Turn off to customize your server ports and startup command."
 
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/setup-server?ref=v0.1.1"  type         = "bool"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/setup-server?ref=PLACEHOLDER"  type         = "bool"
 
     form_type    = "switch"
 
@@ -122,7 +122,7 @@ module "setup_server" {  description  = "Toggle on to scaffold a static welcome 
 
 # Use the output in agent startup scriptmodule "setup_server" {
 
-locals {  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/setup-server?ref=v0.1.1"
+locals {  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/setup-server?ref=PLACEHOLDER"
 
   setup_server_script = module.setup_server.setup_server_script  
 
@@ -140,11 +140,11 @@ locals {  source = "git::https://github.com/weekend-code-project/weekendstack.gi
 
 module "setup_server" {
 
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/setup-server?ref=v0.1.1"# Add to agent startup script
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/setup-server?ref=PLACEHOLDER"# Add to agent startup script
 
   module "agent" {
 
-  exposed_ports_list = local.exposed_ports_list  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/coder-agent?ref=v0.1.1"
+  exposed_ports_list = local.exposed_ports_list  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/coder-agent?ref=PLACEHOLDER"
 
     
 

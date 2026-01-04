@@ -42,5 +42,5 @@ data "coder_parameter" "enable_docker" {
 # Module: Docker Integration (conditionally loaded)
 module "docker" {
   count  = data.coder_parameter.enable_docker.value ? 1 : 0
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/docker-module?ref=v0.1.0"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/docker-module?ref=PLACEHOLDER"
 }

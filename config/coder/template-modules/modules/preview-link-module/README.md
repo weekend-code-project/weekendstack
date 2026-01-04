@@ -88,7 +88,7 @@ data "coder_parameter" "custom_preview_url" {
 ```hcl
 # Call preview_link module
 module "preview_link" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/preview-link?ref=v0.1.1"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/preview-link?ref=PLACEHOLDER"
   
   agent_id              = module.agent.agent_id
   workspace_name        = data.coder_workspace.me.name

@@ -6,7 +6,7 @@ Complete Docker-in-Docker integration for Coder workspaces including installatio
 
 ```hcl
 module "docker" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/docker-integration?ref=v0.1.0"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/docker-integration?ref=PLACEHOLDER"
   
   workspace_id          = data.coder_workspace.me.id
   workspace_name        = data.coder_workspace.me.name

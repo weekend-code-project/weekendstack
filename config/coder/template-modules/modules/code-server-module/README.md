@@ -6,7 +6,7 @@ Configures VS Code Server (code-server) as the web-based IDE for Coder workspace
 
 ```hcl
 module "code_server" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/code-server?ref=v0.1.0"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/code-server?ref=PLACEHOLDER"
   
   agent_id              = module.agent.agent_id
   workspace_start_count = data.coder_workspace.me.start_count

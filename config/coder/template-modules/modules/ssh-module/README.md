@@ -83,7 +83,7 @@ resource "random_password" "workspace_secret" {
 }
 
 module "ssh" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/ssh-integration?ref=v0.1.0"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/ssh-integration?ref=PLACEHOLDER"
   
   workspace_id          = data.coder_workspace.me.id
   # Use custom password if provided, otherwise use random password

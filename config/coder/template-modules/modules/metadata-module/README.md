@@ -20,7 +20,7 @@ Typically used via `metadata-params.tf` overlay which provides a UI dropdown:
 # Module automatically includes custom blocks from loaded modules
 
 module "agent" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/coder-agent?ref=v0.1.0"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/coder-agent?ref=PLACEHOLDER"
   
   # ... other config ...
   metadata_blocks = module.metadata.metadata_blocks
@@ -31,7 +31,7 @@ module "agent" {
 
 ```hcl
 module "metadata" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/metadata?ref=v0.1.0"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/metadata?ref=PLACEHOLDER"
   
   # Only show these metrics
   enabled_blocks = ["cpu", "ram", "disk"]
@@ -67,7 +67,7 @@ module "metadata" {
 
 ```hcl
 module "metadata" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/metadata?ref=v0.1.0"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/metadata?ref=PLACEHOLDER"
   
   enabled_blocks = ["cpu", "ram"]
   

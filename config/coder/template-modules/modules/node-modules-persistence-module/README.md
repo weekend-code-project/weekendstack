@@ -18,7 +18,7 @@ This module provides intelligent persistence and automatic installation for Node
 
 ```hcl
 module "node_modules" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/node-modules-persistence?ref=v0.1.1"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/node-modules-persistence?ref=PLACEHOLDER"
   
   agent_id           = coder_agent.main.id
   node_modules_paths = "node_modules"
@@ -44,7 +44,7 @@ resource "coder_agent" "main" {
 
 ```hcl
 module "node_modules" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/node-modules-persistence?ref=v0.1.1"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/node-modules-persistence?ref=PLACEHOLDER"
   
   agent_id           = coder_agent.main.id
   node_modules_paths = "node_modules,backend/node_modules,frontend/node_modules"
@@ -64,7 +64,7 @@ data "coder_parameter" "node_modules_paths" {
 }
 
 module "node_modules" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/node-modules-persistence?ref=v0.1.1"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/node-modules-persistence?ref=PLACEHOLDER"
   
   agent_id           = coder_agent.main.id
   node_modules_paths = data.coder_parameter.node_modules_paths.value

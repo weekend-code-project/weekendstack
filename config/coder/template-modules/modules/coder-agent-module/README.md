@@ -6,7 +6,7 @@ Configures the Coder agent that runs inside workspace containers. Handles startu
 
 ```hcl
 module "agent" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/coder-agent?ref=v0.1.0"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/coder-agent?ref=PLACEHOLDER"
   
   arch       = data.coder_provisioner.me.arch
   os         = "linux"

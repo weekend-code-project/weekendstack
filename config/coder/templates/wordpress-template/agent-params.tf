@@ -3,7 +3,7 @@
 # =============================================================================
 
 module "agent" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/coder-agent-module?ref=v0.1.0"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/coder-agent-module?ref=PLACEHOLDER"
   
   arch = data.coder_provisioner.me.arch
   os   = "linux"

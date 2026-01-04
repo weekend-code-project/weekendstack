@@ -6,7 +6,7 @@ Provides Git repository cloning with user-configurable repository parameter.
 
 ```hcl
 module "git" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/git-integration?ref=v0.1.0"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/git-integration?ref=PLACEHOLDER"
 }
 
 # Include in startup script (after git-identity and ssh-copy)

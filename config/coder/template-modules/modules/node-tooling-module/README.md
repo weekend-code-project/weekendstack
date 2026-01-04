@@ -13,7 +13,7 @@ This module installs Node.js, package managers, and common tooling using NVM.
 
 ```hcl
 module "node_tooling" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/node-tooling-module?ref=v0.1.0"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/node-tooling-module?ref=PLACEHOLDER"
   
   node_version      = "lts"
   package_manager   = "npm"

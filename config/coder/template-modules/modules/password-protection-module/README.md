@@ -25,7 +25,7 @@ Configures Traefik basic authentication for workspace access using htpasswd.
 
 ```hcl
 module "traefik_auth" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/traefik-auth?ref=v0.1.0"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/traefik-auth?ref=PLACEHOLDER"
   
   workspace_name   = data.coder_workspace.me.name
   workspace_owner  = data.coder_workspace_owner.me.name

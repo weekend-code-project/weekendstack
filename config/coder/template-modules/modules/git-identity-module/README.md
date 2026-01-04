@@ -6,7 +6,7 @@ Configures Git with user name and email for commits in the workspace.
 
 ```hcl
 module "git_identity" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/git-identity?ref=v0.1.0"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/git-identity?ref=PLACEHOLDER"
   
   git_author_name  = data.coder_workspace_owner.me.full_name
   git_author_email = data.coder_workspace_owner.me.email

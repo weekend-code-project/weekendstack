@@ -6,7 +6,7 @@ Initializes the home directory structure for a new Coder workspace.
 
 ```hcl
 module "init_shell" {
-  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/templates/git-modules/init-shell?ref=v0.1.0"
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/init-shell?ref=PLACEHOLDER"
 }
 
 # Include in agent startup script
