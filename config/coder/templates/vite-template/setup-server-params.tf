@@ -16,7 +16,6 @@ data "coder_parameter" "use_custom_command" {
   display_name = "Use Custom Server Command"
   description  = "Enable custom server startup command (disables default static server)"
   type         = "bool"
-  form_type    = "switch"
   default      = "true"
   mutable      = true
   order        = 60
@@ -37,7 +36,6 @@ data "coder_parameter" "patch_allowed_hosts" {
   display_name = "Allow Workspace Hostnames"
   description  = "Patch Vite config at startup to allow workspace hostname and enable HMR"
   type         = "bool"
-  form_type    = "switch"
   default      = "true"
   mutable      = true
   order        = 62
