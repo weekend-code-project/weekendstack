@@ -26,7 +26,7 @@ module "agent" {
     local.ssh_setup_script,
     "",
     "# Traefik Auth Setup",
-    local.traefik_auth_script,
+    local.traefik_auth_setup_script,
     "",
     "# WordPress Installation",
     local.wordpress_install_script,

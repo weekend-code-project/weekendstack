@@ -69,7 +69,7 @@ module "agent" {
     try(module.ssh[0].ssh_setup_script, ""),
     "",
     "# Traefik Auth Setup (only runs when password is provided)",
-    try(module.traefik[0].auth_setup_script, ""),
+    local.traefik_auth_setup_script,
     "",
     "# Phase 6 Module: setup-server (Issue #32) - Conditional",
     try(module.setup_server[0].setup_server_script, "# Server disabled"),
