@@ -68,22 +68,19 @@ module "git_identity" {
   git_author_email = data.coder_workspace_owner.me.email
 }
 
-# Module: Git Integration (conditional - only loaded when repo URL is provided)
+# Module: Git Integration (always loaded - conditional logic in startup script)
 module "git_integration" {
-  count  = local.has_repo ? 1 : 0
   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/git-integration-module?ref=PLACEHOLDER"
   
   github_repo_url = local.repo_url
 }
 
-# Module: GitHub CLI (conditional - auto-detected for GitHub repos)
+# Module: GitHub CLI (always loaded - conditional logic in startup script)
 module "github_cli" {
-  count  = local.use_github_cli ? 1 : 0
   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/github-cli-module?ref=PLACEHOLDER"
 }
 
-# Module: Gitea CLI (conditional - auto-detected for Gitea repos)
+# Module: Gitea CLI (always loaded - conditional logic in startup script)
 module "gitea_cli" {
-  count  = local.use_gitea_cli ? 1 : 0
   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/gitea-cli-module?ref=PLACEHOLDER"
 }
