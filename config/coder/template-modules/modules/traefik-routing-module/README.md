@@ -1,6 +1,8 @@
 # Traefik Routing Module
 
-Unified module that provides Traefik routing labels and preview buttons for workspace access.
+> **✅ CANONICAL MODULE**: This is the single source of truth for Traefik routing, authentication, and preview buttons. Supersedes deprecated `preview-link-module`, `password-protection-module`, and `workspace-auth-module`.
+
+Unified module that provides Traefik routing labels, authentication, and preview buttons for workspace access.
 
 ## Features
 
@@ -13,6 +15,8 @@ Unified module that provides Traefik routing labels and preview buttons for work
 - **Dynamic Labels**: Generates Docker labels for Traefik routing configuration
 
 - **Preview Buttons**: Creates Coder app buttons in the workspace UI
+
+- **All-in-One**: Handles routing, auth, and preview - no need for separate modules
 
 ## Usage
 
@@ -27,12 +31,10 @@ module "traefik" {
   workspace_owner_id    = data.coder_workspace_owner.me.id
   workspace_start_count = data.coder_workspace.me.start_count
   
-  domain       = var.base_domain
-  exposed_port = "8080"
-  preview_mode = "traefik"  # or "internal"
-  
-  make_public      = true   # Set to false to require password
-  workspace_secret = ""     # Required when make_public = false
+  domain           = var.base_domain
+  exposed_port     = "8080"
+  preview_mode     = "traefik"  # or "internal"
+  workspace_secret = ""          # Leave empty for public, set password for auth
 }
 
 # Apply labels to Docker container
@@ -62,8 +64,7 @@ resource "docker_container" "workspace" {
 | `domain` | Base domain for Traefik routing | `string` | - | yes |
 | `exposed_port` | Primary exposed port | `string` | `"8080"` | no |
 | `preview_mode` | Preview mode (`internal` or `traefik`) | `string` | `"traefik"` | no |
-| `make_public` | Whether workspace is public (no auth) | `bool` | `true` | no |
-| `workspace_secret` | Password for workspace auth | `string` | `""` | no |
+| `workspace_secret` | Password for workspace auth (empty = public) | `string` | `""` | no |
 
 ## Outputs
 

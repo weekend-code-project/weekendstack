@@ -32,26 +32,23 @@ data "coder_parameter" "workspace_secret" {
 }
 
 locals {
-  enable_traefik         = data.coder_parameter.preview_mode.value == "traefik"
-  workspace_secret_value = data.coder_parameter.workspace_secret.value != "" ? data.coder_parameter.workspace_secret.value : random_password.workspace_secret.result
-  preview_mode          = data.coder_parameter.preview_mode.value
+  workspace_secret_value    = data.coder_parameter.workspace_secret.value
+  traefik_auth_setup_script = module.traefik.auth_setup_script
+}
+
+# Traefik Routing Module (handles routing + auth + preview)
+module "traefik" {
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/traefik-routing-module?ref=PLACEHOLDER"
   
-  # Traefik labels for routing
-  traefik_labels = local.enable_traefik ? {
-    "traefik.enable" = "true"
-    "traefik.http.routers.${data.coder_workspace.me.name}.rule" = "Host(`${lower(data.coder_workspace.me.name)}.${var.base_domain}`)"
-    "traefik.http.routers.${data.coder_workspace.me.name}.entrypoints" = "websecure"
-    "traefik.http.routers.${data.coder_workspace.me.name}.tls" = "true"
-    "traefik.http.services.${data.coder_workspace.me.name}.loadbalancer.server.port" = "80"
-    "traefik.http.middlewares.${data.coder_workspace.me.name}-auth.basicauth.usersfile" = "/auth/${data.coder_workspace.me.name}.htpasswd"
-    "traefik.http.routers.${data.coder_workspace.me.name}.middlewares" = data.coder_parameter.workspace_secret.value != "" ? "${data.coder_workspace.me.name}-auth" : ""
-  } : {}
+  agent_id              = module.agent.agent_id
+  workspace_name        = data.coder_workspace.me.name
+  workspace_owner       = data.coder_workspace_owner.me.name
+  workspace_id          = data.coder_workspace.me.id
+  workspace_owner_id    = data.coder_workspace_owner.me.id
+  workspace_start_count = data.coder_workspace.me.start_count
   
-  # Auth setup script
-  traefik_auth_script = data.coder_parameter.workspace_secret.value != "" ? join("\n", [
-    "#!/bin/bash",
-    "echo '[Traefik] 🔒 Setting up password protection...'",
-    "sudo apt-get install -y apache2-utils > /dev/null 2>&1",
-    "echo '${local.workspace_secret_value}' | sudo htpasswd -ci /traefik-auth/${data.coder_workspace.me.name}.htpasswd ${data.coder_workspace_owner.me.name}"
-  ]) : "# No password protection"
+  domain           = var.base_domain
+  exposed_port     = "80"  # WordPress runs on port 80
+  preview_mode     = data.coder_parameter.preview_mode.value
+  workspace_secret = local.workspace_secret_value
 }

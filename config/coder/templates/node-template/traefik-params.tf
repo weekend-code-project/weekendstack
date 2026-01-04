@@ -1,10 +1,33 @@
 # =============================================================================
-# Traefik Routing Parameters (Node Template Override)
+# Traefik Routing Parameters
 # =============================================================================
-# OVERRIDE NOTE: Disables Traefik preview button since we use preview-link-module
-# Preview button is provided by preview-params.tf using preview-link-module
+# Provides Traefik routing labels, authentication, and preview buttons
+# This is the ONLY module needed - handles all routing/auth/preview functionality
 
-# Order 31: Workspace password (optional - if empty, workspace is public)
+# Parameter: Preview Mode
+data "coder_parameter" "preview_mode" {
+  name         = "preview_mode"
+  display_name = "Preview Mode"
+  description  = "How to access your Node dev server"
+  type         = "string"
+  default      = "traefik"
+  mutable      = true
+  order        = 30
+  
+  option {
+    name  = "External (Traefik)"
+    value = "traefik"
+    icon  = "/icon/desktop.svg"
+  }
+  
+  option {
+    name  = "Internal (Coder Proxy)"
+    value = "internal"
+    icon  = "/icon/coder.svg"
+  }
+}
+
+# Parameter: Workspace password (optional - if empty, workspace is public)
 data "coder_parameter" "workspace_secret" {
   name         = "workspace_secret"
   display_name = "Workspace Password (Optional)"
@@ -22,20 +45,12 @@ data "coder_parameter" "workspace_secret" {
 
 # Locals for Traefik module
 locals {
-  # Pass the workspace_secret parameter value directly to the module
-  # Module will determine if auth is needed based on whether password is empty
   workspace_secret_value = data.coder_parameter.workspace_secret.value
-  
-  # Enable Traefik routing for labels only (no preview button)
-  enable_traefik = true
-  
-  # Get auth setup script from module output (only when module is enabled)
-  traefik_auth_setup_script = try(module.traefik[0].auth_setup_script, "")
+  traefik_auth_setup_script = module.traefik.auth_setup_script
 }
 
-# Module call for Traefik routing (labels only, no preview)
+# Traefik Routing Module (handles routing + auth + preview)
 module "traefik" {
-  count  = local.enable_traefik ? 1 : 0
   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/traefik-routing-module?ref=PLACEHOLDER"
   
   agent_id              = module.agent.agent_id
@@ -43,10 +58,10 @@ module "traefik" {
   workspace_owner       = data.coder_workspace_owner.me.name
   workspace_id          = data.coder_workspace.me.id
   workspace_owner_id    = data.coder_workspace_owner.me.id
-  workspace_start_count = 0  # Disable preview button from traefik module
+  workspace_start_count = data.coder_workspace.me.start_count
   
   domain           = local.actual_base_domain
   exposed_port     = element(local.exposed_ports_list, 0)
-  preview_mode     = "traefik"  # Use traefik mode for labels, but start_count=0 prevents button
+  preview_mode     = data.coder_parameter.preview_mode.value
   workspace_secret = local.workspace_secret_value
 }

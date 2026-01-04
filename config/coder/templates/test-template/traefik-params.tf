@@ -2,17 +2,17 @@
 # Traefik Routing Parameters
 # =============================================================================
 # Provides Traefik routing labels and preview buttons
-# Vite template doesn't need authentication, so workspace_secret is always empty
+# Test template is always public (no auth)
 
 # Parameter: Preview Mode
 data "coder_parameter" "preview_mode" {
   name         = "preview_mode"
   display_name = "Preview Mode"
-  description  = "How to access your Vite dev server"
+  description  = "How to access your workspace"
   type         = "string"
   default      = "traefik"
   mutable      = true
-  order        = 63
+  order        = 30
   
   option {
     name  = "External (Traefik)"
@@ -32,7 +32,7 @@ locals {
   traefik_auth_setup_script = module.traefik.auth_setup_script
 }
 
-# Traefik Routing Module (handles routing + preview, no auth for Vite)
+# Traefik Routing Module (handles routing + preview, no auth for test template)
 module "traefik" {
   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/traefik-routing-module?ref=PLACEHOLDER"
   
@@ -44,7 +44,7 @@ module "traefik" {
   workspace_start_count = data.coder_workspace.me.start_count
   
   domain           = local.actual_base_domain
-  exposed_port     = element(local.exposed_ports_list, 0)
+  exposed_port     = "8080"
   preview_mode     = data.coder_parameter.preview_mode.value
-  workspace_secret = ""  # Vite is always public, no auth
+  workspace_secret = ""  # Test template is always public, no auth
 }
