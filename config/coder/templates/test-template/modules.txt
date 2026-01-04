@@ -19,12 +19,12 @@ metadata:params
 # =============================================================================
 # Phase 3: Add SSH (HIGH RISK - expect flickering)
 # =============================================================================
-#ssh:params
+ssh:params
 
 # =============================================================================
 # Phase 4: Add Setup Server (if Phase 3 clean)
 # =============================================================================
-#setup-server:params
+setup-server:params
 
 # =============================================================================
 # Phase 5: Additional modules (if needed)
@@ -34,4 +34,4 @@ metadata:params
 #github-cli:params
 #gitea-cli:params
 #preview-link:params
-#traefik:params
+traefik:params

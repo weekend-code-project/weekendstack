@@ -192,7 +192,7 @@ EOT
 resource "coder_app" "preview_internal" {
   count        = var.preview_mode == "internal" ? var.workspace_start_count : 0
   agent_id     = var.agent_id
-  slug         = "preview"
+  slug         = "preview-internal"
   display_name = "Preview"
   icon         = "/icon/coder.svg"
   url          = "http://localhost:${var.exposed_port}"
@@ -210,9 +210,9 @@ resource "coder_app" "preview_internal" {
 resource "coder_app" "preview_traefik" {
   count        = var.preview_mode == "traefik" ? var.workspace_start_count : 0
   agent_id     = var.agent_id
-  slug         = "preview"
+  slug         = "preview-external"
   display_name = "Preview"
-  icon         = "/icon/desktop.svg"
+  icon         = "/icon/globe.svg"
   url          = local.workspace_url
   external     = true
 }

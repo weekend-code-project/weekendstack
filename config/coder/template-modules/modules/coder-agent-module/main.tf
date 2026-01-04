@@ -117,6 +117,15 @@ resource "coder_agent" "main" {
       timeout      = var.metadata_blocks[metadata.key].timeout
     }
   }
+  
+  # Disable auto-created apps
+  display_apps {
+    vscode                 = false
+    vscode_insiders        = false
+    ssh_helper             = false
+    port_forwarding_helper = false
+    web_terminal           = true
+  }
 }
 
 # =============================================================================

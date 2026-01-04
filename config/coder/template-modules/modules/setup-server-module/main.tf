@@ -147,7 +147,8 @@ output "setup_server_script" {
 %{endif~}
 %{endfor~}
     
-    # Navigate to workspace directory (should be created by init-shell module)
+    # Navigate to workspace directory (create if doesn't exist)
+    mkdir -p /home/coder/workspace
     cd /home/coder/workspace
     
     AUTO_HTML="${var.auto_generate_html}"
@@ -329,21 +330,32 @@ HTML
     # Check if custom startup command is provided
     STARTUP_CMD="${var.startup_command}"
     if [ -n "$STARTUP_CMD" ] && [ "$STARTUP_CMD" != "" ]; then
-      # Create wrapper script for proper background execution
-      cat > /tmp/startup-wrapper.sh << 'WRAPPER_EOF'
-#!/bin/bash
-exec $STARTUP_CMD
-WRAPPER_EOF
-      chmod +x /tmp/startup-wrapper.sh
+      echo "[SETUP-SERVER] Command to run: $STARTUP_CMD"
+      echo "[SETUP-SERVER] Python check: $(which python3 || echo 'not found')"
       
-      # Run wrapper script with nohup for process persistence
-      nohup /tmp/startup-wrapper.sh > /tmp/custom-server.log 2>&1 &
-      echo $! > /tmp/custom-server.pid
-      sleep 3
-      if ps -p $(cat /tmp/custom-server.pid) >/dev/null 2>&1; then
-        echo "[SETUP-SERVER] ✓ Custom command: $STARTUP_CMD (PID: $(cat /tmp/custom-server.pid))"
+      # Write command to a script file - use unquoted heredoc so variables expand
+      cat > /tmp/server-start.sh <<SERVERCMD
+#!/bin/bash
+cd /home/coder/workspace
+${var.startup_command}
+SERVERCMD
+      chmod +x /tmp/server-start.sh
+      
+      echo "[SETUP-SERVER] Script contents:"
+      cat /tmp/server-start.sh
+      
+      # Run the script in background
+      /tmp/server-start.sh > /tmp/custom-server.log 2>&1 &
+      SERVER_PID=$!
+      echo $SERVER_PID > /tmp/custom-server.pid
+      echo "[SETUP-SERVER] Started with PID: $SERVER_PID"
+      
+      sleep 2
+      if ps -p $SERVER_PID >/dev/null 2>&1; then
+        echo "[SETUP-SERVER] ✓ Server running (PID: $SERVER_PID)"
       else
-        echo "[SETUP-SERVER] ✗ Custom command failed - check: tail /tmp/custom-server.log"
+        echo "[SETUP-SERVER] ✗ Server died - log contents:"
+        cat /tmp/custom-server.log || echo "(log is empty)"
       fi
     elif [ "$AUTO_HTML" = "true" ]; then
       # Start default server in background
@@ -363,20 +375,11 @@ WRAPPER_EOF
 }
 
 # =============================================================================
-# Preview Button - Direct IP Access
+# Preview Button
 # =============================================================================
-# NOTE: Commented out in favor of unified preview button in traefik-routing module
-# The traefik-routing module provides a single "Preview" button that switches between
-# internal (Coder proxy) and external (Traefik subdomain) based on preview_mode parameter
-
-# resource "coder_app" "preview_server" {
-#   agent_id     = var.agent_id
-#   slug         = "direct-preview"
-#   display_name = "Local Preview"
-#   url          = "http://${var.host_ip}:${local.primary_external_port}"
-#   icon         = "/icon/coder.svg"
-#   external     = true
-# }
+# NOTE: Preview button is now handled by preview-link-module
+# This provides better separation of concerns and allows switching between
+# internal (Coder proxy) and external (Traefik subdomain) preview modes
 
 # =============================================================================
 # Outputs

@@ -30,7 +30,7 @@ data "coder_parameter" "metadata_blocks" {
   description  = "Select metadata blocks to display."
   type         = "list(string)"
   form_type    = "multi-select"
-  default      = jsonencode(["cpu", "ram", "disk", "arch"])
+  default      = jsonencode([])
   mutable      = true
   order        = 50
 
@@ -73,6 +73,11 @@ data "coder_parameter" "metadata_blocks" {
     name  = "SSH Port"
     value = "ssh_port"
   }
+
+  option {
+    name  = "Server Ports"
+    value = "server_ports"
+  }
 }
 
 # Module: Metadata (always loaded, but content depends on selection)
@@ -80,6 +85,7 @@ module "metadata" {
   source         = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/metadata-module?ref=PLACEHOLDER"
   enabled_blocks = data.coder_parameter.metadata_blocks.value != "" ? jsondecode(data.coder_parameter.metadata_blocks.value) : []
   
-  # Accept custom blocks from other modules (defined in template's agent-params.tf)
-  custom_blocks = try(local.all_custom_metadata, [])
+  # Add custom blocks ONLY for selected options that require module data
+  # Check if user selected "server_ports" or "ssh_port" in their metadata selection
+  custom_blocks = try(local.selected_custom_metadata, [])
 }

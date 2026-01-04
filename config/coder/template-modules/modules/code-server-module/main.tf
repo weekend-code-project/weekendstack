@@ -77,16 +77,24 @@ variable "extensions" {
 # Code Server Module
 # =============================================================================
 
-module "code_server" {
-  count   = var.workspace_start_count
-  source  = "registry.coder.com/modules/code-server/coder"
-  version = ">= 1.0.0"
+# =============================================================================
+# Code Server App
+# =============================================================================
+
+resource "coder_app" "code_server" {
+  agent_id     = var.agent_id
+  slug         = "code-server"
+  display_name = "VS Code"
+  url          = "http://localhost:13337?folder=${var.folder}"
+  icon         = "/icon/code.svg"
+  subdomain    = false
+  share        = "owner"
   
-  folder     = var.folder
-  agent_id   = var.agent_id
-  order      = var.order
-  settings   = var.settings
-  extensions = var.extensions
+  healthcheck {
+    url       = "http://localhost:13337/healthz"
+    interval  = 5
+    threshold = 6
+  }
 }
 
 # =============================================================================
@@ -95,5 +103,5 @@ module "code_server" {
 
 output "code_server_id" {
   description = "Code server app ID"
-  value       = try(module.code_server[0].id, "")
+  value       = coder_app.code_server.id
 }

@@ -77,36 +77,36 @@ resource "docker_container" "workspace" {
   }
   
   # SSH port mapping (conditional - only when SSH is enabled)
-  # PHASE 1: Commented out - SSH module not loaded yet
-  # dynamic "ports" {
-  #   for_each = try(module.ssh[0].docker_ports, null) != null ? [module.ssh[0].docker_ports] : []
-  #   content {
-  #     internal = ports.value.internal
-  #     external = ports.value.external
-  #     protocol = "tcp"
-  #   }
-  # }
+  # PHASE 3: SSH enabled - watch for flickering!
+  dynamic "ports" {
+    for_each = try(module.ssh[0].docker_ports, null) != null ? [module.ssh[0].docker_ports] : []
+    content {
+      internal = ports.value.internal
+      external = ports.value.external
+      protocol = "tcp"
+    }
+  }
   
   # Server port mappings (conditional - only when server is configured)
-  # PHASE 1: Commented out - setup_server module not loaded yet
-  # dynamic "ports" {
-  #   for_each = try(module.setup_server[0].docker_ports, [])
-  #   content {
-  #     internal = ports.value.internal
-  #     external = ports.value.external
-  #     protocol = "tcp"
-  #   }
-  # }
+  # PHASE 4: setup-server enabled
+  dynamic "ports" {
+    for_each = try(module.setup_server[0].docker_ports, [])
+    content {
+      internal = ports.value.internal
+      external = ports.value.external
+      protocol = "tcp"
+    }
+  }
   
   # Traefik routing labels (conditional - only when Traefik module is enabled)
-  # PHASE 1: Commented out - traefik module not loaded yet
-  # dynamic "labels" {
-  #   for_each = try(module.traefik[0].traefik_labels, {})
-  #   content {
-  #     label = labels.key
-  #     value = labels.value
-  #   }
-  # }
+  # PHASE 5: Traefik enabled for preview functionality
+  dynamic "labels" {
+    for_each = try(module.traefik[0].traefik_labels, {})
+    content {
+      label = labels.key
+      value = labels.value
+    }
+  }
 }
 
 # Home volume

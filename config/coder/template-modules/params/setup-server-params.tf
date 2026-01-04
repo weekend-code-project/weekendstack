@@ -8,21 +8,10 @@
 # Parameters
 # =============================================================================
 
-data "coder_parameter" "use_custom_command" {
-  name         = "use_custom_command"
-  display_name = "Use Custom Server Command"
-  description  = "Enable custom server startup command (disables default static server)"
-  type         = "bool"
-  form_type    = "switch"
-  default      = "false"
-  mutable      = true
-  order        = 20
-}
-
 data "coder_parameter" "startup_command" {
   name         = "startup_command"
   display_name = "Server Startup Command"
-  description  = "Custom command to run server at startup"
+  description  = "Command to run server at startup (leave empty to disable server)"
   type         = "string"
   default      = "python3 -m http.server 8080 --bind 0.0.0.0"
   mutable      = true
@@ -59,14 +48,16 @@ locals {
   ]
   
   # Determine server configuration
-  use_custom_command = data.coder_parameter.use_custom_command.value
+  startup_command    = trimspace(data.coder_parameter.startup_command.value)
   default_command    = "python3 -m http.server 8080 --bind 0.0.0.0"
-  custom_command     = trimspace(data.coder_parameter.startup_command.value)
 
-  # Always regenerate the landing page and server command
-  auto_generate_html = true
-  startup_command    = local.use_custom_command ? coalesce(local.custom_command != "" ? local.custom_command : null, local.default_command) : local.default_command
-  has_server_config  = true  # Always run server (either default or custom)
+  # Only enable server if user provided a command
+  # If empty, no server runs and no metadata block appears
+  auto_generate_html = local.startup_command != ""
+  has_server_config  = local.startup_command != ""
+  
+  # Use provided command, or fall back to default if they want a server but left it empty
+  final_command = local.startup_command != "" ? local.startup_command : local.default_command
 }
 
 # =============================================================================
@@ -86,8 +77,8 @@ module "setup_server" {
   # Port configuration
   exposed_ports_list = local.exposed_ports_list
   
-  # Use whatever command the user specified (defaults to Python server)
-  default_server_command = local.startup_command
+  # Use the user's command (or default if somehow empty but has_server_config is true)
+  default_server_command = local.final_command
   server_name            = "Static Server"
   server_log_file        = "/tmp/server.log"
   server_pid_file        = "/tmp/server.pid"
@@ -101,5 +92,14 @@ module "setup_server" {
   
   # Pass through the auto-generate toggle value
   auto_generate_html = tostring(local.auto_generate_html)
-  startup_command    = local.startup_command
+  startup_command    = local.final_command
+}
+
+# =============================================================================
+# Outputs
+# =============================================================================
+
+output "setup_server_script" {
+  description = "Server setup script from setup-server module"
+  value       = try(module.setup_server[0].setup_server_script, "")
 }

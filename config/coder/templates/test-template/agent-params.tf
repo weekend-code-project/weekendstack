@@ -6,23 +6,26 @@
 
 # Collect custom metadata blocks from modules
 # This local is referenced by the overlaid metadata-params.tf
-# Start with empty array for Phase 1, add modules as we test
+# Only include blocks that user explicitly selected
 locals {
-  # Phase 1: No custom metadata
-  all_custom_metadata = []
+  # Decode selected metadata blocks
+  selected_blocks = try(jsondecode(data.coder_parameter.metadata_blocks.value), [])
   
-  # Phase 2+: Uncomment as modules are added
-  # docker_metadata = try(module.docker[0].metadata_blocks, [])
-  # ssh_metadata    = try(module.ssh[0].metadata_blocks, [])
-  # git_metadata    = try(module.git_integration[0].metadata_blocks, [])
-  # server_metadata = try(module.setup_server[0].metadata_blocks, [])
-  # 
-  # all_custom_metadata = concat(
-  #   local.docker_metadata,
-  #   local.ssh_metadata,
-  #   local.git_metadata,
-  #   local.server_metadata
-  # )
+  # Only include server_ports if user selected it AND module exists
+  server_metadata = contains(local.selected_blocks, "server_ports") ? try(module.setup_server[0].metadata_blocks, []) : []
+  
+  # Only include ssh_port if user selected it AND SSH is actually enabled
+  ssh_metadata = contains(local.selected_blocks, "ssh_port") && data.coder_parameter.ssh_enable.value ? try(module.ssh[0].metadata_blocks, []) : []
+  
+  # Combine only the selected custom blocks
+  selected_custom_metadata = concat(
+    local.server_metadata,
+    local.ssh_metadata
+  )
+  
+  # Conditional log messages for disabled features
+  ssh_disabled_log = data.coder_parameter.ssh_enable.value ? "" : "echo '[SSH] SSH server disabled'"
+  server_disabled_log = data.coder_parameter.startup_command.value != "" ? "" : "echo '[SETUP-SERVER] No server command configured - skipping server setup'"
 }
 
 module "agent" {
@@ -42,8 +45,8 @@ module "agent" {
   # No additional environment variables for Phase 1
   env_vars = {}
   
-  # PHASE 2: Restore metadata blocks
-  metadata_blocks = try(module.metadata[0].metadata_blocks, [])
+  # PHASE 4: Metadata blocks from metadata module (which includes all_custom_metadata)
+  metadata_blocks = try(module.metadata.metadata_blocks, [])
   
   # Minimal startup script for Phase 1
   # Modules will add their scripts as they're enabled in modules.txt
@@ -54,16 +57,16 @@ module "agent" {
     "# Phase 1: init-shell (always included)",
     try(module.init_shell.setup_script, ""),
     "",
-    "# Phase 2+: Additional modules (uncomment as added)",
-    # try(module.git_identity.setup_script, ""),
-    # try(module.git_integration[0].clone_script, ""),
-    # try(module.github_cli[0].install_script, ""),
-    # try(module.gitea_cli[0].install_script, ""),
-    # try(module.docker[0].docker_setup_script, ""),
-    # try(module.ssh[0].ssh_copy_script, ""),
-    # try(module.ssh[0].ssh_setup_script, ""),
-    # try(module.traefik[0].auth_setup_script, ""),
-    # try(module.setup_server[0].setup_server_script, ""),
+    "# Phase 4: SSH and server modules",
+    local.ssh_disabled_log,
+    try(module.ssh[0].ssh_copy_script, ""),
+    try(module.ssh[0].ssh_setup_script, ""),
+    "",
+    "# Phase 5: Traefik auth and server setup",
+    try(module.traefik[0].auth_setup_script, ""),
+    "",
+    local.server_disabled_log,
+    try(module.setup_server[0].setup_server_script, ""),
     "",
     "echo '[WORKSPACE] Workspace ready!'"
   ])
