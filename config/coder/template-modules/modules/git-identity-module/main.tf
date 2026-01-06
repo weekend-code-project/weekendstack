@@ -21,34 +21,45 @@ output "setup_script" {
     git config --global user.email "${var.git_author_email}" >/dev/null 2>&1
     git config --global --add safe.directory /home/coder/workspace >/dev/null 2>&1
     
-    # Setup SSH keys
-    mkdir -p ~/.ssh
-    chmod 700 ~/.ssh
-    
-    # Copy SSH keys from mounted directory (if any exist)
-    if [ -n "$(ls -A /mnt/host-ssh 2>/dev/null)" ]; then
-      cp -r /mnt/host-ssh/* ~/.ssh/ 2>/dev/null || true
-      chmod 600 ~/.ssh/id_* 2>/dev/null || true
-      chmod 644 ~/.ssh/id_*.pub 2>/dev/null || true
-      chmod 600 ~/.ssh/config 2>/dev/null || true
-      
-      # Count keys for verification
+    # Check if .ssh is already mounted (read-only volume mount)
+    if mountpoint -q ~/.ssh 2>/dev/null || [ -f ~/.ssh/.mounted ]; then
+      # SSH directory is mounted from host - just verify keys exist
       KEY_COUNT=$(ls ~/.ssh/id_* 2>/dev/null | grep -v ".pub" | wc -l)
-      echo "[GIT-IDENTITY] ✅ Configured (SSH keys: $KEY_COUNT)"
+      if [ "$KEY_COUNT" -gt 0 ]; then
+        echo "[GIT-IDENTITY] ✅ Configured (SSH keys: $KEY_COUNT from mounted volume)"
+      else
+        echo "[GIT-IDENTITY] ⚠️  No SSH keys found in mounted volume"
+      fi
     else
-      echo "[GIT-IDENTITY] ⚠️  No SSH keys found - git clone via SSH will fail"
+      # Setup SSH keys from scratch
+      mkdir -p ~/.ssh
+      chmod 700 ~/.ssh
+      
+      # Copy SSH keys from mounted directory (if any exist)
+      if [ -n "$(ls -A /mnt/host-ssh 2>/dev/null)" ]; then
+        cp -r /mnt/host-ssh/* ~/.ssh/ 2>/dev/null || true
+        chmod 600 ~/.ssh/id_* 2>/dev/null || true
+        chmod 644 ~/.ssh/id_*.pub 2>/dev/null || true
+        chmod 600 ~/.ssh/config 2>/dev/null || true
+        
+        # Count keys for verification
+        KEY_COUNT=$(ls ~/.ssh/id_* 2>/dev/null | grep -v ".pub" | wc -l)
+        echo "[GIT-IDENTITY] ✅ Configured (SSH keys: $KEY_COUNT)"
+      else
+        echo "[GIT-IDENTITY] ⚠️  No SSH keys found - git clone via SSH will fail"
+      fi
+      
+      # Add known hosts silently
+      touch ~/.ssh/known_hosts
+      chmod 644 ~/.ssh/known_hosts
+      ssh-keyscan -H github.com >> ~/.ssh/known_hosts 2>/dev/null || true
+      ssh-keyscan -H gitlab.com >> ~/.ssh/known_hosts 2>/dev/null || true
+      ssh-keyscan -H bitbucket.org >> ~/.ssh/known_hosts 2>/dev/null || true
+      
+      # Try adding Gitea hosts silently
+      for gitea_host in git.weekendcodeproject.dev gitea 192.168.1.50; do
+        timeout 2 ssh-keyscan -H -p 2222 "$gitea_host" >> ~/.ssh/known_hosts 2>/dev/null || true
+      done
     fi
-    
-    # Add known hosts silently
-    touch ~/.ssh/known_hosts
-    chmod 644 ~/.ssh/known_hosts
-    ssh-keyscan -H github.com >> ~/.ssh/known_hosts 2>/dev/null || true
-    ssh-keyscan -H gitlab.com >> ~/.ssh/known_hosts 2>/dev/null || true
-    ssh-keyscan -H bitbucket.org >> ~/.ssh/known_hosts 2>/dev/null || true
-    
-    # Try adding Gitea hosts silently
-    for gitea_host in git.weekendcodeproject.dev gitea 192.168.1.50; do
-      timeout 2 ssh-keyscan -H -p 2222 "$gitea_host" >> ~/.ssh/known_hosts 2>/dev/null || true
-    done
   EOT
 }
