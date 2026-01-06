@@ -425,35 +425,35 @@ data "coder_parameter" "metadata_blocks" {
 
   # Core metadata blocks (always available)
   option {
-    name  = "cpu"
+    name  = "CPU"
     value = "cpu"
   }
   option {
-    name  = "ram"
+    name  = "RAM"
     value = "ram"
   }
   option {
-    name  = "disk"
+    name  = "Disk"
     value = "disk"
   }
   option {
-    name  = "arch"
+    name  = "Architecture"
     value = "arch"
   }
   option {
-    name  = "validation"
+    name  = "Validation"
     value = "validation"
   }
   option {
-    name  = "load_avg"
+    name  = "Load Average"
     value = "load_avg"
   }
   option {
-    name  = "uptime"
+    name  = "Uptime"
     value = "uptime"
   }
   option {
-    name  = "ssh_port"
+    name  = "SSH Port"
     value = "ssh_port"
   }
 EOF
