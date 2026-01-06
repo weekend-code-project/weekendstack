@@ -7,6 +7,9 @@ terraform {
     docker = {
       source = "kreuzwerker/docker"
     }
+    random = {
+      source = "hashicorp/random"
+    }
   }
 }
 
@@ -17,6 +20,18 @@ data "coder_provisioner" "me" {}
 
 # Docker provider configuration
 provider "docker" {}
+
+# Random provider configuration
+provider "random" {}
+
+# Workspace secret password (for SSH, etc.)
+resource "random_password" "workspace_secret" {
+  length  = 16
+  special = false
+  keepers = {
+    workspace_id = data.coder_workspace.me.id
+  }
+}
 
 # Container image
 data "docker_registry_image" "main" {
