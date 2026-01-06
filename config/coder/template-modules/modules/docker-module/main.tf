@@ -92,7 +92,7 @@ output "metadata_blocks" {
   value = [
     {
       display_name = "Docker Status"
-      script       = "docker info --format '{{.ServerVersion}} ({{.Containers}} containers)' 2>/dev/null || echo 'Not running'"
+      script       = "docker info --format '{{.ServerVersion}} ({{.ContainersRunning}} running)' 2>/dev/null || echo 'Not running'"
       interval     = 30
       timeout      = 2
     }
