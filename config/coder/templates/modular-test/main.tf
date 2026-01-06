@@ -111,14 +111,15 @@ resource "docker_container" "workspace" {
   }
   
   # Dynamic port mappings (added by modules)
-  # dynamic "ports" {
-  #   for_each = []
-  #   content {
-  #     internal = ports.value.internal
-  #     external = ports.value.external
-  #     protocol = "tcp"
-  #   }
-  # }
+  # SSH port mapping (when SSH is enabled)
+  dynamic "ports" {
+    for_each = data.coder_parameter.ssh_enable.value ? [1] : []
+    content {
+      internal = 2222
+      external = tonumber(module.ssh[0].ssh_port)
+      protocol = "tcp"
+    }
+  }
   
   # Dynamic Traefik labels (added by modules)
   # dynamic "labels" {
