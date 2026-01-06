@@ -36,5 +36,5 @@
 docker-params.tf
 ssh-params.tf
 git-params.tf
-traefik-params.tf
 setup-server-params.tf
+traefik-params.tf

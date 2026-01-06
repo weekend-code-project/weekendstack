@@ -46,7 +46,8 @@ resource "docker_image" "main" {
 
 # Base domain configuration
 locals {
-  base_domain = var.base_domain
+  base_domain        = var.base_domain
+  actual_base_domain = var.base_domain
 }
 
 # Collect custom metadata blocks from modules
