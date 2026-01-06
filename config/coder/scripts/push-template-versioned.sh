@@ -471,7 +471,7 @@ EOF
   # From $module_name
   option {
     name  = "$display_name"
-    value = "$display_name"
+    value = "$identifier"
   }
 EOF
     done
