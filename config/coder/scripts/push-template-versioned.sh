@@ -419,7 +419,7 @@ data "coder_parameter" "metadata_blocks" {
   description  = "Select metadata blocks to display in the workspace."
   type         = "list(string)"
   form_type    = "multi-select"
-  default      = jsonencode(["cpu", "ram", "disk", "arch"])
+  default      = jsonencode([])
   mutable      = true
   order        = 50
 
