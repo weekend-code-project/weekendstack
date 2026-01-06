@@ -59,14 +59,12 @@ variable "settings" {
   description = "VS Code settings"
   type        = map(any)
   default = {
-    "editor.tabSize"                           = 2
-    "workbench.colorTheme"                     = "Default Dark+"
-    "editor.fontSize"                          = 18
-    "terminal.integrated.fontSize"             = 18
-    "workbench.startupEditor"                  = "none"
-    "workbench.iconTheme"                      = "let-icons"
-    "terminal.integrated.cwd"                  = "/home/coder/workspace"
-    "terminal.integrated.defaultProfile.linux" = "bash"
+    "editor.tabSize"               = 2
+    "workbench.colorTheme"         = "Default Dark+"
+    "editor.fontSize"              = 18
+    "terminal.integrated.fontSize" = 18
+    "workbench.startupEditor"      = "none"
+    "workbench.iconTheme"          = "let-icons"
   }
 }
 

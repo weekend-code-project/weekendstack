@@ -32,11 +32,21 @@ output "setup_script" {
       # Ensure proper permissions
       chmod 755 ~/workspace
       
+      # Configure shell to start in workspace directory
+      if ! grep -q "cd ~/workspace" ~/.bashrc; then
+        echo "" >> ~/.bashrc
+        echo "# Auto-navigate to workspace directory" >> ~/.bashrc
+        echo "cd ~/workspace 2>/dev/null || true" >> ~/.bashrc
+      fi
+      
       touch ~/.init_done
       echo "[INIT] ✓ Home directory initialized"
     else
       echo "[INIT] Home directory already initialized"
     fi
+    
+    # Always ensure we're in workspace for current session
+    cd ~/workspace 2>/dev/null || true
     
     echo ""  # Line break after module
   EOT

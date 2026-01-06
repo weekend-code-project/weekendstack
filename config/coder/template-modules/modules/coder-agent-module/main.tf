@@ -94,6 +94,11 @@ resource "coder_agent" "main" {
 
   startup_script = var.startup_script
 
+  # Disable VS Code Desktop button (web-based code-server only)
+  display_apps {
+    vscode = false
+  }
+
   # Git identity configuration
   env = merge(
     {
@@ -102,6 +107,7 @@ resource "coder_agent" "main" {
       GIT_COMMITTER_NAME  = var.git_author_name
       GIT_COMMITTER_EMAIL = var.git_author_email
       CODER_ACCESS_URL    = var.coder_access_url
+      CODER_WORKSPACE_DIR = "/home/coder/workspace"
     },
     var.env_vars
   )
