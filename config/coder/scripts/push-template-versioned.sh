@@ -156,30 +156,31 @@ url_encode_ref() {
     echo "${ref//\//%2F}"
 }
 
-# Initialize version file if it doesn't exist
-if [[ ! -f "$VERSION_FILE" ]]; then
-    echo '{}' > "$VERSION_FILE"
-fi
-
-# Get next version number
+# Get next version number from template-specific version file
 get_next_version() {
-    local template="$1"
-    local current_version
-    current_version=$(jq -r --arg t "$template" '.[$t] // 0' "$VERSION_FILE")
+    local template_dir="$1"
+    local version_file="$template_dir/.version"
+    local current_version=0
+    
+    if [[ -f "$version_file" ]]; then
+        current_version=$(cat "$version_file")
+    fi
+    
     echo $((current_version + 1))
 }
 
-# Save version number
+# Save version number to template-specific version file
 save_version() {
-    local template="$1"
+    local template_dir="$1"
     local version="$2"
-    local temp_file="${VERSION_FILE}.tmp"
-    jq --arg t "$template" --argjson v "$version" '.[$t] = $v' "$VERSION_FILE" > "$temp_file"
-    mv "$temp_file" "$VERSION_FILE"
+    local version_file="$template_dir/.version"
+    
+    echo "$version" > "$version_file"
+    log "📝 Saved version $version to $version_file"
 }
 
 # Determine next available version name by checking both local counter and remote versions
-VERSION_NUM=$(get_next_version "$TEMPLATE_NAME")
+VERSION_NUM=$(get_next_version "$TEMPLATE_DIR")
 
 # Query remote existing versions and find max; if remote has higher/equal, bump
 if docker exec coder coder templates versions list "$TEMPLATE_NAME" >/tmp/_versions.txt 2>/dev/null; then
@@ -220,9 +221,17 @@ mkdir -p "$TEMP_DIR"
 cp -r "$TEMPLATE_DIR" "$TEMP_DIR/$TEMPLATE_NAME"
 
 # Overlay shared params (do not override if file already exists in template)
+# SKIP overlay if modules.txt exists (new declarative system)
 overlay_shared_params() {
     local shared_dir="$1"
     local dest_dir="$2"
+    
+    # Skip overlay if template uses new modules.txt system
+    if [[ -f "$dest_dir/modules.txt" ]]; then
+        log "📋 modules.txt found - using declarative module system (skipping overlay)"
+        return 0
+    fi
+    
     if [[ ! -d "$shared_dir" ]]; then
         log_warn "Shared params dir not found: $shared_dir (skipping overlay)"
         return 0
@@ -389,7 +398,7 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
         --yes 2>&1 | tee /tmp/push-output.txt; then
         
         log "✅ Successfully pushed $TEMPLATE_NAME ($VERSION_NAME)"
-        save_version "$TEMPLATE_NAME" "$VERSION_NUM"
+        save_version "$TEMPLATE_DIR" "$VERSION_NUM"
         
     # Cleanup
         rm -rf "$TEMP_DIR"

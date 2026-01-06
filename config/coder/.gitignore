@@ -1,0 +1,5 @@
+# Template versioning files (managed by push script)
+**/.version
+
+# Legacy version tracking
+.template_versions.json

@@ -1,0 +1,34 @@
+# =============================================================================
+# MODULES.TXT - Declarative Module List
+# =============================================================================
+# This file declares which parameter modules to include in the template.
+# Modules are loaded in the order listed here (top to bottom = execution order).
+#
+# FORMAT:
+#   - One module filename per line (e.g., docker-params.tf)
+#   - Lines starting with # are comments
+#   - Blank lines are ignored
+#   - Inline comments are stripped (everything after # on same line)
+#
+# SOURCE AUTO-DETECTION:
+#   - Script checks template directory first (local override)
+#   - Falls back to config/coder/template-modules/params/ (shared)
+#   - Errors if module not found in either location
+#
+# STARTUP SCRIPT INJECTION:
+#   - Each module's script output is automatically injected into agent-params.tf
+#   - Injection happens at the "# INJECT_MODULES_HERE" marker
+#   - Script outputs follow naming convention: {module_name}_script
+#
+# EXAMPLE MODULES (uncomment to enable):
+# docker-params.tf          # Docker-in-Docker support
+# metadata-params.tf        # Resource monitoring blocks (CPU, RAM, disk)
+# ssh-params.tf             # SSH server configuration
+# git-params.tf             # Git integration and repository cloning
+# traefik-params.tf         # Traefik routing and authentication
+# setup-server-params.tf    # Development server startup
+#
+# =============================================================================
+
+# Currently empty - baseline template with only core modules (init_shell, code_server)
+# Add modules one at a time to test functionality and observe for UI flickering
