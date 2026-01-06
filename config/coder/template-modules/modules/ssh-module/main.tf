@@ -101,8 +101,8 @@ CFG
       if ! grep -q 'Auto-cd to workspace on SSH login' ~/.bashrc 2>/dev/null; then
         cat >> ~/.bashrc <<'BRC'
 # Auto-cd to workspace on SSH login
-if [ -n "$SSH_CONNECTION" ] && [ -d "$HOME/workspace" ] && [ "$PWD" = "$HOME" ]; then
-  cd "$HOME/workspace"
+if [ -n "$SSH_CONNECTION" ] && [ -d "$HOME/workspace" ]; then
+  cd "$HOME/workspace" 2>/dev/null || true
 fi
 BRC
       fi
@@ -110,9 +110,7 @@ BRC
       sudo tee /etc/profile.d/10-cd-workspace.sh >/dev/null <<'PROF'
 # Auto-cd to workspace on SSH login (login shell)
 if [ -n "$SSH_CONNECTION" ] && [ -d "$HOME/workspace" ]; then
-  if [ "$PWD" = "$HOME" ]; then
-    cd "$HOME/workspace"
-  fi
+  cd "$HOME/workspace" 2>/dev/null || true
 fi
 PROF
 

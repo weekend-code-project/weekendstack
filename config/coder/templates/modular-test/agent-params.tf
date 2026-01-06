@@ -27,10 +27,10 @@ module "agent" {
   git_author_email = data.coder_workspace_owner.me.email
   coder_access_url = data.coder_workspace.me.access_url
   
+  metadata_blocks = module.metadata.metadata_blocks
+  
   env_vars = {
     WORKSPACE_NAME  = data.coder_workspace.me.name
     WORKSPACE_OWNER = data.coder_workspace_owner.me.name
   }
-  
-  metadata_blocks = []
 }

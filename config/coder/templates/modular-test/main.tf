@@ -49,6 +49,22 @@ locals {
   base_domain = var.base_domain
 }
 
+# Collect custom metadata blocks from modules
+locals {
+  all_custom_metadata = concat(
+    try(module.docker[0].metadata_blocks, []),
+    try(module.ssh.metadata_blocks, [])
+  )
+}
+
+# Metadata module
+module "metadata" {
+  source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/metadata-module?ref=PLACEHOLDER"
+  
+  enabled_blocks = data.coder_parameter.metadata_blocks.value != "" ? jsondecode(data.coder_parameter.metadata_blocks.value) : []
+  custom_blocks  = local.all_custom_metadata
+}
+
 # Core modules (always loaded, no conditional count)
 module "init_shell" {
   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/init-shell-module?ref=PLACEHOLDER"
