@@ -17,6 +17,8 @@ module "agent" {
   startup_script = join("\n", [
     module.init_shell.setup_script,
     # INJECT_MODULES_HERE
+    try(module.docker[0].docker_setup_script, "# Docker disabled"),
+    try(module.docker[0].docker_test_script, ""),
   ])
   
   git_author_name  = coalesce(data.coder_workspace_owner.me.full_name, data.coder_workspace_owner.me.name)

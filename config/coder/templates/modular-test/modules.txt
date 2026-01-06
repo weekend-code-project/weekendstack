@@ -32,3 +32,5 @@
 
 # Currently empty - baseline template with only core modules (init_shell, code_server)
 # Add modules one at a time to test functionality and observe for UI flickering
+
+docker-params.tf

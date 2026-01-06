@@ -63,6 +63,9 @@ resource "docker_container" "workspace" {
   # Use the docker gateway if the access URL is 127.0.0.1
   entrypoint = ["sh", "-c", replace(module.agent.agent_init_script, "/localhost|127\\.0\\.0\\.1/", "host.docker.internal")]
   
+  # Enable privileged mode for Docker-in-Docker
+  privileged = true
+  
   env = [
     "CODER_AGENT_TOKEN=${module.agent.agent_token}",
   ]
