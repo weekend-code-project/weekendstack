@@ -1,5 +1,3 @@
-# Template versioning files (managed by push script)
-**/.version
-
-# Legacy version tracking
+# Legacy version tracking (deprecated - now using modules.txt VERSION line)
 .template_versions.json
+**/.version

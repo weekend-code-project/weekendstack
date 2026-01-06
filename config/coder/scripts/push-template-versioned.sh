@@ -156,27 +156,34 @@ url_encode_ref() {
     echo "${ref//\//%2F}"
 }
 
-# Get next version number from template-specific version file
+# Get next version number from modules.txt VERSION line
 get_next_version() {
     local template_dir="$1"
-    local version_file="$template_dir/.version"
+    local modules_file="$template_dir/modules.txt"
     local current_version=0
     
-    if [[ -f "$version_file" ]]; then
-        current_version=$(cat "$version_file")
+    if [[ -f "$modules_file" ]]; then
+        # Extract version from "# VERSION: X" line
+        current_version=$(grep -E "^# VERSION:" "$modules_file" | sed -E 's/^# VERSION:\s*//')
+        current_version=${current_version:-0}
     fi
     
     echo $((current_version + 1))
 }
 
-# Save version number to template-specific version file
+# Save version number to modules.txt VERSION line
 save_version() {
     local template_dir="$1"
     local version="$2"
-    local version_file="$template_dir/.version"
+    local modules_file="$template_dir/modules.txt"
     
-    echo "$version" > "$version_file"
-    log "📝 Saved version $version to $version_file"
+    if [[ -f "$modules_file" ]]; then
+        # Update VERSION line in modules.txt
+        sed -i "s/^# VERSION:.*$/# VERSION: $version/" "$modules_file"
+        log "📝 Saved version $version to $modules_file"
+    else
+        log_warn "No modules.txt found, version not saved"
+    fi
 }
 
 # Determine next available version name by checking both local counter and remote versions
@@ -252,6 +259,54 @@ overlay_shared_params() {
 }
 
 overlay_shared_params "$SHARED_PARAMS_DIR" "$TEMP_DIR/$TEMPLATE_NAME"
+
+# Copy modules from modules.txt (new declarative system)
+copy_modules_from_manifest() {
+    local template_dir="$1"
+    local dest_dir="$2"
+    local modules_file="$template_dir/modules.txt"
+    
+    if [[ ! -f "$modules_file" ]]; then
+        return 0
+    fi
+    
+    log "📋 Processing modules from modules.txt..."
+    local count=0
+    
+    # Read modules.txt and process each module line
+    while IFS= read -r line; do
+        # Skip comments and empty lines
+        [[ "$line" =~ ^[[:space:]]*# ]] && continue
+        [[ -z "${line// }" ]] && continue
+        
+        # Strip inline comments and whitespace
+        local module_file
+        module_file=$(echo "$line" | sed 's/#.*//' | xargs)
+        [[ -z "$module_file" ]] && continue
+        
+        # Check if module already exists in template dir (local override)
+        if [[ -f "$template_dir/$module_file" ]]; then
+            log "  ✓ Using local override: $module_file"
+            count=$((count+1))
+            continue
+        fi
+        
+        # Copy from shared params directory
+        local shared_module="$SHARED_PARAMS_DIR/$module_file"
+        if [[ -f "$shared_module" ]]; then
+            cp "$shared_module" "$dest_dir/$module_file"
+            log "  ✓ Copied from shared: $module_file"
+            count=$((count+1))
+        else
+            log_error "Module not found: $module_file (not in template or shared params)"
+            exit 1
+        fi
+    done < "$modules_file"
+    
+    log "📦 Modules copied: $count module(s) from modules.txt"
+}
+
+copy_modules_from_manifest "$TEMPLATE_DIR" "$TEMP_DIR/$TEMPLATE_NAME"
 
 # Substitute ref in temp .tf files for this repository's git module sources
 substitute_ref_in_temp() {

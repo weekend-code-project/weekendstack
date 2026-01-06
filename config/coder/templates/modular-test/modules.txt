@@ -1,10 +1,13 @@
 # =============================================================================
 # MODULES.TXT - Declarative Module List
 # =============================================================================
+# VERSION: 8
+#
 # This file declares which parameter modules to include in the template.
 # Modules are loaded in the order listed here (top to bottom = execution order).
 #
 # FORMAT:
+#   - VERSION: X on line 4 (incremented on each push)
 #   - One module filename per line (e.g., docker-params.tf)
 #   - Lines starting with # are comments
 #   - Blank lines are ignored
@@ -21,7 +24,6 @@
 #   - Script outputs follow naming convention: {module_name}_script
 #
 # EXAMPLE MODULES (uncomment to enable):
-# docker-params.tf          # Docker-in-Docker support
 # metadata-params.tf        # Resource monitoring blocks (CPU, RAM, disk)
 # ssh-params.tf             # SSH server configuration
 # git-params.tf             # Git integration and repository cloning
@@ -30,7 +32,5 @@
 #
 # =============================================================================
 
-# Currently empty - baseline template with only core modules (init_shell, code_server)
-# Add modules one at a time to test functionality and observe for UI flickering
-
+# Modules (one per line)
 docker-params.tf
