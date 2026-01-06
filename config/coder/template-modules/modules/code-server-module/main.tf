@@ -6,9 +6,10 @@
 #   Uses the official Coder registry module for code-server.
 #
 # ARCHITECTURE:
-#   - Provides "VS Code" button in Coder UI
-#   - Opens to specified folder (default: /home/coder/workspace)
+#   - Provides "VS Code" button in Coder UI (opens to workspace folder)
+#   - Terminal always starts in workspace folder (not home directory)
 #   - Customizable settings and extensions
+#   - Does NOT include VS Code Desktop button (web-based only)
 #
 # DEPENDENCIES:
 #   - coder_agent (agent must be created first)
@@ -58,12 +59,14 @@ variable "settings" {
   description = "VS Code settings"
   type        = map(any)
   default = {
-    "editor.tabSize"               = 2
-    "workbench.colorTheme"         = "Default Dark+"
-    "editor.fontSize"              = 18
-    "terminal.integrated.fontSize" = 18
-    "workbench.startupEditor"      = "none"
-    "workbench.iconTheme"          = "let-icons"
+    "editor.tabSize"                           = 2
+    "workbench.colorTheme"                     = "Default Dark+"
+    "editor.fontSize"                          = 18
+    "terminal.integrated.fontSize"             = 18
+    "workbench.startupEditor"                  = "none"
+    "workbench.iconTheme"                      = "let-icons"
+    "terminal.integrated.cwd"                  = "/home/coder/workspace"
+    "terminal.integrated.defaultProfile.linux" = "bash"
   }
 }
 

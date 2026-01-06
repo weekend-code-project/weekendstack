@@ -44,7 +44,7 @@ module "code_server" {
   
   agent_id              = module.agent.agent_id
   workspace_start_count = data.coder_workspace.me.start_count
-  folder                = "/home/coder"
+  folder                = "/home/coder/workspace"
 }
 
 # Workspace container
