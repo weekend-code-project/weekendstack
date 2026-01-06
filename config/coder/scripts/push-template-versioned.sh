@@ -160,12 +160,19 @@ url_encode_ref() {
 get_next_version() {
     local template_dir="$1"
     local modules_file="$template_dir/modules.txt"
-    local current_version=0
     
-    if [[ -f "$modules_file" ]]; then
-        # Extract version from "# VERSION: X" line
-        current_version=$(grep -E "^# VERSION:" "$modules_file" | sed -E 's/^# VERSION:\s*//')
-        current_version=${current_version:-0}
+    if [[ ! -f "$modules_file" ]]; then
+        echo "1"
+        return
+    fi
+    
+    # Extract version from "# VERSION: X" line
+    local current_version=$(grep -E "^# VERSION:" "$modules_file" | sed -E 's/^# VERSION:\s*//' | tr -d '[:space:]')
+    
+    # Default to 0 if VERSION line is missing or empty
+    if [[ -z "$current_version" ]]; then
+        echo "1"
+        return
     fi
     
     echo $((current_version + 1))
@@ -178,8 +185,14 @@ save_version() {
     local modules_file="$template_dir/modules.txt"
     
     if [[ -f "$modules_file" ]]; then
-        # Update VERSION line in modules.txt
-        sed -i "s/^# VERSION:.*$/# VERSION: $version/" "$modules_file"
+        # Check if VERSION line exists
+        if grep -q "^# VERSION:" "$modules_file"; then
+            # Update existing VERSION line
+            sed -i "s/^# VERSION:.*$/# VERSION: $version/" "$modules_file"
+        else
+            # Add VERSION line after first comment block (line 4)
+            sed -i "4i# VERSION: $version" "$modules_file"
+        fi
         log "📝 Saved version $version to $modules_file"
     else
         log_warn "No modules.txt found, version not saved"
