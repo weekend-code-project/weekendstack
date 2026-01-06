@@ -119,11 +119,14 @@ resource "docker_container" "workspace" {
     read_only      = true
   }
   
-  # Mount Traefik auth directory
-  volumes {
-    container_path = "/traefik-auth"
-    host_path      = "/opt/stacks/weekendstack/config/traefik/auth"
-    read_only      = false
+  # Mount Traefik auth directory (conditionally when password is set)
+  dynamic "volumes" {
+    for_each = try(data.coder_parameter.workspace_secret.value, "") != "" ? [1] : []
+    content {
+      container_path = "/traefik-auth"
+      host_path      = var.traefik_auth_dir
+      read_only      = false
+    }
   }
   
   # Dynamic port mappings (added by modules)
@@ -137,14 +140,24 @@ resource "docker_container" "workspace" {
     }
   }
   
-  # Dynamic Traefik labels (added by modules)
-  # dynamic "labels" {
-  #   for_each = {}
-  #   content {
-  #     label = labels.key
-  #     value = labels.value
-  #   }
-  # }
+  # Server port mappings (when server is configured)
+  dynamic "ports" {
+    for_each = try(module.setup_server[0].docker_ports, [])
+    content {
+      internal = ports.value.internal
+      external = ports.value.external
+      protocol = "tcp"
+    }
+  }
+  
+  # Dynamic Traefik labels
+  dynamic "labels" {
+    for_each = try(module.traefik[0].traefik_labels, {})
+    content {
+      label = labels.key
+      value = labels.value
+    }
+  }
 }
 
 # Home volume
