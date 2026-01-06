@@ -1,7 +1,7 @@
 # =============================================================================
 # MODULES.TXT - Declarative Module List
 # =============================================================================
-# VERSION: 8
+# VERSION: 12
 #
 # This file declares which parameter modules to include in the template.
 # Modules are loaded in the order listed here (top to bottom = execution order).
