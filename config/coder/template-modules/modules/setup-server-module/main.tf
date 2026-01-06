@@ -396,7 +396,7 @@ output "metadata_blocks" {
   description = "Metadata blocks contributed by this module"
   value = [
     {
-      display_name = "Server Port${local.num_ports > 1 ? "s" : ""}"
+      display_name = "Server Ports"
       script       = "echo ${local.port_display}"
       interval     = 60
       timeout      = 1
