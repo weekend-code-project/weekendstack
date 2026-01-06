@@ -1,7 +1,7 @@
 # =============================================================================
 # MODULES.TXT - Declarative Module List
 # =============================================================================
-# VERSION: 12
+# VERSION: 13
 #
 # This file declares which parameter modules to include in the template.
 # Modules are loaded in the order listed here (top to bottom = execution order).
@@ -35,3 +35,4 @@
 # Modules (one per line)
 docker-params.tf
 ssh-params.tf
+git-params.tf

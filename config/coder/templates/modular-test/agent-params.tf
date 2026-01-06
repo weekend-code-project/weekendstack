@@ -17,6 +17,10 @@ module "agent" {
   startup_script = join("\n", [
     module.init_shell.setup_script,
     # INJECT_MODULES_HERE
+    module.git_identity.setup_script,
+    try(module.git_integration[0].clone_script, ""),
+    try(module.github_cli[0].install_script, ""),
+    try(module.gitea_cli[0].install_script, ""),
     try(module.docker[0].docker_setup_script, "# Docker disabled"),
     try(module.docker[0].docker_test_script, ""),
     try(module.ssh[0].ssh_copy_script, ""),
