@@ -91,6 +91,7 @@ variable "metadata_blocks" {
 resource "coder_agent" "main" {
   arch = var.arch
   os   = var.os
+  dir  = "/home/coder/workspace"
 
   startup_script = var.startup_script
 
