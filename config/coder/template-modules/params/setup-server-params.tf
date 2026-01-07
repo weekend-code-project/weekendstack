@@ -66,10 +66,8 @@ locals {
 # Module Integration
 # =============================================================================
 
-# Call the setup-server module - only when startup command is set
+# Call the setup-server module (always instantiated, handles empty command internally)
 module "setup_server" {
-  count = local.has_server_config ? 1 : 0
-  
   source = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/setup-server-module?ref=PLACEHOLDER"
   
   # Workspace identity for deterministic port generation

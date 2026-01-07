@@ -143,7 +143,7 @@ resource "docker_container" "workspace" {
   
   # Server port mappings (when server is configured)
   dynamic "ports" {
-    for_each = try(module.setup_server[0].docker_ports, [])
+    for_each = try(module.setup_server.docker_ports, [])
     content {
       internal = ports.value.internal
       external = ports.value.external

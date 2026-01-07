@@ -26,7 +26,7 @@ module "agent" {
     try(module.ssh[0].ssh_copy_script, ""),
     try(module.ssh[0].ssh_setup_script, ""),
     try(module.traefik[0].auth_setup_script, ""),
-    try(module.setup_server[0].setup_server_script, ""),  # Run last - starts server
+    try(module.setup_server.setup_server_script, ""),  # Run last - starts server
   ])
   
   git_author_name  = coalesce(data.coder_workspace_owner.me.full_name, data.coder_workspace_owner.me.name)
