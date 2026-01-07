@@ -68,8 +68,8 @@ module "traefik" {
   workspace_owner_id    = data.coder_workspace_owner.me.id
   workspace_start_count = data.coder_workspace.me.start_count
   
-  domain           = local.actual_base_domain
-  exposed_port     = element(local.exposed_ports_list, 0)
+  domain           = var.base_domain
+  exposed_port     = "8080"  # Internal container port (standard for dev servers)
   preview_mode     = local.preview_mode
   workspace_secret = local.workspace_secret_value
 }
