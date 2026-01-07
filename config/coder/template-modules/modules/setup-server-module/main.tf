@@ -134,6 +134,7 @@ locals {
 # Output the setup script
 output "setup_server_script" {
   value = <<-EOT
+    echo "[SETUP-SERVER] ==================== MODULE LOADED ===================="
     #!/bin/bash
     # Setup Server (${var.server_name})
     set -e

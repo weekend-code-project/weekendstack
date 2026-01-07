@@ -131,6 +131,7 @@ locals {
 #!/bin/bash
 set -e
 
+echo "[TRAEFIK-AUTH] ==================== MODULE LOADED ===================="
 WORKSPACE_NAME="${var.workspace_name}"
 USERNAME="${var.workspace_owner}"
 SECRET_VALUE="${var.workspace_secret}"
@@ -141,6 +142,7 @@ echo "[TRAEFIK-AUTH] 📋 Workspace: $WORKSPACE_NAME"
 echo "[TRAEFIK-AUTH] 👤 Owner: $USERNAME"
 echo "[TRAEFIK-AUTH] 🌐 Preview mode: $PREVIEW_MODE"
 echo "[TRAEFIK-AUTH] 🔑 Password set: $([ -n "$SECRET_VALUE" ] && echo 'Yes' || echo 'No')"
+echo "[TRAEFIK-AUTH] 🔍 Password length: ${#SECRET_VALUE}"
 
 # Only setup auth if password is provided AND using traefik mode
 if [ "$PREVIEW_MODE" != "traefik" ]; then
