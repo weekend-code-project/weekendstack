@@ -330,7 +330,7 @@ HTML
     STARTUP_CMD="${var.startup_command}"
     if [ -n "$STARTUP_CMD" ] && [ "$STARTUP_CMD" != "" ]; then
       # Create wrapper script for proper background execution
-      cat > /tmp/startup-wrapper.sh << 'WRAPPER_EOF'
+      cat > /tmp/startup-wrapper.sh << WRAPPER_EOF
 #!/bin/bash
 exec $STARTUP_CMD
 WRAPPER_EOF
