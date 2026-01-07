@@ -21,12 +21,12 @@ module "agent" {
     try(module.git_integration[0].clone_script, ""),
     try(module.github_cli[0].install_script, ""),
     try(module.gitea_cli[0].install_script, ""),
-    try(module.traefik[0].auth_setup_script, ""),
-    try(module.setup_server[0].setup_server_script, ""),
     try(module.docker[0].docker_setup_script, "# Docker disabled"),
     try(module.docker[0].docker_test_script, ""),
     try(module.ssh[0].ssh_copy_script, ""),
     try(module.ssh[0].ssh_setup_script, ""),
+    try(module.traefik[0].auth_setup_script, ""),
+    try(module.setup_server[0].setup_server_script, ""),  # Run last - starts server
   ])
   
   git_author_name  = coalesce(data.coder_workspace_owner.me.full_name, data.coder_workspace_owner.me.name)

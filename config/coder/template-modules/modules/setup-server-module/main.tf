@@ -148,14 +148,20 @@ output "setup_server_script" {
 %{endfor~}
     
     # Navigate to workspace directory (should be created by init-shell module)
+    echo "[SETUP-SERVER] 🔧 Starting setup..."
+    echo "[SETUP-SERVER] 📂 Current directory: $(pwd)"
     cd /home/coder/workspace
+    echo "[SETUP-SERVER] 📂 Changed to workspace: $(pwd)"
+    echo "[SETUP-SERVER] 📋 Workspace contents: $(ls -la)"
     
     AUTO_HTML="${var.auto_generate_html}"
+    echo "[SETUP-SERVER] 🎨 HTML generation toggle: $AUTO_HTML"
 
     # Auto-generate HTML if enabled (always regenerate to reflect current settings)
     if [ "$AUTO_HTML" = "true" ]; then
-        # Always rewrite the landing page on startup so restarts stay in sync
+        echo "[SETUP-SERVER] 🗑️  Removing old index.html..."
         rm -f index.html
+        echo "[SETUP-SERVER] ✍️  Generating new index.html..."
         # Use an unquoted heredoc so shell variables like $PORT expand
         cat <<-HTML > index.html
 <!DOCTYPE html>
@@ -299,7 +305,11 @@ ${var.server_restart_command}</code></pre>
 </body>
 </html>
 HTML
-  echo "[SETUP-SERVER] ✓ Generated index.html with current port mappings"
+  echo "[SETUP-SERVER] ✅ Generated index.html with current port mappings"
+  echo "[SETUP-SERVER] 📄 File check: $(ls -lh index.html 2>&1)"
+  echo "[SETUP-SERVER] 📏 File size: $(wc -c < index.html 2>&1) bytes"
+    else
+      echo "[SETUP-SERVER] ⚠️  HTML generation disabled (AUTO_HTML=$AUTO_HTML)"
     fi
     
     # Run pre-server setup if provided
@@ -307,16 +317,17 @@ HTML
     
     # Display port information (always shown)
     NUM_PORTS=${local.num_ports}
-    echo "[SETUP-SERVER] Access: ${local.access_url}"
+    echo "[SETUP-SERVER] 🌐 Access: ${local.access_url}"
+    echo "[SETUP-SERVER] 🔌 Number of ports: $NUM_PORTS"
     if [ "$NUM_PORTS" = "1" ]; then
-      echo "[SETUP-SERVER] Port Mapping:"
+      echo "[SETUP-SERVER] 📊 Port Mapping:"
       echo "┌──────────┬──────────┬──────────┐"
       echo "│ Variable │ Internal │ External │"
       echo "├──────────┼──────────┼──────────┤"
       printf "│ %-8s │ %-8s │ %-8s │\n" "\$PORT" "${element(var.exposed_ports_list, 0)}" "${local.primary_external_port}"
       echo "└──────────┴──────────┴──────────┘"
     else
-      echo "[SETUP-SERVER] Port Mappings:"
+      echo "[SETUP-SERVER] 📊 Port Mappings:"
       echo "┌──────────┬──────────┬──────────┐"
       echo "│ Variable │ Internal │ External │"
       echo "├──────────┼──────────┼──────────┤"
@@ -328,35 +339,55 @@ HTML
     
     # Check if custom startup command is provided
     STARTUP_CMD="${var.startup_command}"
+    echo "[SETUP-SERVER] 🚀 Startup command: $STARTUP_CMD"
     if [ -n "$STARTUP_CMD" ] && [ "$STARTUP_CMD" != "" ]; then
+      echo "[SETUP-SERVER] 📝 Creating wrapper script..."
       # Create wrapper script for proper background execution
       cat > /tmp/startup-wrapper.sh << WRAPPER_EOF
 #!/bin/bash
 exec $STARTUP_CMD
 WRAPPER_EOF
       chmod +x /tmp/startup-wrapper.sh
+      echo "[SETUP-SERVER] 🔧 Wrapper script created at /tmp/startup-wrapper.sh"
+      echo "[SETUP-SERVER] 📜 Wrapper contents: $(cat /tmp/startup-wrapper.sh)"
       
       # Run wrapper script with nohup for process persistence
+      echo "[SETUP-SERVER] 🏃 Starting server in background..."
       nohup /tmp/startup-wrapper.sh > /tmp/custom-server.log 2>&1 &
       echo $! > /tmp/custom-server.pid
+      echo "[SETUP-SERVER] 💤 Waiting 3 seconds for server to start..."
       sleep 3
       if ps -p $(cat /tmp/custom-server.pid) >/dev/null 2>&1; then
-        echo "[SETUP-SERVER] ✓ Custom command: $STARTUP_CMD (PID: $(cat /tmp/custom-server.pid))"
+        echo "[SETUP-SERVER] ✅ Custom command: $STARTUP_CMD (PID: $(cat /tmp/custom-server.pid))"
+        echo "[SETUP-SERVER] 📋 Server log preview:"
+        head -20 /tmp/custom-server.log 2>&1 | sed 's/^/[SETUP-SERVER]   /'
       else
-        echo "[SETUP-SERVER] ✗ Custom command failed - check: tail /tmp/custom-server.log"
+        echo "[SETUP-SERVER] ❌ Custom command failed - check: tail /tmp/custom-server.log"
+        echo "[SETUP-SERVER] 📋 Error log:"
+        tail -20 /tmp/custom-server.log 2>&1 | sed 's/^/[SETUP-SERVER]   /'
       fi
     elif [ "$AUTO_HTML" = "true" ]; then
+      echo "[SETUP-SERVER] 🏃 Starting default server: ${var.default_server_command}"
       # Start default server in background
       nohup bash -c "${var.default_server_command}" > ${var.server_log_file} 2>&1 &
       echo $! > ${var.server_pid_file}
+      echo "[SETUP-SERVER] 💤 Waiting 2 seconds for server to start..."
       sleep 2
       if ps -p $(cat ${var.server_pid_file}) >/dev/null 2>&1; then
-        echo "[SETUP-SERVER] ✓ ${var.server_name} running on port $PORT (PID: $(cat ${var.server_pid_file}))"
+        echo "[SETUP-SERVER] ✅ ${var.server_name} running on port $PORT (PID: $(cat ${var.server_pid_file}))"
       else
-        echo "[SETUP-SERVER] ✗ ${var.server_name} failed to start - check: tail ${var.server_log_file}"
+        echo "[SETUP-SERVER] ❌ ${var.server_name} failed to start - check: tail ${var.server_log_file}"
+        echo "[SETUP-SERVER] 📋 Error log:"
+        tail -20 ${var.server_log_file} 2>&1 | sed 's/^/[SETUP-SERVER]   /'
       fi
+    else
+      echo "[SETUP-SERVER] ⚠️  No server command configured"
     fi
     
+    echo ""
+    echo "[SETUP-SERVER] 🏁 Setup complete!"
+    echo "[SETUP-SERVER] 📂 Workspace directory contents:"
+    ls -lah /home/coder/workspace | sed 's/^/[SETUP-SERVER]   /'
     echo ""  # Line break after module
 
   EOT

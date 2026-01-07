@@ -136,35 +136,54 @@ USERNAME="${var.workspace_owner}"
 SECRET_VALUE="${var.workspace_secret}"
 PREVIEW_MODE="${var.preview_mode}"
 
+echo "[TRAEFIK-AUTH] 🔧 Starting Traefik authentication setup..."
+echo "[TRAEFIK-AUTH] 📋 Workspace: $WORKSPACE_NAME"
+echo "[TRAEFIK-AUTH] 👤 Owner: $USERNAME"
+echo "[TRAEFIK-AUTH] 🌐 Preview mode: $PREVIEW_MODE"
+echo "[TRAEFIK-AUTH] 🔑 Password set: $([ -n "$SECRET_VALUE" ] && echo 'Yes' || echo 'No')"
+
 # Only setup auth if password is provided AND using traefik mode
 if [ "$PREVIEW_MODE" != "traefik" ]; then
+  echo "[TRAEFIK-AUTH] ⚠️  Skipping auth setup (preview mode is not 'traefik')"
   exit 0
 fi
 
 if [ -z "$SECRET_VALUE" ]; then
+  echo "[TRAEFIK-AUTH] ⚠️  Skipping auth setup (no password configured)"
   exit 0
 fi
 
 # Check if traefik-auth directory is mounted
+echo "[TRAEFIK-AUTH] 📂 Checking /traefik-auth directory..."
 if [ ! -d "/traefik-auth" ]; then
-  echo "[TRAEFIK-AUTH] ✗ /traefik-auth directory not mounted"
+  echo "[TRAEFIK-AUTH] ❌ /traefik-auth directory not mounted"
   exit 1
 fi
+echo "[TRAEFIK-AUTH] ✅ /traefik-auth directory found"
 
 # Install htpasswd if not available
+echo "[TRAEFIK-AUTH] 🔍 Checking for htpasswd..."
 if ! command -v htpasswd >/dev/null 2>&1; then
+  echo "[TRAEFIK-AUTH] 📦 Installing apache2-utils..."
   sudo apt-get update -qq >/dev/null 2>&1
   sudo apt-get install -y -qq apache2-utils >/dev/null 2>&1
+  echo "[TRAEFIK-AUTH] ✅ apache2-utils installed"
+else
+  echo "[TRAEFIK-AUTH] ✅ htpasswd already available"
 fi
 
 # Set permissions
+echo "[TRAEFIK-AUTH] 🔐 Setting permissions on /traefik-auth..."
 sudo chown -R coder:coder /traefik-auth 2>/dev/null || true
 
 # Generate htpasswd file
+echo "[TRAEFIK-AUTH] 🔒 Generating password hash..."
 htpasswd -nbB "$USERNAME" "$SECRET_VALUE" | sudo tee "/traefik-auth/hashed_password-$WORKSPACE_NAME" >/dev/null
 sudo chmod 600 "/traefik-auth/hashed_password-$WORKSPACE_NAME"
+echo "[TRAEFIK-AUTH] ✅ Password file created: /traefik-auth/hashed_password-$WORKSPACE_NAME"
 
 # Create dynamic Traefik config
+echo "[TRAEFIK-AUTH] 📝 Creating dynamic Traefik configuration..."
 sudo tee "/traefik-auth/dynamic-$WORKSPACE_NAME.yaml" >/dev/null <<EOF
 http:
   middlewares:
@@ -173,11 +192,12 @@ http:
         realm: "$USERNAME-$WORKSPACE_NAME-workspace"
         usersFile: "/traefik-auth/hashed_password-$WORKSPACE_NAME"
 EOF
+echo "[TRAEFIK-AUTH] ✅ Dynamic config created: /traefik-auth/dynamic-$WORKSPACE_NAME.yaml"
 
 # Display auth info
 echo ""
-echo "[TRAEFIK-AUTH] ✓ Password protection enabled"
-echo "[TRAEFIK-AUTH] URL: https://${lower(var.workspace_name)}.${var.domain}"
+echo "[TRAEFIK-AUTH] ✅ Password protection enabled"
+echo "[TRAEFIK-AUTH] 🌐 URL: https://${lower(var.workspace_name)}.${var.domain}"
 echo "[TRAEFIK-AUTH] Username: $USERNAME"
 echo "[TRAEFIK-AUTH] Password: $SECRET_VALUE"
 echo ""
