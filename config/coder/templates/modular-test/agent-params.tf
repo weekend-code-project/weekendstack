@@ -25,8 +25,11 @@ module "agent" {
     try(module.docker[0].docker_test_script, ""),
     try(module.ssh[0].ssh_copy_script, ""),
     try(module.ssh[0].ssh_setup_script, ""),
+    "echo '[AGENT] About to run traefik auth script...'",
     try(module.traefik[0].auth_setup_script, ""),
-    try(module.setup_server.setup_server_script, ""),  # Run last - starts server
+    "echo '[AGENT] About to run setup-server script...'",
+    "echo '[AGENT] Setup server module exists: ${try(module.setup_server.setup_server_script != "", "YES", "NO")}'",
+    try(module.setup_server.setup_server_script, "echo '[AGENT] ERROR: setup_server script is empty'"),  # Run last - starts server
   ])
   
   git_author_name  = coalesce(data.coder_workspace_owner.me.full_name, data.coder_workspace_owner.me.name)
