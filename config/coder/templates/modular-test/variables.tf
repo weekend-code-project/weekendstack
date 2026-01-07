@@ -13,5 +13,5 @@ variable "host_ip" {
 variable "traefik_auth_dir" {
   type        = string
   description = "Directory path for Traefik authentication files"
-  default     = "/tmp/traefik-auth"
+  default     = "/opt/stacks/weekendstack/config/traefik/auth"
 }
