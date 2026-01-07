@@ -151,19 +151,45 @@ resource "docker_container" "workspace" {
     }
   }
   
-  # Traefik labels (dynamic)
-  dynamic "labels" {
-    for_each = try(module.traefik[0].traefik_labels, {})
-    content {
-      label = labels.key
-      value = labels.value
-    }
+  # Traefik labels (static for testing)
+  labels {
+    label = "traefik.enable"
+    value = "true"
   }
   
-  # Static test label
   labels {
-    label = "test.label"
-    value = "test-value"
+    label = "traefik.docker.network"
+    value = "coder-network"
+  }
+  
+  labels {
+    label = "traefik.http.routers.${lower(data.coder_workspace.me.name)}.rule"
+    value = "Host(`${lower(data.coder_workspace.me.name)}.${var.base_domain}`)"
+  }
+  
+  labels {
+    label = "traefik.http.routers.${lower(data.coder_workspace.me.name)}.entrypoints"
+    value = "websecure"
+  }
+  
+  labels {
+    label = "traefik.http.routers.${lower(data.coder_workspace.me.name)}.tls"
+    value = "true"
+  }
+  
+  labels {
+    label = "traefik.http.services.${lower(data.coder_workspace.me.name)}.loadbalancer.server.port"
+    value = "8080"
+  }
+  
+  labels {
+    label = "traefik.http.routers.${lower(data.coder_workspace.me.name)}.middlewares"
+    value = "${lower(data.coder_workspace.me.name)}-auth"
+  }
+  
+  labels {
+    label = "traefik.http.middlewares.${lower(data.coder_workspace.me.name)}-auth.basicauth.usersfile"
+    value = "/traefik-auth/hashed_password-${data.coder_workspace.me.name}"
   }
 }
 
