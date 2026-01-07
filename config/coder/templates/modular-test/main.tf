@@ -102,6 +102,9 @@ resource "docker_container" "workspace" {
     "CODER_AGENT_TOKEN=${module.agent.agent_token}",
   ]
   
+  # Traefik labels (applied as a map)
+  labels = try(module.traefik[0].traefik_labels, {})
+  
   host {
     host = "host.docker.internal"
     ip   = "host-gateway"
@@ -148,15 +151,6 @@ resource "docker_container" "workspace" {
       internal = ports.value.internal
       external = ports.value.external
       protocol = "tcp"
-    }
-  }
-  
-  # Dynamic Traefik labels
-  dynamic "labels" {
-    for_each = try(module.traefik[0].traefik_labels, {})
-    content {
-      label = labels.key
-      value = labels.value
     }
   }
 }
