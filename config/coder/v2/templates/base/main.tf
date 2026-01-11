@@ -271,7 +271,6 @@ module "traefik_routing" {
   preview_port             = local.preview_port
   external_preview_enabled = local.external_preview_enabled
   workspace_password       = local.workspace_password
-  traefik_auth_dir         = var.traefik_auth_dir
 }
 
 # =============================================================================
@@ -558,12 +557,6 @@ resource "docker_container" "workspace" {
   volumes {
     volume_name    = docker_volume.home.name
     container_path = "/home/coder"
-  }
-  
-  # Traefik auth directory (for password files)
-  volumes {
-    host_path      = var.traefik_auth_dir
-    container_path = "/traefik-auth"
   }
   
   # Basic environment

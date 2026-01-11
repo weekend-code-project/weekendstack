@@ -73,12 +73,6 @@ variable "workspace_password" {
   sensitive   = true
 }
 
-variable "traefik_auth_dir" {
-  description = "Host directory for Traefik auth files"
-  type        = string
-  default     = "/opt/stacks/traefik/auth"
-}
-
 # =============================================================================
 # Locals
 # =============================================================================
@@ -93,8 +87,13 @@ locals {
   # Auth middleware name
   auth_middleware = "${local.router_name}-auth"
   
-  # Password file path inside Traefik container
-  password_file = "/traefik-auth/htpasswd-${local.router_name}"
+  # Generate bcrypt hash inline using Terraform's bcrypt() function
+  # This eliminates the need for htpasswd file generation
+  password_hash = var.workspace_password != "" ? bcrypt(var.workspace_password) : ""
+  
+  # Format for Traefik basicauth: username:password_hash
+  # Note: $ must be doubled ($$) in Docker labels for Traefik to read correctly
+  auth_user_entry = var.workspace_password != "" ? "${var.workspace_owner}:${replace(local.password_hash, "$", "$$")}" : ""
   
   # ==========================================================================
   # Traefik Labels (only when external preview is enabled)
@@ -126,68 +125,13 @@ locals {
       # Service configuration
       "traefik.http.services.${local.router_name}.loadbalancer.server.port" = var.preview_port
     },
-    # Auth middleware labels (when password is set)
+    # Auth middleware labels (when password is set) - uses inline bcrypt hash
     var.workspace_password != "" ? {
-      "traefik.http.routers.${local.router_name}.middlewares"                 = local.auth_middleware
-      "traefik.http.middlewares.${local.auth_middleware}.basicauth.usersfile" = local.password_file
-      "traefik.http.middlewares.${local.auth_middleware}.basicauth.realm"     = "${var.workspace_owner}-workspace"
+      "traefik.http.routers.${local.router_name}.middlewares"            = local.auth_middleware
+      "traefik.http.middlewares.${local.auth_middleware}.basicauth.users" = local.auth_user_entry
+      "traefik.http.middlewares.${local.auth_middleware}.basicauth.realm" = "${var.workspace_owner}-workspace"
     } : {}
   ) : {}
-}
-
-# =============================================================================
-# Auth Setup Script
-# =============================================================================
-# Generates htpasswd file for basic auth when external preview is enabled
-
-resource "coder_script" "traefik_auth" {
-  count = var.external_preview_enabled && var.workspace_password != "" ? 1 : 0
-  
-  agent_id           = var.agent_id
-  display_name       = "Traefik Auth Setup"
-  icon               = "/icon/lock.svg"
-  run_on_start       = true
-  start_blocks_login = false
-  
-  script = <<-SCRIPT
-    #!/bin/bash
-    
-    WORKSPACE_NAME="${var.workspace_name}"
-    USERNAME="${var.workspace_owner}"
-    PASSWORD="${var.workspace_password}"
-    AUTH_DIR="/traefik-auth"
-    PASSWORD_FILE="$AUTH_DIR/htpasswd-${lower(var.workspace_name)}"
-    
-    echo "============================================================"
-    echo "[TRAEFIK-AUTH] Setting up external preview authentication"
-    echo "============================================================"
-    
-    # Check if auth directory is mounted
-    if [ ! -d "$AUTH_DIR" ]; then
-      echo "[TRAEFIK-AUTH] ERROR: $AUTH_DIR not mounted"
-      exit 1
-    fi
-    echo "[TRAEFIK-AUTH] Auth directory found: $AUTH_DIR"
-    
-    # Install htpasswd if not available
-    if ! command -v htpasswd >/dev/null 2>&1; then
-      echo "[TRAEFIK-AUTH] Installing apache2-utils..."
-      sudo apt-get update -qq >/dev/null 2>&1
-      sudo apt-get install -y -qq apache2-utils >/dev/null 2>&1
-    fi
-    echo "[TRAEFIK-AUTH] htpasswd available"
-    
-    # Generate password hash
-    echo "[TRAEFIK-AUTH] Generating password file..."
-    htpasswd -nbB "$USERNAME" "$PASSWORD" | sudo tee "$PASSWORD_FILE" >/dev/null
-    sudo chmod 644 "$PASSWORD_FILE"
-    
-    echo "[TRAEFIK-AUTH] Password file created: $PASSWORD_FILE"
-    echo "[TRAEFIK-AUTH] External URL: ${local.workspace_url}"
-    echo "[TRAEFIK-AUTH] Username: $USERNAME"
-    echo "[TRAEFIK-AUTH] Setup complete"
-    echo "============================================================"
-  SCRIPT
 }
 
 # =============================================================================
