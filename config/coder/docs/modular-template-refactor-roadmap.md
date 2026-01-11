@@ -3,15 +3,18 @@
 > **🧠 LIVING MEMORY NOTE (for AI Assistant):**
 > This document serves as living memory during the rebuild process. Update progress here as tasks complete.
 > - **Current Session:** 2026-01-11 - Fresh rebuild in `/config/coder/v2/`
-> - **Active Phase:** Phase 0/1 COMPLETE ✅ - Created new push script and base template
+> - **Active Phase:** Phase 1/2 - Code-server module complete, ready for next module
 > - **Last Completed:** 
 >   - Created v2 folder structure with modules/, templates/, scripts/, helpers/
->   - Created simplified push-template.sh (no auto-copy, manifest-driven)
->   - Created base template with minimal coder agent + docker container
->   - Created startup-lib.sh helper library  
->   - Successfully pushed `new-modular-template` to Coder (v1)
-> - **Next Step:** Create a test workspace from the template, then begin migrating modules
+>   - Created simplified push-template.sh with module copying support
+>   - Created base template with Coder agent + Docker container
+>   - Created code-server module (feature/code-server)
+>   - Template opens to /home/coder/workspace folder
+>   - VS Code Desktop button disabled (web IDE only)
+>   - Successfully pushed `new-modular-template` v4 to Coder
+> - **Next Step:** Test workspace creation, then migrate SSH or Git module
 > - **V2 Location:** `/opt/stacks/weekendstack/config/coder/v2/`
+> - **Commits:** 2 commits on v0.2.0 branch
 
 **Created:** 2026-01-11  
 **Objective:** Transform the current partially-modular template system into a clean, composable architecture with build-time script concatenation and strict module isolation.

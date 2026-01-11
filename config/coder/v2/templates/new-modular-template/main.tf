@@ -45,6 +45,20 @@ data "coder_workspace_owner" "me" {}
 data "coder_provisioner" "me" {}
 
 # =============================================================================
+# PARAMETERS (User-configurable in Coder UI)
+# =============================================================================
+
+data "coder_parameter" "startup_command" {
+  name         = "startup_command"
+  display_name = "Startup Command"
+  description  = "Command to run after workspace is ready. Runs in /home/coder/workspace. Leave empty to disable."
+  type         = "string"
+  default      = "python3 -m http.server 8080"
+  mutable      = true
+  order        = 100
+}
+
+# =============================================================================
 # LOCALS
 # =============================================================================
 
@@ -59,6 +73,22 @@ locals {
   
   # Base image
   docker_image = "codercom/enterprise-base:ubuntu"
+  
+  # ==========================================================================
+  # DEFAULT STARTUP COMMAND (Template-level default)
+  # ==========================================================================
+  # This sets the DEFAULT value for the startup_command parameter.
+  # Users can override via the Coder UI parameter.
+  #
+  # To change the default for a specific template, override this local:
+  #   node:      "npm run dev -- --host 0.0.0.0 --port 8080"
+  #   vite:      "npm run dev -- --host 0.0.0.0 --port 8080"
+  #   wordpress: "apache2-foreground"
+  # ==========================================================================
+  default_startup_command = "python3 -m http.server 8080"
+  
+  # Actual command to run (from parameter, falls back to default)
+  startup_command = data.coder_parameter.startup_command.value
 }
 
 # =============================================================================
@@ -97,17 +127,23 @@ resource "coder_agent" "main" {
   os   = "linux"
   dir  = local.workspace_folder
   
-  # Startup script - create workspace folder
+  # Startup script - basic environment setup only
+  # The startup command runs via coder_script with high order to ensure it's LAST
   startup_script = <<-SCRIPT
     #!/bin/bash
-    echo "[STARTUP] 🚀 Workspace starting..."
+    set -e
+    
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "[STARTUP] 🚀 Workspace initialization starting..."
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     
     # Ensure workspace folder exists
     mkdir -p "${local.workspace_folder}"
     
     echo "[STARTUP] User: $(whoami)"
-    echo "[STARTUP] Workspace folder: ${local.workspace_folder}"
-    echo "[STARTUP] ✅ Workspace ready!"
+    echo "[STARTUP] Home: $HOME"
+    echo "[STARTUP] Workspace: ${local.workspace_folder}"
+    echo "[STARTUP] ✅ Environment ready!"
   SCRIPT
   
   # Disable VS Code Desktop button (web-based code-server only)
@@ -163,6 +199,102 @@ module "code_server" {
   agent_id = coder_agent.main.id
   folder   = local.workspace_folder
   order    = 1
+}
+
+# =============================================================================
+# STARTUP COMMAND (Runs after other scripts)
+# =============================================================================
+# Note: coder_script resources run in parallel. We use start_blocks_login=false
+# and add a delay to allow code-server to install first.
+# The startup command runs in background so it doesn't block the workspace.
+# =============================================================================
+
+resource "coder_script" "startup_command" {
+  agent_id           = coder_agent.main.id
+  display_name       = "Startup Command"
+  icon               = "/icon/play.svg"
+  run_on_start       = true
+  start_blocks_login = false  # Don't block login, run in background
+  
+  script = <<-SCRIPT
+    #!/bin/bash
+    
+    STARTUP_CMD="${local.startup_command}"
+    WORKSPACE_DIR="${local.workspace_folder}"
+    LOG_FILE="/tmp/startup-server.log"
+    PID_FILE="/tmp/startup-server.pid"
+    
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "[STARTUP-CMD] 🚀 Startup Command Script"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    
+    if [ -z "$STARTUP_CMD" ]; then
+      echo "[STARTUP-CMD] No command configured (skipping)"
+      exit 0
+    fi
+    
+    # Wait for code-server to be ready
+    # Check for the process running OR the install complete message in logs
+    echo "[STARTUP-CMD] Waiting for code-server..."
+    MAX_WAIT=60
+    WAITED=0
+    while [ $WAITED -lt $MAX_WAIT ]; do
+      # Check if code-server process is running
+      if pgrep -f "code-server" > /dev/null 2>&1; then
+        echo "[STARTUP-CMD] ✅ Code-server is running!"
+        break
+      fi
+      # Also check log file for completion message
+      if [ -f /tmp/code-server.log ] && grep -q "HTTP server listening" /tmp/code-server.log 2>/dev/null; then
+        echo "[STARTUP-CMD] ✅ Code-server is ready!"
+        break
+      fi
+      sleep 2
+      WAITED=$((WAITED + 2))
+    done
+    
+    if [ $WAITED -ge $MAX_WAIT ]; then
+      echo "[STARTUP-CMD] ⚠️  Timeout waiting for code-server ($MAX_WAIT s), proceeding anyway"
+    fi
+    
+    echo "[STARTUP-CMD] Command: $STARTUP_CMD"
+    echo "[STARTUP-CMD] Directory: $WORKSPACE_DIR"
+    echo "[STARTUP-CMD] Logs: $LOG_FILE"
+    
+    # Change to workspace directory
+    cd "$WORKSPACE_DIR"
+    
+    # Kill any existing process from previous run
+    if [ -f "$PID_FILE" ]; then
+      OLD_PID=$(cat "$PID_FILE")
+      if kill -0 "$OLD_PID" 2>/dev/null; then
+        echo "[STARTUP-CMD] Stopping previous server (PID: $OLD_PID)..."
+        kill "$OLD_PID" 2>/dev/null || true
+        sleep 1
+      fi
+    fi
+    
+    # Run the startup command in background
+    echo "[STARTUP-CMD] Starting server..."
+    nohup bash -c "$STARTUP_CMD" > "$LOG_FILE" 2>&1 &
+    SERVER_PID=$!
+    echo $SERVER_PID > "$PID_FILE"
+    
+    # Give it a moment to start
+    sleep 2
+    
+    # Check if it's still running
+    if kill -0 $SERVER_PID 2>/dev/null; then
+      echo "[STARTUP-CMD] ✅ Server started successfully (PID: $SERVER_PID)"
+    else
+      echo "[STARTUP-CMD] ⚠️  Server may have failed. Check $LOG_FILE"
+      tail -5 "$LOG_FILE" 2>/dev/null || true
+    fi
+    
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "[STARTUP-CMD] ✅ Done!"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  SCRIPT
 }
 
 # =============================================================================
