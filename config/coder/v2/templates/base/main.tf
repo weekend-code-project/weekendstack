@@ -83,7 +83,7 @@ data "coder_parameter" "external_preview" {
   display_name = "External Preview"
   description  = "Enable external preview via Traefik tunnel (requires password)."
   type         = "bool"
-  default      = "false"
+  default      = "true"
   mutable      = true
   order        = 200
 }
@@ -265,6 +265,8 @@ module "traefik_routing" {
   agent_id                 = coder_agent.main.id
   workspace_name           = local.workspace_name
   workspace_owner          = local.owner_name
+  workspace_owner_id       = data.coder_workspace_owner.me.id
+  workspace_id             = data.coder_workspace.me.id
   base_domain              = var.base_domain
   preview_port             = local.preview_port
   external_preview_enabled = local.external_preview_enabled

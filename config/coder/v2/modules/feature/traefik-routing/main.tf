@@ -37,6 +37,18 @@ variable "workspace_owner" {
   type        = string
 }
 
+variable "workspace_owner_id" {
+  description = "Owner ID for Coder metadata labels"
+  type        = string
+  default     = ""
+}
+
+variable "workspace_id" {
+  description = "Workspace ID for Coder metadata labels"
+  type        = string
+  default     = ""
+}
+
 variable "base_domain" {
   description = "Base domain for Traefik routing (e.g., example.com)"
   type        = string
@@ -51,7 +63,7 @@ variable "preview_port" {
 variable "external_preview_enabled" {
   description = "Whether external preview via Traefik is enabled"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "workspace_password" {
@@ -88,6 +100,13 @@ locals {
   # Traefik Labels (only when external preview is enabled)
   # ==========================================================================
   traefik_labels = var.external_preview_enabled ? merge(
+    # Coder metadata labels (for container identification)
+    {
+      "coder.owner"          = var.workspace_owner
+      "coder.owner_id"       = var.workspace_owner_id
+      "coder.workspace_id"   = var.workspace_id
+      "coder.workspace_name" = var.workspace_name
+    },
     # Base routing labels
     {
       "traefik.enable"         = "true"
@@ -97,15 +116,21 @@ locals {
       "traefik.http.routers.${local.router_name}.rule"        = "Host(`${lower(var.workspace_name)}.${var.base_domain}`)"
       "traefik.http.routers.${local.router_name}.entrypoints" = "websecure"
       "traefik.http.routers.${local.router_name}.tls"         = "true"
+      "traefik.http.routers.${local.router_name}.service"     = local.router_name
+      
+      # HTTP Router (local .lab access)
+      "traefik.http.routers.${local.router_name}-http.rule"        = "Host(`${lower(var.workspace_name)}.lab`)"
+      "traefik.http.routers.${local.router_name}-http.entrypoints" = "web"
+      "traefik.http.routers.${local.router_name}-http.service"     = local.router_name
       
       # Service configuration
       "traefik.http.services.${local.router_name}.loadbalancer.server.port" = var.preview_port
     },
     # Auth middleware labels (when password is set)
     var.workspace_password != "" ? {
-      "traefik.http.routers.${local.router_name}.middlewares"                      = local.auth_middleware
-      "traefik.http.middlewares.${local.auth_middleware}.basicauth.usersfile"      = local.password_file
-      "traefik.http.middlewares.${local.auth_middleware}.basicauth.realm"          = "${var.workspace_owner}-workspace"
+      "traefik.http.routers.${local.router_name}.middlewares"                 = local.auth_middleware
+      "traefik.http.middlewares.${local.auth_middleware}.basicauth.usersfile" = local.password_file
+      "traefik.http.middlewares.${local.auth_middleware}.basicauth.realm"     = "${var.workspace_owner}-workspace"
     } : {}
   ) : {}
 }
