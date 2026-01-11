@@ -200,6 +200,43 @@ validate_template() {
     log_success "Template validated: $TEMPLATE_NAME"
 }
 
+# Copy modules referenced by the template from v2/modules/ to the temp directory
+copy_referenced_modules() {
+    local target_dir="$1"
+    
+    log_info "Checking for module references..."
+    
+    # Find all module source references that use ./modules/
+    local module_refs
+    module_refs=$(grep -hE 'source\s*=\s*"\.\/modules\/' "$target_dir"/*.tf 2>/dev/null | \
+                  sed -E 's/.*source\s*=\s*"(\.\/modules\/[^"]+)".*/\1/' | sort -u || true)
+    
+    if [[ -z "$module_refs" ]]; then
+        log_info "  No local module references found"
+        return 0
+    fi
+    
+    local count=0
+    for ref in $module_refs; do
+        # Convert ./modules/feature/code-server to feature/code-server
+        local module_path="${ref#./modules/}"
+        local src_path="$MODULES_DIR/$module_path"
+        local dest_path="$target_dir/modules/$module_path"
+        
+        if [[ -d "$src_path" ]]; then
+            mkdir -p "$(dirname "$dest_path")"
+            cp -r "$src_path" "$dest_path"
+            log_info "  Copied module: $module_path"
+            count=$((count + 1))
+        else
+            log_error "  Module not found: $src_path"
+            exit 1
+        fi
+    done
+    
+    log_success "Copied $count module(s)"
+}
+
 # Substitute variables in Terraform files
 substitute_variables() {
     local target_dir="$1"
@@ -424,6 +461,7 @@ main() {
     cp -r "$TEMPLATE_DIR"/* "$TEMP_DIR/"
     
     # Process template
+    copy_referenced_modules "$TEMP_DIR"
     substitute_variables "$TEMP_DIR"
     compile_startup_script "$TEMP_DIR"
     

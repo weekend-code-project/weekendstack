@@ -1,19 +1,19 @@
 # =============================================================================
 # BASE TEMPLATE v2
 # =============================================================================
-# A minimal Coder workspace template for validation.
+# A minimal Coder workspace template with code-server IDE.
 # This is the foundation that all other templates build upon.
 #
 # Features:
 #   - Ubuntu container with Coder agent
 #   - Home directory persistence via Docker volume
-#   - Basic shell environment
+#   - Code-server web IDE (opens to /home/coder/workspace)
+#   - Basic resource monitoring
 #
 # This template does NOT include:
 #   - SSH access (add ssh module)
 #   - Git integration (add git module)  
 #   - Traefik routing (add traefik module)
-#   - Code-server IDE (add code-server module)
 #
 # =============================================================================
 
@@ -54,6 +54,9 @@ locals {
   owner_name     = data.coder_workspace_owner.me.name
   container_name = "coder-${local.owner_name}-${local.workspace_name}"
   
+  # Paths
+  workspace_folder = "/home/coder/workspace"
+  
   # Base image
   docker_image = "codercom/enterprise-base:ubuntu"
 }
@@ -92,16 +95,29 @@ resource "docker_volume" "home" {
 resource "coder_agent" "main" {
   arch = data.coder_provisioner.me.arch
   os   = "linux"
-  dir  = "/home/coder"
+  dir  = local.workspace_folder
   
-  # Simple startup script - just log that we're ready
+  # Startup script - create workspace folder
   startup_script = <<-SCRIPT
     #!/bin/bash
     echo "[STARTUP] 🚀 Workspace starting..."
+    
+    # Ensure workspace folder exists
+    mkdir -p "${local.workspace_folder}"
+    
     echo "[STARTUP] User: $(whoami)"
-    echo "[STARTUP] Home: $HOME"
+    echo "[STARTUP] Workspace folder: ${local.workspace_folder}"
     echo "[STARTUP] ✅ Workspace ready!"
   SCRIPT
+  
+  # Disable VS Code Desktop button (web-based code-server only)
+  display_apps {
+    vscode                 = false
+    vscode_insiders        = false
+    web_terminal           = true
+    ssh_helper             = false
+    port_forwarding_helper = false
+  }
   
   # Git identity from Coder workspace owner
   env = {
@@ -135,6 +151,18 @@ resource "coder_agent" "main" {
     interval     = 60
     timeout      = 1
   }
+}
+
+# =============================================================================
+# CODE SERVER (Web IDE)
+# =============================================================================
+
+module "code_server" {
+  source = "./modules/feature/code-server"
+  
+  agent_id = coder_agent.main.id
+  folder   = local.workspace_folder
+  order    = 1
 }
 
 # =============================================================================
