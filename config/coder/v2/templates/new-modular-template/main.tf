@@ -78,6 +78,26 @@ data "coder_parameter" "auto_generate_html" {
   order        = 102
 }
 
+data "coder_parameter" "external_preview" {
+  name         = "external_preview"
+  display_name = "External Preview"
+  description  = "Enable external preview via Traefik tunnel (requires password)."
+  type         = "bool"
+  default      = "false"
+  mutable      = true
+  order        = 200
+}
+
+data "coder_parameter" "workspace_password" {
+  name         = "workspace_password"
+  display_name = "Preview Password"
+  description  = "Password for external preview basic auth. Required when external preview is enabled."
+  type         = "string"
+  default      = ""
+  mutable      = true
+  order        = 201
+}
+
 # =============================================================================
 # LOCALS
 # =============================================================================
@@ -115,6 +135,10 @@ locals {
   
   # Auto-generate HTML toggle
   auto_generate_html = data.coder_parameter.auto_generate_html.value
+  
+  # External preview settings
+  external_preview_enabled = data.coder_parameter.external_preview.value
+  workspace_password       = data.coder_parameter.workspace_password.value
 }
 
 # =============================================================================
@@ -160,7 +184,7 @@ resource "coder_agent" "main" {
     set -e
     
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "[STARTUP] 🚀 Workspace initialization starting..."
+    echo "[STARTUP] Workspace initialization starting..."
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     
     # Ensure workspace folder exists
@@ -169,7 +193,7 @@ resource "coder_agent" "main" {
     echo "[STARTUP] User: $(whoami)"
     echo "[STARTUP] Home: $HOME"
     echo "[STARTUP] Workspace: ${local.workspace_folder}"
-    echo "[STARTUP] ✅ Environment ready!"
+    echo "[STARTUP] Environment ready"
   SCRIPT
   
   # Disable VS Code Desktop button (web-based code-server only)
@@ -228,11 +252,32 @@ module "code_server" {
 }
 
 # =============================================================================
+# TRAEFIK ROUTING (External Preview)
+# =============================================================================
+# When enabled, provides external access via Traefik reverse proxy.
+# Creates subdomain route: {workspace}.{base_domain}
+# Requires password for basic auth protection.
+# =============================================================================
+
+module "traefik_routing" {
+  source = "./modules/feature/traefik-routing"
+  
+  agent_id                 = coder_agent.main.id
+  workspace_name           = local.workspace_name
+  workspace_owner          = local.owner_name
+  base_domain              = var.base_domain
+  preview_port             = local.preview_port
+  external_preview_enabled = local.external_preview_enabled
+  workspace_password       = local.workspace_password
+  traefik_auth_dir         = var.traefik_auth_dir
+}
+
+# =============================================================================
 # LOCAL PREVIEW (Coder's built-in proxy)
 # =============================================================================
 # This uses Coder's built-in proxy to access the dev server.
 # Works immediately via Coder's authenticated proxy URL.
-# For external access via domain name, use the Traefik routing module.
+# For external access via domain name, enable External Preview above.
 # =============================================================================
 
 resource "coder_app" "local_preview" {
@@ -279,7 +324,7 @@ resource "coder_script" "startup_command" {
     WORKSPACE_NAME="${local.workspace_name}"
     
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "[STARTUP-CMD] 🚀 Startup Command Script"
+    echo "[STARTUP-CMD] Startup Command Script"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     
     if [ -z "$STARTUP_CMD" ]; then
@@ -295,12 +340,12 @@ resource "coder_script" "startup_command" {
     while [ $WAITED -lt $MAX_WAIT ]; do
       # Check if code-server process is running
       if pgrep -f "code-server" > /dev/null 2>&1; then
-        echo "[STARTUP-CMD] ✅ Code-server is running!"
+        echo "[STARTUP-CMD] Code-server is running"
         break
       fi
       # Also check log file for completion message
       if [ -f /tmp/code-server.log ] && grep -q "HTTP server listening" /tmp/code-server.log 2>/dev/null; then
-        echo "[STARTUP-CMD] ✅ Code-server is ready!"
+        echo "[STARTUP-CMD] Code-server is ready"
         break
       fi
       sleep 2
@@ -308,7 +353,7 @@ resource "coder_script" "startup_command" {
     done
     
     if [ $WAITED -ge $MAX_WAIT ]; then
-      echo "[STARTUP-CMD] ⚠️  Timeout waiting for code-server ($MAX_WAIT s), proceeding anyway"
+      echo "[STARTUP-CMD] Timeout waiting for code-server ($MAX_WAIT s), proceeding anyway"
     fi
     
     # Change to workspace directory first
@@ -316,9 +361,9 @@ resource "coder_script" "startup_command" {
     
     # Auto-generate HTML if enabled
     if [ "$AUTO_HTML" = "true" ]; then
-      echo "[STARTUP-CMD] 🎨 Auto-generate HTML is enabled"
+      echo "[STARTUP-CMD] Auto-generate HTML is enabled"
       if [ ! -f "$WORKSPACE_DIR/index.html" ]; then
-        echo "[STARTUP-CMD] ✍️  Generating default index.html..."
+        echo "[STARTUP-CMD] Generating default index.html..."
         cat > "$WORKSPACE_DIR/index.html" << 'HTMLEOF'
 <!DOCTYPE html>
 <html lang="en">
@@ -401,10 +446,10 @@ resource "coder_script" "startup_command" {
 </head>
 <body>
     <div class="container">
-        <h1>🚀 Workspace Preview</h1>
+        <h1>Workspace Preview</h1>
         
         <div class="status">
-            ✅ Server Running
+            Server Running
         </div>
         
         <div class="info">
@@ -423,7 +468,7 @@ resource "coder_script" "startup_command" {
         </div>
         
         <div class="tip">
-            💡 <strong>Tip:</strong> Replace this file with your own <code>index.html</code> or disable auto-generation in workspace settings.
+            <strong>Tip:</strong> Replace this file with your own <code>index.html</code> or disable auto-generation in workspace settings.
         </div>
         
         <div class="footer">
@@ -433,12 +478,12 @@ resource "coder_script" "startup_command" {
 </body>
 </html>
 HTMLEOF
-        echo "[STARTUP-CMD] ✅ Created index.html"
+        echo "[STARTUP-CMD] Created index.html"
       else
-        echo "[STARTUP-CMD] 📄 index.html already exists (keeping existing)"
+        echo "[STARTUP-CMD] index.html already exists (keeping existing)"
       fi
     else
-      echo "[STARTUP-CMD] ⏭️  Auto-generate HTML disabled"
+      echo "[STARTUP-CMD] Auto-generate HTML disabled"
     fi
     
     echo "[STARTUP-CMD] Command: $STARTUP_CMD"
@@ -467,14 +512,14 @@ HTMLEOF
     
     # Check if it's still running
     if kill -0 $SERVER_PID 2>/dev/null; then
-      echo "[STARTUP-CMD] ✅ Server started successfully (PID: $SERVER_PID)"
+      echo "[STARTUP-CMD] Server started successfully (PID: $SERVER_PID)"
     else
-      echo "[STARTUP-CMD] ⚠️  Server may have failed. Check $LOG_FILE"
+      echo "[STARTUP-CMD] Server may have failed. Check $LOG_FILE"
       tail -5 "$LOG_FILE" 2>/dev/null || true
     fi
     
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "[STARTUP-CMD] ✅ Done!"
+    echo "[STARTUP-CMD] Done"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   SCRIPT
 }
@@ -498,10 +543,25 @@ resource "docker_container" "workspace" {
     name = "coder-network"
   }
   
+  # Traefik labels for external routing (when enabled)
+  dynamic "labels" {
+    for_each = module.traefik_routing.traefik_labels
+    content {
+      label = labels.key
+      value = labels.value
+    }
+  }
+  
   # Home directory persistence
   volumes {
     volume_name    = docker_volume.home.name
     container_path = "/home/coder"
+  }
+  
+  # Traefik auth directory (for password files)
+  volumes {
+    host_path      = var.traefik_auth_dir
+    container_path = "/traefik-auth"
   }
   
   # Basic environment
