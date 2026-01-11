@@ -58,6 +58,26 @@ data "coder_parameter" "startup_command" {
   order        = 100
 }
 
+data "coder_parameter" "preview_port" {
+  name         = "preview_port"
+  display_name = "Preview Port"
+  description  = "Port for the local preview server (used by startup command)"
+  type         = "number"
+  default      = "8080"
+  mutable      = true
+  order        = 101
+}
+
+data "coder_parameter" "auto_generate_html" {
+  name         = "auto_generate_html"
+  display_name = "Auto-Generate HTML"
+  description  = "Generate a default index.html if none exists in workspace. Regenerates on each start if enabled."
+  type         = "bool"
+  default      = "true"
+  mutable      = true
+  order        = 102
+}
+
 # =============================================================================
 # LOCALS
 # =============================================================================
@@ -89,6 +109,12 @@ locals {
   
   # Actual command to run (from parameter, falls back to default)
   startup_command = data.coder_parameter.startup_command.value
+  
+  # Preview port (from parameter)
+  preview_port = data.coder_parameter.preview_port.value
+  
+  # Auto-generate HTML toggle
+  auto_generate_html = data.coder_parameter.auto_generate_html.value
 }
 
 # =============================================================================
@@ -202,6 +228,31 @@ module "code_server" {
 }
 
 # =============================================================================
+# LOCAL PREVIEW (Coder's built-in proxy)
+# =============================================================================
+# This uses Coder's built-in proxy to access the dev server.
+# Works immediately via Coder's authenticated proxy URL.
+# For external access via domain name, use the Traefik routing module.
+# =============================================================================
+
+resource "coder_app" "local_preview" {
+  agent_id     = coder_agent.main.id
+  slug         = "preview"
+  display_name = "Local Preview"
+  icon         = "/icon/widgets.svg"
+  url          = "http://localhost:${local.preview_port}"
+  subdomain    = false
+  share        = "owner"
+  order        = 10
+  
+  healthcheck {
+    url       = "http://localhost:${local.preview_port}"
+    interval  = 5
+    threshold = 3
+  }
+}
+
+# =============================================================================
 # STARTUP COMMAND (Runs after other scripts)
 # =============================================================================
 # Note: coder_script resources run in parallel. We use start_blocks_login=false
@@ -223,6 +274,9 @@ resource "coder_script" "startup_command" {
     WORKSPACE_DIR="${local.workspace_folder}"
     LOG_FILE="/tmp/startup-server.log"
     PID_FILE="/tmp/startup-server.pid"
+    PREVIEW_PORT="${local.preview_port}"
+    AUTO_HTML="${local.auto_generate_html}"
+    WORKSPACE_NAME="${local.workspace_name}"
     
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "[STARTUP-CMD] 🚀 Startup Command Script"
@@ -257,12 +311,140 @@ resource "coder_script" "startup_command" {
       echo "[STARTUP-CMD] ⚠️  Timeout waiting for code-server ($MAX_WAIT s), proceeding anyway"
     fi
     
+    # Change to workspace directory first
+    cd "$WORKSPACE_DIR"
+    
+    # Auto-generate HTML if enabled
+    if [ "$AUTO_HTML" = "true" ]; then
+      echo "[STARTUP-CMD] 🎨 Auto-generate HTML is enabled"
+      if [ ! -f "$WORKSPACE_DIR/index.html" ]; then
+        echo "[STARTUP-CMD] ✍️  Generating default index.html..."
+        cat > "$WORKSPACE_DIR/index.html" << 'HTMLEOF'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workspace Preview</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            padding: 40px 50px;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+        h1 {
+            color: #333;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        .status {
+            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+            padding: 20px;
+            border-radius: 8px;
+            margin: 25px 0;
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #2d5a3d;
+        }
+        .info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { color: #666; }
+        .info-value { font-weight: 600; color: #333; }
+        code {
+            background: #e9ecef;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        .footer {
+            margin-top: 30px;
+            color: #999;
+            font-size: 0.85em;
+        }
+        .tip {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Workspace Preview</h1>
+        
+        <div class="status">
+            ✅ Server Running
+        </div>
+        
+        <div class="info">
+            <div class="info-row">
+                <span class="info-label">Status</span>
+                <span class="info-value">Active</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Server</span>
+                <span class="info-value">Python HTTP Server</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Directory</span>
+                <span class="info-value"><code>/home/coder/workspace</code></span>
+            </div>
+        </div>
+        
+        <div class="tip">
+            💡 <strong>Tip:</strong> Replace this file with your own <code>index.html</code> or disable auto-generation in workspace settings.
+        </div>
+        
+        <div class="footer">
+            Auto-generated by Coder
+        </div>
+    </div>
+</body>
+</html>
+HTMLEOF
+        echo "[STARTUP-CMD] ✅ Created index.html"
+      else
+        echo "[STARTUP-CMD] 📄 index.html already exists (keeping existing)"
+      fi
+    else
+      echo "[STARTUP-CMD] ⏭️  Auto-generate HTML disabled"
+    fi
+    
     echo "[STARTUP-CMD] Command: $STARTUP_CMD"
     echo "[STARTUP-CMD] Directory: $WORKSPACE_DIR"
+    echo "[STARTUP-CMD] Port: $PREVIEW_PORT"
     echo "[STARTUP-CMD] Logs: $LOG_FILE"
-    
-    # Change to workspace directory
-    cd "$WORKSPACE_DIR"
     
     # Kill any existing process from previous run
     if [ -f "$PID_FILE" ]; then
