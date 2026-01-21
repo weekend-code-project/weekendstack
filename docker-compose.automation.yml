@@ -118,10 +118,22 @@ services:
       
       # Traefik Configuration
       - traefik.enable=${HOMEASSISTANT_TRAEFIK_ENABLE:-true}
-      - "traefik.http.routers.homeassistant.rule=Host(`homeassistant.lab`)"
-      - traefik.http.routers.homeassistant.entrypoints=web,websecure
+      
+      # HTTP router with redirect
+      - traefik.http.routers.homeassistant-lab-http.entrypoints=web
+      - traefik.http.routers.homeassistant-lab-http.rule=Host(`homeassistant.${LAB_DOMAIN}`)
+      - traefik.http.routers.homeassistant-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.homeassistant-lab-http.service=homeassistant
+      
+      # HTTPS router for .lab domain
+      - traefik.http.routers.homeassistant-lab.entrypoints=websecure
+      - traefik.http.routers.homeassistant-lab.rule=Host(`homeassistant.${LAB_DOMAIN}`)
+      - traefik.http.routers.homeassistant-lab.tls=true
+      - traefik.http.routers.homeassistant-lab.service=homeassistant
+      
+      # Service definition
       - traefik.http.services.homeassistant.loadbalancer.server.port=8123
-      - traefik.docker.network=shared-network
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
       - "com.docker.compose.service=homeassistant"
       - "description=Home Assistant - Smart Home Automation"
 
@@ -159,10 +171,22 @@ services:
       - glance.name=Node-RED
       
       - traefik.enable=true
-      - traefik.http.routers.nodered.rule=Host(`nodered.lab`)
-      - traefik.http.routers.nodered.entrypoints=web,websecure
+      
+      # HTTP router with redirect
+      - traefik.http.routers.nodered-lab-http.entrypoints=web
+      - traefik.http.routers.nodered-lab-http.rule=Host(`nodered.${LAB_DOMAIN}`)
+      - traefik.http.routers.nodered-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.nodered-lab-http.service=nodered
+      
+      # HTTPS router for .lab domain
+      - traefik.http.routers.nodered-lab.entrypoints=websecure
+      - traefik.http.routers.nodered-lab.rule=Host(`nodered.${LAB_DOMAIN}`)
+      - traefik.http.routers.nodered-lab.tls=true
+      - traefik.http.routers.nodered-lab.service=nodered
+      
+      # Service definition
       - traefik.http.services.nodered.loadbalancer.server.port=1880
-      - traefik.docker.network=shared-network
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
 volumes:
   nodered-data:

@@ -61,15 +61,28 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
-      - traefik.http.routers.immich.rule=Host(`immich.${BASE_DOMAIN}`)
+      
+      # HTTP router with redirect
+      - traefik.http.routers.immich-lab-http.entrypoints=web
+      - traefik.http.routers.immich-lab-http.rule=Host(`immich.${LAB_DOMAIN}`)
+      - traefik.http.routers.immich-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.immich-lab-http.service=immich
+      
+      # HTTPS router for .lab domain
+      - traefik.http.routers.immich-lab.entrypoints=websecure
+      - traefik.http.routers.immich-lab.rule=Host(`immich.${LAB_DOMAIN}`)
+      - traefik.http.routers.immich-lab.tls=true
+      - traefik.http.routers.immich-lab.service=immich
+      
+      # HTTPS router for external domain
       - traefik.http.routers.immich.entrypoints=websecure
+      - traefik.http.routers.immich.rule=Host(`immich.${BASE_DOMAIN}`)
       - traefik.http.routers.immich.tls=true
-      - traefik.http.services.immich.loadbalancer.server.port=2283
-      - traefik.docker.network=shared-network
-
-      - traefik.http.routers.immich.entrypoints=web,websecure
-      - traefik.http.routers.immich.rule=Host(`immich.lab`)
       - traefik.http.routers.immich.service=immich
+      
+      # Service definition
+      - traefik.http.services.immich.loadbalancer.server.port=2283
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
   immich-machine-learning:
     image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-release}
@@ -183,15 +196,28 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
-      - traefik.http.routers.kavita.rule=Host(`kavita.${BASE_DOMAIN}`)
+      
+      # HTTP router with redirect
+      - traefik.http.routers.kavita-lab-http.entrypoints=web
+      - traefik.http.routers.kavita-lab-http.rule=Host(`kavita.${LAB_DOMAIN}`)
+      - traefik.http.routers.kavita-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.kavita-lab-http.service=kavita
+      
+      # HTTPS router for .lab domain
+      - traefik.http.routers.kavita-lab.entrypoints=websecure
+      - traefik.http.routers.kavita-lab.rule=Host(`kavita.${LAB_DOMAIN}`)
+      - traefik.http.routers.kavita-lab.tls=true
+      - traefik.http.routers.kavita-lab.service=kavita
+      
+      # HTTPS router for external domain
       - traefik.http.routers.kavita.entrypoints=websecure
+      - traefik.http.routers.kavita.rule=Host(`kavita.${BASE_DOMAIN}`)
       - traefik.http.routers.kavita.tls=true
-      - traefik.http.services.kavita.loadbalancer.server.port=5000
-      - traefik.docker.network=shared-network
-
-      - traefik.http.routers.kavita.entrypoints=web,websecure
-      - traefik.http.routers.kavita.rule=Host(`kavita.lab`)
       - traefik.http.routers.kavita.service=kavita
+      
+      # Service definition
+      - traefik.http.services.kavita.loadbalancer.server.port=5000
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
   # ====================================================================
   # NAVIDROME - Music Streaming Server
@@ -241,15 +267,28 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
-      - traefik.http.routers.navidrome.rule=Host(`navidrome.${BASE_DOMAIN}`) || Host(`music.${BASE_DOMAIN}`)
+      
+      # HTTP router with redirect
+      - traefik.http.routers.navidrome-lab-http.entrypoints=web
+      - traefik.http.routers.navidrome-lab-http.rule=Host(`navidrome.${LAB_DOMAIN}`)
+      - traefik.http.routers.navidrome-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.navidrome-lab-http.service=navidrome
+      
+      # HTTPS router for .lab domain
+      - traefik.http.routers.navidrome-lab.entrypoints=websecure
+      - traefik.http.routers.navidrome-lab.rule=Host(`navidrome.${LAB_DOMAIN}`)
+      - traefik.http.routers.navidrome-lab.tls=true
+      - traefik.http.routers.navidrome-lab.service=navidrome
+      
+      # HTTPS router for external domain
       - traefik.http.routers.navidrome.entrypoints=websecure
+      - traefik.http.routers.navidrome.rule=Host(`navidrome.${BASE_DOMAIN}`) || Host(`music.${BASE_DOMAIN}`)
       - traefik.http.routers.navidrome.tls=true
-      - traefik.http.services.navidrome.loadbalancer.server.port=4533
-      - traefik.docker.network=shared-network
-
-      - traefik.http.routers.navidrome.entrypoints=web,websecure
-      - traefik.http.routers.navidrome.rule=Host(`navidrome.lab`)
       - traefik.http.routers.navidrome.service=navidrome
+      
+      # Service definition
+      - traefik.http.services.navidrome.loadbalancer.server.port=4533
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
 volumes:
   immich-upload:

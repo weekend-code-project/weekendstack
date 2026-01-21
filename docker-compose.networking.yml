@@ -418,15 +418,26 @@ services:
       # Local-only Pi-hole admin (HTTP, no TLS) on http://pihole.lab/admin
       # This is NOT exposed via Cloudflare tunnel (router is web-only).
       - traefik.enable=true
-      - traefik.http.routers.pihole.rule=Host(`pihole.${LAB_DOMAIN}`)
-      - traefik.http.routers.pihole.entrypoints=web,websecure
-      - traefik.http.routers.pihole.tls=true
-      - traefik.http.routers.pihole-http.middlewares=pihole-redirect
+      
+      # HTTP router with redirect to /admin
+      - traefik.http.routers.pihole-lab-http.entrypoints=web
+      - traefik.http.routers.pihole-lab-http.rule=Host(`pihole.${LAB_DOMAIN}`)
+      - traefik.http.routers.pihole-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.pihole-lab-http.service=pihole
+      
+      # HTTPS router for .lab domain with /admin redirect
+      - traefik.http.routers.pihole-lab.entrypoints=websecure
+      - traefik.http.routers.pihole-lab.rule=Host(`pihole.${LAB_DOMAIN}`)
+      - traefik.http.routers.pihole-lab.tls=true
+      - traefik.http.routers.pihole-lab.middlewares=pihole-redirect
+      - traefik.http.routers.pihole-lab.service=pihole
+      
+      # Middleware to redirect to /admin
       - traefik.http.middlewares.pihole-redirect.redirectregex.regex=^https?://([^/]+)/?$$
       - traefik.http.middlewares.pihole-redirect.redirectregex.replacement=http://$$1/admin/
-      - traefik.http.services.pihole.loadbalancer.server.port=80
-      - "com.docker.compose.service=pihole"
-      - "description=Pi-Hole - Network-wide Ad Blocking (Internal Only)"
+      
+      # Service definition
+      - traefik.http.services.pihole.loadbalancer.server.port=80\n      - \"com.docker.compose.service=pihole\"\n      - \"description=Pi-Hole - Network-wide Ad Blocking (Internal Only)\"
 
 networks:
   traefik-network:

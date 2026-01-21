@@ -174,13 +174,27 @@ services:
               capabilities: [gpu]
     labels:
       - "traefik.enable=${STABLE_DIFFUSION_TRAEFIK_ENABLE:-true}"
-      - "traefik.http.routers.sdwebui.rule=Host(`sdwebui.${BASE_DOMAIN}`)"
+      
+      # HTTP router with redirect
+      - "traefik.http.routers.sdwebui-lab-http.entrypoints=web"
+      - "traefik.http.routers.sdwebui-lab-http.rule=Host(`sdwebui.${LAB_DOMAIN}`)"
+      - "traefik.http.routers.sdwebui-lab-http.middlewares=redirect-to-https@file"
+      - "traefik.http.routers.sdwebui-lab-http.service=sdwebui"
+      
+      # HTTPS router for .lab domain
+      - "traefik.http.routers.sdwebui-lab.entrypoints=websecure"
+      - "traefik.http.routers.sdwebui-lab.rule=Host(`sdwebui.${LAB_DOMAIN}`)"
+      - "traefik.http.routers.sdwebui-lab.tls=true"
+      - "traefik.http.routers.sdwebui-lab.service=sdwebui"
+      
+      # HTTPS router for external domain
       - "traefik.http.routers.sdwebui.entrypoints=websecure"
+      - "traefik.http.routers.sdwebui.rule=Host(`sdwebui.${BASE_DOMAIN}`)"
       - "traefik.http.routers.sdwebui.tls=${TRAEFIK_TLS_ENABLE:-true}"
       - "traefik.http.routers.sdwebui.tls.certresolver=${TRAEFIK_CERT_RESOLVER:-letsencrypt}"
-      - "traefik.http.routers.sdwebui-lab.rule=Host(`sdwebui.${LAB_DOMAIN}`)"
-      - "traefik.http.routers.sdwebui-lab.entrypoints=web,websecure"
-      - "traefik.http.routers.sdwebui-lab.tls=true"
+      - "traefik.http.routers.sdwebui.service=sdwebui"
+      
+      # Service definition
       - "traefik.http.services.sdwebui.loadbalancer.server.port=7860"
       - "traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}"
 
@@ -453,13 +467,28 @@ services:
               capabilities: [gpu]
     labels:
       - traefik.enable=true
-      - "traefik.http.routers.whisperx.rule=Host(`whisperx.${BASE_DOMAIN}`)"
+      
+      # HTTP router with redirect
+      - traefik.http.routers.whisperx-lab-http.entrypoints=web
+      - traefik.http.routers.whisperx-lab-http.rule=Host(`whisperx.${LAB_DOMAIN}`)
+      - traefik.http.routers.whisperx-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.whisperx-lab-http.service=whisperx
+      
+      # HTTPS router for .lab domain
+      - traefik.http.routers.whisperx-lab.entrypoints=websecure
+      - traefik.http.routers.whisperx-lab.rule=Host(`whisperx.${LAB_DOMAIN}`)
+      - traefik.http.routers.whisperx-lab.tls=true
+      - traefik.http.routers.whisperx-lab.service=whisperx
+      
+      # HTTPS router for external domain
       - traefik.http.routers.whisperx.entrypoints=websecure
+      - traefik.http.routers.whisperx.rule=Host(`whisperx.${BASE_DOMAIN}`)
       - traefik.http.routers.whisperx.tls=true
-      - "traefik.http.routers.whisperx.rule=Host(`whisperx.lab`)"
-      - traefik.http.routers.whisperx.entrypoints=web,websecure
+      - traefik.http.routers.whisperx.service=whisperx
+      
+      # Service definition
       - traefik.http.services.whisperx.loadbalancer.server.port=9000
-      - traefik.docker.network=shared-network
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
   # =============================================================================
   # LIBRECHAT - Multi-Provider AI Chat Interface
@@ -518,13 +547,28 @@ services:
       
       # Traefik labels
       - traefik.enable=true
-      - "traefik.http.routers.librechat.rule=Host(`librechat.${BASE_DOMAIN}`)"
+      
+      # HTTP router with redirect
+      - traefik.http.routers.librechat-lab-http.entrypoints=web
+      - traefik.http.routers.librechat-lab-http.rule=Host(`librechat.${LAB_DOMAIN}`)
+      - traefik.http.routers.librechat-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.librechat-lab-http.service=librechat
+      
+      # HTTPS router for .lab domain
+      - traefik.http.routers.librechat-lab.entrypoints=websecure
+      - traefik.http.routers.librechat-lab.rule=Host(`librechat.${LAB_DOMAIN}`)
+      - traefik.http.routers.librechat-lab.tls=true
+      - traefik.http.routers.librechat-lab.service=librechat
+      
+      # HTTPS router for external domain
       - traefik.http.routers.librechat.entrypoints=websecure
+      - traefik.http.routers.librechat.rule=Host(`librechat.${BASE_DOMAIN}`)
       - traefik.http.routers.librechat.tls=true
-      - "traefik.http.routers.librechat.rule=Host(`librechat.lab`)"
-      - traefik.http.routers.librechat.entrypoints=web,websecure
+      - traefik.http.routers.librechat.service=librechat
+      
+      # Service definition
       - traefik.http.services.librechat.loadbalancer.server.port=3080
-      - traefik.docker.network=shared-network
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
   librechat-db:
     image: mongo:latest
@@ -581,13 +625,28 @@ services:
           memory: ${PRIVATEGPT_MEMORY_LIMIT:-4g}
     labels:
       - traefik.enable=true
-      - "traefik.http.routers.privategpt.rule=Host(`privategpt.${BASE_DOMAIN}`)"
+      
+      # HTTP router with redirect
+      - traefik.http.routers.privategpt-lab-http.entrypoints=web
+      - traefik.http.routers.privategpt-lab-http.rule=Host(`privategpt.${LAB_DOMAIN}`)
+      - traefik.http.routers.privategpt-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.privategpt-lab-http.service=privategpt
+      
+      # HTTPS router for .lab domain
+      - traefik.http.routers.privategpt-lab.entrypoints=websecure
+      - traefik.http.routers.privategpt-lab.rule=Host(`privategpt.${LAB_DOMAIN}`)
+      - traefik.http.routers.privategpt-lab.tls=true
+      - traefik.http.routers.privategpt-lab.service=privategpt
+      
+      # HTTPS router for external domain
       - traefik.http.routers.privategpt.entrypoints=websecure
+      - traefik.http.routers.privategpt.rule=Host(`privategpt.${BASE_DOMAIN}`)
       - traefik.http.routers.privategpt.tls=true
-      - "traefik.http.routers.privategpt.rule=Host(`privategpt.lab`)"
-      - traefik.http.routers.privategpt.entrypoints=web,websecure
+      - traefik.http.routers.privategpt.service=privategpt
+      
+      # Service definition
       - traefik.http.services.privategpt.loadbalancer.server.port=8080
-      - traefik.docker.network=shared-network
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
   # =============================================================================
   # COMFYUI - Node-based Stable Diffusion Interface
@@ -626,13 +685,28 @@ services:
               capabilities: [gpu]
     labels:
       - traefik.enable=true
-      - "traefik.http.routers.comfyui.rule=Host(`comfyui.${BASE_DOMAIN}`)"
+      
+      # HTTP router with redirect
+      - traefik.http.routers.comfyui-lab-http.entrypoints=web
+      - traefik.http.routers.comfyui-lab-http.rule=Host(`comfyui.${LAB_DOMAIN}`)
+      - traefik.http.routers.comfyui-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.comfyui-lab-http.service=comfyui
+      
+      # HTTPS router for .lab domain
+      - traefik.http.routers.comfyui-lab.entrypoints=websecure
+      - traefik.http.routers.comfyui-lab.rule=Host(`comfyui.${LAB_DOMAIN}`)
+      - traefik.http.routers.comfyui-lab.tls=true
+      - traefik.http.routers.comfyui-lab.service=comfyui
+      
+      # HTTPS router for external domain
       - traefik.http.routers.comfyui.entrypoints=websecure
+      - traefik.http.routers.comfyui.rule=Host(`comfyui.${BASE_DOMAIN}`)
       - traefik.http.routers.comfyui.tls=true
-      - "traefik.http.routers.comfyui.rule=Host(`comfyui.lab`)"
-      - traefik.http.routers.comfyui.entrypoints=web,websecure
+      - traefik.http.routers.comfyui.service=comfyui
+      
+      # Service definition
       - traefik.http.services.comfyui.loadbalancer.server.port=8188
-      - traefik.docker.network=shared-network
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
   # =============================================================================
   # DIFFRHYTHM - AI Music Generation (GPU Required)
@@ -684,13 +758,28 @@ services:
               capabilities: [gpu]
     labels:
       - traefik.enable=true
-      - "traefik.http.routers.diffrhythm.rule=Host(`diffrhythm.${BASE_DOMAIN}`)"
+      
+      # HTTP router with redirect
+      - traefik.http.routers.diffrhythm-lab-http.entrypoints=web
+      - traefik.http.routers.diffrhythm-lab-http.rule=Host(`diffrhythm.${LAB_DOMAIN}`)
+      - traefik.http.routers.diffrhythm-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.diffrhythm-lab-http.service=diffrhythm
+      
+      # HTTPS router for .lab domain
+      - traefik.http.routers.diffrhythm-lab.entrypoints=websecure
+      - traefik.http.routers.diffrhythm-lab.rule=Host(`diffrhythm.${LAB_DOMAIN}`)
+      - traefik.http.routers.diffrhythm-lab.tls=true
+      - traefik.http.routers.diffrhythm-lab.service=diffrhythm
+      
+      # HTTPS router for external domain
       - traefik.http.routers.diffrhythm.entrypoints=websecure
+      - traefik.http.routers.diffrhythm.rule=Host(`diffrhythm.${BASE_DOMAIN}`)
       - traefik.http.routers.diffrhythm.tls=true
-      - "traefik.http.routers.diffrhythm.rule=Host(`diffrhythm.lab`)"
-      - traefik.http.routers.diffrhythm.entrypoints=web,websecure
+      - traefik.http.routers.diffrhythm.service=diffrhythm
+      
+      # Service definition
       - traefik.http.services.diffrhythm.loadbalancer.server.port=7860
-      - traefik.docker.network=shared-network
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
 # =============================================================================
 # VOLUMES AND NETWORKS
