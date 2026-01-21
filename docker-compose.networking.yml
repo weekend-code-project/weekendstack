@@ -276,10 +276,18 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
-      # Local-only Traefik dashboard (HTTP, no TLS) on http://traefik.lab/dashboard/
-      - traefik.http.routers.traefik-dashboard-http.rule=Host(`traefik.${LAB_DOMAIN}`)
-      - traefik.http.routers.traefik-dashboard-http.entrypoints=web
-      - traefik.http.routers.traefik-dashboard-http.service=api@internal
+      
+      # HTTP router with redirect
+      - traefik.http.routers.traefik-lab-http.entrypoints=web
+      - traefik.http.routers.traefik-lab-http.rule=Host(`traefik.${LAB_DOMAIN}`)
+      - traefik.http.routers.traefik-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.traefik-lab-http.service=api@internal
+      
+      # HTTPS router for .lab domain - Traefik dashboard
+      - traefik.http.routers.traefik-lab.entrypoints=websecure
+      - traefik.http.routers.traefik-lab.rule=Host(`traefik.${LAB_DOMAIN}`)
+      - traefik.http.routers.traefik-lab.tls=true
+      - traefik.http.routers.traefik-lab.service=api@internal
     command:
       - --api.dashboard=true
       - --api.insecure=true
@@ -437,7 +445,10 @@ services:
       - traefik.http.middlewares.pihole-redirect.redirectregex.replacement=http://$$1/admin/
       
       # Service definition
-      - traefik.http.services.pihole.loadbalancer.server.port=80\n      - \"com.docker.compose.service=pihole\"\n      - \"description=Pi-Hole - Network-wide Ad Blocking (Internal Only)\"
+      - traefik.http.services.pihole.loadbalancer.server.port=80
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
+      - "com.docker.compose.service=pihole"
+      - "description=Pi-Hole - Network-wide Ad Blocking (Internal Only)"
 
 networks:
   traefik-network:

@@ -317,10 +317,22 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
-      - traefik.http.routers.uptime-kuma-http.rule=Host(`uptime-kuma.lab`)
-      - traefik.http.routers.uptime-kuma-http.entrypoints=web
+      
+      # HTTP router with redirect
+      - traefik.http.routers.uptime-kuma-lab-http.entrypoints=web
+      - traefik.http.routers.uptime-kuma-lab-http.rule=Host(`uptime-kuma.${LAB_DOMAIN}`)
+      - traefik.http.routers.uptime-kuma-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.uptime-kuma-lab-http.service=uptime-kuma
+      
+      # HTTPS router for .lab domain
+      - traefik.http.routers.uptime-kuma-lab.entrypoints=websecure
+      - traefik.http.routers.uptime-kuma-lab.rule=Host(`uptime-kuma.${LAB_DOMAIN}`)
+      - traefik.http.routers.uptime-kuma-lab.tls=true
+      - traefik.http.routers.uptime-kuma-lab.service=uptime-kuma
+      
+      # Service definition
       - traefik.http.services.uptime-kuma.loadbalancer.server.port=3001
-      - traefik.docker.network=shared-network
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
   # =============================================================================
   # NETDATA - Real-time System Monitoring
