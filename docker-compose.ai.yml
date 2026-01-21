@@ -45,13 +45,28 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
-      - "traefik.http.routers.openwebui.rule=Host(`openwebui.${BASE_DOMAIN}`) || Host(`open-webui.${BASE_DOMAIN}`)"
-      - traefik.http.routers.openwebui.entrypoints=websecure
-      - traefik.http.routers.openwebui.tls=true
-      - "traefik.http.routers.openwebui.rule=Host(`openwebui.lab`) || Host(`open-webui.lab`)"
-      - traefik.http.routers.openwebui.entrypoints=web,websecure
+      
+      # External domain (HTTPS via Cloudflare)
+      - traefik.http.routers.openwebui-external.entrypoints=websecure
+      - "traefik.http.routers.openwebui-external.rule=Host(`openwebui.${BASE_DOMAIN}`) || Host(`open-webui.${BASE_DOMAIN}`)"
+      - traefik.http.routers.openwebui-external.tls=true
+      - traefik.http.routers.openwebui-external.service=openwebui
+      
+      # Local .lab domain (HTTP)
+      - traefik.http.routers.openwebui-lab-http.entrypoints=web
+      - "traefik.http.routers.openwebui-lab-http.rule=Host(`openwebui.${LAB_DOMAIN}`) || Host(`open-webui.${LAB_DOMAIN}`)"
+      - traefik.http.routers.openwebui-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.openwebui-lab-http.service=openwebui
+      
+      # Local .lab domain (HTTPS)
+      - traefik.http.routers.openwebui-lab.entrypoints=websecure
+      - "traefik.http.routers.openwebui-lab.rule=Host(`openwebui.${LAB_DOMAIN}`) || Host(`open-webui.${LAB_DOMAIN}`)"
+      - traefik.http.routers.openwebui-lab.tls=true
+      - traefik.http.routers.openwebui-lab.service=openwebui
+      
+      # Service definition
       - traefik.http.services.openwebui.loadbalancer.server.port=8080
-      - traefik.docker.network=shared-network
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
   # =============================================================================
   # SEARXNG - PRIVACY-FOCUSED SEARCH ENGINE
@@ -94,15 +109,32 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
-      - "traefik.http.routers.searxng.rule=Host(`searxng.${BASE_DOMAIN}`)"
-      - traefik.http.routers.searxng.entrypoints=websecure
-      - traefik.http.routers.searxng.tls=true
-      - "traefik.http.routers.searxng.rule=Host(`searxng.lab`)"
-      - traefik.http.routers.searxng.entrypoints=web,websecure
-      - traefik.http.routers.searxng-http.priority=21
+      
+      # External domain (HTTPS via Cloudflare)
+      - traefik.http.routers.searxng-external.entrypoints=websecure
+      - "traefik.http.routers.searxng-external.rule=Host(`searxng.${BASE_DOMAIN}`)"
+      - traefik.http.routers.searxng-external.tls=true
+      - traefik.http.routers.searxng-external.service=searxng
+      - traefik.http.routers.searxng-external.middlewares=searxng-auth@file
+      
+      # Local .lab domain (HTTP)
+      - traefik.http.routers.searxng-lab-http.entrypoints=web
+      - "traefik.http.routers.searxng-lab-http.rule=Host(`searxng.${LAB_DOMAIN}`)"
+      - traefik.http.routers.searxng-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.searxng-lab-http.service=searxng
+      - traefik.http.routers.searxng-lab-http.priority=21
+      
+      # Local .lab domain (HTTPS)
+      - traefik.http.routers.searxng-lab.entrypoints=websecure
+      - "traefik.http.routers.searxng-lab.rule=Host(`searxng.${LAB_DOMAIN}`)"
+      - traefik.http.routers.searxng-lab.tls=true
+      - traefik.http.routers.searxng-lab.service=searxng
+      - traefik.http.routers.searxng-lab.middlewares=searxng-auth@file
+      - traefik.http.routers.searxng-lab.priority=21
+      
+      # Service definition
       - traefik.http.services.searxng.loadbalancer.server.port=8080
-      - traefik.docker.network=shared-network
-      - traefik.http.routers.searxng.middlewares=searxng-auth@file
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
   # =============================================================================
   # STABLE DIFFUSION - IMAGE GENERATION (GPU Required)
@@ -146,10 +178,11 @@ services:
       - "traefik.http.routers.sdwebui.entrypoints=websecure"
       - "traefik.http.routers.sdwebui.tls=${TRAEFIK_TLS_ENABLE:-true}"
       - "traefik.http.routers.sdwebui.tls.certresolver=${TRAEFIK_CERT_RESOLVER:-letsencrypt}"
-      - "traefik.http.routers.sdwebui.rule=Host(`sdwebui.lab`)"
-      - "traefik.http.routers.sdwebui-http.entrypoints=web"
+      - "traefik.http.routers.sdwebui-lab.rule=Host(`sdwebui.${LAB_DOMAIN}`)"
+      - "traefik.http.routers.sdwebui-lab.entrypoints=web,websecure"
+      - "traefik.http.routers.sdwebui-lab.tls=true"
       - "traefik.http.services.sdwebui.loadbalancer.server.port=7860"
-      - "traefik.docker.network=shared-network"
+      - "traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}"
 
   # =============================================================================
   # LOCALAI - OpenAI-compatible Local LLM Server
@@ -192,15 +225,32 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
-      - "traefik.http.routers.localai.rule=Host(`localai.${BASE_DOMAIN}`)"
-      - traefik.http.routers.localai.entrypoints=websecure
-      - traefik.http.routers.localai.tls=true
-      - traefik.http.routers.localai.middlewares=ai-services-auth@file
-      - "traefik.http.routers.localai.rule=Host(`localai.lab`)"
-      - traefik.http.routers.localai.entrypoints=web,websecure
-      - traefik.http.routers.localai-http.priority=21
+      
+      # External domain (HTTPS via Cloudflare)
+      - traefik.http.routers.localai-external.entrypoints=websecure
+      - "traefik.http.routers.localai-external.rule=Host(`localai.${BASE_DOMAIN}`)"
+      - traefik.http.routers.localai-external.tls=true
+      - traefik.http.routers.localai-external.service=localai
+      - traefik.http.routers.localai-external.middlewares=ai-services-auth@file
+      
+      # Local .lab domain (HTTP)
+      - traefik.http.routers.localai-lab-http.entrypoints=web
+      - "traefik.http.routers.localai-lab-http.rule=Host(`localai.${LAB_DOMAIN}`)"
+      - traefik.http.routers.localai-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.localai-lab-http.service=localai
+      - traefik.http.routers.localai-lab-http.priority=21
+      
+      # Local .lab domain (HTTPS)
+      - traefik.http.routers.localai-lab.entrypoints=websecure
+      - "traefik.http.routers.localai-lab.rule=Host(`localai.${LAB_DOMAIN}`)"
+      - traefik.http.routers.localai-lab.tls=true
+      - traefik.http.routers.localai-lab.service=localai
+      - traefik.http.routers.localai-lab.middlewares=ai-services-auth@file
+      - traefik.http.routers.localai-lab.priority=21
+      
+      # Service definition
       - traefik.http.services.localai.loadbalancer.server.port=8080
-      - traefik.docker.network=shared-network
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
   # GPU version of LocalAI (uncomment to use)
   # localai-gpu:
@@ -274,15 +324,32 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
-      - "traefik.http.routers.anythingllm.rule=Host(`anythingllm.${BASE_DOMAIN}`)"
-      - traefik.http.routers.anythingllm.entrypoints=websecure
-      - traefik.http.routers.anythingllm.tls=true
-      - traefik.http.routers.anythingllm.middlewares=ai-services-auth@file
-      - "traefik.http.routers.anythingllm.rule=Host(`anythingllm.lab`)"
-      - traefik.http.routers.anythingllm.entrypoints=web,websecure
-      - traefik.http.routers.anythingllm-http.priority=21
+      
+      # External domain (HTTPS via Cloudflare)
+      - traefik.http.routers.anythingllm-external.entrypoints=websecure
+      - "traefik.http.routers.anythingllm-external.rule=Host(`anythingllm.${BASE_DOMAIN}`)"
+      - traefik.http.routers.anythingllm-external.tls=true
+      - traefik.http.routers.anythingllm-external.service=anythingllm
+      - traefik.http.routers.anythingllm-external.middlewares=ai-services-auth@file
+      
+      # Local .lab domain (HTTP)
+      - traefik.http.routers.anythingllm-lab-http.entrypoints=web
+      - "traefik.http.routers.anythingllm-lab-http.rule=Host(`anythingllm.${LAB_DOMAIN}`)"
+      - traefik.http.routers.anythingllm-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.anythingllm-lab-http.service=anythingllm
+      - traefik.http.routers.anythingllm-lab-http.priority=21
+      
+      # Local .lab domain (HTTPS)
+      - traefik.http.routers.anythingllm-lab.entrypoints=websecure
+      - "traefik.http.routers.anythingllm-lab.rule=Host(`anythingllm.${LAB_DOMAIN}`)"
+      - traefik.http.routers.anythingllm-lab.tls=true
+      - traefik.http.routers.anythingllm-lab.service=anythingllm
+      - traefik.http.routers.anythingllm-lab.middlewares=ai-services-auth@file
+      - traefik.http.routers.anythingllm-lab.priority=21
+      
+      # Service definition
       - traefik.http.services.anythingllm.loadbalancer.server.port=3001
-      - traefik.docker.network=shared-network
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
   # =============================================================================
   # WHISPER - Speech-to-Text API
@@ -324,15 +391,32 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
-      - "traefik.http.routers.whisper.rule=Host(`whisper.${BASE_DOMAIN}`)"
-      - traefik.http.routers.whisper.entrypoints=websecure
-      - traefik.http.routers.whisper.tls=true
-      - traefik.http.routers.whisper.middlewares=ai-services-auth@file
-      - "traefik.http.routers.whisper.rule=Host(`whisper.lab`)"
-      - traefik.http.routers.whisper.entrypoints=web,websecure
-      - traefik.http.routers.whisper-http.priority=21
+      
+      # External domain (HTTPS via Cloudflare)
+      - traefik.http.routers.whisper-external.entrypoints=websecure
+      - "traefik.http.routers.whisper-external.rule=Host(`whisper.${BASE_DOMAIN}`)"
+      - traefik.http.routers.whisper-external.tls=true
+      - traefik.http.routers.whisper-external.service=whisper
+      - traefik.http.routers.whisper-external.middlewares=ai-services-auth@file
+      
+      # Local .lab domain (HTTP)
+      - traefik.http.routers.whisper-lab-http.entrypoints=web
+      - "traefik.http.routers.whisper-lab-http.rule=Host(`whisper.${LAB_DOMAIN}`)"
+      - traefik.http.routers.whisper-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.whisper-lab-http.service=whisper
+      - traefik.http.routers.whisper-lab-http.priority=21
+      
+      # Local .lab domain (HTTPS)
+      - traefik.http.routers.whisper-lab.entrypoints=websecure
+      - "traefik.http.routers.whisper-lab.rule=Host(`whisper.${LAB_DOMAIN}`)"
+      - traefik.http.routers.whisper-lab.tls=true
+      - traefik.http.routers.whisper-lab.service=whisper
+      - traefik.http.routers.whisper-lab.middlewares=ai-services-auth@file
+      - traefik.http.routers.whisper-lab.priority=21
+      
+      # Service definition
       - traefik.http.services.whisper.loadbalancer.server.port=9000
-      - traefik.docker.network=shared-network
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
   # =============================================================================
   # WHISPERX - Advanced Speech-to-Text with Speaker Diarization

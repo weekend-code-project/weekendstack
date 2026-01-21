@@ -193,20 +193,52 @@ services:
       
       # Traefik labels
       - traefik.enable=true
-      # External domain (HTTPS via Cloudflare)
+      
+      # Main dashboard - External domain (HTTPS via Cloudflare)
       - traefik.http.routers.coder-external.entrypoints=websecure
-      - traefik.http.routers.coder-external.rule=Host(`coder.${BASE_DOMAIN}`)
+      - traefik.http.routers.coder-external.rule=Host(`${CODER_HOSTNAME}.${BASE_DOMAIN}`)
       - traefik.http.routers.coder-external.tls=true
       - traefik.http.routers.coder-external.service=coder
+      - traefik.http.routers.coder-external.priority=100
       
-      # Local .lab domain (HTTP + HTTPS)
-      - traefik.http.routers.coder.entrypoints=web,websecure
-      - traefik.http.routers.coder.rule=Host(`coder.lab`)
-      - traefik.http.routers.coder.service=coder
+      # Main dashboard - Local .lab domain (HTTP)
+      - traefik.http.routers.coder-lab-http.entrypoints=web
+      - traefik.http.routers.coder-lab-http.rule=Host(`${CODER_HOSTNAME}.${LAB_DOMAIN}`)
+      - traefik.http.routers.coder-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.coder-lab-http.service=coder
+      - traefik.http.routers.coder-lab-http.priority=100
+      
+      # Main dashboard - Local .lab domain (HTTPS)
+      - traefik.http.routers.coder-lab.entrypoints=websecure
+      - traefik.http.routers.coder-lab.rule=Host(`${CODER_HOSTNAME}.${LAB_DOMAIN}`)
+      - traefik.http.routers.coder-lab.tls=true
+      - traefik.http.routers.coder-lab.service=coder
+      - traefik.http.routers.coder-lab.priority=100
+      
+      # Workspace wildcard - External domain (*.coder.weekendcodeproject.dev)
+      - traefik.http.routers.coder-workspace-external.entrypoints=websecure
+      - traefik.http.routers.coder-workspace-external.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.${CODER_HOSTNAME}.${BASE_DOMAIN}`)
+      - traefik.http.routers.coder-workspace-external.tls=true
+      - traefik.http.routers.coder-workspace-external.service=coder
+      - traefik.http.routers.coder-workspace-external.priority=50
+      
+      # Workspace wildcard - Local .lab domain HTTP (*.coder.lab)
+      - traefik.http.routers.coder-workspace-lab-http.entrypoints=web
+      - traefik.http.routers.coder-workspace-lab-http.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.${CODER_HOSTNAME}.${LAB_DOMAIN}`)
+      - traefik.http.routers.coder-workspace-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.coder-workspace-lab-http.service=coder
+      - traefik.http.routers.coder-workspace-lab-http.priority=50
+      
+      # Workspace wildcard - Local .lab domain HTTPS (*.coder.lab)
+      - traefik.http.routers.coder-workspace-lab.entrypoints=websecure
+      - traefik.http.routers.coder-workspace-lab.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.${CODER_HOSTNAME}.${LAB_DOMAIN}`)
+      - traefik.http.routers.coder-workspace-lab.tls=true
+      - traefik.http.routers.coder-workspace-lab.service=coder
+      - traefik.http.routers.coder-workspace-lab.priority=50
       
       # Service definition
       - traefik.http.services.coder.loadbalancer.server.port=7080
-      - traefik.docker.network=shared-network
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
   # =============================================================================
   # GITEA GIT REPOSITORY HOSTING WITH CI/CD
@@ -277,15 +309,28 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
-      - traefik.http.routers.gitea.entrypoints=websecure
-      - traefik.http.routers.gitea.rule=Host(`gitea.${BASE_DOMAIN}`)
-      - traefik.http.routers.gitea.tls=true
+      
+      # External domain (HTTPS via Cloudflare)
+      - traefik.http.routers.gitea-external.entrypoints=websecure
+      - traefik.http.routers.gitea-external.rule=Host(`gitea.${BASE_DOMAIN}`)
+      - traefik.http.routers.gitea-external.tls=true
+      - traefik.http.routers.gitea-external.service=gitea
+      
+      # Local .lab domain (HTTP)
+      - traefik.http.routers.gitea-lab-http.entrypoints=web
+      - traefik.http.routers.gitea-lab-http.rule=Host(`gitea.${LAB_DOMAIN}`)
+      - traefik.http.routers.gitea-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.gitea-lab-http.service=gitea
+      
+      # Local .lab domain (HTTPS)
+      - traefik.http.routers.gitea-lab.entrypoints=websecure
+      - traefik.http.routers.gitea-lab.rule=Host(`gitea.${LAB_DOMAIN}`)
+      - traefik.http.routers.gitea-lab.tls=true
+      - traefik.http.routers.gitea-lab.service=gitea
+      
+      # Service definition
       - traefik.http.services.gitea.loadbalancer.server.port=3000
-      - traefik.docker.network=shared-network
-
-      - traefik.http.routers.gitea.entrypoints=web,websecure
-      - traefik.http.routers.gitea.rule=Host(`gitea.lab`)
-      - traefik.http.routers.gitea.service=gitea
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
   registry-cache:
     image: registry:2
@@ -312,15 +357,28 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
-      - traefik.http.routers.registry.rule=Host(`registry.${BASE_DOMAIN}`)
-      - traefik.http.routers.registry.entrypoints=websecure
-      - traefik.http.routers.registry.tls=true
-
-      - traefik.http.routers.registry.rule=Host(`registry.lab`)
-      - traefik.http.routers.registry.entrypoints=web,websecure
-      - traefik.http.routers.registry.service=registry
+      
+      # External domain (HTTPS via Cloudflare)
+      - traefik.http.routers.registry-external.entrypoints=websecure
+      - traefik.http.routers.registry-external.rule=Host(`registry.${BASE_DOMAIN}`)
+      - traefik.http.routers.registry-external.tls=true
+      - traefik.http.routers.registry-external.service=registry
+      
+      # Local .lab domain (HTTP)
+      - traefik.http.routers.registry-lab-http.entrypoints=web
+      - traefik.http.routers.registry-lab-http.rule=Host(`registry.${LAB_DOMAIN}`)
+      - traefik.http.routers.registry-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.registry-lab-http.service=registry
+      
+      # Local .lab domain (HTTPS)
+      - traefik.http.routers.registry-lab.entrypoints=websecure
+      - traefik.http.routers.registry-lab.rule=Host(`registry.${LAB_DOMAIN}`)
+      - traefik.http.routers.registry-lab.tls=true
+      - traefik.http.routers.registry-lab.service=registry
+      
+      # Service definition
       - traefik.http.services.registry.loadbalancer.server.port=5000
-      - traefik.docker.network=shared-network
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
   # ====================================================================
   # GITLAB CE - Complete DevOps Platform
@@ -381,20 +439,28 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
+      
       # External domain (HTTPS via Cloudflare)
       - traefik.http.routers.gitlab-external.entrypoints=websecure
       - traefik.http.routers.gitlab-external.rule=Host(`gitlab.${BASE_DOMAIN}`)
       - traefik.http.routers.gitlab-external.tls=true
       - traefik.http.routers.gitlab-external.service=gitlab
       
-      # Local .lab domain (HTTP + HTTPS)
-      - traefik.http.routers.gitlab.entrypoints=web,websecure
-      - traefik.http.routers.gitlab.rule=Host(`gitlab.lab`)
-      - traefik.http.routers.gitlab.service=gitlab
+      # Local .lab domain (HTTP)
+      - traefik.http.routers.gitlab-lab-http.entrypoints=web
+      - traefik.http.routers.gitlab-lab-http.rule=Host(`gitlab.${LAB_DOMAIN}`)
+      - traefik.http.routers.gitlab-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.gitlab-lab-http.service=gitlab
+      
+      # Local .lab domain (HTTPS)
+      - traefik.http.routers.gitlab-lab.entrypoints=websecure
+      - traefik.http.routers.gitlab-lab.rule=Host(`gitlab.${LAB_DOMAIN}`)
+      - traefik.http.routers.gitlab-lab.tls=true
+      - traefik.http.routers.gitlab-lab.service=gitlab
       
       # Service definition
       - traefik.http.services.gitlab.loadbalancer.server.port=80
-      - traefik.docker.network=shared-network
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
 volumes:
   coder-db-data:

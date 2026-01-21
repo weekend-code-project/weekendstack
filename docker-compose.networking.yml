@@ -277,7 +277,7 @@ services:
       # Traefik Configuration
       - traefik.enable=true
       # Local-only Traefik dashboard (HTTP, no TLS) on http://traefik.lab/dashboard/
-      - traefik.http.routers.traefik-dashboard-http.rule=Host(`traefik.lab`)
+      - traefik.http.routers.traefik-dashboard-http.rule=Host(`traefik.${LAB_DOMAIN}`)
       - traefik.http.routers.traefik-dashboard-http.entrypoints=web
       - traefik.http.routers.traefik-dashboard-http.service=api@internal
     command:
@@ -341,7 +341,7 @@ services:
       # Traefik Configuration
       - traefik.enable=true
       - traefik.http.services.error-pages.loadbalancer.server.port=8080
-      - traefik.docker.network=shared-network
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
   # =============================================================================
   # PI-HOLE - NETWORK-WIDE AD BLOCKING & DNS (INTERNAL ONLY)
@@ -418,7 +418,7 @@ services:
       # Local-only Pi-hole admin (HTTP, no TLS) on http://pihole.lab/admin
       # This is NOT exposed via Cloudflare tunnel (router is web-only).
       - traefik.enable=true
-      - traefik.http.routers.pihole.rule=Host(`pihole.lab`)
+      - traefik.http.routers.pihole.rule=Host(`pihole.${LAB_DOMAIN}`)
       - traefik.http.routers.pihole.entrypoints=web,websecure
       - traefik.http.routers.pihole.tls=true
       - traefik.http.routers.pihole-http.middlewares=pihole-redirect

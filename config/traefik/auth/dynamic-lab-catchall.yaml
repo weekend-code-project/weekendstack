@@ -1,4 +1,11 @@
 http:
+  # HTTP to HTTPS redirect middleware
+  middlewares:
+    redirect-to-https:
+      redirectScheme:
+        scheme: https
+        permanent: false
+
   # Lab catchall redirect is disabled - unknown .lab routes now show custom 404 pages
   # instead of redirecting to glance.lab
   # middlewares:
