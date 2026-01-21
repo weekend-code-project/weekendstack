@@ -134,10 +134,11 @@ locals {
 # Output the setup script
 output "setup_server_script" {
   value = <<-EOT
-    echo "[SETUP-SERVER] ==================== MODULE LOADED ===================="
     #!/bin/bash
     # Setup Server (${var.server_name})
     set -e
+    
+    echo "[SETUP-SERVER] ==================== MODULE LOADED ===================="
     
     # Export internal ports (for binding inside container)
     export PORTS="${join(",", var.exposed_ports_list)}"

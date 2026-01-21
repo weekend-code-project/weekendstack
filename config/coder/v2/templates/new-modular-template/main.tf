@@ -271,6 +271,7 @@ module "traefik_routing" {
   preview_port             = local.preview_port
   external_preview_enabled = local.external_preview_enabled
   workspace_password       = local.workspace_password
+  # Note: traefik_auth_dir not passed - module uses fixed /traefik-auth mount point
 }
 
 # =============================================================================
@@ -557,6 +558,16 @@ resource "docker_container" "workspace" {
   volumes {
     volume_name    = docker_volume.home.name
     container_path = "/home/coder"
+  }
+  
+  # Traefik auth directory (shared with Traefik for basic auth)
+  # Host path (traefik_auth_dir) maps to /traefik-auth inside container
+  # Traefik also mounts the same host path to /traefik-auth
+  mounts {
+    type      = "bind"
+    source    = var.traefik_auth_dir
+    target    = "/traefik-auth"
+    read_only = false
   }
   
   # Basic environment

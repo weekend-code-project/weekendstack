@@ -142,11 +142,12 @@ resource "docker_container" "workspace" {
   }
   
   # Server port mappings (when server is configured)
+  # Note: Using hardcoded port 8080 for now (inline setup-server script)
   dynamic "ports" {
-    for_each = try(module.setup_server.docker_ports, [])
+    for_each = local.auto_generate_html ? [1] : []
     content {
-      internal = ports.value.internal
-      external = ports.value.external
+      internal = 8080
+      external = 8080
       protocol = "tcp"
     }
   }

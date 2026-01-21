@@ -67,18 +67,22 @@ locals {
 # =============================================================================
 
 locals {
-  setup_server_script = <<-BASH
-#!/bin/bash
-set -e
-
-echo "[SETUP-SERVER] ==================== STARTING ===================="
-echo "[SETUP-SERVER] Working directory: $(pwd)"
-
-cd /home/coder/workspace
-echo "[SETUP-SERVER] Changed to: $(pwd)"
-
-echo "[SETUP-SERVER] Creating index.html..."
-cat > index.html << 'EOF'
+  setup_server_script = <<-EOT
+    #!/bin/bash
+    set -e
+    
+    echo "[SETUP-SERVER] ==================== MODULE LOADED ===================="
+    echo "[SETUP-SERVER] 🔧 Starting setup..."
+    
+    cd /home/coder/workspace
+    echo "[SETUP-SERVER] 📂 Workspace: $(pwd)"
+    
+    AUTO_HTML="${local.auto_generate_html}"
+    echo "[SETUP-SERVER] 🎨 Generate HTML: $AUTO_HTML"
+    
+    if [ "$AUTO_HTML" = "true" ]; then
+        echo "[SETUP-SERVER] ✍️ Generating index.html..."
+        cat > index.html <<'HTML'
 <!DOCTYPE html>
 <html>
 <head>
@@ -104,10 +108,11 @@ cat > index.html << 'EOF'
     <h1>🎉 IT WORKS! 🎉</h1>
 </body>
 </html>
-EOF
-
-echo "[SETUP-SERVER] ✅ Created index.html ($(wc -c < index.html) bytes)"
-ls -lh index.html
-echo "[SETUP-SERVER] ==================== COMPLETE ===================="
-BASH
+HTML
+        echo "[SETUP-SERVER] ✅ Generated index.html ($(wc -c < index.html) bytes)"
+        ls -lh index.html
+    fi
+    
+    echo "[SETUP-SERVER] 🏁 Complete!"
+  EOT
 }

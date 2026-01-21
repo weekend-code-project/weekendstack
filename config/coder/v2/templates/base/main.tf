@@ -81,7 +81,7 @@ data "coder_parameter" "auto_generate_html" {
 data "coder_parameter" "external_preview" {
   name         = "external_preview"
   display_name = "External Preview"
-  description  = "Enable external preview via Traefik tunnel (requires password)."
+  description  = "Enable external preview via Traefik tunnel."
   type         = "bool"
   default      = "true"
   mutable      = true
@@ -91,7 +91,7 @@ data "coder_parameter" "external_preview" {
 data "coder_parameter" "workspace_password" {
   name         = "workspace_password"
   display_name = "Preview Password"
-  description  = "Password for external preview basic auth. Required when external preview is enabled."
+  description  = "Optional password for external preview basic auth. Leave empty for no password."
   type         = "string"
   default      = ""
   mutable      = true
