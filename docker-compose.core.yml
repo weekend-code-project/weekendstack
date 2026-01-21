@@ -50,19 +50,29 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
-      # HTTPS (Tunnel / public)
-      - traefik.http.routers.link-router.rule=(Host(`glance.${LAB_DOMAIN:-lab}`) || Host(`glance.${BASE_DOMAIN}`)) && (PathPrefix(`/go/`) || PathPrefix(`/go-external/`))
-      - traefik.http.routers.link-router.entrypoints=websecure
-      - traefik.http.routers.link-router.tls=${TRAEFIK_TLS_ENABLE:-true}
-      - traefik.http.routers.link-router.priority=100
+      
+      # External HTTPS (Tunnel / public)
+      - traefik.http.routers.link-router-external.rule=(Host(`glance.${LAB_DOMAIN:-lab}`) || Host(`glance.${BASE_DOMAIN}`)) && (PathPrefix(`/go/`) || PathPrefix(`/go-external/`))
+      - traefik.http.routers.link-router-external.entrypoints=websecure
+      - traefik.http.routers.link-router-external.tls=${TRAEFIK_TLS_ENABLE:-true}
+      - traefik.http.routers.link-router-external.priority=100
+      - traefik.http.routers.link-router-external.service=link-router
 
-      # Local .lab and IP access (HTTP + HTTPS)
-      - "traefik.http.routers.link-router-local.rule=(Host(`home.lab`) || Host(`${HOST_IP}`)) && (PathPrefix(`/go/`) || PathPrefix(`/go-external/`))"
-      - traefik.http.routers.link-router-local.entrypoints=web,websecure
+      # Local .lab and IP access (HTTP with redirect)
+      - "traefik.http.routers.link-router-local-http.rule=(Host(`home.${LAB_DOMAIN}`) || Host(`${HOST_IP}`)) && (PathPrefix(`/go/`) || PathPrefix(`/go-external/`))"
+      - traefik.http.routers.link-router-local-http.entrypoints=web
+      - traefik.http.routers.link-router-local-http.priority=200
+      - traefik.http.routers.link-router-local-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.link-router-local-http.service=link-router
+      
+      # Local .lab and IP access (HTTPS)
+      - "traefik.http.routers.link-router-local.rule=(Host(`home.${LAB_DOMAIN}`) || Host(`${HOST_IP}`)) && (PathPrefix(`/go/`) || PathPrefix(`/go-external/`))"
+      - traefik.http.routers.link-router-local.entrypoints=websecure
       - traefik.http.routers.link-router-local.priority=200
       - traefik.http.routers.link-router-local.service=link-router
       - traefik.http.routers.link-router-local.tls=true
 
+      # Service definition
       - traefik.http.services.link-router.loadbalancer.server.port=8080
       - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
@@ -116,11 +126,21 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
-      - traefik.http.routers.glance.entrypoints=web,websecure
-      - "traefik.http.routers.glance.rule=(Host(`home.lab`) || Host(`${HOST_IP}`)) && !PathPrefix(`/go/`)"
+      
+      # HTTP router with redirect
+      - traefik.http.routers.glance-http.entrypoints=web
+      - "traefik.http.routers.glance-http.rule=(Host(`home.${LAB_DOMAIN}`) || Host(`${HOST_IP}`)) && !PathPrefix(`/go/`)"
+      - traefik.http.routers.glance-http.priority=100
+      - traefik.http.routers.glance-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.glance-http.service=glance
+      
+      # HTTPS router
+      - traefik.http.routers.glance.entrypoints=websecure
+      - "traefik.http.routers.glance.rule=(Host(`home.${LAB_DOMAIN}`) || Host(`${HOST_IP}`)) && !PathPrefix(`/go/`)"
       - traefik.http.routers.glance.priority=100
       - traefik.http.routers.glance.service=glance
       - traefik.http.routers.glance.tls=true
+      
       # Service definition
       - traefik.http.services.glance.loadbalancer.server.port=8080
       - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
