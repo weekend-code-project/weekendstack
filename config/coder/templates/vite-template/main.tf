@@ -113,6 +113,13 @@ resource "docker_container" "workspace" {
     label = "traefik.http.routers.${lower(data.coder_workspace.me.name)}.tls"
     value = "true"
   }
+  
+  # Hide from Glance dashboard
+  labels {
+    label = "glance.hide"
+    value = "true"
+  }
+  
   labels {
     label = "traefik.http.services.${lower(data.coder_workspace.me.name)}.loadbalancer.server.port"
     value = "8080"

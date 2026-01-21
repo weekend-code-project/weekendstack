@@ -152,6 +152,12 @@ resource "docker_container" "workspace" {
     }
   }
   
+  # Hide from Glance dashboard
+  labels {
+    label = "glance.hide"
+    value = "true"
+  }
+  
   # Traefik labels (static for testing)
   labels {
     label = "traefik.enable"

@@ -553,6 +553,12 @@ resource "docker_container" "workspace" {
     }
   }
   
+  # Hide from Glance dashboard
+  labels {
+    label = "glance.hide"
+    value = "true"
+  }
+  
   # Home directory persistence
   volumes {
     volume_name    = docker_volume.home.name

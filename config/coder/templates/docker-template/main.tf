@@ -114,6 +114,12 @@ resource "docker_volume" "home_volume" {
     ignore_changes = all
   }
   
+  # Hide from Glance dashboard
+  labels {
+    label = "glance.hide"
+    value = "true"
+  }
+  
   labels {
     label = "coder.owner"
     value = data.coder_workspace_owner.me.name
