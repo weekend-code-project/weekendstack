@@ -707,17 +707,24 @@ services:
       - glance.url=/go/postiz
       - glance.description=Social Media Management
       
-      # Traefik Configuration for external access
+      # Traefik Configuration
       - traefik.enable=true
-      - traefik.http.routers.postiz.rule=Host(`postiz.${BASE_DOMAIN}`)
-      - traefik.http.routers.postiz.entrypoints=websecure
-      - traefik.http.routers.postiz.tls=true
+      
+      # Local .lab domain (HTTP)
+      - traefik.http.routers.postiz-lab-http.entrypoints=web
+      - traefik.http.routers.postiz-lab-http.rule=Host(`postiz.${LAB_DOMAIN}`)
+      - traefik.http.routers.postiz-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.postiz-lab-http.service=postiz
+      
+      # Local .lab domain (HTTPS)
+      - traefik.http.routers.postiz-lab.entrypoints=websecure
+      - traefik.http.routers.postiz-lab.rule=Host(`postiz.${LAB_DOMAIN}`)
+      - traefik.http.routers.postiz-lab.tls=true
+      - traefik.http.routers.postiz-lab.service=postiz
+      
+      # Service definition
       - traefik.http.services.postiz.loadbalancer.server.port=5000
-      - traefik.docker.network=shared-network
-
-      - traefik.http.routers.postiz.entrypoints=web,websecure
-      - traefik.http.routers.postiz.rule=Host(`postiz.lab`)
-      - traefik.http.routers.postiz.service=postiz
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
       
       # Additional labels for documentation
       - "com.docker.compose.service=postiz"
@@ -758,15 +765,22 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
-      - traefik.http.routers.focalboard.rule=Host(`focalboard.${BASE_DOMAIN}`)
-      - traefik.http.routers.focalboard.entrypoints=websecure
-      - traefik.http.routers.focalboard.tls=true
+      
+      # Local .lab domain (HTTP)
+      - traefik.http.routers.focalboard-lab-http.entrypoints=web
+      - traefik.http.routers.focalboard-lab-http.rule=Host(`focalboard.${LAB_DOMAIN}`)
+      - traefik.http.routers.focalboard-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.focalboard-lab-http.service=focalboard
+      
+      # Local .lab domain (HTTPS)
+      - traefik.http.routers.focalboard-lab.entrypoints=websecure
+      - traefik.http.routers.focalboard-lab.rule=Host(`focalboard.${LAB_DOMAIN}`)
+      - traefik.http.routers.focalboard-lab.tls=true
+      - traefik.http.routers.focalboard-lab.service=focalboard
+      
+      # Service definition
       - traefik.http.services.focalboard.loadbalancer.server.port=8000
-      - traefik.docker.network=shared-network
-
-      - traefik.http.routers.focalboard.entrypoints=web,websecure
-      - traefik.http.routers.focalboard.rule=Host(`focalboard.lab`)
-      - traefik.http.routers.focalboard.service=focalboard
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
   # =============================================================================
   # TRILIUM - Hierarchical Note-Taking
@@ -806,15 +820,22 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
-      - traefik.http.routers.trilium.rule=Host(`trilium.${BASE_DOMAIN}`)
-      - traefik.http.routers.trilium.entrypoints=websecure
-      - traefik.http.routers.trilium.tls=true
+      
+      # Local .lab domain (HTTP)
+      - traefik.http.routers.trilium-lab-http.entrypoints=web
+      - traefik.http.routers.trilium-lab-http.rule=Host(`trilium.${LAB_DOMAIN}`)
+      - traefik.http.routers.trilium-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.trilium-lab-http.service=trilium
+      
+      # Local .lab domain (HTTPS)
+      - traefik.http.routers.trilium-lab.entrypoints=websecure
+      - traefik.http.routers.trilium-lab.rule=Host(`trilium.${LAB_DOMAIN}`)
+      - traefik.http.routers.trilium-lab.tls=true
+      - traefik.http.routers.trilium-lab.service=trilium
+      
+      # Service definition
       - traefik.http.services.trilium.loadbalancer.server.port=8080
-      - traefik.docker.network=shared-network
-
-      - traefik.http.routers.trilium.entrypoints=web,websecure
-      - traefik.http.routers.trilium.rule=Host(`trilium.lab`)
-      - traefik.http.routers.trilium.service=trilium
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
   # =============================================================================
   # VIKUNJA - Task & Project Management
@@ -860,15 +881,22 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
-      - traefik.http.routers.vikunja.rule=Host(`vikunja.${BASE_DOMAIN}`)
-      - traefik.http.routers.vikunja.entrypoints=websecure
-      - traefik.http.routers.vikunja.tls=true
+      
+      # Local .lab domain (HTTP)
+      - traefik.http.routers.vikunja-lab-http.entrypoints=web
+      - traefik.http.routers.vikunja-lab-http.rule=Host(`vikunja.${LAB_DOMAIN}`)
+      - traefik.http.routers.vikunja-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.vikunja-lab-http.service=vikunja
+      
+      # Local .lab domain (HTTPS)
+      - traefik.http.routers.vikunja-lab.entrypoints=websecure
+      - traefik.http.routers.vikunja-lab.rule=Host(`vikunja.${LAB_DOMAIN}`)
+      - traefik.http.routers.vikunja-lab.tls=true
+      - traefik.http.routers.vikunja-lab.service=vikunja
+      
+      # Service definition
       - traefik.http.services.vikunja.loadbalancer.server.port=3456
-      - traefik.docker.network=shared-network
-
-      - traefik.http.routers.vikunja.entrypoints=web,websecure
-      - traefik.http.routers.vikunja.rule=Host(`vikunja.lab`)
-      - traefik.http.routers.vikunja.service=vikunja
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
   # =============================================================================
   # IT-TOOLS - Developer Utilities Collection
@@ -948,16 +976,25 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
-      - traefik.http.routers.excalidraw.rule=Host(`excalidraw.${BASE_DOMAIN}`)
-      - traefik.http.routers.excalidraw.entrypoints=websecure
-      - traefik.http.routers.excalidraw.tls=true
-      - traefik.http.routers.excalidraw.middlewares=it-tools-auth@file
+      
+      # Local .lab domain (HTTP)
+      - traefik.http.routers.excalidraw-lab-http.entrypoints=web
+      - traefik.http.routers.excalidraw-lab-http.rule=Host(`excalidraw.${LAB_DOMAIN}`)
+      - traefik.http.routers.excalidraw-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.excalidraw-lab-http.service=excalidraw
+      
+      # Local .lab domain (HTTPS)
+      - traefik.http.routers.excalidraw-lab.entrypoints=websecure
+      - traefik.http.routers.excalidraw-lab.rule=Host(`excalidraw.${LAB_DOMAIN}`)
+      - traefik.http.routers.excalidraw-lab.tls=true
+      - traefik.http.routers.excalidraw-lab.middlewares=it-tools-auth@file
+      - traefik.http.routers.excalidraw-lab.service=excalidraw
+      
+      # Service definition
       - traefik.http.services.excalidraw.loadbalancer.server.port=80
-      - traefik.docker.network=shared-network
-
-      - traefik.http.routers.excalidraw.entrypoints=web,websecure
-      - traefik.http.routers.excalidraw.rule=Host(`excalidraw.lab`)
-      - traefik.http.routers.excalidraw.service=excalidraw
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
+      
+      # Additional labels for documentation
       - "com.docker.compose.service=excalidraw"
       - "description=Excalidraw - Whiteboard Collaboration"
 
@@ -1059,15 +1096,22 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
-      - traefik.http.routers.docmost.rule=Host(`docmost.${BASE_DOMAIN}`)
-      - traefik.http.routers.docmost.entrypoints=websecure
-      - traefik.http.routers.docmost.tls=true
+      
+      # Local .lab domain (HTTP)
+      - traefik.http.routers.docmost-lab-http.entrypoints=web
+      - traefik.http.routers.docmost-lab-http.rule=Host(`docmost.${LAB_DOMAIN}`)
+      - traefik.http.routers.docmost-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.docmost-lab-http.service=docmost
+      
+      # Local .lab domain (HTTPS)
+      - traefik.http.routers.docmost-lab.entrypoints=websecure
+      - traefik.http.routers.docmost-lab.rule=Host(`docmost.${LAB_DOMAIN}`)
+      - traefik.http.routers.docmost-lab.tls=true
+      - traefik.http.routers.docmost-lab.service=docmost
+      
+      # Service definition
       - traefik.http.services.docmost.loadbalancer.server.port=3000
-      - traefik.docker.network=shared-network
-
-      - traefik.http.routers.docmost.entrypoints=web,websecure
-      - traefik.http.routers.docmost.rule=Host(`docmost.lab`)
-      - traefik.http.routers.docmost.service=docmost
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
       - "com.docker.compose.service=docmost"
       - "description=Docmost - Wiki/Documentation Platform"
 
@@ -1116,15 +1160,22 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
-      - traefik.http.routers.filebrowser.rule=Host(`filebrowser.${BASE_DOMAIN}`)
-      - traefik.http.routers.filebrowser.entrypoints=websecure
-      - traefik.http.routers.filebrowser.tls=true
+      
+      # Local .lab domain (HTTP)
+      - traefik.http.routers.filebrowser-lab-http.entrypoints=web
+      - traefik.http.routers.filebrowser-lab-http.rule=Host(`filebrowser.${LAB_DOMAIN}`)
+      - traefik.http.routers.filebrowser-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.filebrowser-lab-http.service=filebrowser
+      
+      # Local .lab domain (HTTPS)
+      - traefik.http.routers.filebrowser-lab.entrypoints=websecure
+      - traefik.http.routers.filebrowser-lab.rule=Host(`filebrowser.${LAB_DOMAIN}`)
+      - traefik.http.routers.filebrowser-lab.tls=true
+      - traefik.http.routers.filebrowser-lab.service=filebrowser
+      
+      # Service definition
       - traefik.http.services.filebrowser.loadbalancer.server.port=80
-      - traefik.docker.network=shared-network
-
-      - traefik.http.routers.filebrowser.entrypoints=web,websecure
-      - traefik.http.routers.filebrowser.rule=Host(`filebrowser.lab`)
-      - traefik.http.routers.filebrowser.service=filebrowser
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
       - "com.docker.compose.service=filebrowser"
       - "description=File Browser - Web File Manager (scoped to ./files)"
@@ -1176,15 +1227,24 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
-      - traefik.http.routers.hoarder.rule=Host(`hoarder.${BASE_DOMAIN}`)
-      - traefik.http.routers.hoarder.entrypoints=websecure
-      - traefik.http.routers.hoarder.tls=true
-
-      - traefik.http.routers.hoarder.entrypoints=web,websecure
-      - traefik.http.routers.hoarder.rule=Host(`hoarder.lab`)
-      - traefik.http.routers.hoarder.service=hoarder
+      
+      # Local .lab domain (HTTP)
+      - traefik.http.routers.hoarder-lab-http.entrypoints=web
+      - traefik.http.routers.hoarder-lab-http.rule=Host(`hoarder.${LAB_DOMAIN}`)
+      - traefik.http.routers.hoarder-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.hoarder-lab-http.service=hoarder
+      
+      # Local .lab domain (HTTPS)
+      - traefik.http.routers.hoarder-lab.entrypoints=websecure
+      - traefik.http.routers.hoarder-lab.rule=Host(`hoarder.${LAB_DOMAIN}`)
+      - traefik.http.routers.hoarder-lab.tls=true
+      - traefik.http.routers.hoarder-lab.service=hoarder
+      
+      # Service definition
       - traefik.http.services.hoarder.loadbalancer.server.port=3000
-      - traefik.docker.network=shared-network
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
+      
+      # Additional labels for documentation
       - "com.docker.compose.service=hoarder"
       - "description=Hoarder (Karakeep) - Bookmark Everything"
 
@@ -1269,15 +1329,24 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
-      - traefik.http.routers.bytestash.rule=Host(`bytestash.${BASE_DOMAIN}`)
-      - traefik.http.routers.bytestash.entrypoints=websecure
-      - traefik.http.routers.bytestash.tls=true
+      
+      # Local .lab domain (HTTP)
+      - traefik.http.routers.bytestash-lab-http.entrypoints=web
+      - traefik.http.routers.bytestash-lab-http.rule=Host(`bytestash.${LAB_DOMAIN}`)
+      - traefik.http.routers.bytestash-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.bytestash-lab-http.service=bytestash
+      
+      # Local .lab domain (HTTPS)
+      - traefik.http.routers.bytestash-lab.entrypoints=websecure
+      - traefik.http.routers.bytestash-lab.rule=Host(`bytestash.${LAB_DOMAIN}`)
+      - traefik.http.routers.bytestash-lab.tls=true
+      - traefik.http.routers.bytestash-lab.service=bytestash
+      
+      # Service definition
       - traefik.http.services.bytestash.loadbalancer.server.port=5000
-      - traefik.docker.network=shared-network
-
-      - traefik.http.routers.bytestash.entrypoints=web,websecure
-      - traefik.http.routers.bytestash.rule=Host(`bytestash.lab`)
-      - traefik.http.routers.bytestash.service=bytestash
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
+      
+      # Additional labels for documentation
       - "com.docker.compose.service=bytestash"
       - "description=ByteStash - Code Snippet Manager"
 
@@ -1368,17 +1437,24 @@ services:
       - glance.url=/go/resourcespace
       - glance.description=Digital Asset Management
       
-      # Traefik Configuration for external access
+      # Traefik Configuration
       - traefik.enable=true
-      - traefik.http.routers.resourcespace.rule=Host(`resourcespace.${BASE_DOMAIN}`)
-      - traefik.http.routers.resourcespace.entrypoints=websecure
-      - traefik.http.routers.resourcespace.tls=true
+      
+      # Local .lab domain (HTTP)
+      - traefik.http.routers.resourcespace-lab-http.entrypoints=web
+      - traefik.http.routers.resourcespace-lab-http.rule=Host(`resourcespace.${LAB_DOMAIN}`)
+      - traefik.http.routers.resourcespace-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.resourcespace-lab-http.service=resourcespace
+      
+      # Local .lab domain (HTTPS)
+      - traefik.http.routers.resourcespace-lab.entrypoints=websecure
+      - traefik.http.routers.resourcespace-lab.rule=Host(`resourcespace.${LAB_DOMAIN}`)
+      - traefik.http.routers.resourcespace-lab.tls=true
+      - traefik.http.routers.resourcespace-lab.service=resourcespace
+      
+      # Service definition
       - traefik.http.services.resourcespace.loadbalancer.server.port=80
-      - traefik.docker.network=shared-network
-
-      - traefik.http.routers.resourcespace.entrypoints=web,websecure
-      - traefik.http.routers.resourcespace.rule=Host(`resourcespace.lab`)
-      - traefik.http.routers.resourcespace.service=resourcespace
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
       
       # Additional labels for documentation
       - "com.docker.compose.service=resourcespace"

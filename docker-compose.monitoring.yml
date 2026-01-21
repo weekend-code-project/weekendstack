@@ -77,10 +77,22 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
-      - traefik.http.routers.cockpit.rule=Host(`cockpit.lab`)
-      - traefik.http.routers.cockpit.entrypoints=web,websecure
+      
+      # Local .lab domain (HTTP)
+      - traefik.http.routers.cockpit-lab-http.entrypoints=web
+      - traefik.http.routers.cockpit-lab-http.rule=Host(`cockpit.${LAB_DOMAIN}`)
+      - traefik.http.routers.cockpit-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.cockpit-lab-http.service=cockpit
+      
+      # Local .lab domain (HTTPS)
+      - traefik.http.routers.cockpit-lab.entrypoints=websecure
+      - traefik.http.routers.cockpit-lab.rule=Host(`cockpit.${LAB_DOMAIN}`)
+      - traefik.http.routers.cockpit-lab.tls=true
+      - traefik.http.routers.cockpit-lab.service=cockpit
+      
+      # Service definition
       - traefik.http.services.cockpit.loadbalancer.server.port=9090
-      - traefik.docker.network=shared-network
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
   # =============================================================================
   # DOZZLE - Real-time Docker Log Viewer
@@ -119,10 +131,22 @@ services:
       - glance.hide=true
       # Traefik Configuration
       - traefik.enable=true
-      - traefik.http.routers.dozzle.rule=Host(`dozzle.lab`)
-      - traefik.http.routers.dozzle.entrypoints=web,websecure
+      
+      # Local .lab domain (HTTP)
+      - traefik.http.routers.dozzle-lab-http.entrypoints=web
+      - traefik.http.routers.dozzle-lab-http.rule=Host(`dozzle.${LAB_DOMAIN}`)
+      - traefik.http.routers.dozzle-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.dozzle-lab-http.service=dozzle
+      
+      # Local .lab domain (HTTPS)
+      - traefik.http.routers.dozzle-lab.entrypoints=websecure
+      - traefik.http.routers.dozzle-lab.rule=Host(`dozzle.${LAB_DOMAIN}`)
+      - traefik.http.routers.dozzle-lab.tls=true
+      - traefik.http.routers.dozzle-lab.service=dozzle
+      
+      # Service definition
       - traefik.http.services.dozzle.loadbalancer.server.port=8080
-      - traefik.docker.network=shared-network
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
   # =============================================================================
   # WHAT'S UP DOCKER (WUD) - Container Update Manager
@@ -172,10 +196,22 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
-      - traefik.http.routers.wud.rule=Host(`wud.lab`)
-      - traefik.http.routers.wud.entrypoints=web,websecure
+      
+      # Local .lab domain (HTTP)
+      - traefik.http.routers.wud-lab-http.entrypoints=web
+      - traefik.http.routers.wud-lab-http.rule=Host(`wud.${LAB_DOMAIN}`)
+      - traefik.http.routers.wud-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.wud-lab-http.service=wud
+      
+      # Local .lab domain (HTTPS)
+      - traefik.http.routers.wud-lab.entrypoints=websecure
+      - traefik.http.routers.wud-lab.rule=Host(`wud.${LAB_DOMAIN}`)
+      - traefik.http.routers.wud-lab.tls=true
+      - traefik.http.routers.wud-lab.service=wud
+      
+      # Service definition
       - traefik.http.services.wud.loadbalancer.server.port=3000
-      - traefik.docker.network=shared-network
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
   # =============================================================================
   # SPEEDTEST TRACKER - Internet Speed Monitor
@@ -227,10 +263,22 @@ services:
       - glance.hide=true
       # Traefik Configuration
       - traefik.enable=true
-      - traefik.http.routers.speedtest.rule=Host(`speedtest.lab`)
-      - traefik.http.routers.speedtest.entrypoints=web,websecure
+      
+      # Local .lab domain (HTTP)
+      - traefik.http.routers.speedtest-lab-http.entrypoints=web
+      - traefik.http.routers.speedtest-lab-http.rule=Host(`speedtest.${LAB_DOMAIN}`)
+      - traefik.http.routers.speedtest-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.speedtest-lab-http.service=speedtest
+      
+      # Local .lab domain (HTTPS)
+      - traefik.http.routers.speedtest-lab.entrypoints=websecure
+      - traefik.http.routers.speedtest-lab.rule=Host(`speedtest.${LAB_DOMAIN}`)
+      - traefik.http.routers.speedtest-lab.tls=true
+      - traefik.http.routers.speedtest-lab.service=speedtest
+      
+      # Service definition
       - traefik.http.services.speedtest.loadbalancer.server.port=80
-      - traefik.docker.network=shared-network
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
   # =============================================================================
   # UPTIME KUMA - Service Monitoring
@@ -334,10 +382,22 @@ services:
       - glance.hide=true
       # Traefik Configuration
       - traefik.enable=true
-      - traefik.http.routers.netdata.rule=Host(`netdata.lab`)
-      - traefik.http.routers.netdata.entrypoints=web,websecure
+      
+      # Local .lab domain (HTTP)
+      - traefik.http.routers.netdata-lab-http.entrypoints=web
+      - traefik.http.routers.netdata-lab-http.rule=Host(`netdata.${LAB_DOMAIN}`)
+      - traefik.http.routers.netdata-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.netdata-lab-http.service=netdata
+      
+      # Local .lab domain (HTTPS)
+      - traefik.http.routers.netdata-lab.entrypoints=websecure
+      - traefik.http.routers.netdata-lab.rule=Host(`netdata.${LAB_DOMAIN}`)
+      - traefik.http.routers.netdata-lab.tls=true
+      - traefik.http.routers.netdata-lab.service=netdata
+      
+      # Service definition
       - traefik.http.services.netdata.loadbalancer.server.port=19999
-      - traefik.docker.network=shared-network
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
   # =============================================================================
   # DUPLICATI - Backup Solution
@@ -384,10 +444,22 @@ services:
       - glance.hide=true
       # Traefik Configuration
       - traefik.enable=true
-      - traefik.http.routers.duplicati.rule=Host(`duplicati.lab`)
-      - traefik.http.routers.duplicati.entrypoints=web,websecure
+      
+      # Local .lab domain (HTTP)
+      - traefik.http.routers.duplicati-lab-http.entrypoints=web
+      - traefik.http.routers.duplicati-lab-http.rule=Host(`duplicati.${LAB_DOMAIN}`)
+      - traefik.http.routers.duplicati-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.duplicati-lab-http.service=duplicati
+      
+      # Local .lab domain (HTTPS)
+      - traefik.http.routers.duplicati-lab.entrypoints=websecure
+      - traefik.http.routers.duplicati-lab.rule=Host(`duplicati.${LAB_DOMAIN}`)
+      - traefik.http.routers.duplicati-lab.tls=true
+      - traefik.http.routers.duplicati-lab.service=duplicati
+      
+      # Service definition
       - traefik.http.services.duplicati.loadbalancer.server.port=8200
-      - traefik.docker.network=shared-network
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
   # =============================================================================
   # PORTAINER - Container Management UI
@@ -428,10 +500,22 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
-      - traefik.http.routers.portainer.rule=Host(`portainer.lab`)
-      - traefik.http.routers.portainer.entrypoints=web,websecure
+      
+      # Local .lab domain (HTTP)
+      - traefik.http.routers.portainer-lab-http.entrypoints=web
+      - traefik.http.routers.portainer-lab-http.rule=Host(`portainer.${LAB_DOMAIN}`)
+      - traefik.http.routers.portainer-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.portainer-lab-http.service=portainer
+      
+      # Local .lab domain (HTTPS)
+      - traefik.http.routers.portainer-lab.entrypoints=websecure
+      - traefik.http.routers.portainer-lab.rule=Host(`portainer.${LAB_DOMAIN}`)
+      - traefik.http.routers.portainer-lab.tls=true
+      - traefik.http.routers.portainer-lab.service=portainer
+      
+      # Service definition
       - traefik.http.services.portainer.loadbalancer.server.port=9000
-      - traefik.docker.network=shared-network
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
   # =============================================================================
   # NETBOX - Network Documentation & IPAM
@@ -485,10 +569,22 @@ services:
       - glance.hide=true
       # Traefik Configuration
       - traefik.enable=true
-      - traefik.http.routers.netbox.rule=Host(`netbox.lab`)
-      - traefik.http.routers.netbox.entrypoints=web,websecure
+      
+      # Local .lab domain (HTTP)
+      - traefik.http.routers.netbox-lab-http.entrypoints=web
+      - traefik.http.routers.netbox-lab-http.rule=Host(`netbox.${LAB_DOMAIN}`)
+      - traefik.http.routers.netbox-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.netbox-lab-http.service=netbox
+      
+      # Local .lab domain (HTTPS)
+      - traefik.http.routers.netbox-lab.entrypoints=websecure
+      - traefik.http.routers.netbox-lab.rule=Host(`netbox.${LAB_DOMAIN}`)
+      - traefik.http.routers.netbox-lab.tls=true
+      - traefik.http.routers.netbox-lab.service=netbox
+      
+      # Service definition
       - traefik.http.services.netbox.loadbalancer.server.port=8080
-      - traefik.docker.network=shared-network
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
   netbox-postgres:
     image: postgres:15-alpine
