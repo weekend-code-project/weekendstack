@@ -33,6 +33,7 @@ services:
     labels:
       - glance.parent=homeassistant
       - glance.name=Init Permissions
+      - glance.hide=true
     user: "0:0"
     networks:
       - automation-network

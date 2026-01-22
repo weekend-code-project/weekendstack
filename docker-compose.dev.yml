@@ -106,6 +106,7 @@ services:
     labels:
       - glance.parent=coder
       - glance.name=Init
+      - glance.hide=true
     profiles:
       - all
       - dev
