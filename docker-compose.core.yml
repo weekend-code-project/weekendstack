@@ -127,6 +127,14 @@ services:
       # Traefik Configuration
       - traefik.enable=true
       
+      # External domain (HTTPS via Cloudflare) - Requires auth
+      - traefik.http.routers.glance-external.entrypoints=websecure
+      - "traefik.http.routers.glance-external.rule=Host(`home.${BASE_DOMAIN}`) && !PathPrefix(`/go/`)"
+      - traefik.http.routers.glance-external.tls=true
+      - traefik.http.routers.glance-external.service=glance
+      - traefik.http.routers.glance-external.priority=100
+      - traefik.http.routers.glance-external.middlewares=it-tools-auth@file
+      
       # HTTP router with redirect
       - traefik.http.routers.glance-http.entrypoints=web
       - "traefik.http.routers.glance-http.rule=(Host(`home.${LAB_DOMAIN}`) || Host(`${HOST_IP}`)) && !PathPrefix(`/go/`)"
@@ -134,7 +142,7 @@ services:
       - traefik.http.routers.glance-http.middlewares=redirect-to-https@file
       - traefik.http.routers.glance-http.service=glance
       
-      # HTTPS router
+      # HTTPS router - Local .lab (No auth for trusted network)
       - traefik.http.routers.glance.entrypoints=websecure
       - "traefik.http.routers.glance.rule=(Host(`home.${LAB_DOMAIN}`) || Host(`${HOST_IP}`)) && !PathPrefix(`/go/`)"
       - traefik.http.routers.glance.priority=100

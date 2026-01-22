@@ -996,6 +996,13 @@ services:
       # Traefik Configuration
       - traefik.enable=true
       
+      # External domain (HTTPS via Cloudflare) - Requires auth
+      - traefik.http.routers.excalidraw-external.entrypoints=websecure
+      - traefik.http.routers.excalidraw-external.rule=Host(`excalidraw.${BASE_DOMAIN}`)
+      - traefik.http.routers.excalidraw-external.tls=true
+      - traefik.http.routers.excalidraw-external.service=excalidraw
+      - traefik.http.routers.excalidraw-external.middlewares=it-tools-auth@file
+      
       # Local .lab domain (HTTP)
       - traefik.http.routers.excalidraw-lab-http.entrypoints=web
       - traefik.http.routers.excalidraw-lab-http.rule=Host(`excalidraw.${LAB_DOMAIN}`)
