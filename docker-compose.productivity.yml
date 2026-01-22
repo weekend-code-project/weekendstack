@@ -358,14 +358,20 @@ services:
         source: paperless-data
         target: /usr/src/paperless/data
       - type: bind
-        source: ${FILES_BASE_DIR:-./files}/paperless/media
+        source: ${PAPERLESS_MEDIA_PATH:-${FILES_BASE_DIR:-./files}/paperless/media}
         target: /usr/src/paperless/media
+        bind:
+          create_host_path: true
       - type: bind
-        source: ${FILES_BASE_DIR:-./files}/paperless/consume
+        source: ${PAPERLESS_CONSUME_PATH:-${FILES_BASE_DIR:-./files}/paperless/consume}
         target: /usr/src/paperless/consume
+        bind:
+          create_host_path: true
       - type: bind
-        source: ${FILES_BASE_DIR:-./files}/paperless/export
+        source: ${PAPERLESS_EXPORT_PATH:-${FILES_BASE_DIR:-./files}/paperless/export}
         target: /usr/src/paperless/export
+        bind:
+          create_host_path: true
     networks:
       - productivity-network
       - shared-network

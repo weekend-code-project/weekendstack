@@ -32,9 +32,11 @@ services:
     ports:
       - "${IMMICH_PORT:-2283}:2283"
     volumes:
-      - type: volume
-        source: immich-upload
+      - type: bind
+        source: ${IMMICH_UPLOAD_PATH:-./files/immich/upload}
         target: /usr/src/app/upload
+        bind:
+          create_host_path: true
       - /etc/localtime:/etc/localtime:ro
     environment:
       DB_HOSTNAME: immich-db
@@ -291,7 +293,6 @@ services:
       - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
 volumes:
-  immich-upload:
   immich-model-cache:
   immich-redis-data:
   immich-db-data:
