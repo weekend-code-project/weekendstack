@@ -79,7 +79,7 @@ pages:
             sites:
               - title: Cockpit
                 url: /go/cockpit
-                check-url: http://${HOST_IP}:80
+                check-url: http://${HOST_IP}:9090
                 icon: si:cockpit
               - title: Dozzle
                 url: /go/dozzle
@@ -115,7 +115,7 @@ pages:
                 icon: si:docker
               - title: Traefik
                 url: /go/traefik
-                check-url: http://${HOST_IP}:80
+                check-url: http://${HOST_IP}:8081/api/overview
                 icon: si:traefikproxy
               - title: Pi-hole
                 url: /go/pihole
