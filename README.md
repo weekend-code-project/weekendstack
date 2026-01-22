@@ -155,7 +155,44 @@ bash tools/diagnose_lab.sh
 
 📖 **Full guide:** [docs/dns-setup-guide.md](docs/dns-setup-guide.md)
 
-### 3. Start Services
+### 3. Configure File Paths (Optional)
+
+**For network shares or custom storage locations:**
+
+Services that manage user files (photos, music, documents, etc.) support configurable storage paths. This allows you to:
+- Point to existing media libraries on NAS/Unraid servers
+- Use network shares (NFS, SMB/CIFS) for storage
+- Keep files on separate drives or partitions
+
+**Quick configuration in `.env`:**
+```bash
+# Point Navidrome to Unraid music share
+NAVIDROME_MUSIC_PATH=/mnt/unraid/music
+
+# Use network storage for photos
+IMMICH_UPLOAD_PATH=/mnt/nas/photos
+
+# Configure Paperless document paths
+PAPERLESS_MEDIA_PATH=/mnt/nas/documents/paperless
+PAPERLESS_CONSUME_PATH=/mnt/scanner/inbox
+
+# Change base directory for all file services
+FILES_BASE_DIR=/mnt/nas/weekendstack
+```
+
+**Supported services:**
+- **Navidrome** - `NAVIDROME_MUSIC_PATH` (music library)
+- **Immich** - `IMMICH_UPLOAD_PATH` (photo/video storage)
+- **Kavita** - `KAVITA_LIBRARY_PATH` (ebook/manga library)
+- **Paperless** - `PAPERLESS_MEDIA_PATH`, `PAPERLESS_CONSUME_PATH`, `PAPERLESS_EXPORT_PATH`
+- **Other services** - Use `FILES_BASE_DIR` as base path
+
+📖 **Detailed guides:**
+- [File Paths Quick Reference](docs/file-paths-reference.md) - All configurable paths
+- [File Mounts Configuration Guide](docs/file-mounts-guide.md) - NFS/SMB setup instructions
+- [Unraid Share Example](docs/unraid-share-example.md) - Step-by-step Unraid integration
+
+### 4. Start Services
 
 ```bash
 # Start the default stack (profile `all`)
@@ -186,7 +223,7 @@ docker compose --profile personal up -d
 - Check [`docs/profile-matrix.md`](docs/profile-matrix.md) for a full service × profile table before adding new toggles like `dev-gitea` or `dev-gitlab`.
 - Mix and match profiles for targeted stacks, e.g. `docker compose --profile dev --profile networking up -d` (Coder + Traefik) or `docker compose --profile productivity --profile personal up -d` (office + lifestyle).
 
-### 4. Access Services
+### 5. Access Services
 
 **After configuring DNS** (step 2), all services are accessible via `.lab` domains:
 
@@ -233,7 +270,7 @@ Setup docs:
 - [docs/filebrowser-setup.md](docs/filebrowser-setup.md)
 - [docs/hoarder-setup.md](docs/hoarder-setup.md)
 
-### 5. Optional: Enable Local HTTPS
+### 6. Optional: Enable Local HTTPS
 
 The stack includes automated certificate generation for secure local access:
 

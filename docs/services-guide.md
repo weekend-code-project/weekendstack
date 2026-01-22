@@ -83,6 +83,164 @@ Secure tunnel for external access without exposing ports.
 
 ---
 
+## File Storage Configuration
+
+Services that manage user files support configurable storage paths via environment variables. This allows you to point services to network shares (NFS, SMB/CIFS), separate drives, or existing media libraries.
+
+### Media Services File Paths
+
+#### Immich - Photo & Video Storage
+**Environment Variable:** `IMMICH_UPLOAD_PATH`  
+**Default:** `./files/immich/upload`  
+**Container Mount:** `/usr/src/app/upload`  
+**Access:** Read-Write
+
+```env
+# Example: Point to NAS
+IMMICH_UPLOAD_PATH=/mnt/nas/photos
+
+# Example: Separate drive
+IMMICH_UPLOAD_PATH=/mnt/storage/immich
+```
+
+#### Navidrome - Music Library
+**Environment Variable:** `NAVIDROME_MUSIC_PATH`  
+**Default:** `./files/navidrome/music`  
+**Container Mount:** `/music` (read-only)  
+**Access:** Read-Only
+
+```env
+# Example: Point to Unraid share
+NAVIDROME_MUSIC_PATH=/mnt/unraid/music
+
+# Example: Existing music collection
+NAVIDROME_MUSIC_PATH=/mnt/media/music
+```
+
+#### Kavita - eBook/Manga Library
+**Environment Variable:** `KAVITA_LIBRARY_PATH`  
+**Default:** `./files/kavita/library`  
+**Container Mount:** `/manga`  
+**Access:** Read-Write
+
+```env
+# Example: Calibre library
+KAVITA_LIBRARY_PATH=/mnt/books/calibre-library
+
+# Example: Network share
+KAVITA_LIBRARY_PATH=/mnt/smb/ebooks
+```
+
+### Productivity Services File Paths
+
+#### Paperless-ngx - Document Storage
+**Environment Variables:**
+- `PAPERLESS_MEDIA_PATH` - Stored/processed documents
+- `PAPERLESS_CONSUME_PATH` - Inbox for new documents (watch folder)
+- `PAPERLESS_EXPORT_PATH` - Export directory
+
+**Defaults:**
+- `${FILES_BASE_DIR}/paperless/media`
+- `${FILES_BASE_DIR}/paperless/consume`
+- `${FILES_BASE_DIR}/paperless/export`
+
+**Container Mounts:**
+- `/usr/src/paperless/media`
+- `/usr/src/paperless/consume`
+- `/usr/src/paperless/export`
+
+**Access:** All Read-Write
+
+```env
+# Example: Network storage
+PAPERLESS_MEDIA_PATH=/mnt/nas/documents/paperless
+PAPERLESS_CONSUME_PATH=/mnt/scanner/inbox
+PAPERLESS_EXPORT_PATH=/mnt/nas/documents/exports
+
+# Example: Separate drives
+PAPERLESS_MEDIA_PATH=/mnt/storage/paperless/media
+PAPERLESS_CONSUME_PATH=/home/scanner/inbox
+PAPERLESS_EXPORT_PATH=/mnt/backup/paperless-exports
+```
+
+### AI Services File Paths
+
+#### Stable Diffusion WebUI - Generated Images
+**Path:** `${FILES_BASE_DIR}/stable-diffusion/outputs`  
+**Container Mount:** `/outputs`  
+**Access:** Read-Write
+
+#### DiffRhythm - Music Generation
+**Paths:**
+- `${FILES_BASE_DIR}/diffrhythm/output` → `/app/output`
+- `${FILES_BASE_DIR}/diffrhythm/input` → `/app/input`
+
+**Access:** Read-Write
+
+### Other Services Using FILES_BASE_DIR
+
+These services use paths relative to `FILES_BASE_DIR` (default: `./files`):
+
+- **FileBrowser** - `${FILES_BASE_DIR}` → `/srv` (browse all files)
+- **Postiz** - `${FILES_BASE_DIR}/postiz/uploads` → `/uploads`
+- **ResourceSpace** - `${FILES_BASE_DIR}/resourcespace` → `/var/www/html/filestore`
+
+```env
+# Change base directory for all services
+FILES_BASE_DIR=/mnt/nas/weekendstack-files
+```
+
+### Network Share Setup Quick Start
+
+**For Unraid/NAS (SMB/CIFS):**
+```bash
+# Create mount point
+sudo mkdir -p /mnt/unraid/music
+
+# Install CIFS utilities
+sudo apt-get install cifs-utils
+
+# Create credentials file
+sudo mkdir -p /etc/smbcredentials
+echo "username=your_user" | sudo tee /etc/smbcredentials/unraid
+echo "password=your_pass" | sudo tee -a /etc/smbcredentials/unraid
+sudo chmod 600 /etc/smbcredentials/unraid
+
+# Add to /etc/fstab
+echo "//192.168.1.100/music /mnt/unraid/music cifs credentials=/etc/smbcredentials/unraid,uid=1000,gid=1000,nofail 0 0" | sudo tee -a /etc/fstab
+
+# Mount
+sudo mount -a
+
+# Update .env
+NAVIDROME_MUSIC_PATH=/mnt/unraid/music
+
+# Recreate container
+docker compose up -d navidrome
+```
+
+**For NFS:**
+```bash
+# Install NFS client
+sudo apt-get install nfs-common
+
+# Add to /etc/fstab
+echo "192.168.1.100:/volume1/music /mnt/nfs/music nfs defaults,auto,nofail 0 0" | sudo tee -a /etc/fstab
+
+# Mount and configure
+sudo mount -a
+NAVIDROME_MUSIC_PATH=/mnt/nfs/music
+docker compose up -d navidrome
+```
+
+### Detailed Guides
+
+- [File Paths Quick Reference](file-paths-reference.md) - Complete table of all configurable paths
+- [File Mounts Configuration Guide](file-mounts-guide.md) - Comprehensive NFS/SMB setup with examples
+- [Unraid Share Example](unraid-share-example.md) - Step-by-step Unraid integration for Navidrome
+
+---
+
 ## Development Services
 
 ### Coder - Cloud Development Environment
@@ -278,12 +436,27 @@ PAPERLESS_DBUSER=paperless
 PAPERLESS_DBPASS=paperless_db_password_change_me
 ```
 
-**Directories:**
+**File Paths (Configurable):**
+```env
+PAPERLESS_MEDIA_PATH=${FILES_BASE_DIR}/paperless/media      # Stored documents
+PAPERLESS_CONSUME_PATH=${FILES_BASE_DIR}/paperless/consume  # Auto-import inbox
+PAPERLESS_EXPORT_PATH=${FILES_BASE_DIR}/paperless/export    # Export directory
+```
+
+**Default Directories:**
 - `files/paperless/consume/` - Drop documents here for auto-import
 - `files/paperless/media/` - Stored documents
+- `files/paperless/export/` - Exported documents
+
+**Network Share Example:**
+```env
+PAPERLESS_MEDIA_PATH=/mnt/nas/documents/paperless
+PAPERLESS_CONSUME_PATH=/mnt/scanner/inbox
+```
 
 **Setup:**
 - [docs/paperless-integration.md](paperless-integration.md)
+- [docs/file-mounts-guide.md](file-mounts-guide.md) - Network storage setup
 
 ### NocoDB - Database Platform
 **Port:** 8090 | **Domain:** `nocodb.${BASE_DOMAIN}`
@@ -448,12 +621,21 @@ Google Photos alternative with ML-powered features.
 IMMICH_PORT=2283
 IMMICH_DB_USER=immich
 IMMICH_DB_PASSWORD=immich_password_change_me
+IMMICH_UPLOAD_PATH=./files/immich/upload  # Photo/video storage - can point to network share
 ```
 
-**Upload Directory:** `files/immich/upload/`
+**File Path (Configurable):**
+- Default: `./files/immich/upload`
+- Container Mount: `/usr/src/app/upload`
+- Access: Read-Write
+- Network Share Example:
+  ```env
+  IMMICH_UPLOAD_PATH=/mnt/nas/photos
+  ```
 
 **Setup:**
 - [docs/immich-setup.md](immich-setup.md)
+- [docs/file-mounts-guide.md](file-mounts-guide.md) - Network storage setup
 
 ### Kavita - eBook Reader
 **Port:** 5000 | **Domain:** `kavita.${BASE_DOMAIN}`
@@ -467,12 +649,21 @@ Self-hosted digital library for books, comics, manga.
 **Key Variables:**
 ```env
 KAVITA_PORT=5000
+KAVITA_LIBRARY_PATH=./files/kavita/library  # eBook/manga library - can point to network share
 ```
 
-**Library Path:** `files/kavita/library/`
+**File Path (Configurable):**
+- Default: `./files/kavita/library`
+- Container Mount: `/manga`
+- Access: Read-Write
+- Network Share Example:
+  ```env
+  KAVITA_LIBRARY_PATH=/mnt/books/calibre-library
+  ```
 
 **Setup:**
 - [docs/kavita-setup.md](kavita-setup.md)
+- [docs/file-mounts-guide.md](file-mounts-guide.md) - Network storage setup
 
 ### Navidrome - Music Streaming
 **Port:** 4533 | **Domain:** `music.${BASE_DOMAIN}`
@@ -486,12 +677,25 @@ Personal music streaming server.
 **Key Variables:**
 ```env
 NAVIDROME_PORT=4533
+NAVIDROME_MUSIC_PATH=./files/navidrome/music  # Music library - can point to NFS/SMB share
 ```
 
-**Music Path:** `files/navidrome/music/`
+**File Path (Configurable):**
+- Default: `./files/navidrome/music`
+- Container Mount: `/music` (read-only)
+- Access: Read-Only (won't modify your files)
+- Unraid Example:
+  ```env
+  NAVIDROME_MUSIC_PATH=/mnt/unraid/music
+  ```
+
+**Network Share Setup:**
+See [docs/unraid-share-example.md](unraid-share-example.md) for step-by-step guide to mount Unraid music share.
 
 **Setup:**
 - [docs/navidrome-setup.md](navidrome-setup.md)
+- [docs/file-mounts-guide.md](file-mounts-guide.md) - Network storage setup
+- [docs/unraid-share-example.md](unraid-share-example.md) - Unraid integration
 
 ---
 
