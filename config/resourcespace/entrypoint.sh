@@ -30,7 +30,7 @@ if [ ! -f "$CONFIG_FILE" ]; then
 \$mysql_db = '$DB_NAME';
 \$mysql_bin_path = '/usr/bin';
 
-\$baseurl = 'http://resourcespace.lab';
+\$baseurl = 'https://resourcespace.lab';
 \$baseurl_short = 'pages';
 \$storagedir = '/var/www/html/filestore';
 
@@ -46,6 +46,11 @@ if [ ! -f "$CONFIG_FILE" ]; then
 \$default_admin_password = 'resourcespace_admin_2024';
 \$default_admin_email = 'admin@localhost';
 \$default_admin_fullname = 'Administrator';
+
+// Trust proxy headers for HTTPS
+if (isset(\$_SERVER['HTTP_X_FORWARDED_PROTO']) && \$_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+    \$_SERVER['HTTPS'] = 'on';
+}
 EOF
 
     chown www-data:www-data "$CONFIG_FILE"

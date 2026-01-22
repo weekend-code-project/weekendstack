@@ -36,7 +36,11 @@ RUN svn export https://svn.resourcespace.com/svn/rs/releases/10.3 /tmp/resources
 
 # Configure Apache
 RUN a2enmod rewrite \
+    && a2enmod headers \
     && sed -i 's/AllowOverride None/AllowOverride All/g' /etc/apache2/apache2.conf
+
+# Configure Apache to trust X-Forwarded-Proto from Traefik
+RUN echo "SetEnvIf X-Forwarded-Proto https HTTPS=on" >> /etc/apache2/apache2.conf
 
 # Configure PHP settings for ResourceSpace
 RUN sed -i 's/memory_limit = 128M/memory_limit = 512M/g' /etc/php/8.1/apache2/php.ini \
