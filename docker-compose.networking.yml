@@ -252,7 +252,7 @@ services:
       - "${TRAEFIK_API_PORT:-8081}:8080"  # API/Dashboard port
     volumes:
       - ${TRAEFIK_CONFIG_FILE}:/etc/traefik/traefik.yml:ro
-      - ${TRAEFIK_AUTH_DIR}:/traefik-auth
+      - ./config/traefik/auth:/config/traefik/auth:ro
       - type: bind
         source: ./config/traefik/certs
         target: /certs
