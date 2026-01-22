@@ -94,6 +94,12 @@ services:
       - proxy
     user: root
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2375"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
     volumes:
       - type: bind
         source: /var/run/docker.sock
@@ -353,6 +359,12 @@ services:
       REGISTRY_PROXY_REMOTEURL: https://registry-1.docker.io
     ports:
       - "${REGISTRY_PORT:-5000}:5000"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5000/v2/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
     volumes:
       - type: bind
         source: ${REGISTRY_DATA_DIR}
