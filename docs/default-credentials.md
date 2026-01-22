@@ -1,4 +1,51 @@
-# Default Credentials & Access Guide
+# Default Credentials Reference
+
+## Traefik Authentication (External Access)
+
+All services without built-in authentication use a shared default credential for external access via `*.weekendcodeproject.dev`:
+
+**Username:** `admin`  
+**Password:** `CHANGEME1234`
+
+### Services Using Default Auth
+
+These services require the default Traefik credentials when accessed externally:
+
+- **Glance Dashboard** - home.weekendcodeproject.dev
+- **IT-Tools** - it-tools.weekendcodeproject.dev  
+- **Excalidraw** - excalidraw.weekendcodeproject.dev
+- **LocalAI** - localai.weekendcodeproject.dev
+- **AnythingLLM** - anythingllm.weekendcodeproject.dev
+- **Whisper** - whisper.weekendcodeproject.dev
+- **SearXNG** - searxng.weekendcodeproject.dev (username: `searx`, same password)
+
+### Local Access (No Authentication)
+
+When accessing services via `*.lab` domain on your local network, **no authentication is required** (trusted network pattern).
+
+### Changing the Default Password
+
+1. Update `DEFAULT_TRAEFIK_AUTH_PASS` in your `.env` file
+2. Generate new bcrypt hash:
+   ```bash
+   docker run --rm httpd:alpine htpasswd -nbB admin YOUR_NEW_PASSWORD
+   ```
+3. Update auth files in `config/traefik/auth/` with the new hash (remember to escape `$` as `$$` in YAML)
+4. Restart Traefik:
+   ```bash
+   docker compose restart traefik
+   ```
+
+## Configuration in .env
+
+Add these variables to your `.env` file (already included in System Configuration section):
+
+```bash
+# Default Traefik Authentication
+# Used for external access to services without built-in auth
+DEFAULT_TRAEFIK_AUTH_USER=admin
+DEFAULT_TRAEFIK_AUTH_PASS=CHANGEME1234
+``` & Access Guide
 
 > **⚠️ IMPORTANT:** These are the default credentials from `.env.example`. **Change all passwords in production!**
 
