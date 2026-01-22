@@ -124,12 +124,11 @@ services:
       - traefik.http.routers.searxng-lab-http.service=searxng
       - traefik.http.routers.searxng-lab-http.priority=21
       
-      # Local .lab domain (HTTPS)
+      # Local .lab domain (HTTPS) - No auth for local network
       - traefik.http.routers.searxng-lab.entrypoints=websecure
       - "traefik.http.routers.searxng-lab.rule=Host(`searxng.${LAB_DOMAIN}`)"
       - traefik.http.routers.searxng-lab.tls=true
       - traefik.http.routers.searxng-lab.service=searxng
-      - traefik.http.routers.searxng-lab.middlewares=searxng-auth@file
       - traefik.http.routers.searxng-lab.priority=21
       
       # Service definition
@@ -254,12 +253,11 @@ services:
       - traefik.http.routers.localai-lab-http.service=localai
       - traefik.http.routers.localai-lab-http.priority=21
       
-      # Local .lab domain (HTTPS)
+      # Local .lab domain (HTTPS) - No auth for local network
       - traefik.http.routers.localai-lab.entrypoints=websecure
       - "traefik.http.routers.localai-lab.rule=Host(`localai.${LAB_DOMAIN}`)"
       - traefik.http.routers.localai-lab.tls=true
       - traefik.http.routers.localai-lab.service=localai
-      - traefik.http.routers.localai-lab.middlewares=ai-services-auth@file
       - traefik.http.routers.localai-lab.priority=21
       
       # Service definition
@@ -353,12 +351,11 @@ services:
       - traefik.http.routers.anythingllm-lab-http.service=anythingllm
       - traefik.http.routers.anythingllm-lab-http.priority=21
       
-      # Local .lab domain (HTTPS)
+      # Local .lab domain (HTTPS) - No auth for local network
       - traefik.http.routers.anythingllm-lab.entrypoints=websecure
       - "traefik.http.routers.anythingllm-lab.rule=Host(`anythingllm.${LAB_DOMAIN}`)"
       - traefik.http.routers.anythingllm-lab.tls=true
       - traefik.http.routers.anythingllm-lab.service=anythingllm
-      - traefik.http.routers.anythingllm-lab.middlewares=ai-services-auth@file
       - traefik.http.routers.anythingllm-lab.priority=21
       
       # Service definition
@@ -420,12 +417,11 @@ services:
       - traefik.http.routers.whisper-lab-http.service=whisper
       - traefik.http.routers.whisper-lab-http.priority=21
       
-      # Local .lab domain (HTTPS)
+      # Local .lab domain (HTTPS) - No auth for local network
       - traefik.http.routers.whisper-lab.entrypoints=websecure
       - "traefik.http.routers.whisper-lab.rule=Host(`whisper.${LAB_DOMAIN}`)"
       - traefik.http.routers.whisper-lab.tls=true
       - traefik.http.routers.whisper-lab.service=whisper
-      - traefik.http.routers.whisper-lab.middlewares=ai-services-auth@file
       - traefik.http.routers.whisper-lab.priority=21
       
       # Service definition

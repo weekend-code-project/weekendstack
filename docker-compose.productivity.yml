@@ -944,11 +944,10 @@ services:
       - traefik.http.routers.it-tools-lab-http.middlewares=redirect-to-https@file
       - traefik.http.routers.it-tools-lab-http.service=it-tools
       
-      # HTTPS router for .lab domain
+      # HTTPS router for .lab domain - No auth for local network
       - traefik.http.routers.it-tools-lab.entrypoints=websecure
       - traefik.http.routers.it-tools-lab.rule=Host(`it-tools.${LAB_DOMAIN}`)
       - traefik.http.routers.it-tools-lab.tls=true
-      - traefik.http.routers.it-tools-lab.middlewares=it-tools-auth@file
       - traefik.http.routers.it-tools-lab.service=it-tools
       
       # HTTPS router for external domain
@@ -1003,11 +1002,10 @@ services:
       - traefik.http.routers.excalidraw-lab-http.middlewares=redirect-to-https@file
       - traefik.http.routers.excalidraw-lab-http.service=excalidraw
       
-      # Local .lab domain (HTTPS)
+      # Local .lab domain (HTTPS) - No auth for local network
       - traefik.http.routers.excalidraw-lab.entrypoints=websecure
       - traefik.http.routers.excalidraw-lab.rule=Host(`excalidraw.${LAB_DOMAIN}`)
       - traefik.http.routers.excalidraw-lab.tls=true
-      - traefik.http.routers.excalidraw-lab.middlewares=it-tools-auth@file
       - traefik.http.routers.excalidraw-lab.service=excalidraw
       
       # Service definition
