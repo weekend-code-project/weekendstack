@@ -45,6 +45,7 @@ PORT_MAP = {
     "open-webui": 3000,
     "openwebui": 3000,  # Alias
     "whisper": 9002,
+    "guacamole": "8098/guacamole",  # Special case: needs /guacamole path
     
     # Productivity
     "vikunja": 3456,

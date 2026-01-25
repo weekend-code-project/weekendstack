@@ -481,9 +481,140 @@ services:
       - traefik.http.services.gitlab.loadbalancer.server.port=80
       - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
+  # =============================================================================
+  # GUACAMOLE DATABASE
+  # =============================================================================
+  guacamole-db:
+    image: postgres:15-alpine
+    container_name: guacamole-db
+    labels:
+      - glance.parent=guacamole
+      - glance.name=Database
+    restart: unless-stopped
+    networks:
+      - shared-network
+    profiles:
+      - all
+      - dev
+    environment:
+      POSTGRES_DB: ${GUACAMOLE_DBNAME:-guacamole}
+      POSTGRES_USER: ${GUACAMOLE_DBUSER:-guacamole}
+      POSTGRES_PASSWORD: ${GUACAMOLE_DBPASS:-guacamole_password_2024}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${GUACAMOLE_DBUSER:-guacamole} -d ${GUACAMOLE_DBNAME:-guacamole}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    volumes:
+      - type: volume
+        source: guacamole-db-data
+        target: /var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  # =============================================================================
+  # GUACAMOLE DAEMON (Protocol handler)
+  # =============================================================================
+  guacd:
+    image: lscr.io/linuxserver/guacd:latest
+    container_name: guacd
+    labels:
+      - glance.parent=guacamole
+      - glance.name=Daemon
+      - glance.hide=true
+    restart: unless-stopped
+    networks:
+      - shared-network
+    profiles:
+      - all
+      - dev
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  # =============================================================================
+  # GUACAMOLE WEB APPLICATION
+  # =============================================================================
+  guacamole:
+    image: guacamole/guacamole:latest
+    container_name: guacamole
+    depends_on:
+      guacamole-db:
+        condition: service_healthy
+      guacd:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - shared-network
+    profiles:
+      - all
+      - dev
+    environment:
+      # Database
+      POSTGRESQL_HOSTNAME: guacamole-db
+      POSTGRESQL_DATABASE: ${GUACAMOLE_DBNAME:-guacamole}
+      POSTGRESQL_USER: ${GUACAMOLE_DBUSER:-guacamole}
+      POSTGRESQL_PASSWORD: ${GUACAMOLE_DBPASS:-guacamole_password_2024}
+      
+      # Guacd connection
+      GUACD_HOSTNAME: guacd
+      GUACD_PORT: 4822
+    ports:
+      - "${GUACAMOLE_PORT:-8098}:8080"
+    volumes:
+      - type: bind
+        source: ${GUACAMOLE_CONFIG_DIR:-./config/guacamole}
+        target: /config
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    deploy:
+      resources:
+        limits:
+          memory: ${GUACAMOLE_MEMORY_LIMIT:-1g}
+    labels:
+      # Glance Configuration
+      - glance.id=guacamole
+      - glance.group=Dev
+      - glance.name=Guacamole
+      - glance.icon=si:apacheguacamole
+      - glance.url=/go/guacamole
+      - glance.description=Remote Desktop Gateway
+      
+      # Traefik Configuration
+      - traefik.enable=true
+      
+      # External domain (HTTPS via Cloudflare) - WITH AUTH
+      - traefik.http.routers.guacamole-external.entrypoints=websecure
+      - traefik.http.routers.guacamole-external.rule=Host(`guacamole.${BASE_DOMAIN}`)
+      - traefik.http.routers.guacamole-external.tls=true
+      - traefik.http.routers.guacamole-external.service=guacamole
+      - traefik.http.routers.guacamole-external.middlewares=it-tools-auth@file,guacamole-redirect@file
+      
+      # Local .lab domain (HTTP redirect)
+      - traefik.http.routers.guacamole-lab-http.entrypoints=web
+      - traefik.http.routers.guacamole-lab-http.rule=Host(`guacamole.${LAB_DOMAIN}`)
+      - traefik.http.routers.guacamole-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.guacamole-lab-http.service=guacamole
+      
+      # Local .lab domain (HTTPS) - NO AUTH
+      - traefik.http.routers.guacamole-lab.entrypoints=websecure
+      - traefik.http.routers.guacamole-lab.rule=Host(`guacamole.${LAB_DOMAIN}`)
+      - traefik.http.routers.guacamole-lab.tls=true
+      - traefik.http.routers.guacamole-lab.service=guacamole
+      - traefik.http.routers.guacamole-lab.middlewares=guacamole-redirect@file
+      
+      # Service definition
+      - traefik.http.services.guacamole.loadbalancer.server.port=8080
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
+
 volumes:
   coder-db-data:
   gitea-db-data:
+  guacamole-db-data:
 
 
 
