@@ -716,6 +716,12 @@ services:
       # Traefik Configuration
       - traefik.enable=true
       
+      # External domain (HTTPS - has built-in auth)
+      - traefik.http.routers.postiz-external.entrypoints=websecure
+      - traefik.http.routers.postiz-external.rule=Host(`postiz.${BASE_DOMAIN}`)
+      - traefik.http.routers.postiz-external.tls=true
+      - traefik.http.routers.postiz-external.service=postiz
+      
       # Local .lab domain (HTTP)
       - traefik.http.routers.postiz-lab-http.entrypoints=web
       - traefik.http.routers.postiz-lab-http.rule=Host(`postiz.${LAB_DOMAIN}`)
@@ -772,6 +778,12 @@ services:
       # Traefik Configuration
       - traefik.enable=true
       
+      # External domain (HTTPS - has built-in auth)
+      - traefik.http.routers.focalboard-external.entrypoints=websecure
+      - traefik.http.routers.focalboard-external.rule=Host(`focalboard.${BASE_DOMAIN}`)
+      - traefik.http.routers.focalboard-external.tls=true
+      - traefik.http.routers.focalboard-external.service=focalboard
+      
       # Local .lab domain (HTTP)
       - traefik.http.routers.focalboard-lab-http.entrypoints=web
       - traefik.http.routers.focalboard-lab-http.rule=Host(`focalboard.${LAB_DOMAIN}`)
@@ -826,6 +838,12 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
+      
+      # External domain (HTTPS - has built-in auth)
+      - traefik.http.routers.trilium-external.entrypoints=websecure
+      - traefik.http.routers.trilium-external.rule=Host(`trilium.${BASE_DOMAIN}`)
+      - traefik.http.routers.trilium-external.tls=true
+      - traefik.http.routers.trilium-external.service=trilium
       
       # Local .lab domain (HTTP)
       - traefik.http.routers.trilium-lab-http.entrypoints=web
@@ -887,6 +905,12 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
+      
+      # External domain (HTTPS - has built-in auth)
+      - traefik.http.routers.vikunja-external.entrypoints=websecure
+      - traefik.http.routers.vikunja-external.rule=Host(`vikunja.${BASE_DOMAIN}`)
+      - traefik.http.routers.vikunja-external.tls=true
+      - traefik.http.routers.vikunja-external.service=vikunja
       
       # Local .lab domain (HTTP)
       - traefik.http.routers.vikunja-lab-http.entrypoints=web
@@ -1122,6 +1146,12 @@ services:
       # Traefik Configuration
       - traefik.enable=true
       
+      # External domain (HTTPS - has built-in auth)
+      - traefik.http.routers.docmost-external.entrypoints=websecure
+      - traefik.http.routers.docmost-external.rule=Host(`docmost.${BASE_DOMAIN}`)
+      - traefik.http.routers.docmost-external.tls=true
+      - traefik.http.routers.docmost-external.service=docmost
+      
       # Local .lab domain (HTTP)
       - traefik.http.routers.docmost-lab-http.entrypoints=web
       - traefik.http.routers.docmost-lab-http.rule=Host(`docmost.${LAB_DOMAIN}`)
@@ -1185,6 +1215,12 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
+      
+      # External domain (HTTPS - has built-in auth)
+      - traefik.http.routers.filebrowser-external.entrypoints=websecure
+      - traefik.http.routers.filebrowser-external.rule=Host(`filebrowser.${BASE_DOMAIN}`)
+      - traefik.http.routers.filebrowser-external.tls=true
+      - traefik.http.routers.filebrowser-external.service=filebrowser
       
       # Local .lab domain (HTTP)
       - traefik.http.routers.filebrowser-lab-http.entrypoints=web
@@ -1252,6 +1288,12 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
+      
+      # External domain (HTTPS - has built-in auth)
+      - traefik.http.routers.hoarder-external.entrypoints=websecure
+      - traefik.http.routers.hoarder-external.rule=Host(`hoarder.${BASE_DOMAIN}`)
+      - traefik.http.routers.hoarder-external.tls=true
+      - traefik.http.routers.hoarder-external.service=hoarder
       
       # Local .lab domain (HTTP)
       - traefik.http.routers.hoarder-lab-http.entrypoints=web
@@ -1354,6 +1396,12 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
+      
+      # External domain (HTTPS - no auth required)
+      - traefik.http.routers.bytestash-external.entrypoints=websecure
+      - traefik.http.routers.bytestash-external.rule=Host(`bytestash.${BASE_DOMAIN}`)
+      - traefik.http.routers.bytestash-external.tls=true
+      - traefik.http.routers.bytestash-external.service=bytestash
       
       # Local .lab domain (HTTP)
       - traefik.http.routers.bytestash-lab-http.entrypoints=web
@@ -1464,6 +1512,12 @@ services:
       
       # Traefik Configuration
       - traefik.enable=true
+      
+      # External domain (HTTPS - has built-in auth)
+      - traefik.http.routers.resourcespace-external.entrypoints=websecure
+      - traefik.http.routers.resourcespace-external.rule=Host(`resourcespace.${BASE_DOMAIN}`)
+      - traefik.http.routers.resourcespace-external.tls=true
+      - traefik.http.routers.resourcespace-external.service=resourcespace
       
       # Local .lab domain (HTTP)
       - traefik.http.routers.resourcespace-lab-http.entrypoints=web

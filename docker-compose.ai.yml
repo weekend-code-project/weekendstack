@@ -110,12 +110,12 @@ services:
       # Traefik Configuration
       - traefik.enable=true
       
-      # External domain (HTTPS via Cloudflare)
+      # External domain (HTTPS via Cloudflare - with auth)
       - traefik.http.routers.searxng-external.entrypoints=websecure
       - "traefik.http.routers.searxng-external.rule=Host(`searxng.${BASE_DOMAIN}`)"
       - traefik.http.routers.searxng-external.tls=true
-      - traefik.http.routers.searxng-external.service=searxng
       - traefik.http.routers.searxng-external.middlewares=searxng-auth@file
+      - traefik.http.routers.searxng-external.service=searxng
       
       # Local .lab domain (HTTP)
       - traefik.http.routers.searxng-lab-http.entrypoints=web
@@ -313,6 +313,9 @@ services:
       - OLLAMA_BASE_PATH=${OLLAMA_HOST:-http://host.docker.internal:11434}
       - EMBEDDING_MODEL_PREF=${ANYTHINGLLM_EMBEDDING_MODEL:-nomic-embed-text}
       - VECTOR_DB=${ANYTHINGLLM_VECTOR_DB:-lancedb}
+      - JWT_SECRET=${ANYTHINGLLM_JWT_SECRET:-change-this-secret-key-for-production}
+      - AUTH_TOKEN=${DEFAULT_TRAEFIK_AUTH_PASS:-CHANGEME1234}
+      - DISABLE_TELEMETRY=true
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
@@ -342,7 +345,6 @@ services:
       - "traefik.http.routers.anythingllm-external.rule=Host(`anythingllm.${BASE_DOMAIN}`)"
       - traefik.http.routers.anythingllm-external.tls=true
       - traefik.http.routers.anythingllm-external.service=anythingllm
-      - traefik.http.routers.anythingllm-external.middlewares=ai-services-auth@file
       
       # Local .lab domain (HTTP)
       - traefik.http.routers.anythingllm-lab-http.entrypoints=web

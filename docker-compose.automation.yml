@@ -120,6 +120,12 @@ services:
       # Traefik Configuration
       - traefik.enable=${HOMEASSISTANT_TRAEFIK_ENABLE:-true}
       
+      # External domain (HTTPS - has built-in auth)
+      - traefik.http.routers.homeassistant-external.entrypoints=websecure
+      - traefik.http.routers.homeassistant-external.rule=Host(`homeassistant.${BASE_DOMAIN}`)
+      - traefik.http.routers.homeassistant-external.tls=true
+      - traefik.http.routers.homeassistant-external.service=homeassistant
+      
       # HTTP router with redirect
       - traefik.http.routers.homeassistant-lab-http.entrypoints=web
       - traefik.http.routers.homeassistant-lab-http.rule=Host(`homeassistant.${LAB_DOMAIN}`)

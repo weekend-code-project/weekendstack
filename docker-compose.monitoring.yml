@@ -314,6 +314,7 @@ services:
       - glance.icon=si:statuspage
       - glance.url=/go/uptime-kuma
       - glance.description=Uptime Monitoring
+      - glance.hide=true
       
       # Traefik Configuration
       - traefik.enable=true

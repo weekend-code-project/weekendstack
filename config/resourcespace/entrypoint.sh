@@ -30,7 +30,10 @@ if [ ! -f "$CONFIG_FILE" ]; then
 \$mysql_db = '$DB_NAME';
 \$mysql_bin_path = '/usr/bin';
 
-\$baseurl = 'https://resourcespace.lab';
+// Dynamically determine base URL from request
+\$protocol = (isset(\$_SERVER['HTTP_X_FORWARDED_PROTO']) && \$_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') ? 'https' : 'http';
+\$host = isset(\$_SERVER['HTTP_HOST']) ? \$_SERVER['HTTP_HOST'] : 'resourcespace.lab';
+\$baseurl = \$protocol . '://' . \$host;
 \$baseurl_short = 'pages';
 \$storagedir = '/var/www/html/filestore';
 

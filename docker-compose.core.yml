@@ -52,7 +52,7 @@ services:
       - traefik.enable=true
       
       # External HTTPS (Tunnel / public)
-      - traefik.http.routers.link-router-external.rule=(Host(`glance.${LAB_DOMAIN:-lab}`) || Host(`glance.${BASE_DOMAIN}`)) && (PathPrefix(`/go/`) || PathPrefix(`/go-external/`))
+      - traefik.http.routers.link-router-external.rule=(Host(`home.${BASE_DOMAIN}`) || Host(`glance.${LAB_DOMAIN:-lab}`) || Host(`glance.${BASE_DOMAIN}`)) && (PathPrefix(`/go/`) || PathPrefix(`/go-external/`))
       - traefik.http.routers.link-router-external.entrypoints=websecure
       - traefik.http.routers.link-router-external.tls=${TRAEFIK_TLS_ENABLE:-true}
       - traefik.http.routers.link-router-external.priority=100
