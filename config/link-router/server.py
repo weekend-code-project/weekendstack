@@ -155,12 +155,8 @@ class Handler(BaseHTTPRequestHandler):
         parsed = urllib.parse.urlsplit(self.path)
         path = parsed.path or "/"
 
-        # Check for /go-external/ (force external) or /go/ (auto-detect)
-        force_external = False
-        if path.startswith("/go-external/"):
-            force_external = True
-            rest = path[len("/go-external/") :]
-        elif path.startswith("/go/"):
+        # Check for /go/ prefix
+        if path.startswith("/go/"):
             rest = path[len("/go/") :]
         else:
             self.send_response(404)
@@ -173,7 +169,7 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             return
 
-        # /go/<service>/<optional-path> or /go-external/<service>/<optional-path>
+        # /go/<service>/<optional-path>
         parts = rest.split("/", 1)
         service = parts[0].strip()
         tail = parts[1] if len(parts) > 1 else ""
@@ -189,12 +185,8 @@ class Handler(BaseHTTPRequestHandler):
         forwarded_proto = self.headers.get("X-Forwarded-Proto", "").lower()
         incoming_scheme = "https" if forwarded_proto == "https" else "http"
         
-        # If force_external and tunnel is available, use external mode
-        # Otherwise, fall back to auto-detection (respects IP/lab/external)
-        if force_external and is_tunnel_available():
-            mode = "external"
-        else:
-            mode = choose_mode(host)
+        # Auto-detect mode based on incoming host
+        mode = choose_mode(host)
 
         # Special handling for services using Host-based routing
         if service == "glance":

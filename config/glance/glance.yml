@@ -17,58 +17,58 @@ pages:
           - title: AI Services
             links:
               - title: Open-WebUI
-                url: /go-external/open-webui
+                url: https://openwebui.lab
                 icon: si:openai
               - title: AnythingLLM
-                url: /go-external/anythingllm
+                url: https://anythingllm.lab
                 icon: si:openai
               - title: LocalAI
-                url: /go-external/localai
+                url: https://localai.lab
                 icon: si:openai
               - title: LibreChat
-                url: /go-external/librechat
+                url: https://librechat.lab
                 icon: si:chatbot
           - title: Development
             links:
               - title: Coder
-                url: /go-external/coder
+                url: https://coder.lab
                 icon: si:coder
               - title: Gitea
-                url: /go-external/gitea
+                url: https://gitea.lab
                 icon: si:gitea
               - title: GitLab
-                url: /go-external/gitlab
+                url: https://gitlab.lab
                 icon: si:gitlab
               - title: ByteStash
-                url: /go-external/bytestash
+                url: https://bytestash.lab
                 icon: si:bookstack
           - title: Personal
             links:
               - title: Mealie
-                url: /go-external/mealie
+                url: https://mealie.lab
                 icon: si:chef
               - title: Firefly III
-                url: /go-external/firefly
+                url: https://firefly.lab
                 icon: si:fireflyiii
               - title: Immich
-                url: /go-external/immich
+                url: https://immich.lab
                 icon: si:googlephotos
               - title: Navidrome
-                url: /go-external/navidrome
+                url: https://navidrome.lab
                 icon: si:musicbrainz
           - title: Productivity
             links:
               - title: Vaultwarden
-                url: /go-external/vaultwarden
+                url: https://vaultwarden.lab
                 icon: si:bitwarden
               - title: Paperless
-                url: /go-external/paperless
+                url: https://paperless.lab
                 icon: si:files
               - title: Vikunja
-                url: /go-external/vikunja
+                url: https://vikunja.lab
                 icon: si:todoist
               - title: Focalboard
-                url: /go-external/focalboard
+                url: https://focalboard.lab
                 icon: si:trello
     columns:
       - size: full

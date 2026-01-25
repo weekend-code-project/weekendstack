@@ -52,21 +52,21 @@ services:
       - traefik.enable=true
       
       # External HTTPS (Tunnel / public)
-      - traefik.http.routers.link-router-external.rule=(Host(`home.${BASE_DOMAIN}`) || Host(`glance.${LAB_DOMAIN:-lab}`) || Host(`glance.${BASE_DOMAIN}`)) && (PathPrefix(`/go/`) || PathPrefix(`/go-external/`))
+      - traefik.http.routers.link-router-external.rule=(Host(`home.${BASE_DOMAIN}`) || Host(`glance.${LAB_DOMAIN:-lab}`) || Host(`glance.${BASE_DOMAIN}`)) && PathPrefix(`/go/`)
       - traefik.http.routers.link-router-external.entrypoints=websecure
       - traefik.http.routers.link-router-external.tls=${TRAEFIK_TLS_ENABLE:-true}
       - traefik.http.routers.link-router-external.priority=100
       - traefik.http.routers.link-router-external.service=link-router
 
       # Local .lab and IP access (HTTP with redirect)
-      - "traefik.http.routers.link-router-local-http.rule=(Host(`home.${LAB_DOMAIN}`) || Host(`${HOST_IP}`)) && (PathPrefix(`/go/`) || PathPrefix(`/go-external/`))"
+      - "traefik.http.routers.link-router-local-http.rule=(Host(`home.${LAB_DOMAIN}`) || Host(`${HOST_IP}`)) && PathPrefix(`/go/`)"
       - traefik.http.routers.link-router-local-http.entrypoints=web
       - traefik.http.routers.link-router-local-http.priority=200
       - traefik.http.routers.link-router-local-http.middlewares=redirect-to-https@file
       - traefik.http.routers.link-router-local-http.service=link-router
       
       # Local .lab and IP access (HTTPS)
-      - "traefik.http.routers.link-router-local.rule=(Host(`home.${LAB_DOMAIN}`) || Host(`${HOST_IP}`)) && (PathPrefix(`/go/`) || PathPrefix(`/go-external/`))"
+      - "traefik.http.routers.link-router-local.rule=(Host(`home.${LAB_DOMAIN}`) || Host(`${HOST_IP}`)) && PathPrefix(`/go/`)"
       - traefik.http.routers.link-router-local.entrypoints=websecure
       - traefik.http.routers.link-router-local.priority=200
       - traefik.http.routers.link-router-local.service=link-router
