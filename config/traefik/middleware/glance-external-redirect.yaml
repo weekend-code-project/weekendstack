@@ -1,0 +1,7 @@
+http:
+  middlewares:
+    glance-external-redirect:
+      redirectRegex:
+        regex: "^(https?://[^/]+)/$"
+        replacement: "${1}/external"
+        permanent: false

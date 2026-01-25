@@ -127,7 +127,15 @@ services:
       # Traefik Configuration
       - traefik.enable=true
       
-      # External domain (HTTPS via Cloudflare) - Requires auth
+      # External domain - redirect root to /external (highest priority, no auth)
+      - traefik.http.routers.glance-external-root.entrypoints=websecure
+      - "traefik.http.routers.glance-external-root.rule=Host(`home.${BASE_DOMAIN}`) && Path(`/`)"
+      - traefik.http.routers.glance-external-root.tls=true
+      - traefik.http.routers.glance-external-root.service=glance
+      - traefik.http.routers.glance-external-root.priority=150
+      - traefik.http.routers.glance-external-root.middlewares=glance-external-redirect@file
+      
+      # External domain (HTTPS via Cloudflare) - Requires auth for all other paths
       - traefik.http.routers.glance-external.entrypoints=websecure
       - "traefik.http.routers.glance-external.rule=Host(`home.${BASE_DOMAIN}`) && !PathPrefix(`/go/`)"
       - traefik.http.routers.glance-external.tls=true

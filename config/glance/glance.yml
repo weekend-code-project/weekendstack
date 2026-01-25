@@ -333,3 +333,171 @@ pages:
                   {{ end }}
                 </ul>
               {{ end }}
+
+  - name: External
+    slug: external
+    hide-desktop-navigation: true
+    head-widgets:
+      - type: bookmarks
+        groups:
+          - title: AI Services
+            links:
+              - title: Open-WebUI
+                url: /go/open-webui
+                icon: si:openai
+              - title: AnythingLLM
+                url: /go/anythingllm
+                icon: si:openai
+              - title: LocalAI
+                url: /go/localai
+                icon: si:openai
+              - title: LibreChat
+                url: /go/librechat
+                icon: si:chatbot
+          - title: Development
+            links:
+              - title: Coder
+                url: /go/coder
+                icon: si:coder
+              - title: Gitea
+                url: /go/gitea
+                icon: si:gitea
+              - title: GitLab
+                url: /go/gitlab
+                icon: si:gitlab
+              - title: ByteStash
+                url: /go/bytestash
+                icon: si:bookstack
+          - title: Personal
+            links:
+              - title: Mealie
+                url: /go/mealie
+                icon: si:chef
+              - title: Firefly III
+                url: /go/firefly
+                icon: si:fireflyiii
+              - title: Immich
+                url: /go/immich
+                icon: si:googlephotos
+              - title: Navidrome
+                url: /go/navidrome
+                icon: si:musicbrainz
+          - title: Productivity
+            links:
+              - title: Vaultwarden
+                url: /go/vaultwarden
+                icon: si:bitwarden
+              - title: Paperless
+                url: /go/paperless
+                icon: si:files
+              - title: Vikunja
+                url: /go/vikunja
+                icon: si:todoist
+              - title: Focalboard
+                url: /go/focalboard
+                icon: si:trello
+    columns:
+      - size: full
+        widgets:
+          - type: docker-containers
+            limit: 50
+
+      - size: small
+        widgets:
+          - type: server-stats
+            servers:
+              - type: local
+                name: Docker VM
+
+          - type: custom-api
+            cache: 5m
+            title: Immich Stats
+            title-url: http://192.168.2.50:2283
+            url: http://192.168.2.50:2283/api/server-info/stats
+            headers:
+              x-api-key: "your_immich_api_key_here"
+            template: |
+              {{ $photos := .JSON.Int "photos" }}
+              {{ $videos := .JSON.Int "videos" }}
+              {{ $usage := .JSON.Int "usage" }}
+              <div style="display: flex; justify-content: space-around; margin: 1rem 0;">
+                <div style="text-align: center;">
+                  <div style="font-size: 1.4rem;">{{ $photos }}</div>
+                  <div style="font-size: 0.9rem; opacity: 0.8;">Photos</div>
+                </div>
+                <div style="text-align: center;">
+                  <div style="font-size: 1.4rem;">{{ $videos }}</div>
+                  <div style="font-size: 0.9rem; opacity: 0.8;">Videos</div>
+                </div>
+                <div style="text-align: center;">
+                  <div style="font-size: 1.4rem;">{{ add $photos $videos }}</div>
+                  <div style="font-size: 0.9rem; opacity: 0.8;">Total</div>
+                </div>
+              </div>
+          - type: custom-api
+            cache: 5m
+            title: Kavita Latest
+            title-url: http://192.168.2.50:5000
+            url: http://192.168.2.50:5000/api/Series/recently-updated?pageSize=5
+            headers:
+              Authorization: "Bearer kavita_api_key_here"
+            template: |
+              {{ range .JSON.Array "" }}
+                <li>
+                  <div class="size-h4">{{ .String "name" }}</div>
+                  <div style="font-size: 0.9rem; opacity: 0.8;">{{ .String "libraryName" }}</div>
+                </li>
+              {{ end }}
+          - type: custom-api
+            cache: 5m
+            title: Navidrome Stats
+            title-url: http://192.168.2.50:4533
+            url: http://192.168.2.50:4533/rest/getUser.view?u=admin&p=admin&v=1.16.1&c=glance&f=json
+            template: |
+              {{ $artists := .JSON.Int "subsonic-response.user.artistCount" }}
+              {{ $albums := .JSON.Int "subsonic-response.user.albumCount" }}
+              {{ $songs := .JSON.Int "subsonic-response.user.trackCount" }}
+              <div style="display: flex; justify-content: space-around; margin: 1rem 0;">
+                <div style="text-align: center;">
+                  <div style="font-size: 1.4rem;">{{ $artists }}</div>
+                  <div style="font-size: 0.9rem; opacity: 0.8;">Artists</div>
+                </div>
+                <div style="text-align: center;">
+                  <div style="font-size: 1.4rem;">{{ $albums }}</div>
+                  <div style="font-size: 0.9rem; opacity: 0.8;">Albums</div>
+                </div>
+                <div style="text-align: center;">
+                  <div style="font-size: 1.4rem;">{{ $songs }}</div>
+                  <div style="font-size: 0.9rem; opacity: 0.8;">Songs</div>
+                </div>
+              </div>
+
+          - type: custom-api
+            title: Latest Speedtest
+            cache: 5m
+            url: http://speedtest-tracker:80/api/speedtest/latest
+            template: |
+              {{ $data := .JSON.Get "data" }}
+              {{ if $data }}
+                <div style="display: flex; justify-content: space-around; padding: 1rem 0;">
+                  <div style="text-align: center;">
+                    <div style="font-size: 1.6rem; font-weight: bold;" class="color-primary">{{ $data.String "download" }}</div>
+                    <div style="font-size: 0.9rem; opacity: 0.8;">↓ Mbps</div>
+                  </div>
+                  <div style="text-align: center;">
+                    <div style="font-size: 1.6rem; font-weight: bold;" class="color-primary">{{ $data.String "upload" }}</div>
+                    <div style="font-size: 0.9rem; opacity: 0.8;">↑ Mbps</div>
+                  </div>
+                  <div style="text-align: center;">
+                    <div style="font-size: 1.6rem; font-weight: bold;">{{ $data.String "ping" }}</div>
+                    <div style="font-size: 0.9rem; opacity: 0.8;">Ping (ms)</div>
+                  </div>
+                </div>
+                <div style="text-align: center; font-size: 0.85rem; opacity: 0.7; margin-top: 0.5rem;">
+                  Last test: {{ $data.String "created_at" }}
+                </div>
+              {{ else }}
+                <div style="text-align: center; padding: 1rem; opacity: 0.7;">
+                  No speedtest results yet. Tests run automatically every hour.
+                </div>
+              {{ end }}
