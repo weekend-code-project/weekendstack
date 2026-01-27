@@ -6,6 +6,156 @@
 
 services:
   # =============================================================================
+  # OLLAMA - Unified LLM Backend (GPU Accelerated)
+  # =============================================================================
+  # All chat frontends connect to this service for LLM inference
+  # GPU-accelerated version for optimal performance
+  # =============================================================================
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    restart: unless-stopped
+    networks:
+      - ai-network
+      - shared-network
+    profiles:
+      - gpu
+      - all
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_ORIGINS=*
+    volumes:
+      - type: bind
+        source: ${FILES_BASE_DIR:-./files}/ai-models/ollama
+        target: /root/.ollama
+        bind:
+          create_host_path: true
+    deploy:
+      resources:
+        limits:
+          memory: ${OLLAMA_MEMORY_LIMIT:-4g}
+        reservations:
+          devices:
+            - driver: nvidia
+              count: ${GPU_COUNT:-1}
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    labels:
+      # Glance Configuration - Hidden, shown in Monitoring widget
+      - glance.id=ollama
+      - glance.group=Monitoring
+      - glance.name=Ollama (GPU)
+      - glance.icon=si:ollama
+      - glance.url=/go/ollama
+      - glance.description=LLM API (GPU)
+      - glance.hide=true
+      
+      # Traefik Configuration
+      - traefik.enable=true
+      
+      # External domain (HTTPS)
+      - traefik.http.routers.ollama-external.entrypoints=websecure
+      - "traefik.http.routers.ollama-external.rule=Host(`ollama.${BASE_DOMAIN}`)"
+      - traefik.http.routers.ollama-external.tls=true
+      - traefik.http.routers.ollama-external.service=ollama
+      - traefik.http.routers.ollama-external.middlewares=ai-services-auth@file
+      
+      # Local .lab domain (HTTP redirect)
+      - traefik.http.routers.ollama-lab-http.entrypoints=web
+      - "traefik.http.routers.ollama-lab-http.rule=Host(`ollama.${LAB_DOMAIN}`)"
+      - traefik.http.routers.ollama-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.ollama-lab-http.service=ollama
+      
+      # Local .lab domain (HTTPS)
+      - traefik.http.routers.ollama-lab.entrypoints=websecure
+      - "traefik.http.routers.ollama-lab.rule=Host(`ollama.${LAB_DOMAIN}`)"
+      - traefik.http.routers.ollama-lab.tls=true
+      - traefik.http.routers.ollama-lab.service=ollama
+      
+      # Service definition
+      - traefik.http.services.ollama.loadbalancer.server.port=11434
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
+
+  # =============================================================================
+  # OLLAMA CPU - CPU Fallback (No GPU Required)
+  # =============================================================================
+  # Use this when GPU is not available - same container name prevents conflicts
+  # Start with: docker compose --profile ai up -d
+  # =============================================================================
+  ollama-cpu:
+    image: ollama/ollama:latest
+    container_name: ollama
+    restart: unless-stopped
+    networks:
+      - ai-network
+      - shared-network
+    profiles:
+      - ai
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_ORIGINS=*
+    volumes:
+      - type: bind
+        source: ${FILES_BASE_DIR:-./files}/ai-models/ollama
+        target: /root/.ollama
+        bind:
+          create_host_path: true
+    deploy:
+      resources:
+        limits:
+          memory: ${OLLAMA_MEMORY_LIMIT:-4g}
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    labels:
+      # Glance Configuration - Hidden, shown in Monitoring widget
+      - glance.id=ollama
+      - glance.group=Monitoring
+      - glance.name=Ollama (CPU)
+      - glance.icon=si:ollama
+      - glance.url=/go/ollama
+      - glance.description=LLM API (CPU)
+      - glance.hide=true
+      
+      # Traefik Configuration
+      - traefik.enable=true
+      
+      # External domain (HTTPS)
+      - traefik.http.routers.ollama-external.entrypoints=websecure
+      - "traefik.http.routers.ollama-external.rule=Host(`ollama.${BASE_DOMAIN}`)"
+      - traefik.http.routers.ollama-external.tls=true
+      - traefik.http.routers.ollama-external.service=ollama
+      - traefik.http.routers.ollama-external.middlewares=ai-services-auth@file
+      
+      # Local .lab domain (HTTP redirect)
+      - traefik.http.routers.ollama-lab-http.entrypoints=web
+      - "traefik.http.routers.ollama-lab-http.rule=Host(`ollama.${LAB_DOMAIN}`)"
+      - traefik.http.routers.ollama-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.ollama-lab-http.service=ollama
+      
+      # Local .lab domain (HTTPS)
+      - traefik.http.routers.ollama-lab.entrypoints=websecure
+      - "traefik.http.routers.ollama-lab.rule=Host(`ollama.${LAB_DOMAIN}`)"
+      - traefik.http.routers.ollama-lab.tls=true
+      - traefik.http.routers.ollama-lab.service=ollama
+      
+      # Service definition
+      - traefik.http.services.ollama.loadbalancer.server.port=11434
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
+
+  # =============================================================================
   # OPEN WEBUI - AI Chat Interface (connects to native Ollama)
   # =============================================================================
   open-webui:
@@ -135,67 +285,7 @@ services:
       - traefik.http.services.searxng.loadbalancer.server.port=8080
       - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
-  # =============================================================================
-  # STABLE DIFFUSION - IMAGE GENERATION (GPU Required)
-  # =============================================================================
-  stable-diffusion-webui:
-    image: ghcr.io/jemeyer/stable-diffusion-webui:latest
-    container_name: stable-diffusion-webui
-    restart: unless-stopped
-    networks:
-      - ai-network
-      - shared-network
-    profiles:
-      - gpu
-    ports:
-      - "${STABLE_DIFFUSION_PORT:-7861}:7860"
-    environment:
-      - COMMANDLINE_ARGS=${STABLE_DIFFUSION_ARGS:---listen --port 7860 --allow-code --medvram --xformers --enable-insecure-extension-access}
-      - WEBUI_SECRET_KEY=${STABLE_DIFFUSION_SECRET:-stable-diffusion-secret}
-    volumes:
-      - type: volume
-        source: stable-diffusion-models
-        target: /stable-diffusion-webui/models
-      - type: volume
-        source: stable-diffusion-data
-        target: /stable-diffusion-webui/data
-      - type: bind
-        source: ${FILES_BASE_DIR:-./files}/stable-diffusion/outputs
-        target: /stable-diffusion-webui/outputs
-    deploy:
-      resources:
-        limits:
-          memory: ${STABLE_DIFFUSION_MEMORY_LIMIT:-6g}
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-    labels:
-      - "traefik.enable=${STABLE_DIFFUSION_TRAEFIK_ENABLE:-true}"
-      
-      # HTTP router with redirect
-      - "traefik.http.routers.sdwebui-lab-http.entrypoints=web"
-      - "traefik.http.routers.sdwebui-lab-http.rule=Host(`sdwebui.${LAB_DOMAIN}`)"
-      - "traefik.http.routers.sdwebui-lab-http.middlewares=redirect-to-https@file"
-      - "traefik.http.routers.sdwebui-lab-http.service=sdwebui"
-      
-      # HTTPS router for .lab domain
-      - "traefik.http.routers.sdwebui-lab.entrypoints=websecure"
-      - "traefik.http.routers.sdwebui-lab.rule=Host(`sdwebui.${LAB_DOMAIN}`)"
-      - "traefik.http.routers.sdwebui-lab.tls=true"
-      - "traefik.http.routers.sdwebui-lab.service=sdwebui"
-      
-      # HTTPS router for external domain
-      - "traefik.http.routers.sdwebui.entrypoints=websecure"
-      - "traefik.http.routers.sdwebui.rule=Host(`sdwebui.${BASE_DOMAIN}`)"
-      - "traefik.http.routers.sdwebui.tls=${TRAEFIK_TLS_ENABLE:-true}"
-      - "traefik.http.routers.sdwebui.tls.certresolver=${TRAEFIK_CERT_RESOLVER:-letsencrypt}"
-      - "traefik.http.routers.sdwebui.service=sdwebui"
-      
-      # Service definition
-      - "traefik.http.services.sdwebui.loadbalancer.server.port=7860"
-      - "traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}"
+
 
   # =============================================================================
   # LOCALAI - OpenAI-compatible Local LLM Server
@@ -394,13 +484,14 @@ services:
         limits:
           memory: ${WHISPER_MEMORY_LIMIT:-4g}
     labels:
-      # Glance Configuration
+      # Glance Configuration - Hidden, shown in Monitoring widget
       - glance.id=whisper
-      - glance.group=AI
+      - glance.group=Monitoring
       - glance.name=Whisper
       - glance.icon=si:openai
       - glance.url=/go/whisper
-      - glance.description=Speech-to-Text
+      - glance.description=Speech-to-Text API
+      - glance.hide=true
       
       # Traefik Configuration
       - traefik.enable=true
@@ -646,153 +737,17 @@ services:
       - traefik.http.services.privategpt.loadbalancer.server.port=8080
       - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
-  # =============================================================================
-  # COMFYUI - Node-based Stable Diffusion Interface
-  # =============================================================================
-  # Advanced node-based workflow for image generation
-  # Highly customizable with community nodes and models
-  # =============================================================================
-  comfyui:
-    image: yanwk/comfyui-boot:latest
-    container_name: comfyui
-    restart: unless-stopped
-    networks:
-      - ai-network
-      - shared-network
-    profiles:
-      - gpu
-    ports:
-      - "${COMFYUI_PORT:-8188}:8188"
-    environment:
-      - CLI_ARGS=${COMFYUI_ARGS:---listen 0.0.0.0 --port 8188}
-    volumes:
-      - type: volume
-        source: comfyui-data
-        target: /home/runner
-      - type: volume
-        source: comfyui-models
-        target: /home/runner/ComfyUI/models
-    deploy:
-      resources:
-        limits:
-          memory: ${COMFYUI_MEMORY_LIMIT:-8g}
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-    labels:
-      - traefik.enable=true
-      
-      # HTTP router with redirect
-      - traefik.http.routers.comfyui-lab-http.entrypoints=web
-      - traefik.http.routers.comfyui-lab-http.rule=Host(`comfyui.${LAB_DOMAIN}`)
-      - traefik.http.routers.comfyui-lab-http.middlewares=redirect-to-https@file
-      - traefik.http.routers.comfyui-lab-http.service=comfyui
-      
-      # HTTPS router for .lab domain
-      - traefik.http.routers.comfyui-lab.entrypoints=websecure
-      - traefik.http.routers.comfyui-lab.rule=Host(`comfyui.${LAB_DOMAIN}`)
-      - traefik.http.routers.comfyui-lab.tls=true
-      - traefik.http.routers.comfyui-lab.service=comfyui
-      
-      # HTTPS router for external domain
-      - traefik.http.routers.comfyui.entrypoints=websecure
-      - traefik.http.routers.comfyui.rule=Host(`comfyui.${BASE_DOMAIN}`)
-      - traefik.http.routers.comfyui.tls=true
-      - traefik.http.routers.comfyui.service=comfyui
-      
-      # Service definition
-      - traefik.http.services.comfyui.loadbalancer.server.port=8188
-      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
-  # =============================================================================
-  # DIFFRHYTHM - AI Music Generation (GPU Required)
-  # =============================================================================
-  # Full-length song generation with latent diffusion
-  # Can generate up to ~5 minute songs from lyrics and style prompts
-  # Supports text-to-music, reference audio, and instrumental generation
-  # Requires NVIDIA GPU with 8GB+ VRAM minimum
-  # =============================================================================
-  diffrhythm:
-    build:
-      context: ./config/diffrhythm
-      dockerfile: Dockerfile
-    image: diffrhythm:local
-    container_name: diffrhythm
-    restart: unless-stopped
-    networks:
-      - ai-network
-      - shared-network
-    profiles:
-      - gpu
-    ports:
-      - "${DIFFRHYTHM_PORT:-7870}:7860"
-    environment:
-      - GRADIO_SERVER_NAME=0.0.0.0
-      - GRADIO_SERVER_PORT=7860
-    volumes:
-      - type: volume
-        source: diffrhythm-models
-        target: /app/models
-      - type: bind
-        source: ${FILES_BASE_DIR:-./files}/diffrhythm/output
-        target: /app/output
-        bind:
-          create_host_path: true
-      - type: bind
-        source: ${FILES_BASE_DIR:-./files}/diffrhythm/input
-        target: /app/input
-        bind:
-          create_host_path: true
-    deploy:
-      resources:
-        limits:
-          memory: ${DIFFRHYTHM_MEMORY_LIMIT:-12g}
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-    labels:
-      - traefik.enable=true
-      
-      # HTTP router with redirect
-      - traefik.http.routers.diffrhythm-lab-http.entrypoints=web
-      - traefik.http.routers.diffrhythm-lab-http.rule=Host(`diffrhythm.${LAB_DOMAIN}`)
-      - traefik.http.routers.diffrhythm-lab-http.middlewares=redirect-to-https@file
-      - traefik.http.routers.diffrhythm-lab-http.service=diffrhythm
-      
-      # HTTPS router for .lab domain
-      - traefik.http.routers.diffrhythm-lab.entrypoints=websecure
-      - traefik.http.routers.diffrhythm-lab.rule=Host(`diffrhythm.${LAB_DOMAIN}`)
-      - traefik.http.routers.diffrhythm-lab.tls=true
-      - traefik.http.routers.diffrhythm-lab.service=diffrhythm
-      
-      # HTTPS router for external domain
-      - traefik.http.routers.diffrhythm.entrypoints=websecure
-      - traefik.http.routers.diffrhythm.rule=Host(`diffrhythm.${BASE_DOMAIN}`)
-      - traefik.http.routers.diffrhythm.tls=true
-      - traefik.http.routers.diffrhythm.service=diffrhythm
-      
-      # Service definition
-      - traefik.http.services.diffrhythm.loadbalancer.server.port=7860
-      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
 # =============================================================================
 # VOLUMES AND NETWORKS
 # =============================================================================
 volumes:
-  stable-diffusion-models:
-  stable-diffusion-data:
   localai-models:
   anythingllm-data:
   whisper-data:
   librechat-data:
-  comfyui-data:
-  comfyui-models:
   privategpt-data:
-  diffrhythm-models:
 
 networks:
   ai-network:

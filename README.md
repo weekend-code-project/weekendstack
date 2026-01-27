@@ -2,6 +2,54 @@
 
 A comprehensive self-hosted Docker stack for development, AI, productivity, media, home automation, and monitoring. Features **45+ services** organized into modular compose files with profile-based deployment.
 
+## 📦 Quick Start
+
+### 1. Authenticate with Docker Hub (Recommended)
+
+To avoid rate limits when pulling images, authenticate with your Docker Hub account:
+
+```bash
+docker login -u your-username
+```
+
+When prompted for password, enter your **Personal Access Token (PAT)**, NOT your account password.
+
+**Create a Personal Access Token:**
+1. Go to https://hub.docker.com/settings/security
+2. Click "New Access Token"
+3. Name it (e.g., "weekend-stack")
+4. Select "Read, Write, Delete" permissions (or just "Read" for pull-only)
+5. Click "Generate" and copy the token
+6. Use this token as your password when running `docker login`
+
+**Why authenticate?**
+- Anonymous users: 100 pulls per 6 hours
+- Authenticated free accounts: 200 pulls per 6 hours
+- Required for pulling all AI service images without hitting rate limits
+
+### 2. Clone and Configure
+
+```bash
+cd /opt/stacks/weekendstack
+cp .env.example .env
+# Edit .env with your settings
+nano .env
+```
+
+### 3. Start Services
+
+```bash
+# Start all services
+docker compose --profile all up -d
+
+# Or start specific profiles
+docker compose --profile ai up -d        # AI services only
+docker compose --profile gpu up -d       # GPU-accelerated services only
+docker compose --profile dev up -d       # Development services only
+```
+
+---
+
 ## 📦 Stack Overview
 
 ### Service Categories

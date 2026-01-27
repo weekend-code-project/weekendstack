@@ -75,12 +75,16 @@ pages:
         widgets:
           - type: monitor
             cache: 1m
-            title: Monitoring Services
+            title: APIs & Monitoring
             sites:
-              - title: Cockpit
-                url: /go/cockpit
-                check-url: http://${HOST_IP}:9090
-                icon: si:cockpit
+              - title: Ollama
+                url: /go/ollama
+                check-url: http://${HOST_IP}:11434/api/tags
+                icon: si:ollama
+              - title: Whisper
+                url: /go/whisper
+                check-url: http://${HOST_IP}:9002
+                icon: si:openai
               - title: Dozzle
                 url: /go/dozzle
                 check-url: http://${HOST_IP}:9999
