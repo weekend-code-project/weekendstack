@@ -400,8 +400,10 @@ services:
     environment:
       - STORAGE_DIR=/app/server/storage
       - LLM_PROVIDER=${ANYTHINGLLM_LLM_PROVIDER:-ollama}
-      - OLLAMA_BASE_PATH=${OLLAMA_HOST:-http://host.docker.internal:11434}
+      - OLLAMA_BASE_PATH=${OLLAMA_HOST:-http://ollama:11434}
+      - OLLAMA_MODEL_PREF=${ANYTHINGLLM_OLLAMA_MODEL:-qwen2.5:0.5b}
       - EMBEDDING_MODEL_PREF=${ANYTHINGLLM_EMBEDDING_MODEL:-nomic-embed-text}
+      - EMBEDDING_BASE_PATH=${OLLAMA_HOST:-http://ollama:11434}
       - VECTOR_DB=${ANYTHINGLLM_VECTOR_DB:-lancedb}
       - JWT_SECRET=${ANYTHINGLLM_JWT_SECRET:-change-this-secret-key-for-production}
       - AUTH_TOKEN=${DEFAULT_TRAEFIK_AUTH_PASS:-CHANGEME1234}
