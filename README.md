@@ -2,7 +2,59 @@
 
 A comprehensive self-hosted Docker stack for development, AI, productivity, media, home automation, and monitoring. Features **45+ services** organized into modular compose files with profile-based deployment.
 
-## 📦 Quick Start
+## � MVP Quick Start (v0.3.0)
+
+> **Default Credentials for all services:**
+> - **Username:** `admin`
+> - **Password:** `weekendstack`
+> 
+> Change these in `.env` before production use. See [docs/default-credentials.md](docs/default-credentials.md) for details.
+
+### 1. Clone and Configure
+
+```bash
+git clone https://github.com/weekend-code-project/weekendstack.git
+cd weekendstack
+
+# The .env file is ready to use with default credentials
+# Edit HOST_IP if your server IP is different from 192.168.2.215
+nano .env
+```
+
+### 2. Start Core Services
+
+```bash
+# Create network and start core services
+docker network create shared-network 2>/dev/null || true
+docker compose --profile core up -d
+
+# Or use the MVP startup script
+./tools/mvp-start.sh
+```
+
+### 3. Access Services
+
+**Core Services (profile: core):**
+- **Glance Dashboard:** http://YOUR_IP:8080
+- **Vaultwarden:** http://YOUR_IP:8222
+
+**Add Development (profile: dev):**
+```bash
+docker compose --profile core --profile dev up -d
+```
+- **Coder:** http://YOUR_IP:7080
+- **Gitea:** http://YOUR_IP:7001
+
+**Add Productivity (profile: productivity):**
+```bash
+docker compose --profile core --profile productivity up -d
+```
+- **Paperless:** http://YOUR_IP:8082
+- **NocoDB:** http://YOUR_IP:8090
+
+---
+
+## 📦 Full Setup
 
 ### 1. Authenticate with Docker Hub (Recommended)
 
@@ -162,8 +214,11 @@ docker compose --profile dev up -d       # Development services only
 ### Prerequisites
 
 - Docker 24+ and Docker Compose v2+
-- 8GB+ RAM (16GB+ recommended for AI services)
-- 100GB+ disk space (SSD recommended)
+- 16GB RAM minimum (65% utilization at idle with full stack ~10.4GB used)
+- 100GB+ disk space minimum (60GB for Docker images, 40GB+ for service data/volumes)
+  - Docker images: ~58GB for all services
+  - Service volumes: ~3GB base + data storage as needed
+  - SSD strongly recommended for database performance
 - NVIDIA GPU with drivers (optional, for image generation)
 
 ### 1. Clone and Configure
@@ -496,6 +551,14 @@ Shared services:
 
 ## 🐛 Troubleshooting
 
+### Known Issues
+
+**link-router DNS resolution dependency:**
+- The `link-router` service (providing `/go/` short links) requires Pi-hole to be running for DNS resolution
+- Without Pi-hole, links redirect to `http://HOST_IP:8080/go/service` instead of resolving to the service's actual port
+- **Workaround**: Start Pi-hole with `docker compose --profile networking up -d` before using `/go/` links
+- **Alternative**: Use direct service URLs from the Glance dashboard instead of short links
+
 ### Service Won't Start
 
 ```bash
@@ -560,14 +623,18 @@ curl -I http://localhost:80 -H "Host: service.yourdomain.com"
 
 ### Minimum Specs
 - **CPU**: 4 cores
-- **RAM**: 8GB
-- **Disk**: 50GB
+- **RAM**: 16GB (65% utilization at idle with full stack ~10.4GB used)
+- **Disk**: 100GB minimum
+  - 60GB for Docker images (all services)
+  - 40GB+ for service data volumes and growth
 - **OS**: Linux (Ubuntu 22.04+ recommended)
 
 ### Recommended Specs
 - **CPU**: 8+ cores
-- **RAM**: 32GB (for AI services)
+- **RAM**: 32GB (for AI services with heavy workloads)
 - **Disk**: 500GB+ SSD
+  - 60GB for Docker images
+  - 440GB+ for service data, media libraries, backups
 - **GPU**: NVIDIA RTX 3060+ (for image generation)
 
 ### Per-Service Memory Limits
