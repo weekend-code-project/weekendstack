@@ -1,11 +1,71 @@
 # Default Credentials Reference
 
+> **MVP Default Credentials (v0.3.0)**
+> 
+> For quick MVP testing, all services use consolidated credentials:
+> - **Username:** `admin`
+> - **Password:** `weekendstack`
+> 
+> Change these in `.env` before production use!
+
+---
+
+## 🔑 Quick Reference - All Services
+
+| Category | Service | Username | Password | Notes |
+|----------|---------|----------|----------|-------|
+| **Auth** | Traefik (external) | `admin` | `weekendstack` | Used for services without built-in auth |
+| **Database** | PostgreSQL | `admin` | `weekendstack` | Shared DB for Coder, etc. |
+| **DNS** | Pi-hole | - | `weekendstack` | Web admin password |
+| **Dev** | Gitea | `admin` | `weekendstack` | First-run setup creates account |
+| **Dev** | Coder | `admin` | (create on first run) | Create account on first access |
+| **Productivity** | Paperless-ngx | `admin` | `weekendstack` | Document management |
+| **Productivity** | NocoDB | `admin` | `weekendstack` | Airtable alternative |
+| **Productivity** | Activepieces | `admin` | `weekendstack` | Workflow automation |
+| **Productivity** | Postiz | `admin@example.com` | `weekendstack` | Social media management |
+| **Productivity** | AtroCore | `admin` | `weekendstack` | Digital asset management |
+| **Monitoring** | NetBox | `admin` | `weekendstack` | Infrastructure management |
+| **Monitoring** | WUD | `admin` | `weekendstack` | Container update monitoring |
+| **Media** | Immich | - | - | Create account on first access |
+| **Media** | Navidrome | `admin` | `admin` | Music streaming |
+| **AI** | Open WebUI | - | - | Create account on first access |
+| **AI** | SearXNG | `admin` | `weekendstack` | Privacy search (same as Traefik auth) |
+
+---
+
+## 🚀 MVP Quick Start
+
+1. **Clone and start core services:**
+   ```bash
+   cd /opt/stacks/weekendstack
+   docker network create shared-network 2>/dev/null || true
+   docker compose --profile core up -d
+   ```
+
+2. **Access services:**
+   - Glance Dashboard: http://192.168.2.215:8080 (or http://home.lab via Traefik)
+   - Vaultwarden: http://192.168.2.215:8222
+
+3. **Add development tools:**
+   ```bash
+   docker compose --profile core --profile dev up -d
+   ```
+   - Coder: http://192.168.2.215:7080
+   - Gitea: http://192.168.2.215:7001
+
+4. **Add productivity:**
+   ```bash
+   docker compose --profile core --profile productivity up -d
+   ```
+
+---
+
 ## Traefik Authentication (External Access)
 
 All services without built-in authentication use a shared default credential for external access via `*.weekendcodeproject.dev`:
 
 **Username:** `admin`  
-**Password:** `CHANGEME1234`
+**Password:** `weekendstack`
 
 ### Services Using Default Auth
 
@@ -17,7 +77,7 @@ These services require the default Traefik credentials when accessed externally:
 - **LocalAI** - localai.weekendcodeproject.dev
 - **AnythingLLM** - anythingllm.weekendcodeproject.dev
 - **Whisper** - whisper.weekendcodeproject.dev
-- **SearXNG** - searxng.weekendcodeproject.dev (username: `searx`, same password)
+- **SearXNG** - searxng.weekendcodeproject.dev
 
 ### Local Access (No Authentication)
 
@@ -25,31 +85,16 @@ When accessing services via `*.lab` domain on your local network, **no authentic
 
 ### Changing the Default Password
 
-1. Update `DEFAULT_TRAEFIK_AUTH_PASS` in your `.env` file
-2. Generate new bcrypt hash:
+1. Update all `*_PASSWORD` and `*_DBPASS` variables in your `.env` file
+2. For Traefik auth, generate new bcrypt hash:
    ```bash
    docker run --rm httpd:alpine htpasswd -nbB admin YOUR_NEW_PASSWORD
    ```
 3. Update auth files in `config/traefik/auth/` with the new hash (remember to escape `$` as `$$` in YAML)
-4. Restart Traefik:
+4. Restart services:
    ```bash
-   docker compose restart traefik
+   docker compose --profile all down && docker compose --profile all up -d
    ```
-
-## Configuration in .env
-
-Add these variables to your `.env` file (already included in System Configuration section):
-
-```bash
-# Default Traefik Authentication
-# Used for external access to services without built-in auth
-DEFAULT_TRAEFIK_AUTH_USER=admin
-DEFAULT_TRAEFIK_AUTH_PASS=CHANGEME1234
-``` & Access Guide
-
-> **⚠️ IMPORTANT:** These are the default credentials from `.env.example`. **Change all passwords in production!**
-
-This document lists all default login credentials and access URLs for WeekendStack services using the default `HOST_IP=192.168.2.50` configuration.
 
 ---
 

@@ -138,8 +138,8 @@ pages:
           - type: custom-api
             cache: 5m
             title: Immich Stats
-            title-url: http://192.168.2.50:2283
-            url: http://192.168.2.50:2283/api/server-info/stats
+            title-url: http://${HOST_IP}:2283
+            url: http://${HOST_IP}:2283/api/server-info/stats
             headers:
               x-api-key: "your_immich_api_key_here"
             template: |
@@ -163,8 +163,8 @@ pages:
           - type: custom-api
             cache: 5m
             title: Kavita Latest
-            title-url: http://192.168.2.50:5000
-            url: http://192.168.2.50:5000/api/Series/recently-updated?pageSize=5
+            title-url: http://${HOST_IP}:5000
+            url: http://${HOST_IP}:5000/api/Series/recently-updated?pageSize=5
             headers:
               Authorization: "Bearer kavita_api_key_here"
             template: |
@@ -177,8 +177,8 @@ pages:
           - type: custom-api
             cache: 5m
             title: Navidrome Stats
-            title-url: http://192.168.2.50:4533
-            url: http://192.168.2.50:4533/rest/getUser.view?u=admin&p=admin&v=1.16.1&c=glance&f=json
+            title-url: http://${HOST_IP}:4533
+            url: http://${HOST_IP}:4533/rest/getUser.view?u=admin&p=admin&v=1.16.1&c=glance&f=json
             template: |
               {{ $artists := .JSON.Int "subsonic-response.user.artistCount" }}
               {{ $albums := .JSON.Int "subsonic-response.user.albumCount" }}
@@ -230,7 +230,7 @@ pages:
 
           - type: custom-api
             title: What's Up Docker?
-            title-url: http://192.168.2.50:3002
+            title-url: http://${HOST_IP}:3002
             cache: 1h
             url: http://wud:3000/api/containers/
             method: GET
@@ -289,7 +289,7 @@ pages:
                           {{ else }}
                             <span class="color-negative">●</span>
                           {{ end }}
-                          <a href="http://192.168.2.50:3002" target="_blank" style="color: inherit; text-decoration: none;">{{ .String "name" }}</a>
+                          <a href="http://${HOST_IP}:3002" target="_blank" style="color: inherit; text-decoration: none;">{{ .String "name" }}</a>
                         </div>
                         <div style="display: flex; gap: 1rem; margin-top: 0.25rem; font-size: 0.9rem; opacity: 0.8;">
                           {{ if $showLocalVersion }}
@@ -416,8 +416,8 @@ pages:
           - type: custom-api
             cache: 5m
             title: Immich Stats
-            title-url: http://192.168.2.50:2283
-            url: http://192.168.2.50:2283/api/server-info/stats
+            title-url: http://${HOST_IP}:2283
+            url: http://${HOST_IP}:2283/api/server-info/stats
             headers:
               x-api-key: "your_immich_api_key_here"
             template: |
@@ -441,8 +441,8 @@ pages:
           - type: custom-api
             cache: 5m
             title: Kavita Latest
-            title-url: http://192.168.2.50:5000
-            url: http://192.168.2.50:5000/api/Series/recently-updated?pageSize=5
+            title-url: http://${HOST_IP}:5000
+            url: http://${HOST_IP}:5000/api/Series/recently-updated?pageSize=5
             headers:
               Authorization: "Bearer kavita_api_key_here"
             template: |
@@ -455,8 +455,8 @@ pages:
           - type: custom-api
             cache: 5m
             title: Navidrome Stats
-            title-url: http://192.168.2.50:4533
-            url: http://192.168.2.50:4533/rest/getUser.view?u=admin&p=admin&v=1.16.1&c=glance&f=json
+            title-url: http://${HOST_IP}:4533
+            url: http://${HOST_IP}:4533/rest/getUser.view?u=admin&p=admin&v=1.16.1&c=glance&f=json
             template: |
               {{ $artists := .JSON.Int "subsonic-response.user.artistCount" }}
               {{ $albums := .JSON.Int "subsonic-response.user.albumCount" }}

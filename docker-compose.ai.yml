@@ -20,7 +20,6 @@ services:
       - shared-network
     profiles:
       - gpu
-      - all
     ports:
       - "${OLLAMA_PORT:-11434}:11434"
     environment:
@@ -98,6 +97,7 @@ services:
       - shared-network
     profiles:
       - ai
+      - all
     ports:
       - "${OLLAMA_PORT:-11434}:11434"
     environment:
