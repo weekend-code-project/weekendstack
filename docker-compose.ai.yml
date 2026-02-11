@@ -27,11 +27,17 @@ services:
       - OLLAMA_HOST=0.0.0.0
       - OLLAMA_ORIGINS=*
     volumes:
+      # Default: Local bind mount for AI models
       - type: bind
         source: ${FILES_BASE_DIR:-./files}/ai-models/ollama
         target: /root/.ollama
         bind:
           create_host_path: true
+      # Advanced: NFS mount for AI models (requires NFS_OLLAMA_PATH in .env)
+      # Uncomment the lines below and comment out the bind mount above to use NFS
+      # - type: volume
+      #   source: ollama-nfs-models
+      #   target: /root/.ollama
     deploy:
       resources:
         limits:
@@ -104,11 +110,17 @@ services:
       - OLLAMA_HOST=0.0.0.0
       - OLLAMA_ORIGINS=*
     volumes:
+      # Default: Local bind mount for AI models
       - type: bind
         source: ${FILES_BASE_DIR:-./files}/ai-models/ollama
         target: /root/.ollama
         bind:
           create_host_path: true
+      # Advanced: NFS mount for AI models (requires NFS_OLLAMA_PATH in .env)
+      # Uncomment the lines below and comment out the bind mount above to use NFS
+      # - type: volume
+      #   source: ollama-nfs-models
+      #   target: /root/.ollama
     deploy:
       resources:
         limits:
@@ -750,6 +762,15 @@ volumes:
   whisper-data:
   librechat-data:
   privategpt-data:
+  
+  # NFS Volumes (Optional - see service documentation for setup)
+  # Uncomment and configure NFS_SERVER_IP and NFS_OLLAMA_PATH in .env
+  # ollama-nfs-models:
+  #   driver: local
+  #   driver_opts:
+  #     type: nfs
+  #     o: "addr=${NFS_SERVER_IP:-192.168.2.3},rw,nfsvers=4,nolock"
+  #     device: ":${NFS_OLLAMA_PATH:-/mnt/user/ollama-models}"
 
 networks:
   ai-network:

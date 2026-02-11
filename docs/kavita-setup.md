@@ -35,6 +35,67 @@ docker compose --profile media up -d kavita
 | `KAVITA_LIBRARY_PATH` | ./files/kavita/library | Host path for media files |
 | `KAVITA_MEMORY_LIMIT` | 512m | Container memory limit |
 
+## Storage Configuration
+
+### Default: Local VM Storage
+
+By default, Kavita uses local VM storage at `./files/kavita/library` for your eBook/manga collection.
+
+### Advanced: NFS Network Storage  
+
+For large libraries, you can configure Kavita to use NFS storage (e.g., from Unraid NAS) instead of consuming VM disk space.
+
+#### Setup Steps
+
+1. **Configure NFS Server** (e.g., Unraid)
+   - Create NFS export (e.g., `/mnt/user/kavita-library` or `/mnt/user/books-and-comics`)
+   - Set permissions: `192.168.2.0/24(sec=sys,rw,no_subtree_check,all_squash,anonuid=99,anongid=100)`
+
+2. **Configure Environment Variables** in `.env`:
+   ```bash
+   NFS_SERVER_IP=192.168.2.3
+   NFS_KAVITA_PATH=/mnt/user/kavita-library
+   ```
+
+3. **Edit docker-compose.media.yml**:
+   - Uncomment the NFS volume definition at the bottom:
+     ```yaml
+     kavita-nfs-library:
+       driver: local
+       driver_opts:
+         type: nfs
+         o: "addr=${NFS_SERVER_IP:-192.168.2.3},rw,nfsvers=4,nolock"
+         device: ":${NFS_KAVITA_PATH:-/mnt/user/kavita-library}"
+     ```
+   - In the kavita service volumes section, comment out the bind mount and uncomment the NFS volume:
+     ```yaml
+     # - type: bind
+     #   source: ${KAVITA_LIBRARY_PATH:-./files/kavita/library}
+     #   target: /manga
+     #   bind:
+     #     create_host_path: true
+     - type: volume
+       source: kavita-nfs-library
+       target: /manga
+     ```
+
+4. **Restart Kavita**:
+   ```bash
+   docker compose down kavita
+   docker compose up -d kavita
+   ```
+
+5. **Verify NFS Storage**:
+   ```bash
+   docker compose exec kavita ls -la /manga
+   ```
+
+#### Troubleshooting NFS
+
+- **"Permission denied"**: Verify NFS export has `rw` permissions and correct UID/GID mapping
+- **"No such file or directory"**: Check `NFS_KAVITA_PATH` matches your NFS export path
+- **Kavita can't scan library**: Ensure proper folder structure and file permissions (see below)
+
 ## Adding Content
 
 Place your content in the library folder on the host:

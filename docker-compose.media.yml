@@ -40,11 +40,17 @@ services:
       - type: volume
         source: kavita-data
         target: /kavita/config
+      # Default: Local bind mount for eBook library  
       - type: bind
         source: ${KAVITA_LIBRARY_PATH:-./files/kavita/library}
         target: /manga
         bind:
           create_host_path: true
+      # Advanced: NFS mount for eBook library (requires NFS_KAVITA_PATH in .env)
+      # Uncomment the lines below and comment out the bind mount above to use NFS
+      # - type: volume
+      #   source: kavita-nfs-library
+      #   target: /manga
     restart: unless-stopped
     deploy:
       resources:
@@ -110,12 +116,19 @@ services:
       - type: volume
         source: navidrome-data
         target: /data
+      # Default: Local bind mount for music library
       - type: bind
         source: ${NAVIDROME_MUSIC_PATH:-./files/navidrome/music}
         target: /music
         read_only: true
         bind:
           create_host_path: true
+      # Advanced: NFS mount for music library (requires NFS_NAVIDROME_PATH in .env)
+      # Uncomment the lines below and comment out the bind mount above to use NFS
+      # - type: volume
+      #   source: navidrome-nfs-music
+      #   target: /music
+      #   read_only: true
     restart: unless-stopped
     deploy:
       resources:
@@ -158,3 +171,19 @@ services:
 volumes:
   kavita-data:
   navidrome-data:
+  
+  # NFS Volumes (Optional - see service documentation for setup)
+  # Uncomment and configure NFS_SERVER_IP and service-specific NFS path variables in .env
+  # kavita-nfs-library:
+  #   driver: local
+  #   driver_opts:
+  #     type: nfs
+  #     o: "addr=${NFS_SERVER_IP:-192.168.2.3},rw,nfsvers=4,nolock"
+  #     device: ":${NFS_KAVITA_PATH:-/mnt/user/kavita-library}"
+  # 
+  # navidrome-nfs-music:
+  #   driver: local
+  #   driver_opts:
+  #     type: nfs
+  #     o: "addr=${NFS_SERVER_IP:-192.168.2.3},ro,nfsvers=4,nolock"
+  #     device: ":${NFS_NAVIDROME_PATH:-/mnt/user/navidrome-music}"

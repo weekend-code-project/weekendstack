@@ -30,6 +30,70 @@ docker compose --profile media up -d navidrome
 | `NAVIDROME_MUSIC_PATH` | ./files/navidrome/music | Host path for music files |
 | `NAVIDROME_MEMORY_LIMIT` | 512m | Container memory limit |
 
+## Storage Configuration
+
+### Default: Local VM Storage
+
+By default, Navidrome uses local VM storage at `./files/navidrome/music` for your music library.
+
+### Advanced: NFS Network Storage
+
+For large music libraries, you can configure Navidrome to use NFS storage (e.g., from Unraid NAS) instead of consuming VM disk space. This is ideal if you have a large existing music collection on a NAS.
+
+#### Setup Steps
+
+1. **Configure NFS Server** (e.g., Unraid)
+   - Create NFS export (e.g., `/mnt/user/music` or `/mnt/user/navidrome-music`)
+   - Set permissions: `192.168.2.0/24(sec=sys,ro,no_subtree_check,all_squash,anonuid=99,anongid=100)`
+   - Note: Read-only (`ro`) recommended for music libraries
+
+2. **Configure Environment Variables** in `.env`:
+   ```bash
+   NFS_SERVER_IP=192.168.2.3
+   NFS_NAVIDROME_PATH=/mnt/user/music
+   ```
+
+3. **Edit docker-compose.media.yml**:
+   - Uncomment the NFS volume definition at the bottom:
+     ```yaml
+     navidrome-nfs-music:
+       driver: local
+       driver_opts:
+         type: nfs
+         o: "addr=${NFS_SERVER_IP:-192.168.2.3},ro,nfsvers=4,nolock"
+         device: ":${NFS_NAVIDROME_PATH:-/mnt/user/navidrome-music}"
+     ```
+   - In the navidrome service volumes section, comment out the bind mount and uncomment the NFS volume:
+     ```yaml
+     # - type: bind
+     #   source: ${NAVIDROME_MUSIC_PATH:-./files/navidrome/music}
+     #   target: /music
+     #   read_only: true
+     #   bind:
+     #     create_host_path: true
+     - type: volume
+       source: navidrome-nfs-music
+       target: /music
+       read_only: true
+     ```
+
+4. **Restart Navidrome**:
+   ```bash
+   docker compose down navidrome
+   docker compose up -d navidrome
+   ```
+
+5. **Verify NFS Storage**:
+   ```bash
+   docker compose exec navidrome ls -la /music
+   ```
+
+#### Troubleshooting NFS
+
+- **"Permission denied"**: Check NFS export has `ro` or `rw` permissions
+- **"No such file or directory"**: Verify `NFS_NAVIDROME_PATH` matches your NFS export path
+- **"Connection refused"**: Check firewall allows NFS traffic from Docker host
+
 ## Adding Music
 
 Place your music files in the library folder:
