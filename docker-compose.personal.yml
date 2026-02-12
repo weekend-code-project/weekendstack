@@ -428,4 +428,4 @@ volumes:
     driver_opts:
       type: nfs
       o: "addr=${NFS_SERVER_IP:-192.168.2.3},rw,nfsvers=4,nolock"
-      device: ":${NFS_PHOTOS_PATH:-/mnt/user/photos/immich-uploads}"
+      device: ":${NFS_PHOTOS_PATH:-/mnt/user/files/immich}"

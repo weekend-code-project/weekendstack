@@ -174,16 +174,16 @@ volumes:
   
   # NFS Volumes (Optional - see service documentation for setup)
   # Uncomment and configure NFS_SERVER_IP and service-specific NFS path variables in .env
-  # kavita-nfs-library:
-  #   driver: local
-  #   driver_opts:
-  #     type: nfs
-  #     o: "addr=${NFS_SERVER_IP:-192.168.2.3},rw,nfsvers=4,nolock"
-  #     device: ":${NFS_KAVITA_PATH:-/mnt/user/kavita-library}"
-  # 
-  # navidrome-nfs-music:
-  #   driver: local
-  #   driver_opts:
-  #     type: nfs
-  #     o: "addr=${NFS_SERVER_IP:-192.168.2.3},ro,nfsvers=4,nolock"
-  #     device: ":${NFS_NAVIDROME_PATH:-/mnt/user/navidrome-music}"
+  kavita-nfs-library:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: "addr=${NFS_SERVER_IP:-192.168.2.3},rw,nfsvers=4,nolock"
+      device: ":${NFS_KAVITA_PATH:-/mnt/user/files/kavita}"
+  
+  navidrome-nfs-music:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: "addr=${NFS_SERVER_IP:-192.168.2.3},rw,nfsvers=4,nolock"
+      device: ":${NFS_NAVIDROME_PATH:-/mnt/user/files/navidrome}"

@@ -26,7 +26,7 @@ WeekendStack uses Docker's local volume driver with NFS backend. This approach:
 | Service | Category | Data Type | Typical Size | Read/Write | Setup Doc |
 |---------|----------|-----------|--------------|------------|-----------|
 | **Immich** | Personal | Photos/Videos | 10GB-1TB+ | Read/Write | [immich-setup.md](immich-setup.md) |
-| **Navidrome** | Media | Music library | 10GB-500GB | Read-Only | [navidrome-setup.md](navidrome-setup.md) |
+| **Navidrome** | Media | Music library | 10GB-500GB | Read/Write | [navidrome-setup.md](navidrome-setup.md) |
 | **Kavita** | Media | eBooks/Comics | 5GB-200GB | Read/Write | [kavita-setup.md](kavita-setup.md) |
 | **Ollama** | AI | LLM models | 1GB-200GB | Read/Write | [ollama-setup.md](ollama-setup.md) |
 
@@ -58,8 +58,7 @@ WeekendStack uses Docker's local volume driver with NFS backend. This approach:
      /mnt/user/photos 192.168.2.0/24(sec=sys,rw,no_subtree_check,all_squash,anonuid=99,anongid=100)
      ```
    - Adjust subnet (`192.168.2.0/24`) to match your network
-   - Use `ro` (read-only) for read-only data like music libraries
-   - Use `rw` (read-write) for uploads, documents, AI models
+   - Use `rw` (read-write) for all services to allow file uploads
 
 3. **NFS Export Options Explained**
    - `sec=sys`: Standard Unix permissions
@@ -146,7 +145,6 @@ volumes:
   - type: volume                # Uncomment NFS volume
     source: navidrome-nfs-music
     target: /music
-    read_only: true
 
 # At the bottom of the file:
 volumes:
@@ -155,7 +153,7 @@ volumes:
     driver: local
     driver_opts:
       type: nfs
-      o: "addr=${NFS_SERVER_IP:-192.168.2.3},ro,nfsvers=4,nolock"
+      o: "addr=${NFS_SERVER_IP:-192.168.2.3},rw,nfsvers=4,nolock"
       device: ":${NFS_NAVIDROME_PATH:-/mnt/user/navidrome-music}"
 ```
 
@@ -208,7 +206,7 @@ addr=<NFS_SERVER_IP>,rw,nfsvers=4,nolock
 
 ### Standard Options
 - `addr=IP`: NFS server IP address
-- `rw` or `ro`: Read-write or read-only
+- `rw`: Read-write access (required for file uploads)
 - `nfsvers=4`: Use NFSv4 protocol (more efficient, better security)
 - `nolock`: Disable file locking (safe for Docker, improves performance)
 

@@ -309,6 +309,68 @@ services:
       - shared-network
     restart: unless-stopped
 
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    container_name: gotenberg
+    command:
+      - "gotenberg"
+      - "--chromium-disable-javascript=true"
+      - "--chromium-allow-list=file:///tmp/.*"
+      - "--libreoffice-auto-start=true"
+      - "--libreoffice-restart-after=10"
+      - "--api-timeout=120s"
+      - "--log-level=debug"
+      - "--libreoffice-disable-routes=false"
+    environment:
+      - GOTENBERG_LOG_LEVEL=DEBUG
+    networks:
+      - productivity-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    tmpfs:
+      - /tmp
+    shm_size: 2gb
+    profiles:
+      - all
+      - productivity
+    labels:
+      # Hide from main Glance view (no GUI)
+      - glance.hide=true
+      # Show in APIs & Monitoring widget
+      - glance.id=gotenberg
+      - glance.group=APIs & Monitoring
+      - glance.name=Gotenberg
+      - glance.icon=si:convertio
+      - glance.url=http://gotenberg:3000/health
+      - glance.description=Document Converter API
+
+  tika:
+    image: apache/tika:latest
+    container_name: tika
+    networks:
+      - productivity-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+    profiles:
+      - all
+      - productivity
+    labels:
+      # Hide from main Glance view (no GUI)
+      - glance.hide=true
+      # Show in APIs & Monitoring widget
+      - glance.id=tika
+      - glance.group=APIs & Monitoring
+      - glance.name=Apache Tika
+      - glance.icon=si:apache
+      - glance.url=http://tika:9998/tika
+      - glance.description=Content Analysis API
+
   paperless-ngx:
     image: ghcr.io/paperless-ngx/paperless-ngx:latest
     container_name: paperless-ngx
@@ -317,6 +379,10 @@ services:
         condition: service_healthy
       paperless-redis:
         condition: service_healthy
+      gotenberg:
+        condition: service_started
+      tika:
+        condition: service_started
     environment:
       # Host IP for ALLOWED_HOSTS
       HOST_IP: ${HOST_IP}
@@ -352,6 +418,15 @@ services:
       # Security
       PAPERLESS_ALLOWED_HOSTS: paperless.${BASE_DOMAIN},paperless.lab,localhost,127.0.0.1,${HOST_IP}
       PAPERLESS_CORS_ALLOWED_HOSTS: https://paperless.${BASE_DOMAIN},http://paperless.lab,http://${HOST_IP}:${PAPERLESS_PORT:-8082}
+      PAPERLESS_CSRF_TRUSTED_ORIGINS: https://paperless.${BASE_DOMAIN},https://paperless.lab,http://paperless.lab,http://${HOST_IP}:${PAPERLESS_PORT:-8082}
+      
+      # Document Conversion Services
+      PAPERLESS_TIKA_ENABLED: 1
+      PAPERLESS_TIKA_ENDPOINT: http://tika:9998
+      PAPERLESS_TIKA_GOTENBERG_ENDPOINT: http://gotenberg:3000
+      
+      # Allow unconverted documents (store original without PDF conversion)
+      PAPERLESS_IGNORE_DATES: ""
       
     volumes:
       - type: volume
