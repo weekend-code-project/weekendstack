@@ -4,7 +4,7 @@ Immich is a self-hosted photo and video backup solution, similar to Google Photo
 
 ## Configuration
 
-Immich is configured in `docker-compose.personal.yml` with the `personal` profile.
+Immich is configured in `compose/docker-compose.personal.yml` with the `personal` profile.
 
 ### Environment Variables
 
@@ -215,7 +215,7 @@ Upload a test photo through the Immich web UI, then verify it appears on the NFS
 
 ### How It Works
 
-The `docker-compose.personal.yml` file defines an NFS volume:
+The `compose/docker-compose.personal.yml` file defines an NFS volume:
 
 ```yaml
 volumes:
@@ -250,7 +250,7 @@ To switch from NFS back to local storage:
    IMMICH_UPLOAD_PATH=./files/immich
    ```
 
-3. Modify `docker-compose.personal.yml` to use a bind mount instead of the NFS volume (see git history for the original configuration)
+3. Modify `compose/docker-compose.personal.yml` to use a bind mount instead of the NFS volume (see git history for the original configuration)
 
 4. Restart Immich:
    ```bash

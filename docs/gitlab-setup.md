@@ -13,7 +13,7 @@ The Cloudflare tunnel URL works from anywhere (local network or internet) and pr
 
 ## Configuration
 
-GitLab is configured in `docker-compose.dev.yml` with the `gitlab` profile.
+GitLab is configured in `compose/docker-compose.dev.yml` with the `gitlab` profile.
 
 ### Environment Variables
 

@@ -57,7 +57,7 @@ For large libraries, you can configure Kavita to use NFS storage (e.g., from Unr
    NFS_KAVITA_PATH=/mnt/user/kavita-library
    ```
 
-3. **Edit docker-compose.media.yml**:
+3. **Edit compose/docker-compose.media.yml**:
    - Uncomment the NFS volume definition at the bottom:
      ```yaml
      kavita-nfs-library:

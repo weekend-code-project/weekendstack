@@ -28,15 +28,15 @@ x-default-profile: &default-profile
   - all
 
 include:
-  - docker-compose.core.yml
-  - docker-compose.ai.yml
-  - docker-compose.dev.yml
-  - docker-compose.productivity.yml
-  - docker-compose.networking.yml
-  - docker-compose.automation.yml
-  - docker-compose.media.yml
-  - docker-compose.personal.yml
-  - docker-compose.monitoring.yml
+  - compose/docker-compose.core.yml
+  - compose/docker-compose.ai.yml
+  - compose/docker-compose.dev.yml
+  - compose/docker-compose.productivity.yml
+  - compose/docker-compose.networking.yml
+  - compose/docker-compose.automation.yml
+  - compose/docker-compose.media.yml
+  - compose/docker-compose.personal.yml
+  - compose/docker-compose.monitoring.yml
 
 # Shared network for inter-service communication
 networks:

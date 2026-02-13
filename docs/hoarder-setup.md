@@ -9,7 +9,7 @@ Hoarder (Karakeep) is a “bookmark everything” service.
 
 ## Files
 
-- Compose services: `docker-compose.productivity.yml`
+- Compose services: `compose/docker-compose.productivity.yml`
   - `hoarder`
   - `hoarder-chrome`
   - `hoarder-meilisearch`

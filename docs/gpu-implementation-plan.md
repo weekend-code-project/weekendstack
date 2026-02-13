@@ -61,7 +61,7 @@ Replace Docker volumes with bind mounts for portable model storage
   - `./files/ai-models/comfyui/`
   - `./files/ai-models/diffrhythm/`
   - `./files/ai-models/whisper/`
-- [x] Update docker-compose.ai.yml volume definitions:
+- [x] Update compose/docker-compose.ai.yml volume definitions:
   - [x] Replace `ollama-data` volume with bind mount
   - [x] Replace `stable-diffusion-models` and `stable-diffusion-data` with bind mounts
   - [x] Replace `comfyui-models` and `comfyui-data` with bind mounts
@@ -78,7 +78,7 @@ Replace Docker volumes with bind mounts for portable model storage
 
 ### Files
 
-- [docker-compose.ai.yml](../docker-compose.ai.yml)
+- [compose/docker-compose.ai.yml](../compose/docker-compose.ai.yml)
 - [files/README.md](../files/README.md)
 - [.gitignore](../.gitignore)
 
@@ -90,7 +90,7 @@ Create containerized Ollama service replacing native host installation
 
 ### Tasks
 
-- [x] Add `ollama` service to docker-compose.ai.yml:
+- [x] Add `ollama` service to compose/docker-compose.ai.yml:
   - [x] Use `ollama/ollama:latest` image
   - [x] Configure shared GPU reservation (`count: 1, capabilities: [gpu]`)
   - [x] Set memory limit from `${OLLAMA_MEMORY_LIMIT:-1g}`

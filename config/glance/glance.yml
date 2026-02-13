@@ -83,7 +83,7 @@ pages:
                 icon: si:ollama
               - title: Whisper
                 url: /go/whisper
-                check-url: http://${HOST_IP}:9002
+                check-url: http://${HOST_IP}:9001
                 icon: si:openai
               - title: Dozzle
                 url: /go/dozzle
@@ -95,7 +95,7 @@ pages:
                 icon: si:netdata
               - title: Portainer
                 url: /go/portainer
-                check-url: http://${HOST_IP}:9000
+                check-url: http://${HOST_IP}:9001
                 icon: si:portainer
               - title: Uptime Kuma
                 url: /go/uptime-kuma
@@ -103,8 +103,10 @@ pages:
                 icon: si:uptimekuma
               - title: WUD
                 url: /go/wud
-                check-url: http://${HOST_IP}:3002
+                check-url: http://${HOST_IP}:3000
                 icon: si:docker
+                headers:
+                  Authorization: "Basic YWRtaW46OGJjNTFkYTg0ZTI3NTFlNTU4M2VjNmQwZGIzNjA0MzIzNmUyZjFlNTVlNTI0YTYzMTZhZDExNDc2MjRiZjhjOA=="
               - title: Speedtest
                 url: /go/speedtest
                 check-url: http://${HOST_IP}:8765
@@ -115,7 +117,7 @@ pages:
                 icon: si:docker
               - title: NetBox
                 url: /go/netbox
-                check-url: http://${HOST_IP}:8484/login/
+                check-url: http://${HOST_IP}:8092/login/
                 icon: si:docker
               - title: Traefik
                 url: /go/traefik
@@ -123,7 +125,7 @@ pages:
                 icon: si:traefikproxy
               - title: Pi-hole
                 url: /go/pihole
-                check-url: http://${HOST_IP}:8088/admin/
+                check-url: http://${HOST_IP}:8091/admin/
                 icon: si:pihole
           - type: docker-containers
             limit: 50
@@ -230,12 +232,12 @@ pages:
 
           - type: custom-api
             title: What's Up Docker?
-            title-url: http://192.168.2.50:3002
+            title-url: http://192.168.2.50:3000
             cache: 1h
             url: http://wud:3000/api/containers/
             method: GET
             headers:
-              Authorization: "Basic YWRtaW46YWRtaW4="
+              Authorization: "Basic YWRtaW46OGJjNTFkYTg0ZTI3NTFlNTU4M2VjNmQwZGIzNjA0MzIzNmUyZjFlNTVlNTI0YTYzMTZhZDExNDc2MjRiZjhjOA=="
             template: |
               {{/* WUD Monitor v2.1 */}}
               {{ $showInfo := true }}

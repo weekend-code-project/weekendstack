@@ -1263,6 +1263,7 @@ services:
       PUID: ${PUID:-1000}
       PGID: ${PGID:-1000}
       TZ: ${TIMEZONE:-UTC}
+      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD}
     volumes:
       # Persist File Browser config/DB outside of the browsable root.
       - type: volume
@@ -1274,6 +1275,11 @@ services:
         target: /srv
         bind:
           create_host_path: true
+      # Initialization script to set admin password (runs via s6 custom-init)
+      - type: bind
+        source: ${CONFIG_BASE_DIR:-./config}/filebrowser/init-filebrowser.sh
+        target: /custom-cont-init.d/99-set-password.sh
+        read_only: true
     restart: unless-stopped
     deploy:
       resources:

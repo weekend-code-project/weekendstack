@@ -1,10 +1,28 @@
-# Stack Health Testing Tools
+# WeekendStack Tools
 
-This directory contains scripts to help diagnose and test the Weekend Stack health and routing.
+This directory contains utility scripts and the setup system for managing WeekendStack.
 
-## Available Scripts
+## Setup System
 
-### 1. `test_stack_health.sh`
+The `setup/` directory contains the modular library used by the main `setup.sh` script in the root directory. These modules provide:
+
+- **common.sh** - Shared utility functions (logging, prompts, validation)
+- **docker-auth.sh** - Multi-registry Docker authentication
+- **profile-selector.sh** - Interactive service profile selection
+- **env-generator.sh** - Environment configuration generation
+- **directory-creator.sh** - Directory structure creation
+- **cloudflare-wizard.sh** - Cloudflare Tunnel setup wizard
+- **certificate-helper.sh** - CA certificate generation and installation
+- **service-deps.sh** - Service dependency mapping
+- **summary.sh** - Post-setup documentation generation
+
+**For setup instructions, see:** [../docs/setup-script-guide.md](../docs/setup-script-guide.md)
+
+---
+
+## Utility Scripts
+
+### `test_stack_health.sh`
 
 Comprehensive health check that tests:
 - Traefik container status and API accessibility
@@ -19,29 +37,26 @@ Comprehensive health check that tests:
 ./tools/test_stack_health.sh
 ```
 
-**Example Output:**
-```
-========================================
-  Weekend Stack Health Check
-========================================
-
-[1/6] Checking Core Services...
-  ✓ Traefik Container
-  ✓ Traefik API (78 routers discovered)
-
-[2/6] Checking Critical Containers...
-  ✓ traefik
-  ✓ glance
-  ✓ coder
-  ...
-
-[4/6] Testing HTTP→HTTPS Redirects...
-  ✓ coder.lab → https://coder.lab/
-  ✓ home.lab → https://home.lab/
-  ...
+**Alternative:** Use the Makefile
+```bash
+make health    # Quick health check
+make test      # Full system test
 ```
 
-### 2. `list_stopped_containers.sh`
+### `validate-env.sh`
+
+Validates your `.env` file configuration:
+- Checks for required variables
+- Validates domain formats
+- Verifies path configurations
+- Checks port assignments
+
+**Usage:**
+```bash
+./tools/validate-env.sh
+```
+
+### `list_stopped_containers.sh`
 
 Lists all containers that are not running (Created, Exited, Dead states).
 
@@ -50,112 +65,136 @@ Lists all containers that are not running (Created, Exited, Dead states).
 ./tools/list_stopped_containers.sh
 ```
 
-## Common Scenarios
-
-### Containers Not Starting
-
-If containers are in "Created" state but not running:
-
+**Alternative:** Use the Makefile
 ```bash
-# Check which containers are stopped
-./tools/list_stopped_containers.sh
-
-# Start specific services
-docker compose up -d <service-name>
-
-# Check logs for errors
-docker logs <container-name>
+make ps        # List running containers
+make status    # Show service status
 ```
 
-### HTTP→HTTPS Redirects Not Working
+---
 
-If a service is not redirecting HTTP to HTTPS:
+## Common Scenarios
 
-1. Run health check to identify which services have issues:
-   ```bash
-   ./tools/test_stack_health.sh
-   ```
+### Initial Setup
 
-2. Check if the redirect middleware is loaded:
-   ```bash
-   curl -s http://localhost:8081/api/http/middlewares/redirect-to-https@file | jq
-   ```
+Use the interactive setup script:
+```bash
+./setup.sh
+```
 
-3. Check the service's Traefik router configuration:
-   ```bash
-   curl -s http://localhost:8081/api/http/routers | jq '.[] | select(.name | contains("<service-name>"))'
-   ```
+Or use the Makefile:
+```bash
+make setup
+```
 
-4. If the router is missing, the container labels might not have been loaded. Recreate the container:
-   ```bash
-   docker compose up -d <service-name>
-   ```
+### Health Diagnostics
 
-### Service Not Accessible
+```bash
+# Full health check
+./tools/test_stack_health.sh
 
-If a service shows as running but isn't accessible:
+# Or use make
+make health
+make test
+```
 
-1. Check if Traefik has discovered the routers:
-   ```bash
-   curl -s http://localhost:8081/api/http/routers | jq '.[] | select(.name | contains("<service-name>")) | {name, rule, entryPoints}'
-   ```
+### Environment Validation
 
-2. Verify the container is on the correct network:
-   ```bash
-   docker inspect <container-name> | jq '.[0].NetworkSettings.Networks | keys'
-   ```
-   
-   Should include `shared-network`.
+```bash
+# Validate your .env configuration
+./tools/validate-env.sh
 
-3. Check container logs:
-   ```bash
-   docker logs <container-name>
-   ```
+# Validate docker-compose configuration
+make validate
+```
+
+### Check Stopped Containers
+
+```bash
+# List stopped containers
+./tools/list_stopped_containers.sh
+
+# View all container status
+make ps
+make status
+```
+
+---
+
+## Archived Scripts
+
+The following scripts have been moved to `_trash/` as they've been replaced by the new setup system:
+
+- `comprehensive_test.sh` - Replaced by `setup.sh` and `make test`
+- `diagnose_lab.sh` - Diagnostic functionality now in `test_stack_health.sh`
+- `env-template-gen.sh` - Replaced by `setup/lib/env-generator.sh`
+- `generate_profile_matrix.py` - Replaced by `setup/lib/profile-selector.sh`
+- `init-nfs-service.sh` - Replaced by setup system
+- `list_lab_urls.py` - Functionality available via `make ports` and `make services`
+
+---
 
 ## Quick Reference
 
-### View Traefik Dashboard
+### Using the Makefile
+
+The root Makefile provides convenient shortcuts for all common operations:
+
 ```bash
-# Open in browser:
-http://localhost:8081/dashboard/
+make help              # Show all available commands
+make setup             # Interactive setup
+make start             # Start services
+make stop              # Stop services
+make restart           # Restart services
+make status            # Service status
+make logs              # View logs
+make health            # Health check
+make test              # System tests
+make update            # Pull latest images and restart
+make backup            # Backup configuration
 ```
 
-### List All Traefik Routers
+**See:** Run `make help` for the complete command list.
+
+### Direct Docker Compose
+
 ```bash
-curl -s http://localhost:8081/api/http/routers | jq 'keys'
+# Start all services
+docker compose up -d
+
+# Start specific profile
+docker compose --profile dev up -d
+
+# Stop all services
+docker compose down
+
+# View logs
+docker compose logs -f
+
+# Check status
+docker compose ps
 ```
 
-### Test a Specific Domain
-```bash
-# Test HTTP redirect
-curl -v -H "Host: <service>.lab" http://127.0.0.1/
+### Environment Variables
 
-# Test HTTPS access
-curl -vk --resolve "<service>.lab:443:127.0.0.1" https://<service>.lab/
-```
-
-### Restart Entire Stack
-```bash
-docker compose down && docker compose up -d
-```
-
-### Restart Traefik (to reload configuration)
-```bash
-docker compose restart traefik
-```
-
-## Troubleshooting Tips
-
-1. **Container in "Created" state**: Run `docker compose up -d <service>` to start it
-2. **Traefik not discovering routers**: Recreate the container with `docker compose up -d <service>`
-3. **Networks not found after VM restart**: Run `docker compose down --remove-orphans && docker compose up -d`
-4. **Middleware not loading**: Check that `/opt/stacks/weekendstack/data/traefik-auth/` contains the middleware YAML files
-5. **Certificate errors**: Check `/opt/stacks/weekendstack/config/traefik/certs/` has valid certificates
-
-## Environment Variables
-
-The health check script loads environment variables from `.env`:
-- `LAB_DOMAIN` - Local domain suffix (default: `lab`)
-- `BASE_DOMAIN` - External domain (default: `weekendcodeproject.dev`)
+Scripts and health checks use these `.env` variables:
+- `LAB_DOMAIN` - Local domain suffix (e.g., `lab`)
+- `BASE_DOMAIN` - External domain (e.g., `example.com`)
 - `HOST_IP` - Host machine IP address
-- `TRAEFIK_DOCKER_NETWORK` - Network Traefik watches (default: `shared-network`)
+- `TRAEFIK_DOCKER_NETWORK` - Traefik network (default: `shared-network`)
+
+### Troubleshooting
+
+1. **Container won't start**: Check logs with `docker logs <container>` or `make logs-service SERVICE=<name>`
+2. **Configuration issues**: Run `./tools/validate-env.sh` or `make validate`
+3. **Health problems**: Run `./tools/test_stack_health.sh` or `make health`
+4. **Need to reset**: Use `make clean` (keeps volumes) or see `./uninstall.sh`
+
+---
+
+## More Information
+
+- **Setup Guide**: [docs/setup-script-guide.md](../docs/setup-script-guide.md)
+- **Architecture**: [docs/architecture.md](../docs/architecture.md)
+- **Services Guide**: [docs/services-guide.md](../docs/services-guide.md)
+- **Main README**: [../README.md](../README.md)

@@ -7,10 +7,11 @@ This stack is organized into modular Docker Compose files with shared networking
 
 ```
 docker-compose.yml          # Main orchestration file
+compose/
 ├── docker-compose.dev.yml         # Development services (Coder, Gitea)
 ├── docker-compose.productivity.yml # Productivity services (NocoDB, Paperless, N8N) 
 ├── docker-compose.ai.yml           # AI services (Open WebUI, SearXNG)
-├── docker-compose.traefik.yml      # Reverse proxy & tunnel
+├── docker-compose.networking.yml  # Reverse proxy & tunnel
 └── docker-compose.core.yml         # Reserved for future infrastructure
 ```
 
@@ -35,21 +36,21 @@ All `*.weekendcodeproject.dev` domains route through:
 
 ## Service Mapping
 
-### **Development Services** (`docker-compose.dev.yml`)
+### **Development Services** (`compose/docker-compose.dev.yml`)
 | Service | Local Port | External Domain | Network | Database |
 |---------|------------|-----------------|---------|----------|
 | Coder IDE | 7080 | coder.weekendcodeproject.dev | coder-network + shared-network | PostgreSQL 16 |
 | Gitea | 7001 | gitea.weekendcodeproject.dev | coder-network + shared-network | PostgreSQL 16 |
 | Registry Cache | 5001 | - | coder-network | - |
 
-### **Productivity Services** (`docker-compose.productivity.yml`)
+### **Productivity Services** (`compose/docker-compose.productivity.yml`)
 | Service | Local Port | External Domain | Network | Database |
 |---------|------------|-----------------|---------|----------|
 | NocoDB | 8090 | nocodb.weekendcodeproject.dev | productivity-network + shared-network | PostgreSQL 15 |
 | Paperless-ngx | 8082 | paperless.weekendcodeproject.dev | productivity-network + shared-network | PostgreSQL 15 + Redis 7 |
 | N8N | 5678 | n8n.weekendcodeproject.dev | productivity-network + shared-network | PostgreSQL 15 |
 
-### **AI Services** (`docker-compose.ai.yml`)
+### **AI Services** (`compose/docker-compose.ai.yml`)
 | Service | Local Port | External Domain | Network | External Dependency |
 |---------|------------|-----------------|---------|-------------------|
 | Open WebUI | 3000 | chat.weekendcodeproject.dev | ai-network + shared-network | Native Ollama (host:11434) |

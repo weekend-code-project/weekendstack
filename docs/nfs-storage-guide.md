@@ -131,7 +131,7 @@ For each service you want to use NFS storage:
 
 **Example: Navidrome**
 
-Edit `docker-compose.media.yml`:
+Edit `compose/docker-compose.media.yml`:
 
 ```yaml
 # In the navidrome service:

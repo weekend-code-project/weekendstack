@@ -14,7 +14,7 @@ This keeps Glance bookmarks consistent across local `.lab` and public `${BASE_DO
 ## Files
 
 - Redirector code: `config/link-router/server.py`
-- Compose service: `docker-compose.core.yml` (`link-router`)
+- Compose service: `compose/docker-compose.core.yml` (`link-router`)
 
 ## Start
 

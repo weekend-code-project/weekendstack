@@ -52,7 +52,7 @@ For large music libraries, you can configure Navidrome to use NFS storage (e.g.,
    NFS_NAVIDROME_PATH=/mnt/user/music
    ```
 
-3. **Edit docker-compose.media.yml**:
+3. **Edit compose/docker-compose.media.yml**:
    - Uncomment the NFS volume definition at the bottom:
      ```yaml
      navidrome-nfs-music:

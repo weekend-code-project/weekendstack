@@ -1,8 +1,36 @@
 # 🏠 Weekend Stack
 
-A comprehensive self-hosted Docker stack for development, AI, productivity, media, home automation, and monitoring. Features **45+ services** organized into modular compose files with profile-based deployment.
+A comprehensive self-hosted Docker stack for development, AI, productivity, media, home automation, and monitoring. Features **65+ services** organized into modular compose files with profile-based deployment.
 
-## 📦 Quick Start
+## ⚡ Quick Start (Automated Setup)
+
+**New users:** Use our interactive setup script for a guided installation:
+
+```bash
+./setup.sh
+```
+
+This will:
+- ✅ Check prerequisites (Docker, disk space, memory)
+- ✅ Guide you through profile selection (AI, Dev, Productivity, etc.)
+- ✅ Generate secure credentials automatically
+- ✅ Create necessary directories with correct permissions
+- ✅ Set up local HTTPS certificates
+- ✅ Optionally configure Cloudflare Tunnel for external access
+- ✅ Pull and start services
+
+**Quick mode (with defaults):**
+```bash
+./setup.sh --quick
+```
+
+**For detailed instructions, see** [docs/setup-script-guide.md](docs/setup-script-guide.md)
+
+---
+
+## 📖 Manual Setup (Alternative)
+
+If you prefer manual setup or need more control:
 
 ### 1. Authenticate with Docker Hub (Recommended)
 
@@ -348,15 +376,20 @@ See [docs/local-https-setup.md](docs/local-https-setup.md) for detailed instruct
 ```
 weekendstack/
 ├── docker-compose.yml           # Main orchestrator (includes all modules)
-├── docker-compose.core.yml      # Core services (Coder, databases)
-├── docker-compose.ai.yml        # AI/ML services
-├── docker-compose.dev.yml       # Development tools (Gitea, GitLab)
-├── docker-compose.productivity.yml  # Productivity apps
-├── docker-compose.media.yml     # Media services
-├── docker-compose.personal.yml  # Personal apps
-├── docker-compose.networking.yml    # Network infrastructure
-├── docker-compose.automation.yml    # Home automation
-├── docker-compose.monitoring.yml    # Monitoring stack
+├── setup.sh                    # Interactive setup wizard
+├── uninstall.sh                # Safe uninstall script
+├── Makefile                    # Common commands (make help)
+│
+├── compose/                     # Modular compose files
+│   ├── docker-compose.core.yml      # Core services (Coder, databases)
+│   ├── docker-compose.ai.yml        # AI/ML services
+│   ├── docker-compose.dev.yml       # Development tools (Gitea, GitLab)
+│   ├── docker-compose.productivity.yml  # Productivity apps
+│   ├── docker-compose.media.yml     # Media services
+│   ├── docker-compose.personal.yml  # Personal apps
+│   ├── docker-compose.networking.yml    # Network infrastructure
+│   ├── docker-compose.automation.yml    # Home automation
+│   └── docker-compose.monitoring.yml    # Monitoring stack
 │
 ├── config/                      # Service configurations
 │   ├── cloudflare/             # Tunnel configuration
