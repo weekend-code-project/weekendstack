@@ -453,7 +453,11 @@ generate_env_interactive() {
     fi
     
     # Set storage paths
-    update_env_var "FILES_BASE_DIR" "$files_base_dir" "$env_file"
+    update_env_var "FILES_BASE_DIR" "$files_dir" "$env_file"
+    update_env_var "DATA_BASE_DIR" "$data_dir" "$env_file"
+    update_env_var "CONFIG_BASE_DIR" "$config_dir" "$env_file"
+    update_env_var "WORKSPACE_DIR" "$workspace_dir" "$env_file"
+    update_env_var "SSH_KEY_DIR" "$ssh_key_dir" "$env_file"
     
     # Add setup metadata
     add_setup_metadata "$env_file" "${selected_profiles[@]}"
