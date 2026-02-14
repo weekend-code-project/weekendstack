@@ -138,8 +138,8 @@ services:
       NC_REDIS_URL: ""
       
       # Admin Configuration
-      NC_ADMIN_EMAIL: admin@example.com
-      NC_ADMIN_PASSWORD: ${NOCODB_ADMIN_PASSWORD:-secure_nocodb_password_2024}
+      NC_ADMIN_EMAIL: ${NOCODB_ADMIN_EMAIL:-admin@example.com}
+      NC_ADMIN_PASSWORD: ${NOCODB_ADMIN_PASSWORD}
       
     volumes:
       - type: bind
@@ -472,9 +472,9 @@ services:
       PAPERLESS_OCR_LANGUAGE: eng
       
       # Admin User Configuration
-      PAPERLESS_ADMIN_USER: ${PAPERLESS_ADMIN_USER:-admin}
-      PAPERLESS_ADMIN_PASSWORD: ${PAPERLESS_ADMIN_PASSWORD:-secure_paperless_password_2024}
-      PAPERLESS_ADMIN_MAIL: admin@localhost
+      PAPERLESS_ADMIN_USER: ${PAPERLESS_ADMIN_USER}
+      PAPERLESS_ADMIN_PASSWORD: ${PAPERLESS_ADMIN_PASSWORD}
+      PAPERLESS_ADMIN_MAIL: ${PAPERLESS_ADMIN_EMAIL:-admin@example.com}
       
       # Document Processing
       PAPERLESS_CONSUMER_POLLING: 10
@@ -812,8 +812,8 @@ services:
       UPLOAD_DIRECTORY: /app/public/uploads
       
       # Admin Configuration
-      ADMIN_EMAIL: ${POSTIZ_ADMIN_EMAIL:-admin@example.com}
-      ADMIN_PASSWORD: ${POSTIZ_ADMIN_PASSWORD:-secure_postiz_password_2024}
+      ADMIN_EMAIL: ${POSTIZ_ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${POSTIZ_ADMIN_PASSWORD}
       
       # Environment
       NODE_ENV: production
