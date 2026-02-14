@@ -68,9 +68,11 @@ docker-compose up -d  # Uses custom profile automatically
 ### Assembly Flow
 
 ```
-Selected Profiles → assemble-env.sh → .env.assembled → env-template-gen.sh → .env
-                                   ↓
-                          generate-custom-profile.sh → docker-compose.custom.yml
+Modular Templates → assemble-env.sh → .env.tmp → env-template-gen.sh → .env
+                                                    ↓
+                                     generate-custom-profile.sh → docker-compose.custom.yml
+
+Reference: .env.example (static, committed to git)
 ```
 
 ### File Structure
@@ -92,11 +94,11 @@ Selected Profiles → assemble-env.sh → .env.assembled → env-template-gen.sh
 ### Assemble Environment for Specific Profiles
 
 ```bash
-# Core services only
-tools/env/scripts/assemble-env.sh --profiles "core" --output .env.assembled
+# Core services only (to temporary file)
+tools/env/scripts/assemble-env.sh --profiles "core" --output .env.tmp
 
 # Multiple profiles
-tools/env/scripts/assemble-env.sh --profiles "core,ai,productivity"
+tools/env/scripts/assemble-env.sh --profiles "core,ai,productivity" --output .env.tmp
 
 # Preview without writing
 tools/env/scripts/assemble-env.sh --profiles "core" --preview
@@ -105,11 +107,11 @@ tools/env/scripts/assemble-env.sh --profiles "core" --preview
 ### Generate Secrets
 
 ```bash
-# Uses .env.assembled if present, falls back to .env.example
-tools/env-template-gen.sh
+# Generate .env from custom template
+tools/env-template-gen.sh .env.tmp .env
 
-# Or specify template
-tools/env-template-gen.sh .env.assembled .env
+# Or use default .env.example
+tools/env-template-gen.sh .env.example .env
 ```
 
 ### Create Custom Profile
@@ -238,9 +240,10 @@ Run `bash tools/test/test-modular-env.sh` to identify specific failure
 
 ```
 weekendstack/
-├── .env.assembled          # Generated assembly (not committed)
-├── .env                    # Final config (not committed)
-├── docker-compose.custom.yml   # Custom profile (generated)
+├── .env.example            # Static reference template (committed, all services)
+├── .env.tmp                # Temporary assembly (generated, not committed)
+├── .env                    # Final config with secrets (not committed)
+├── docker-compose.custom.yml   # Custom profile (generated, not committed)
 ├── docker-compose.yml      # Includes custom profile
 └── tools/
     ├── env-template-gen.sh # Updated for modular templates

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Auto-generate .env file from .env.example (or .env.assembled) with secure random values
+# Auto-generate .env file from .env.example with secure random values
 # This script finds all <GENERATE> tags and replaces them with appropriate random values
 #
 # Usage:
@@ -7,21 +7,16 @@
 #
 # Examples:
 #   ./tools/env-template-gen.sh                          # Use .env.example -> .env
-#   ./tools/env-template-gen.sh .env.assembled           # Use .env.assembled -> .env
-#   ./tools/env-template-gen.sh .env.assembled .env.new  # Custom output
+#   ./tools/env-template-gen.sh custom.env.example       # Use custom template
+#   ./tools/env-template-gen.sh .env.example .env.new    # Custom output
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Support both .env.assembled (modular) and .env.example (legacy)
-# Priority: .env.assembled > .env.example
-if [[ -f "${PROJECT_ROOT}/.env.assembled" ]]; then
-    DEFAULT_TEMPLATE="${PROJECT_ROOT}/.env.assembled"
-else
-    DEFAULT_TEMPLATE="${PROJECT_ROOT}/.env.example"
-fi
+# Default to .env.example as template
+DEFAULT_TEMPLATE="${PROJECT_ROOT}/.env.example"
 
 ENV_EXAMPLE="${1:-$DEFAULT_TEMPLATE}"
 ENV_FILE="${2:-${PROJECT_ROOT}/.env}"
@@ -39,7 +34,7 @@ log_info() { echo -e "${YELLOW}→${NC} $1"; }
 # Check if template exists
 if [[ ! -f "$ENV_EXAMPLE" ]]; then
     log_error "Template file not found at $ENV_EXAMPLE"
-    log_info "Expected: .env.assembled or .env.example"
+    log_info "Expected: .env.example"
     exit 1
 fi
 

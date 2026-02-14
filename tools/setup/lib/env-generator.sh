@@ -398,30 +398,39 @@ generate_env_interactive() {
     # ========================================================================
     log_step "Assembling modular env template for selected profiles..."
     
-    # Step 1: Assemble profile-specific template
+    # Generate .env directly from modular templates
     local env_templates_dir="${SCRIPT_DIR}/tools/env/templates"
     if [[ -d "$env_templates_dir" ]]; then
-        # Use modular templates
+        # Use modular templates - assemble directly to .env
         local profiles_csv=$(IFS=, ; echo "${selected_profiles[*]}")
-        log_info "Creating template for profiles: $profiles_csv"
+        log_info "Generating .env from modular templates for profiles: $profiles_csv"
         
+        # Assemble templates to temporary file
+        local temp_template="${SCRIPT_DIR}/.env.tmp"
         if ! "${SCRIPT_DIR}/tools/env/scripts/assemble-env.sh" \
             --profiles "$profiles_csv" \
-            --output "${SCRIPT_DIR}/.env.assembled" >/dev/null 2>&1; then
+            --output "$temp_template" >/dev/null 2>&1; then
             log_error "Failed to assemble modular env template"
+            rm -f "$temp_template"
             return 1
         fi
-        log_success "Template assembled successfully"
+        
+        # Generate .env from assembled template with secrets
+        if ! "${SCRIPT_DIR}/tools/env-template-gen.sh" "$temp_template" "$env_file" >/dev/null 2>&1; then
+            log_error "Failed to generate .env from template"
+            rm -f "$temp_template"
+            return 1
+        fi
+        
+        # Clean up temp file
+        rm -f "$temp_template"
     else
-        # Fallback to monolithic .env.example (legacy mode)
-        log_warn "Modular templates not found, using legacy .env.example"
-    fi
-    
-    # Step 2: Generate .env from assembled template with secure random secrets
-    log_step "Generating .env file with secure random secrets..."
-    if ! "${SCRIPT_DIR}/tools/env-template-gen.sh" >/dev/null 2>&1; then
-        log_error "Failed to generate .env from template"
-        return 1
+        # Use legacy .env.example
+        log_step "Generating .env file with secure random secrets..."
+        if ! "${SCRIPT_DIR}/tools/env-template-gen.sh" >/dev/null 2>&1; then
+            log_error "Failed to generate .env from template"
+            return 1
+        fi
     fi
     
     # Step 3: Apply all collected configuration using safe update function
@@ -457,33 +466,17 @@ generate_env_interactive() {
     else
         log_warn "Custom profile generation failed (will fall back to manual --profile flags)"
     fi
-    if [[ -n "$admin_password" ]]; then
-        update_env_var "DEFAULT_ADMIN_PASSWORD" "$admin_password" "$env_file"
-    fi
-    
-    update_env_var "FILES_BASE_DIR" "$files_dir" "$env_file"
-    update_env_var "DATA_BASE_DIR" "$data_dir" "$env_file"
-    update_env_var "CONFIG_BASE_DIR" "$config_dir" "$env_file"
-    update_env_var "WORKSPACE_DIR" "$workspace_dir" "$env_file"
-    update_env_var "SSH_KEY_DIR" "$ssh_key_dir" "$env_file"
-    
-    # Profile configuration
-    local profiles_string="${selected_profiles[*]}"
-    profiles_string="${profiles_string// /,}"
-    update_env_var "COMPOSE_PROFILES" "$profiles_string" "$env_file"
-    
-    # Add setup metadata
-    add_setup_metadata "$env_file" "${selected_profiles[@]}"
     
     log_success ".env file created successfully!"
     echo ""
-    log_info "Your configuration has been saved to: $env_file"
+    log_info "Final configuration saved to: .env"
+    log_info "(Assembled from modular templates based on selected profiles)"
     
     # Show generated admin password if it was auto-generated
     if [[ -z "$admin_password" ]]; then
-        local generated_password=$(grep "^DEFAULT_ADMIN_PASSWORD=" "$env_file" | cut -d'=' -f2)
+        local generated_password=$(grep "^DEFAULT_ADMIN_PASSWORD=" "$env_file" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
         echo ""
-        log_warn "IMPORTANT - Save this default admin password:"
+        log_warn "IMPORTANT - Save this auto-generated admin password:"
         echo ""
         echo -e "${BOLD}  Username: $admin_user${NC}"
         echo -e "${BOLD}  Password: $generated_password${NC}"
@@ -539,26 +532,35 @@ generate_env_quick() {
     log_step "Assembling modular env template..."
     local env_templates_dir="${SCRIPT_DIR}/tools/env/templates"
     if [[ -d "$env_templates_dir" ]]; then
-        # Use modular templates
+        # Use modular templates - assemble to temporary file
         local profiles_csv=$(IFS=, ; echo "${selected_profiles[*]}")
         log_info "Creating template for profiles: $profiles_csv"
         
+        local temp_template="${SCRIPT_DIR}/.env.tmp"
         if ! "${SCRIPT_DIR}/tools/env/scripts/assemble-env.sh" \
             --profiles "$profiles_csv" \
-            --output "${SCRIPT_DIR}/.env.assembled" >/dev/null 2>&1; then
+            --output "$temp_template" >/dev/null 2>&1; then
             log_error "Failed to assemble modular env template"
             return 1
         fi
+        
+        # Generate from temporary template
+        log_step "Generating .env with defaults..."
+        if ! "${SCRIPT_DIR}/tools/env-template-gen.sh" "$temp_template" "$env_file" >/dev/null 2>&1; then
+            log_error "Failed to generate .env from template"
+            rm -f "$temp_template"
+            return 1
+        fi
+        rm -f "$temp_template"
     else
         # Fallback to monolithic .env.example
         log_warn "Modular templates not found, using legacy .env.example"
-    fi
-    
-    # Generate from template
-    log_step "Generating .env with defaults..."
-    if ! "${SCRIPT_DIR}/tools/env-template-gen.sh" >/dev/null 2>&1; then
-        log_error "Failed to generate .env from template"
-        return 1
+        
+        log_step "Generating .env with defaults..."
+        if ! "${SCRIPT_DIR}/tools/env-template-gen.sh" >/dev/null 2>&1; then
+            log_error "Failed to generate .env from template"
+            return 1
+        fi
     fi
     
     # Auto-detect and set critical values

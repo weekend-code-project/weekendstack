@@ -6,11 +6,11 @@
 # selected profiles to create a consolidated .env.example file.
 #
 # Usage:
-#   ./tools/env/scripts/assemble-env.sh --profiles "core,ai" [--output .env.assembled] [--preview]
+#   ./tools/env/scripts/assemble-env.sh --profiles "core,ai" --output .env.tmp [--preview]
 #
 # Options:
 #   --profiles   Comma-separated list of profiles (required)
-#   --output     Output file path (default: .env.assembled)
+#   --output     Output file path (required, or use --preview)
 #   --preview    Display output to stdout instead of writing file
 #   --help       Show this help message
 #
@@ -30,7 +30,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 TEMPLATES_DIR="${REPO_ROOT}/tools/env/templates"
 MAPPINGS_DIR="${REPO_ROOT}/tools/env/mappings"
-DEFAULT_OUTPUT="${REPO_ROOT}/.env.assembled"
+DEFAULT_OUTPUT=""  # No default - require explicit output path
 
 # Color output
 RED='\033[0;31m'
@@ -313,8 +313,7 @@ main() {
         generate_summary
         echo "Next steps:"
         echo "  1. Review assembled file: $OUTPUT_FILE"
-        echo "  2. Generate secrets: ./tools/env-template-gen.sh"
-        echo "  3. Copy to .env: cp $OUTPUT_FILE .env"
+        echo "  2. Generate .env with secrets: ./tools/env-template-gen.sh"
         echo ""
     fi
 }

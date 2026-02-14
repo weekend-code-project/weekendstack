@@ -5,6 +5,11 @@
 *.env
 !.env.example
 .env.backup
+.env.tmp
+
+# Generated files (auto-created by setup.sh)
+docker-compose.custom.yml
+SETUP_SUMMARY.md
 
 # Cloudflare tunnel credentials and config
 config/cloudflare/.cloudflared/
