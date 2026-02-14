@@ -10,6 +10,10 @@ update_env_var() {
     local var_value="$2"
     local env_file="$3"
     
+    # Strip any newlines or carriage returns from value to prevent line injection  
+    var_value="${var_value//$'\n'/}"
+    var_value="${var_value//$'\r'/}"
+    
     # Use awk to safely replace the line - avoids all escaping issues
     awk -v var="$var_name" -v val="$var_value" '
         $0 ~ "^" var "=" { print var "=" val; next }
