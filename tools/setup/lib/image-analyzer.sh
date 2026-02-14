@@ -4,6 +4,13 @@
 
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
+# Determine project root directory
+# Can be set by calling script or auto-detected
+if [[ -z "$SCRIPT_DIR" ]]; then
+    # Find project root by looking for docker-compose.yml
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+fi
+
 # Cache file for parsed image data
 CACHE_DIR="/tmp/weekendstack-cache"
 mkdir -p "$CACHE_DIR"
@@ -226,6 +233,9 @@ analyze_compose_images() {
     output+="SHARED_COUNT=${#shared_images[@]}"$'\n'
     output+="IMAGES_LIST=$(printf '%s,' "${images[@]}" | sed 's/,$//')"$'\n'
     output+="SHARED_LIST=$(printf '%s,' "${shared_images[@]}" | sed 's/,$//')"$'\n'
+    
+    # Ensure cache directory exists before writing
+    mkdir -p "$(dirname "$cache_file")" 2>/dev/null || true
     
     # Cache the result
     echo "$output" > "$cache_file"
