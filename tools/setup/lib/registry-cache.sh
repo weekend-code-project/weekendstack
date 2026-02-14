@@ -54,7 +54,23 @@ start_registry_cache() {
     export REGISTRY_DATA_DIR="$cache_dir"
     
     # Start only the registry-cache service with setup-infrastructure profile
-    if docker compose --profile setup-infrastructure up -d "$REGISTRY_CACHE_SERVICE" 2>&1; then
+    local compose_output
+    compose_output=$(docker compose --profile setup-infrastructure up -d "$REGISTRY_CACHE_SERVICE" 2>&1)
+    local compose_exit=$?
+    
+    # Check for network label mismatch errors
+    if echo "$compose_output" | grep -q "has incorrect label"; then
+        log_warn "Detected network label mismatch, recreating networks..."
+        
+        # Remove existing networks (they'll be recreated with correct labels)
+        docker network rm shared-network coder-network traefik-network 2>/dev/null || true
+        
+        # Retry starting the service
+        compose_output=$(docker compose --profile setup-infrastructure up -d "$REGISTRY_CACHE_SERVICE" 2>&1)
+        compose_exit=$?
+    fi
+    
+    if [[ $compose_exit -eq 0 ]]; then
         log_step "Waiting for cache to become healthy..."
         
         if is_cache_healthy; then
@@ -66,10 +82,12 @@ start_registry_cache() {
             return 0
         else
             log_error "Registry cache failed to become healthy"
+            echo "$compose_output" | grep -i "error" || echo "$compose_output"
             return 1
         fi
     else
         log_error "Failed to start registry cache"
+        echo "$compose_output" | grep -i "error" || echo "$compose_output"
         return 1
     fi
 }
