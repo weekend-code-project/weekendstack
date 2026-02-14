@@ -162,7 +162,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: ${NOCODB_MEMORY_LIMIT}
+          memory: ${NOCODB_MEMORY_LIMIT:-512m}
     labels:
       # Glance Configuration
       - glance.id=nocodb

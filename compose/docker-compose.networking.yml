@@ -311,7 +311,7 @@ services:
       - "${TRAEFIK_HTTPS_PORT:-443}:443"
       - "${TRAEFIK_API_PORT:-8081}:8080"  # API/Dashboard port
     volumes:
-      - ${TRAEFIK_CONFIG_FILE}:/etc/traefik/traefik.yml:ro
+      - ${TRAEFIK_CONFIG_FILE:-./config/traefik/traefik.yml}:/etc/traefik/traefik.yml:ro
       - ./config/traefik/auth:/config/traefik/auth:ro
       - type: bind
         source: ./config/traefik/certs
@@ -373,9 +373,15 @@ services:
       - proxy
       - external
     volumes:
-      - ${CLOUDFLARE_CONFIG_FILE}:/etc/cloudflared/config.yml:ro
-      - ${CLOUDFLARE_CREDENTIALS_DIR}:/etc/cloudflared/.cloudflared:ro
+      - ${CLOUDFLARE_CONFIG_FILE:-./config/cloudflare/config.yml}:/etc/cloudflared/config.yml:ro
+      - ${CLOUDFLARE_CREDENTIALS_DIR:-./config/cloudflare/.cloudflared}:/etc/cloudflared/.cloudflared:ro
     command: tunnel --config /etc/cloudflared/config.yml run
+    healthcheck:
+      test: ["CMD-SHELL", "cloudflared tunnel info 2>&1 | grep -q 'Registered tunnel' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   # =============================================================================
   # ERROR PAGES - CUSTOM ERROR PAGES FOR TRAEFIK
