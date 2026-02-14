@@ -1,350 +1,398 @@
 {
-  "link-router": {
-    "display_name": "Link Router",
-    "description": "Internal link routing service",
-    "template": "core/link-router.env.example",
-    "profile": "core"
-  },
-  "glance": {
-    "display_name": "Glance",
-    "description": "Dashboard for all services",
-    "template": "core/glance.env.example",
-    "profile": "core"
-  },
-  "vaultwarden": {
-    "display_name": "Vaultwarden",
-    "description": "Password manager",
-    "template": "core/vaultwarden.env.example",
-    "profile": "core"
-  },
-  "dozzle": {
-    "display_name": "Dozzle",
-    "description": "Docker log viewer",
-    "template": "core/dozzle.env.example",
-    "profile": "core"
-  },
-  "speedtest-tracker": {
-    "display_name": "Speedtest Tracker",
-    "description": "Network speed monitoring",
-    "template": "core/speedtest-tracker.env.example",
-    "profile": "core"
-  },
-  "traefik": {
-    "display_name": "Traefik",
-    "description": "Reverse proxy and load balancer",
-    "template": "networking/traefik.env.example",
-    "profile": "networking"
-  },
-  "pihole": {
-    "display_name": "Pi-hole",
-    "description": "Network-wide ad blocking and DNS",
-    "template": "networking/pihole.env.example",
-    "profile": "networking",
-    "support_containers": ["pihole-dnsmasq-init"]
-  },
-  "cert-generator": {
-    "display_name": "Certificate Generator",
-    "description": "SSL certificate generation",
-    "template": "networking/cert-generator.env.example",
-    "profile": "networking"
-  },
-  "error-pages": {
-    "display_name": "Error Pages",
-    "description": "Custom error pages for Traefik",
-    "template": "networking/error-pages.env.example",
-    "profile": "networking"
-  },
-  "cloudflare-tunnel": {
-    "display_name": "Cloudflare Tunnel",
-    "description": "Secure tunnel to Cloudflare",
-    "template": "networking/cloudflare-tunnel.env.example",
-    "profile": "networking"
-  },
-  "ollama": {
-    "display_name": "Ollama",
-    "description": "Local LLM runtime",
-    "template": "ai/ollama.env.example",
-    "profile": "ai",
-    "support_containers": ["ollama-cpu"]
-  },
-  "open-webui": {
-    "display_name": "Open WebUI",
-    "description": "Web UI for LLMs",
-    "template": "ai/open-webui.env.example",
-    "profile": "ai"
-  },
-  "searxng": {
-    "display_name": "SearXNG",
-    "description": "Privacy-respecting metasearch engine",
-    "template": "ai/searxng.env.example",
-    "profile": "ai"
-  },
-  "anythingllm": {
-    "display_name": "AnythingLLM",
-    "description": "Full-stack LLM application",
-    "template": "ai/anythingllm.env.example",
-    "profile": "ai"
-  },
-  "librechat": {
-    "display_name": "LibreChat",
-    "description": "ChatGPT alternative",
-    "template": "ai/librechat.env.example",
-    "profile": "ai",
-    "support_containers": ["librechat-db"]
-  },
-  "localai": {
-    "display_name": "LocalAI",
-    "description": "Local AI inference server",
-    "template": "ai/localai.env.example",
-    "profile": "ai"
-  },
-  "whisper": {
-    "display_name": "Whisper",
-    "description": "Speech-to-text service",
-    "template": "ai/whisper.env.example",
-    "profile": "ai"
-  },
-  "whisperx": {
-    "display_name": "WhisperX",
-    "description": "Enhanced speech-to-text",
-    "template": "ai/whisperx.env.example",
-    "profile": "ai"
-  },
-  "privategpt": {
-    "display_name": "PrivateGPT",
-    "description": "Private document Q&A with GPT",
-    "template": "ai/privategpt.env.example",
-    "profile": "ai"
-  },
-  "coder": {
-    "display_name": "Coder",
-    "description": "Cloud development environments",
-    "template": "dev/coder.env.example",
-    "profile": "dev",
-    "support_containers": ["coder-db", "coder-init"]
-  },
-  "gitea": {
-    "display_name": "Gitea",
-    "description": "Lightweight Git server",
-    "template": "dev/gitea.env.example",
-    "profile": "dev",
-    "support_containers": ["gitea-db"]
-  },
-  "gitlab": {
-    "display_name": "GitLab",
-    "description": "Complete DevOps platform",
-    "template": "dev/gitlab.env.example",
-    "profile": "dev"
-  },
-  "guacamole": {
-    "display_name": "Apache Guacamole",
-    "description": "Clientless remote desktop gateway",
-    "template": "dev/guacamole.env.example",
-    "profile": "dev",
-    "support_containers": ["guacamole-db", "guacd"]
-  },
-  "registry-cache": {
-    "display_name": "Docker Registry Cache",
-    "description": "Caching proxy for Docker registries",
-    "template": "dev/registry-cache.env.example",
-    "profile": "dev"
-  },
-  "socat": {
-    "display_name": "Socat",
-    "description": "Docker socket proxy",
-    "template": "dev/socat.env.example",
-    "profile": "dev"
-  },
-  "nocodb": {
-    "display_name": "NocoDB",
-    "description": "No-code database platform",
-    "template": "productivity/nocodb.env.example",
-    "profile": "productivity",
-    "support_containers": ["nocodb-db"]
-  },
-  "n8n": {
-    "display_name": "n8n",
-    "description": "Workflow automation",
-    "template": "productivity/n8n.env.example",
-    "profile": "productivity",
-    "support_containers": ["n8n-db"]
-  },
-  "paperless-ngx": {
-    "display_name": "Paperless-NGX",
-    "description": "Document management system",
-    "template": "productivity/paperless-ngx.env.example",
-    "profile": "productivity",
-    "support_containers": ["paperless-db", "paperless-redis", "gotenberg", "tika"]
-  },
-  "activepieces": {
-    "display_name": "Activepieces",
-    "description": "Open source automation platform",
-    "template": "productivity/activepieces.env.example",
-    "profile": "productivity",
-    "support_containers": ["activepieces-db", "activepieces-redis"]
-  },
-  "postiz": {
-    "display_name": "Postiz",
-    "description": "Social media management",
-    "template": "productivity/postiz.env.example",
-    "profile": "productivity",
-    "support_containers": ["postiz-db", "postiz-redis"]
-  },
-  "docmost": {
-    "display_name": "Docmost",
-    "description": "Collaborative documentation",
-    "template": "productivity/docmost.env.example",
-    "profile": "productivity",
-    "support_containers": ["docmost-db", "docmost-redis"]
-  },
-  "focalboard": {
-    "display_name": "Focalboard",
-    "description": "Project management",
-    "template": "productivity/focalboard.env.example",
-    "profile": "productivity"
-  },
-  "trilium": {
-    "display_name": "Trilium Notes",
-    "description": "Hierarchical note taking",
-    "template": "productivity/trilium.env.example",
-    "profile": "productivity"
-  },
-  "vikunja": {
-    "display_name": "Vikunja",
-    "description": "Task management",
-    "template": "productivity/vikunja.env.example",
-    "profile": "productivity"
-  },
-  "it-tools": {
-    "display_name": "IT Tools",
-    "description": "Collection of IT utilities",
-    "template": "productivity/it-tools.env.example",
-    "profile": "productivity"
-  },
-  "excalidraw": {
-    "display_name": "Excalidraw",
-    "description": "Virtual whiteboard",
-    "template": "productivity/excalidraw.env.example",
-    "profile": "productivity"
-  },
-  "filebrowser": {
-    "display_name": "File Browser",
-    "description": "Web-based file manager",
-    "template": "productivity/filebrowser.env.example",
-    "profile": "productivity"
-  },
-  "hoarder": {
-    "display_name": "Hoarder",
-    "description": "Bookmark and content manager",
-    "template": "productivity/hoarder.env.example",
-    "profile": "productivity",
-    "support_containers": ["hoarder-chrome", "hoarder-meilisearch"]
-  },
-  "bytestash": {
-    "display_name": "ByteStash",
-    "description": "Knowledge base",
-    "template": "productivity/bytestash.env.example",
-    "profile": "productivity"
-  },
-  "resourcespace": {
-    "display_name": "ResourceSpace",
-    "description": "Digital asset management",
-    "template": "productivity/resourcespace.env.example",
-    "profile": "productivity",
-    "support_containers": ["resourcespace-db"]
-  },
-  "mealie": {
-    "display_name": "Mealie",
-    "description": "Recipe manager",
-    "template": "personal/mealie.env.example",
-    "profile": "personal"
-  },
-  "firefly": {
-    "display_name": "Firefly III",
-    "description": "Personal finance manager",
-    "template": "personal/firefly.env.example",
-    "profile": "personal"
-  },
-  "wger": {
-    "display_name": "wger",
-    "description": "Workout and fitness tracker",
-    "template": "personal/wger.env.example",
-    "profile": "personal",
-    "support_containers": ["wger-nginx"]
-  },
-  "immich": {
-    "display_name": "Immich",
-    "description": "Photo and video management",
-    "template": "media/immich.env.example",
-    "profile": "media",
-    "support_containers": ["immich-db", "immich-redis", "immich-machine-learning"]
-  },
-  "kavita": {
-    "display_name": "Kavita",
-    "description": "Ebook and manga reader",
-    "template": "media/kavita.env.example",
-    "profile": "media"
-  },
-  "navidrome": {
-    "display_name": "Navidrome",
-    "description": "Music server and streamer",
-    "template": "media/navidrome.env.example",
-    "profile": "media"
-  },
-  "cockpit": {
-    "display_name": "Cockpit",
-    "description": "Server management interface",
-    "template": "monitoring/cockpit.env.example",
-    "profile": "monitoring"
-  },
-  "wud": {
-    "display_name": "What's Up Docker",
-    "description": "Container update monitoring",
-    "template": "monitoring/wud.env.example",
-    "profile": "monitoring"
-  },
-  "uptime-kuma": {
-    "display_name": "Uptime Kuma",
-    "description": "Uptime monitoring",
-    "template": "monitoring/uptime-kuma.env.example",
-    "profile": "monitoring"
-  },
-  "netdata": {
-    "display_name": "Netdata",
-    "description": "Real-time performance monitoring",
-    "template": "monitoring/netdata.env.example",
-    "profile": "monitoring"
-  },
-  "portainer": {
-    "display_name": "Portainer",
-    "description": "Docker management UI",
-    "template": "monitoring/portainer.env.example",
-    "profile": "monitoring"
-  },
-  "netbox": {
-    "display_name": "NetBox",
-    "description": "Network infrastructure management",
-    "template": "monitoring/netbox.env.example",
-    "profile": "monitoring",
-    "support_containers": ["netbox-postgres", "netbox-redis"]
-  },
-  "duplicati": {
-    "display_name": "Duplicati",
-    "description": "Backup solution",
-    "template": "monitoring/duplicati.env.example",
-    "profile": "monitoring"
-  },
-  "homeassistant": {
-    "display_name": "Home Assistant",
-    "description": "Home automation platform",
-    "template": "automation/homeassistant.env.example",
-    "profile": "automation",
-    "support_containers": ["homeassistant-perms"]
-  },
-  "nodered": {
-    "display_name": "Node-RED",
-    "description": "Flow-based automation",
-    "template": "automation/nodered.env.example",
-    "profile": "automation"
-  }
+    "link-router": {
+        "display_name": "Link Router",
+        "description": "Internal link routing service",
+        "template": "core/link-router.env.example",
+        "profile": "core"
+    },
+    "glance": {
+        "display_name": "Glance",
+        "description": "Dashboard for all services",
+        "template": "core/glance.env.example",
+        "profile": "core"
+    },
+    "vaultwarden": {
+        "display_name": "Vaultwarden",
+        "description": "Password manager",
+        "template": "core/vaultwarden.env.example",
+        "profile": "core"
+    },
+    "dozzle": {
+        "display_name": "Dozzle",
+        "description": "Docker log viewer",
+        "template": "core/dozzle.env.example",
+        "profile": "core"
+    },
+    "speedtest-tracker": {
+        "display_name": "Speedtest Tracker",
+        "description": "Network speed monitoring",
+        "template": "core/speedtest-tracker.env.example",
+        "profile": "core"
+    },
+    "traefik": {
+        "display_name": "Traefik",
+        "description": "Reverse proxy and load balancer",
+        "template": "networking/traefik.env.example",
+        "profile": "networking"
+    },
+    "pihole": {
+        "display_name": "Pi-hole",
+        "description": "Network-wide ad blocking and DNS",
+        "template": "networking/pihole.env.example",
+        "profile": "networking",
+        "support_containers": [
+            "pihole-dnsmasq-init"
+        ]
+    },
+    "cert-generator": {
+        "display_name": "Certificate Generator",
+        "description": "SSL certificate generation",
+        "template": "networking/cert-generator.env.example",
+        "profile": "networking"
+    },
+    "error-pages": {
+        "display_name": "Error Pages",
+        "description": "Custom error pages for Traefik",
+        "template": "networking/error-pages.env.example",
+        "profile": "networking"
+    },
+    "cloudflare-tunnel": {
+        "display_name": "Cloudflare Tunnel",
+        "description": "Secure tunnel to Cloudflare",
+        "template": "networking/cloudflare-tunnel.env.example",
+        "profile": "networking"
+    },
+    "ollama": {
+        "display_name": "Ollama",
+        "description": "Local LLM runtime",
+        "template": "ai/ollama.env.example",
+        "profile": "ai",
+        "support_containers": [
+            "ollama-cpu"
+        ]
+    },
+    "open-webui": {
+        "display_name": "Open WebUI",
+        "description": "Web UI for LLMs",
+        "template": "ai/open-webui.env.example",
+        "profile": "ai"
+    },
+    "searxng": {
+        "display_name": "SearXNG",
+        "description": "Privacy-respecting metasearch engine",
+        "template": "ai/searxng.env.example",
+        "profile": "ai"
+    },
+    "anythingllm": {
+        "display_name": "AnythingLLM",
+        "description": "Full-stack LLM application",
+        "template": "ai/anythingllm.env.example",
+        "profile": "ai"
+    },
+    "librechat": {
+        "display_name": "LibreChat",
+        "description": "ChatGPT alternative",
+        "template": "ai/librechat.env.example",
+        "profile": "ai",
+        "support_containers": [
+            "librechat-db"
+        ]
+    },
+    "localai": {
+        "display_name": "LocalAI",
+        "description": "Local AI inference server",
+        "template": "ai/localai.env.example",
+        "profile": "ai"
+    },
+    "whisper": {
+        "display_name": "Whisper",
+        "description": "Speech-to-text service",
+        "template": "ai/whisper.env.example",
+        "profile": "ai"
+    },
+    "whisperx": {
+        "display_name": "WhisperX",
+        "description": "Enhanced speech-to-text",
+        "template": "ai/whisperx.env.example",
+        "profile": "ai"
+    },
+    "privategpt": {
+        "display_name": "PrivateGPT",
+        "description": "Private document Q&A with GPT",
+        "template": "ai/privategpt.env.example",
+        "profile": "ai"
+    },
+    "coder": {
+        "display_name": "Coder",
+        "description": "Cloud development environments",
+        "template": "dev/coder.env.example",
+        "profile": "dev",
+        "support_containers": [
+            "coder-db",
+            "coder-init"
+        ]
+    },
+    "gitea": {
+        "display_name": "Gitea",
+        "description": "Lightweight Git server",
+        "template": "dev/gitea.env.example",
+        "profile": "dev",
+        "support_containers": [
+            "gitea-db"
+        ]
+    },
+    "gitlab": {
+        "display_name": "GitLab",
+        "description": "Complete DevOps platform",
+        "template": "dev/gitlab.env.example",
+        "profile": "dev"
+    },
+    "guacamole": {
+        "display_name": "Apache Guacamole",
+        "description": "Clientless remote desktop gateway",
+        "template": "dev/guacamole.env.example",
+        "profile": "dev",
+        "support_containers": [
+            "guacamole-db",
+            "guacd"
+        ]
+    },
+    "registry-cache": {
+        "display_name": "Docker Registry Cache",
+        "description": "Caching proxy for Docker registries",
+        "template": "dev/registry-cache.env.example",
+        "profile": "dev"
+    },
+    "socat": {
+        "display_name": "Socat",
+        "description": "Docker socket proxy",
+        "template": "dev/socat.env.example",
+        "profile": "dev"
+    },
+    "nocodb": {
+        "display_name": "NocoDB",
+        "description": "No-code database platform",
+        "template": "productivity/nocodb.env.example",
+        "profile": "productivity",
+        "support_containers": [
+            "nocodb-db"
+        ]
+    },
+    "n8n": {
+        "display_name": "n8n",
+        "description": "Workflow automation",
+        "template": "productivity/n8n.env.example",
+        "profile": "productivity",
+        "support_containers": [
+            "n8n-db"
+        ]
+    },
+    "paperless-ngx": {
+        "display_name": "Paperless-NGX",
+        "description": "Document management system",
+        "template": "productivity/paperless-ngx.env.example",
+        "profile": "productivity",
+        "support_containers": [
+            "paperless-db",
+            "paperless-redis",
+            "gotenberg",
+            "tika"
+        ]
+    },
+    "activepieces": {
+        "display_name": "Activepieces",
+        "description": "Open source automation platform",
+        "template": "productivity/activepieces.env.example",
+        "profile": "productivity",
+        "support_containers": [
+            "activepieces-db",
+            "activepieces-redis"
+        ]
+    },
+    "postiz": {
+        "display_name": "Postiz",
+        "description": "Social media management",
+        "template": "productivity/postiz.env.example",
+        "profile": "productivity",
+        "support_containers": [
+            "postiz-db",
+            "postiz-redis"
+        ]
+    },
+    "docmost": {
+        "display_name": "Docmost",
+        "description": "Collaborative documentation",
+        "template": "productivity/docmost.env.example",
+        "profile": "productivity",
+        "support_containers": [
+            "docmost-db",
+            "docmost-redis"
+        ]
+    },
+    "focalboard": {
+        "display_name": "Focalboard",
+        "description": "Project management",
+        "template": "productivity/focalboard.env.example",
+        "profile": "productivity"
+    },
+    "trilium": {
+        "display_name": "Trilium Notes",
+        "description": "Hierarchical note taking",
+        "template": "productivity/trilium.env.example",
+        "profile": "productivity"
+    },
+    "vikunja": {
+        "display_name": "Vikunja",
+        "description": "Task management",
+        "template": "productivity/vikunja.env.example",
+        "profile": "productivity"
+    },
+    "it-tools": {
+        "display_name": "IT Tools",
+        "description": "Collection of IT utilities",
+        "template": "productivity/it-tools.env.example",
+        "profile": "productivity"
+    },
+    "excalidraw": {
+        "display_name": "Excalidraw",
+        "description": "Virtual whiteboard",
+        "template": "productivity/excalidraw.env.example",
+        "profile": "productivity"
+    },
+    "filebrowser": {
+        "display_name": "File Browser",
+        "description": "Web-based file manager",
+        "template": "productivity/filebrowser.env.example",
+        "profile": "productivity"
+    },
+    "hoarder": {
+        "display_name": "Hoarder",
+        "description": "Bookmark and content manager",
+        "template": "productivity/hoarder.env.example",
+        "profile": "productivity",
+        "support_containers": [
+            "hoarder-chrome",
+            "hoarder-meilisearch"
+        ]
+    },
+    "bytestash": {
+        "display_name": "ByteStash",
+        "description": "Knowledge base",
+        "template": "productivity/bytestash.env.example",
+        "profile": "productivity"
+    },
+    "resourcespace": {
+        "display_name": "ResourceSpace",
+        "description": "Digital asset management",
+        "template": "productivity/resourcespace.env.example",
+        "profile": "productivity",
+        "support_containers": [
+            "resourcespace-db"
+        ]
+    },
+    "mealie": {
+        "display_name": "Mealie",
+        "description": "Recipe manager",
+        "template": "personal/mealie.env.example",
+        "profile": "personal"
+    },
+    "firefly": {
+        "display_name": "Firefly III",
+        "description": "Personal finance manager",
+        "template": "personal/firefly.env.example",
+        "profile": "personal"
+    },
+    "wger": {
+        "display_name": "wger",
+        "description": "Workout and fitness tracker",
+        "template": "personal/wger.env.example",
+        "profile": "personal",
+        "support_containers": [
+            "wger-nginx"
+        ]
+    },
+    "immich": {
+        "display_name": "Immich",
+        "description": "Photo and video management",
+        "template": "media/immich.env.example",
+        "profile": "media",
+        "support_containers": [
+            "immich-db",
+            "immich-redis",
+            "immich-machine-learning"
+        ]
+    },
+    "kavita": {
+        "display_name": "Kavita",
+        "description": "Ebook and manga reader",
+        "template": "media/kavita.env.example",
+        "profile": "media"
+    },
+    "navidrome": {
+        "display_name": "Navidrome",
+        "description": "Music server and streamer",
+        "template": "media/navidrome.env.example",
+        "profile": "media"
+    },
+    "cockpit": {
+        "display_name": "Cockpit",
+        "description": "Server management interface",
+        "template": "monitoring/cockpit.env.example",
+        "profile": "monitoring"
+    },
+    "wud": {
+        "display_name": "What's Up Docker",
+        "description": "Container update monitoring",
+        "template": "monitoring/wud.env.example",
+        "profile": "monitoring"
+    },
+    "uptime-kuma": {
+        "display_name": "Uptime Kuma",
+        "description": "Uptime monitoring",
+        "template": "monitoring/uptime-kuma.env.example",
+        "profile": "monitoring"
+    },
+    "netdata": {
+        "display_name": "Netdata",
+        "description": "Real-time performance monitoring",
+        "template": "monitoring/netdata.env.example",
+        "profile": "monitoring"
+    },
+    "portainer": {
+        "display_name": "Portainer",
+        "description": "Docker management UI",
+        "template": "monitoring/portainer.env.example",
+        "profile": "monitoring"
+    },
+    "netbox": {
+        "display_name": "NetBox",
+        "description": "Network infrastructure management",
+        "template": "monitoring/netbox.env.example",
+        "profile": "monitoring",
+        "support_containers": [
+            "netbox-postgres",
+            "netbox-redis"
+        ]
+    },
+    "duplicati": {
+        "display_name": "Duplicati",
+        "description": "Backup solution",
+        "template": "monitoring/duplicati.env.example",
+        "profile": "monitoring"
+    },
+    "homeassistant": {
+        "display_name": "Home Assistant",
+        "description": "Home automation platform",
+        "template": "automation/homeassistant.env.example",
+        "profile": "automation",
+        "support_containers": [
+            "homeassistant-perms"
+        ]
+    },
+    "nodered": {
+        "display_name": "Node-RED",
+        "description": "Flow-based automation",
+        "template": "automation/nodered.env.example",
+        "profile": "automation"
+    }
 }

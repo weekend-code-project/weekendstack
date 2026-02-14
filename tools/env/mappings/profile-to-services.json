@@ -1,75 +1,75 @@
 {
-  "core": [
-    "link-router",
-    "glance",
-    "vaultwarden",
-    "dozzle",
-    "speedtest-tracker"
-  ],
-  "networking": [
-    "traefik",
-    "pihole",
-    "cert-generator",
-    "error-pages",
-    "cloudflare-tunnel"
-  ],
-  "ai": [
-    "ollama",
-    "open-webui",
-    "searxng",
-    "anythingllm",
-    "librechat",
-    "localai",
-    "whisper",
-    "whisperx",
-    "privategpt"
-  ],
-  "dev": [
-    "coder",
-    "gitea",
-    "gitlab",
-    "guacamole",
-    "registry-cache",
-    "socat"
-  ],
-  "productivity": [
-    "nocodb",
-    "n8n",
-    "paperless-ngx",
-    "activepieces",
-    "postiz",
-    "docmost",
-    "focalboard",
-    "trilium",
-    "vikunja",
-    "it-tools",
-    "excalidraw",
-    "filebrowser",
-    "hoarder",
-    "bytestash",
-    "resourcespace"
-  ],
-  "personal": [
-    "mealie",
-    "firefly",
-    "wger"
-  ],
-  "media": [
-    "immich",
-    "kavita",
-    "navidrome"
-  ],
-  "monitoring": [
-    "cockpit",
-    "wud",
-    "uptime-kuma",
-    "netdata",
-    "portainer",
-    "netbox",
-    "duplicati"
-  ],
-  "automation": [
-    "homeassistant",
-    "nodered"
-  ]
+    "core": [
+        "link-router",
+        "glance",
+        "vaultwarden",
+        "dozzle",
+        "speedtest-tracker"
+    ],
+    "networking": [
+        "traefik",
+        "pihole",
+        "cert-generator",
+        "error-pages",
+        "cloudflare-tunnel"
+    ],
+    "ai": [
+        "ollama",
+        "open-webui",
+        "searxng",
+        "anythingllm",
+        "librechat",
+        "localai",
+        "whisper",
+        "whisperx",
+        "privategpt"
+    ],
+    "dev": [
+        "coder",
+        "gitea",
+        "gitlab",
+        "guacamole",
+        "registry-cache",
+        "socat"
+    ],
+    "productivity": [
+        "nocodb",
+        "n8n",
+        "paperless-ngx",
+        "activepieces",
+        "postiz",
+        "docmost",
+        "focalboard",
+        "trilium",
+        "vikunja",
+        "it-tools",
+        "excalidraw",
+        "filebrowser",
+        "hoarder",
+        "bytestash",
+        "resourcespace"
+    ],
+    "personal": [
+        "mealie",
+        "firefly",
+        "wger"
+    ],
+    "media": [
+        "immich",
+        "kavita",
+        "navidrome"
+    ],
+    "monitoring": [
+        "cockpit",
+        "wud",
+        "uptime-kuma",
+        "netdata",
+        "portainer",
+        "netbox",
+        "duplicati"
+    ],
+    "automation": [
+        "homeassistant",
+        "nodered"
+    ]
 }
