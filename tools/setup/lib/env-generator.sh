@@ -396,15 +396,35 @@ generate_env_interactive() {
     # ========================================================================
     # Generate .env file
     # ========================================================================
-    log_step "Generating .env file with secure random secrets..."
+    log_step "Assembling modular env template for selected profiles..."
     
-    # Step 1: Generate base file from template
+    # Step 1: Assemble profile-specific template
+    local env_templates_dir="${SCRIPT_DIR}/tools/env/templates"
+    if [[ -d "$env_templates_dir" ]]; then
+        # Use modular templates
+        local profiles_csv=$(IFS=, ; echo "${selected_profiles[*]}")
+        log_info "Creating template for profiles: $profiles_csv"
+        
+        if ! "${SCRIPT_DIR}/tools/env/scripts/assemble-env.sh" \
+            --profiles "$profiles_csv" \
+            --output "${SCRIPT_DIR}/.env.assembled" >/dev/null 2>&1; then
+            log_error "Failed to assemble modular env template"
+            return 1
+        fi
+        log_success "Template assembled successfully"
+    else
+        # Fallback to monolithic .env.example (legacy mode)
+        log_warn "Modular templates not found, using legacy .env.example"
+    fi
+    
+    # Step 2: Generate .env from assembled template with secure random secrets
+    log_step "Generating .env file with secure random secrets..."
     if ! "${SCRIPT_DIR}/tools/env-template-gen.sh" >/dev/null 2>&1; then
         log_error "Failed to generate .env from template"
         return 1
     fi
     
-    # Step 2: Apply all collected configuration using safe update function
+    # Step 3: Apply all collected configuration using safe update function
     log_step "Applying configuration values..."
     
     update_env_var "COMPUTER_NAME" "$computer_name" "$env_file"
@@ -418,6 +438,25 @@ generate_env_interactive() {
     update_env_var "DEFAULT_ADMIN_EMAIL" "$admin_email" "$env_file"
     
     # Only set custom password if provided
+    if [[ -n "$admin_password" ]]; then
+        update_env_var "DEFAULT_ADMIN_PASSWORD" "$admin_password" "$env_file"
+    fi
+    
+    # Set storage paths
+    update_env_var "FILES_BASE_DIR" "$files_base_dir" "$env_file"
+    
+    # Add setup metadata
+    add_setup_metadata "$env_file" "${selected_profiles[@]}"
+    
+    # Step 4: Generate custom docker-compose profile
+    log_step "Generating custom docker-compose profile..."
+    local profiles_csv=$(IFS=, ; echo "${selected_profiles[*]}")
+    if "${SCRIPT_DIR}/tools/env/scripts/generate-custom-profile.sh" \
+        --profiles "$profiles_csv" >/dev/null 2>&1; then
+        log_success "Custom profile generated"
+    else
+        log_warn "Custom profile generation failed (will fall back to manual --profile flags)"
+    fi
     if [[ -n "$admin_password" ]]; then
         update_env_var "DEFAULT_ADMIN_PASSWORD" "$admin_password" "$env_file"
     fi
@@ -496,6 +535,25 @@ generate_env_quick() {
         backup_file "$env_file"
     fi
     
+    # Assemble modular template if available
+    log_step "Assembling modular env template..."
+    local env_templates_dir="${SCRIPT_DIR}/tools/env/templates"
+    if [[ -d "$env_templates_dir" ]]; then
+        # Use modular templates
+        local profiles_csv=$(IFS=, ; echo "${selected_profiles[*]}")
+        log_info "Creating template for profiles: $profiles_csv"
+        
+        if ! "${SCRIPT_DIR}/tools/env/scripts/assemble-env.sh" \
+            --profiles "$profiles_csv" \
+            --output "${SCRIPT_DIR}/.env.assembled" >/dev/null 2>&1; then
+            log_error "Failed to assemble modular env template"
+            return 1
+        fi
+    else
+        # Fallback to monolithic .env.example
+        log_warn "Modular templates not found, using legacy .env.example"
+    fi
+    
     # Generate from template
     log_step "Generating .env with defaults..."
     if ! "${SCRIPT_DIR}/tools/env-template-gen.sh" >/dev/null 2>&1; then
@@ -519,10 +577,20 @@ generate_env_quick() {
     # Set profiles
     local profiles_string="${selected_profiles[*]}"
     profiles_string="${profiles_string// /,}"
-    update_env_var "COMPOSE_PROFILES" "$profiles_string" "$env_file"
     
     # Add metadata
     add_setup_metadata "$env_file" "${selected_profiles[@]}"
+    
+    # Generate custom docker-compose profile
+    log_step "Generating custom docker-compose profile..."
+    if "${SCRIPT_DIR}/tools/env/scripts/generate-custom-profile.sh" \
+        --profiles "$profiles_string" >/dev/null 2>&1; then
+        log_success "Custom profile generated"
+    else
+        log_warn "Custom profile generation failed (will fall back to manual --profile flags)"
+        # Fallback to original profile list if custom generation fails
+        update_env_var "COMPOSE_PROFILES" "$profiles_string" "$env_file"
+    fi
     
     log_success "Quick environment setup complete"
     log_info "Computer: $hostname"

@@ -7,9 +7,13 @@
 #   - Empty required fields  
 #   - Invalid values
 #   - Security concerns
+#   - Profile-aware validation (only validates enabled services)
 #
 # Usage:
-#   ./tools/validate-env.sh
+#   ./tools/validate-env.sh [--strict]
+#
+# Options:
+#   --strict    Validate all variables (ignore profile selection)
 #
 # Exit codes:
 #   0 = All checks passed
@@ -25,6 +29,22 @@ NC='\033[0m'
 
 ERRORS=0
 WARNINGS=0
+STRICT_MODE=false
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --strict)
+            STRICT_MODE=true
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Usage: ./tools/validate-env.sh [--strict]"
+            exit 1
+            ;;
+    esac
+done
 
 echo "============================================================================"
 echo "  WeekendStack - Configuration Validator"
@@ -39,6 +59,19 @@ if [ ! -f .env ]; then
 fi
 
 echo "📋 Checking .env configuration..."
+
+# Get selected profiles
+SELECTED_PROFILES=$(grep "^SELECTED_PROFILES=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+
+if [ "$STRICT_MODE" = true ]; then
+    echo -e "${YELLOW}⚙️  Mode: STRICT (validating all variables)${NC}"
+elif [ -n "$SELECTED_PROFILES" ]; then
+    echo -e "${BLUE}📦 Selected Profiles: $SELECTED_PROFILES${NC}"
+    echo -e "${GREEN}⚙️  Mode: Profile-aware (validating only enabled services)${NC}"
+else
+    echo -e "${YELLOW}⚠ No SELECTED_PROFILES found - validating all variables${NC}"
+    STRICT_MODE=true
+fi
 echo ""
 
 # ============================================================================

@@ -1,13 +1,30 @@
 #!/bin/bash
-# Auto-generate .env file from .env.example with secure random values
+# Auto-generate .env file from .env.example (or .env.assembled) with secure random values
 # This script finds all <GENERATE> tags and replaces them with appropriate random values
+#
+# Usage:
+#   ./tools/env-template-gen.sh [input_file] [output_file]
+#
+# Examples:
+#   ./tools/env-template-gen.sh                          # Use .env.example -> .env
+#   ./tools/env-template-gen.sh .env.assembled           # Use .env.assembled -> .env
+#   ./tools/env-template-gen.sh .env.assembled .env.new  # Custom output
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-ENV_EXAMPLE="${PROJECT_ROOT}/.env.example"
-ENV_FILE="${PROJECT_ROOT}/.env"
+
+# Support both .env.assembled (modular) and .env.example (legacy)
+# Priority: .env.assembled > .env.example
+if [[ -f "${PROJECT_ROOT}/.env.assembled" ]]; then
+    DEFAULT_TEMPLATE="${PROJECT_ROOT}/.env.assembled"
+else
+    DEFAULT_TEMPLATE="${PROJECT_ROOT}/.env.example"
+fi
+
+ENV_EXAMPLE="${1:-$DEFAULT_TEMPLATE}"
+ENV_FILE="${2:-${PROJECT_ROOT}/.env}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -19,14 +36,16 @@ log_success() { echo -e "${GREEN}✓${NC} $1"; }
 log_error() { echo -e "${RED}✗${NC} $1" >&2; }
 log_info() { echo -e "${YELLOW}→${NC} $1"; }
 
-# Check if .env.example exists
+# Check if template exists
 if [[ ! -f "$ENV_EXAMPLE" ]]; then
-    log_error ".env.example not found at $ENV_EXAMPLE"
+    log_error "Template file not found at $ENV_EXAMPLE"
+    log_info "Expected: .env.assembled or .env.example"
     exit 1
 fi
 
-# Copy .env.example to .env
-log_info "Generating .env from template..."
+# Show which template we're using
+template_name=$(basename "$ENV_EXAMPLE")
+log_info "Generating .env from template: $template_name"
 cp "$ENV_EXAMPLE" "$ENV_FILE"
 
 # Function to generate random value based on comment
@@ -71,8 +90,13 @@ done < "$ENV_EXAMPLE"
 # Set setup metadata
 sed -i "s/^SETUP_DATE=.*/SETUP_DATE=$(date +%Y-%m-%d)/" "$ENV_FILE"
 
+# Count generated secrets
+secret_count=$(grep -c "^[A-Z0-9_]*=.*#.*<GENERATE>" "$ENV_EXAMPLE" || true)
 log_success ".env file generated successfully"
-log_info "All secrets and keys have been auto-generated"
+log_info "Template: $template_name"
+log_info "Generated: $secret_count secrets and keys"
+log_info "Output: $ENV_FILE"
+echo ""
 log_info "Review and customize settings in .env before deploying"
 
 exit 0
