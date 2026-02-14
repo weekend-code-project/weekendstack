@@ -443,9 +443,9 @@ services:
       - "${PIHOLE_PORT_WEB:-8088}:80/tcp"
     environment:
       TZ: ${TIMEZONE:-UTC}
-      WEBPASSWORD: ${PIHOLE_WEBPASSWORD:-pihole-admin-2024}
+      WEBPASSWORD: ${PIHOLE_WEBPASSWORD}
       PIHOLE_DNS_: ${PIHOLE_DNS1:-1.1.1.1};${PIHOLE_DNS2:-1.0.0.1}
-      FTLCONF_webserver_api_password: ${PIHOLE_WEBPASSWORD:-pihole-admin-2024}
+      FTLCONF_webserver_api_password: ${PIHOLE_WEBPASSWORD}
       DNSMASQ_LISTENING: all
       # Disable DHCP - use router for DHCP
       DHCP_ACTIVE: "false"
