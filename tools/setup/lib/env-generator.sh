@@ -459,6 +459,13 @@ generate_env_interactive() {
     update_env_var "WORKSPACE_DIR" "$workspace_dir" "$env_file"
     update_env_var "SSH_KEY_DIR" "$ssh_key_dir" "$env_file"
     
+    # Set registry cache configuration
+    # The registry cache is used during setup to optimize Docker image pulls
+    # and bypass Docker Hub rate limits. It starts automatically during setup.
+    update_env_var "REGISTRY_DATA_DIR" "${data_dir}/registry-cache" "$env_file"
+    update_env_var "REGISTRY_PORT" "5000" "$env_file"
+    update_env_var "REGISTRY_MEMORY_LIMIT" "256m" "$env_file"
+    
     # Add setup metadata
     add_setup_metadata "$env_file" "${selected_profiles[@]}"
     

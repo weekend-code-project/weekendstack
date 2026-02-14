@@ -348,15 +348,17 @@ services:
   registry-cache:
     image: registry:2
     container_name: coder-registry
-    restart: unless-stopped
+    restart: "no"
     networks:
       - coder-network
       - shared-network
     profiles:
       - all
       - dev-tools
+      - setup-infrastructure
     environment:
       REGISTRY_PROXY_REMOTEURL: https://registry-1.docker.io
+      REGISTRY_STORAGE_DELETE_ENABLED: "true"
     ports:
       - "${REGISTRY_PORT:-5000}:5000"
     healthcheck:
@@ -369,7 +371,15 @@ services:
       - type: bind
         source: ${REGISTRY_DATA_DIR}
         target: /var/lib/registry
+    deploy:
+      resources:
+        limits:
+          memory: ${REGISTRY_MEMORY_LIMIT:-256m}
     labels:
+      # WeekendStack metadata
+      - weekendstack.role=setup-cache
+      - weekendstack.description=Pull-through cache for Docker Hub images
+      
       # Glance Configuration
       - glance.parent=coder
       - glance.name=Registry Cache

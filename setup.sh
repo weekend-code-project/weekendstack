@@ -332,17 +332,7 @@ main_setup() {
     clear
     
     # 3. Docker registry authentication
-    show_setup_progress "Docker Authentication"
-    if ! $SKIP_AUTH; then
-        if [[ "$SETUP_MODE" == "quick" ]]; then
-            log_info "Skipping Docker authentication in quick mode (use --interactive for auth)"
-        else
-            setup_docker_auth || log_warn "Docker authentication failed or skipped"
-            clear
-        fi
-    else
-        log_info "Skipping Docker authentication (--skip-auth)"
-    fi
+    # Note: Contextual authentication happens later (step 10.5) after analyzing image requirements
     
     # 4. Generate environment configuration
     show_setup_progress "Environment Configuration"
@@ -436,12 +426,64 @@ main_setup() {
         log_info "Skipping Cloudflare Tunnel setup"
     fi
     
-    # 11. Pull Docker images
+    # 10.5. Image Pull Planning
+    show_setup_progress "Analyzing Docker Images"
+    if ! $SKIP_PULL; then
+        # Source image analysis libraries
+        source "$SCRIPT_DIR/tools/setup/lib/image-analyzer.sh"
+        source "$SCRIPT_DIR/tools/setup/lib/image-puller.sh"
+        source "$SCRIPT_DIR/tools/setup/lib/docker-auth.sh"
+        
+        log_step "Analyzing required images for selected profiles..."
+        local image_analysis=$(analyze_compose_images "${selected_profiles[@]}")
+        
+        # Parse analysis
+        declare -A img_data
+        while IFS='=' read -r key value; do
+            img_data[$key]="$value"
+        done <<< "$image_analysis"
+        
+        local dockerhub_count="${img_data[DOCKERHUB_COUNT]:-0}"
+        
+        # Check rate limit status
+        local rate_limit_status=$(format_rate_limit_status)
+        
+        # Show the pull plan
+        show_pull_plan "$image_analysis" "$rate_limit_status"
+        
+        # Contextual authentication if needed and not skipped
+        if ! $SKIP_AUTH && [[ $dockerhub_count -gt 0 ]] && [[ "$SETUP_MODE" == "interactive" ]]; then
+            if prompt_hub_auth_contextual "$dockerhub_count"; then
+                docker_login_hub || log_warn "Authentication failed or skipped"
+            fi
+        fi
+        
+        clear
+    fi
+    
+    # 11. Pull Docker images (optimized)
     show_setup_progress "Pulling Docker Images"
     if ! $SKIP_PULL; then
-        if ! pull_images "${selected_profiles[@]}"; then
+        if ! pull_images_optimized "${selected_profiles[@]}"; then
             log_error "Failed to pull Docker images"
-            exit 1
+            
+            if [[ "$SETUP_MODE" == "interactive" ]]; then
+                if ! prompt_yes_no "Some images failed. Continue anyway?" "n"; then
+                    exit 1
+                fi
+            else
+                exit 1
+            fi
+        fi
+        
+        # Ask about keeping cache
+        if is_cache_running && [[ "$SETUP_MODE" == "interactive" ]]; then
+            echo ""
+            if prompt_yes_no "Keep registry cache running for future pulls?" "n"; then
+                log_info "Registry cache will continue running"
+            else
+                stop_registry_cache
+            fi
         fi
     else
         log_info "Skipping image pull (--skip-pull)"
