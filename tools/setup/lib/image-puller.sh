@@ -87,9 +87,11 @@ show_pull_plan() {
         local count=0
         for shared in "${shared_array[@]}"; do
             if [[ $count -lt 5 ]] && [[ -n "$shared" ]]; then
-                IFS=':' read -r image uses <<< "$shared"
+                # Split on last colon to handle images like postgres:15-alpine:3
+                local image="${shared%:*}"  # Everything before last :
+                local uses="${shared##*:}"   # Everything after last :
                 echo "  • $image (used $uses times)"
-                ((count++))
+                ((count++)) || true  # Make arithmetic non-fatal
             fi
         done
         echo ""
