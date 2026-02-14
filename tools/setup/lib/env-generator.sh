@@ -72,7 +72,6 @@ update_env_profiles_only() {
 }
 
 generate_env_interactive() {
-    local env_example="${SCRIPT_DIR}/.env.example"
     local env_file="${SCRIPT_DIR}/.env"
     local selected_profiles=("$@")
     
@@ -425,12 +424,10 @@ generate_env_interactive() {
         # Clean up temp file
         rm -f "$temp_template"
     else
-        # Use legacy .env.example
-        log_step "Generating .env file with secure random secrets..."
-        if ! "${SCRIPT_DIR}/tools/env-template-gen.sh" >/dev/null 2>&1; then
-            log_error "Failed to generate .env from template"
-            return 1
-        fi
+        # Modular templates are required
+        log_error "Modular templates not found at: $env_templates_dir"
+        log_error "Please ensure tools/env/templates/ directory exists"
+        return 1
     fi
     
     # Step 3: Apply all collected configuration using safe update function
@@ -553,14 +550,10 @@ generate_env_quick() {
         fi
         rm -f "$temp_template"
     else
-        # Fallback to monolithic .env.example
-        log_warn "Modular templates not found, using legacy .env.example"
-        
-        log_step "Generating .env with defaults..."
-        if ! "${SCRIPT_DIR}/tools/env-template-gen.sh" >/dev/null 2>&1; then
-            log_error "Failed to generate .env from template"
-            return 1
-        fi
+        # Modular templates are required
+        log_error "Modular templates not found at: $env_templates_dir"
+        log_error "Please ensure tools/env/templates/ directory exists"
+        return 1
     fi
     
     # Auto-detect and set critical values

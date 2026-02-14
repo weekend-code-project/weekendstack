@@ -1,24 +1,31 @@
 #!/bin/bash
-# Auto-generate .env file from .env.example with secure random values
+# Auto-generate .env file from template with secure random values
 # This script finds all <GENERATE> tags and replaces them with appropriate random values
 #
 # Usage:
-#   ./tools/env-template-gen.sh [input_file] [output_file]
+#   ./tools/env-template-gen.sh <template_file> [output_file]
 #
 # Examples:
-#   ./tools/env-template-gen.sh                          # Use .env.example -> .env
-#   ./tools/env-template-gen.sh custom.env.example       # Use custom template
-#   ./tools/env-template-gen.sh .env.example .env.new    # Custom output
+#   ./tools/env-template-gen.sh .env.tmp                 # Use .env.tmp -> .env
+#   ./tools/env-template-gen.sh custom.template .env.new # Custom template and output
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Default to .env.example as template
-DEFAULT_TEMPLATE="${PROJECT_ROOT}/.env.example"
+# Require template file as first argument
+if [[ -z "$1" ]]; then
+    echo "Error: Template file required"
+    echo "Usage: $0 <template_file> [output_file]"
+    echo ""
+    echo "Examples:"
+    echo "  $0 .env.tmp                     # Generate .env from .env.tmp"
+    echo "  $0 custom.template .env.custom  # Custom template and output"
+    exit 1
+fi
 
-ENV_EXAMPLE="${1:-$DEFAULT_TEMPLATE}"
+ENV_EXAMPLE="$1"
 ENV_FILE="${2:-${PROJECT_ROOT}/.env}"
 
 # Colors for output
@@ -33,8 +40,7 @@ log_info() { echo -e "${YELLOW}→${NC} $1"; }
 
 # Check if template exists
 if [[ ! -f "$ENV_EXAMPLE" ]]; then
-    log_error "Template file not found at $ENV_EXAMPLE"
-    log_info "Expected: .env.example"
+    echo "Error: Template file not found: $ENV_EXAMPLE"
     exit 1
 fi
 
