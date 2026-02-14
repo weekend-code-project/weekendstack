@@ -157,6 +157,66 @@ services:
         echo ""
         echo "=================================================="
         echo ""
+
+  # =============================================================================
+  # LINK ROUTER - GO-LINKS REDIRECT SERVICE
+  # =============================================================================
+  # Smart URL router for /go/ paths - redirects to services based on detection
+  # Automatically detects if accessed from LAN (.lab) or external (tunnel domain)
+  # Local: http://home.lab/go/service or http://IP/go/service
+  # External: https://home.domain.com/go/service
+  # =============================================================================
+  link-router:
+    build:
+      context: ./config/link-router
+    container_name: link-router
+    restart: unless-stopped
+    profiles:
+      - all
+      - networking
+    environment:
+      HOST_IP: ${HOST_IP:-192.168.2.50}
+      LAB_DOMAIN: ${LAB_DOMAIN:-lab}
+      BASE_DOMAIN: ${BASE_DOMAIN}
+      LAB_SCHEME: ${LAB_SCHEME:-http}
+      EXTERNAL_SCHEME: ${EXTERNAL_SCHEME:-https}
+      FORCE_LINK_MODE: ${FORCE_LINK_MODE:-}
+      PORT: 8080
+    networks:
+      - shared-network
+    labels:
+      # Glance Configuration
+      - glance.parent=glance
+      - glance.name=Link Router
+      
+      # Traefik Configuration
+      - traefik.enable=true
+      
+      # External HTTPS (Tunnel / public)
+      - traefik.http.routers.link-router-external.rule=(Host(`home.${BASE_DOMAIN}`) || Host(`glance.${LAB_DOMAIN:-lab}`) || Host(`glance.${BASE_DOMAIN}`)) && PathPrefix(`/go/`)
+      - traefik.http.routers.link-router-external.entrypoints=websecure
+      - traefik.http.routers.link-router-external.tls=${TRAEFIK_TLS_ENABLE:-true}
+      - traefik.http.routers.link-router-external.priority=100
+      - traefik.http.routers.link-router-external.service=link-router
+
+      # Local .lab and IP access (HTTP with redirect)
+      - "traefik.http.routers.link-router-local-http.rule=(Host(`home.${LAB_DOMAIN}`) || Host(`${HOST_IP}`)) && PathPrefix(`/go/`)"
+      - traefik.http.routers.link-router-local-http.entrypoints=web
+      - traefik.http.routers.link-router-local-http.priority=200
+      - traefik.http.routers.link-router-local-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.link-router-local-http.service=link-router
+      
+      # Local .lab and IP access (HTTPS)
+      - "traefik.http.routers.link-router-local.rule=(Host(`home.${LAB_DOMAIN}`) || Host(`${HOST_IP}`)) && PathPrefix(`/go/`)"
+      - traefik.http.routers.link-router-local.entrypoints=websecure
+      - traefik.http.routers.link-router-local.priority=200
+      - traefik.http.routers.link-router-local.service=link-router
+      - traefik.http.routers.link-router-local.tls=true
+
+      # Service definition
+      - traefik.http.services.link-router.loadbalancer.server.port=8080
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
+
   # =============================================================================
   # PI-HOLE DNSMASQ INIT - GENERATE PORTABLE LOCAL DNS RULES
   # =============================================================================

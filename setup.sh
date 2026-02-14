@@ -25,6 +25,7 @@ SKIP_PULL=false
 SKIP_CLOUDFLARE=false
 SKIP_CERTS=false
 DRY_RUN=false
+FORCE_RECONFIGURE=false
 
 # Show usage
 show_usage() {
@@ -43,6 +44,7 @@ OPTIONS:
     --skip-pull             Skip image pulling
     --skip-cloudflare       Skip Cloudflare Tunnel setup
     --skip-certs            Skip certificate generation
+    --reconfigure           Force full configuration wizard (ignore existing .env)
     --dry-run               Show what would be done without executing
     --validate              Validate configuration without starting services
     --status                Show current deployment status
@@ -57,6 +59,13 @@ EXAMPLES:
 
     # Quick setup with defaults
     $0 --quick
+
+    # Add more services to existing setup
+    $0
+    # (Detects existing .env and only updates profiles)
+
+    # Reconfigure everything from scratch
+    $0 --reconfigure
 
     # Setup without Cloudflare
     $0 --skip-cloudflare
@@ -114,6 +123,10 @@ parse_args() {
                 ;;
             --skip-certs)
                 SKIP_CERTS=true
+                shift
+                ;;
+            --reconfigure)
+                FORCE_RECONFIGURE=true
                 shift
                 ;;
             --dry-run)
@@ -234,25 +247,26 @@ check_prerequisites() {
 show_welcome() {
     clear
     echo ""
-    echo "${CYAN}╔══════════════════════════════════════════════════════════════════╗${NC}"
-    echo "${CYAN}║                                                                  ║${NC}"
-    echo "${CYAN}║${NC}        ${BOLD}WeekendStack Interactive Setup Script v$VERSION${NC}         ${CYAN}║${NC}"
-    echo "${CYAN}║                                                                  ║${NC}"
-    echo "${CYAN}╚══════════════════════════════════════════════════════════════════╝${NC}"
+    echo -e "${CYAN}╔══════════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${CYAN}║                                                                  ║${NC}"
+    echo -e "${CYAN}║${NC}        ${BOLD}WeekendStack Interactive Setup Script v$VERSION${NC}         ${CYAN}║${NC}"
+    echo -e "${CYAN}║                                                                  ║${NC}"
+    echo -e "${CYAN}╚══════════════════════════════════════════════════════════════════╝${NC}"
     echo ""
     echo "This script will help you set up your self-hosted infrastructure with:"
     echo ""
-    echo "  • 65+ open-source services across 9 categories"
+    echo "  • 65+ open-source services across 7 core profiles"
     echo "  • Local HTTPS with automatic certificate generation"
     echo "  • Optional Cloudflare Tunnel for external access"
     echo "  • Secure credential generation"
-    echo "  • Profile-based deployment (AI, Dev, Productivity, etc.)"
+    echo "  • Profile-based deployment with incremental layering"
+    echo "  • Foundation-first approach (Core → Networking → Add more)"
     echo ""
     
     if [[ "$SETUP_MODE" == "quick" ]]; then
-        echo "Running in ${BOLD}QUICK MODE${NC} - using defaults where possible"
+        echo -e "Running in ${BOLD}QUICK MODE${NC} - using defaults where possible"
     else
-        echo "Running in ${BOLD}INTERACTIVE MODE${NC} - you can customize all settings"
+        echo -e "Running in ${BOLD}INTERACTIVE MODE${NC} - you can customize all settings"
     fi
     
     echo ""
@@ -265,20 +279,46 @@ show_welcome() {
             log_info "Setup cancelled by user"
             exit 0
         fi
+        clear
     fi
 }
 
 # Main setup workflow
 main_setup() {
-    log_header "WeekendStack Setup Starting"
+    # Export configuration flags
+    export FORCE_RECONFIGURE
+    
+    local total_steps=13
+    local current_step=0
+    
+    # Helper to show progress
+    show_setup_progress() {
+        current_step=$((current_step + 1))
+        clear
+        echo ""
+        echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo -e "${BOLD}${CYAN}  Setup Progress: Step $current_step of $total_steps - $1${NC}"
+        echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo ""
+    }
     
     # 1. Check prerequisites
+    show_setup_progress "Checking Prerequisites"
     if ! check_prerequisites; then
         log_error "Prerequisites check failed. Please fix errors and try again."
         exit 1
     fi
     
+    # Clear screen and show profile selection
+    if [[ "$SETUP_MODE" == "interactive" ]] && ! $DRY_RUN; then
+        echo ""
+        echo "Press Enter to continue to profile selection..."
+        read -r
+        clear
+    fi
+    
     # 2. Select profiles
+    show_setup_progress "Selecting Service Profiles"
     local selected_profiles=()
     if [[ "$SETUP_MODE" == "quick" ]]; then
         selected_profiles=($(select_profiles_quick))
@@ -288,81 +328,148 @@ main_setup() {
     
     export SELECTED_PROFILES=("${selected_profiles[@]}")
     
-    # 3. Check system resources
-    local resources=($(estimate_resources "${selected_profiles[@]}"))
-    local required_memory=${resources[0]}
-    local required_disk=${resources[1]}
+    # Clear screen after selection
+    clear
     
-    if ! check_system_resources "$required_memory" "$required_disk"; then
-        log_error "Insufficient system resources"
-        exit 1
-    fi
-    
-    # 4. Docker registry authentication
+    # 3. Docker registry authentication
+    show_setup_progress "Docker Authentication"
     if ! $SKIP_AUTH; then
         if [[ "$SETUP_MODE" == "quick" ]]; then
             log_info "Skipping Docker authentication in quick mode (use --interactive for auth)"
         else
             setup_docker_auth || log_warn "Docker authentication failed or skipped"
+            clear
         fi
+    else
+        log_info "Skipping Docker authentication (--skip-auth)"
     fi
     
-    # 5. Generate environment configuration
+    # 4. Generate environment configuration
+    show_setup_progress "Environment Configuration"
     if [[ "$SETUP_MODE" == "quick" ]]; then
         generate_env_quick "${selected_profiles[@]}"
     else
         generate_env_interactive "${selected_profiles[@]}"
     fi
     
-    # 6. Validate .env file
+    # 5. Validate .env file
+    show_setup_progress "Validating Configuration"
     log_step "Validating environment configuration..."
-    if ! "$SCRIPT_DIR/tools/validate-env.sh" 2>&1 | grep -q "All checks passed"; then
-        log_warn "Environment validation found issues"
+    
+    # Run validation and capture both output AND exit code (disable set -e temporarily)
+    local validation_output
+    local validation_exit_code=0
+    set +e  # Temporarily disable exit on error
+    validation_output=$("$SCRIPT_DIR/tools/validate-env.sh" 2>&1)
+    validation_exit_code=$?
+    set -e  # Re-enable exit on error
+    
+    if [[ $validation_exit_code -eq 0 ]]; then
+        log_success "Environment validation passed"
+    else
+        echo ""
+        log_warn "Environment validation found issues:"
+        echo ""
+        echo "$validation_output"
+        echo ""
+        
+        # Check if errors or just warnings
+        local has_errors=false
+        if echo "$validation_output" | grep -q "error(s)"; then
+            has_errors=true
+        fi
+        
         if [[ "$SETUP_MODE" == "interactive" ]]; then
-            if ! prompt_yes_no "Continue anyway?" "n"; then
+            if $has_errors; then
+                if ! prompt_yes_no "Validation found errors. Continue anyway?" "n"; then
+                    log_error "Setup aborted due to validation errors"
+                    exit 1
+                fi
+            else
+                log_info "Validation warnings are acceptable, continuing..."
+            fi
+        else
+            # In quick mode, abort on errors but continue on warnings
+            if $has_errors; then
+                log_error "Setup aborted due to validation errors (use --interactive to override)"
                 exit 1
+            else
+                log_info "Validation warnings are acceptable, continuing..."
             fi
         fi
-    else
-        log_success "Environment validation passed"
     fi
     
-    # 7. Create directories
-    setup_all_directories "${selected_profiles[@]}"
+    # 6. Create directories
+    show_setup_progress "Creating Directory Structure"
+    if ! setup_all_directories "${selected_profiles[@]}"; then
+        log_error "Failed to create directory structure"
+        exit 1
+    fi
     
-    # 8. Create Docker networks
-    create_docker_networks
+    # 7. Create Docker networks
+    show_setup_progress "Creating Docker Networks"
+    if ! create_docker_networks; then
+        log_error "Failed to create Docker networks"
+        exit 1
+    fi
     
-    # 9. Create Docker volumes
-    create_docker_volumes
+    # 8. Create Docker volumes
+    show_setup_progress "Creating Docker Volumes"
+    if ! create_docker_volumes; then
+        log_error "Failed to create Docker volumes"
+        exit 1
+    fi
     
-    # 10. Certificate setup
+    # 9. Certificate setup
+    show_setup_progress "Setting Up SSL Certificates"
     if ! $SKIP_CERTS; then
-        setup_certificates || log_warn "Certificate setup incomplete"
+        setup_certificates || log_warn "Certificate setup incomplete (continuing anyway)"
+    else
+        log_info "Skipping certificate setup (--skip-certs)"
     fi
     
-    # 11. Cloudflare Tunnel setup
+    # 10. Cloudflare Tunnel setup
+    show_setup_progress "Cloudflare Tunnel Configuration"
     if ! $SKIP_CLOUDFLARE && [[ "$SETUP_MODE" == "interactive" ]]; then
         setup_cloudflare_tunnel || log_warn "Cloudflare Tunnel setup skipped"
+    else
+        log_info "Skipping Cloudflare Tunnel setup"
     fi
     
-    # 12. Pull Docker images
+    # 11. Pull Docker images
+    show_setup_progress "Pulling Docker Images"
     if ! $SKIP_PULL; then
-        pull_images "${selected_profiles[@]}"
+        if ! pull_images "${selected_profiles[@]}"; then
+            log_error "Failed to pull Docker images"
+            exit 1
+        fi
+    else
+        log_info "Skipping image pull (--skip-pull)"
     fi
     
-    # 13. Run init containers
+    # 12. Run init containers
+    show_setup_progress "Running Initialization Containers"
     local init_containers=($(get_init_containers_for_profiles "${selected_profiles[@]}"))
     if [[ ${#init_containers[@]} -gt 0 ]]; then
-        run_init_containers "${init_containers[@]}"
+        if ! run_init_containers "${init_containers[@]}"; then
+            log_warn "Some init containers failed (continuing anyway)"
+        fi
+    else
+        log_info "No initialization containers needed"
     fi
     
-    # 14. Generate setup summary
-    generate_setup_summary "${selected_profiles[@]}"
+    # 13. Generate setup summary
+    show_setup_progress "Generating Setup Summary"
+    if ! generate_setup_summary "${selected_profiles[@]}"; then
+        log_warn "Failed to generate summary (continuing anyway)"
+    fi
     
-    # 15. Ask to start services
+    # Ask to start services
+    echo ""
+    echo -e "${BOLD}${GREEN}Setup Complete!${NC}"
     echo ""
     if prompt_yes_no "Start WeekendStack services now?" "y"; then
+        clear
         start_services_with_profiles "${selected_profiles[@]}"
         display_summary_to_console
     else
@@ -399,6 +506,7 @@ pull_images() {
         if ! prompt_yes_no "Continue anyway?" "y"; then
             exit 1
         fi
+        clear
     fi
 }
 

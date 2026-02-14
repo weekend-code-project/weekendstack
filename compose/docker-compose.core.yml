@@ -1,8 +1,18 @@
 # =============================================================================
 # CORE AI DEV STACK - BASE CONFIGURATION  
 # =============================================================================
-# This file contains the essential infrastructure services
-# Additional services are defined in separate compose files
+# This file contains the essential foundation services
+#
+# Core services:
+# - Glance: Dashboard / Start Page
+# - Dozzle: Real-time log viewer (essential troubleshooting)
+# - Speedtest Tracker: Internet speed monitoring
+#
+# Additional development services are defined in separate compose files
+#
+# Usage:
+#   docker compose --profile core up -d
+# =============================================================================
 
 networks:
   core-network:
@@ -15,7 +25,7 @@ volumes:
   # Core service databases
   coder-db-data:
   gitea-db-data:
-  vaultwarden-data:
+  speedtest-data:
 
 services:
   # =============================================================================
@@ -25,57 +35,6 @@ services:
   # Config: ./config/glance/glance.yml
   # Local: http://home.lab (Traefik) or http://192.168.2.50:8080
   # =============================================================================
-  link-router:
-    build:
-      context: ./config/link-router
-    container_name: link-router
-    restart: unless-stopped
-    profiles:
-      - all
-      - core
-    environment:
-      HOST_IP: ${HOST_IP:-192.168.2.50}
-      LAB_DOMAIN: ${LAB_DOMAIN:-lab}
-      BASE_DOMAIN: ${BASE_DOMAIN}
-      LAB_SCHEME: ${LAB_SCHEME:-http}
-      EXTERNAL_SCHEME: ${EXTERNAL_SCHEME:-https}
-      FORCE_LINK_MODE: ${FORCE_LINK_MODE:-}
-      PORT: 8080
-    networks:
-      - shared-network
-    labels:
-      # Glance Configuration
-      - glance.parent=glance
-      - glance.name=Link Router
-      
-      # Traefik Configuration
-      - traefik.enable=true
-      
-      # External HTTPS (Tunnel / public)
-      - traefik.http.routers.link-router-external.rule=(Host(`home.${BASE_DOMAIN}`) || Host(`glance.${LAB_DOMAIN:-lab}`) || Host(`glance.${BASE_DOMAIN}`)) && PathPrefix(`/go/`)
-      - traefik.http.routers.link-router-external.entrypoints=websecure
-      - traefik.http.routers.link-router-external.tls=${TRAEFIK_TLS_ENABLE:-true}
-      - traefik.http.routers.link-router-external.priority=100
-      - traefik.http.routers.link-router-external.service=link-router
-
-      # Local .lab and IP access (HTTP with redirect)
-      - "traefik.http.routers.link-router-local-http.rule=(Host(`home.${LAB_DOMAIN}`) || Host(`${HOST_IP}`)) && PathPrefix(`/go/`)"
-      - traefik.http.routers.link-router-local-http.entrypoints=web
-      - traefik.http.routers.link-router-local-http.priority=200
-      - traefik.http.routers.link-router-local-http.middlewares=redirect-to-https@file
-      - traefik.http.routers.link-router-local-http.service=link-router
-      
-      # Local .lab and IP access (HTTPS)
-      - "traefik.http.routers.link-router-local.rule=(Host(`home.${LAB_DOMAIN}`) || Host(`${HOST_IP}`)) && PathPrefix(`/go/`)"
-      - traefik.http.routers.link-router-local.entrypoints=websecure
-      - traefik.http.routers.link-router-local.priority=200
-      - traefik.http.routers.link-router-local.service=link-router
-      - traefik.http.routers.link-router-local.tls=true
-
-      # Service definition
-      - traefik.http.services.link-router.loadbalancer.server.port=8080
-      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
-
   glance:
     image: glanceapp/glance:latest
     container_name: glance
@@ -165,11 +124,14 @@ services:
       - "description=Glance - Dashboard / Start Page"
 
   # =============================================================================
-  # VAULTWARDEN - Password Manager (Bitwarden Compatible)
+  # DOZZLE - Real-time Docker Log Viewer
   # =============================================================================
-  vaultwarden:
-    image: vaultwarden/server:latest
-    container_name: vaultwarden
+  # Lightweight, web-based Docker log viewer. No database required.
+  # Essential for troubleshooting services
+  # =============================================================================
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: dozzle
     networks:
       - core-network
       - shared-network
@@ -177,54 +139,103 @@ services:
       - all
       - core
     ports:
-      - "${VAULTWARDEN_PORT:-8222}:80"
+      - "${DOZZLE_PORT:-9999}:8080"
     environment:
-      # Use HTTP for local access - the web vault will work with both HTTP and HTTPS
-      DOMAIN: "http://${HOST_IP}:8222"
-      SIGNUPS_ALLOWED: ${VAULTWARDEN_SIGNUPS_ALLOWED:-true}
-      ADMIN_TOKEN: ${VAULTWARDEN_ADMIN_TOKEN:-}
-      WEBSOCKET_ENABLED: "true"
+      DOZZLE_LEVEL: info
+      DOZZLE_TAILSIZE: 300
     volumes:
-      - type: volume
-        source: vaultwarden-data
-        target: /data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     restart: unless-stopped
     deploy:
       resources:
         limits:
-          memory: ${VAULTWARDEN_MEMORY_LIMIT:-256m}
+          memory: 128m
     labels:
       # Glance Configuration
-      - glance.id=vaultwarden
+      - glance.id=dozzle
       - glance.group=Core
-      - glance.name=Vaultwarden
-      - glance.icon=si:vaultwarden
-      - glance.url=/go/vaultwarden
-      - glance.description=Password Manager
+      - glance.name=Dozzle
+      - glance.icon=si:logstash
+      - glance.url=/go/dozzle
+      - glance.description=Log Viewer
       
       # Traefik Configuration
       - traefik.enable=true
       
-      # External domain (HTTPS via Cloudflare)
-      - traefik.http.routers.vaultwarden-external.entrypoints=websecure
-      - traefik.http.routers.vaultwarden-external.rule=Host(`vaultwarden.${BASE_DOMAIN}`) || Host(`vault.${BASE_DOMAIN}`)
-      - traefik.http.routers.vaultwarden-external.tls=true
-      - traefik.http.routers.vaultwarden-external.service=vaultwarden
-      
       # Local .lab domain (HTTP)
-      - traefik.http.routers.vaultwarden-lab-http.entrypoints=web
-      - traefik.http.routers.vaultwarden-lab-http.rule=Host(`vaultwarden.${LAB_DOMAIN}`) || Host(`vault.${LAB_DOMAIN}`)
-      - traefik.http.routers.vaultwarden-lab-http.middlewares=redirect-to-https@file
-      - traefik.http.routers.vaultwarden-lab-http.service=vaultwarden
+      - traefik.http.routers.dozzle-lab-http.entrypoints=web
+      - traefik.http.routers.dozzle-lab-http.rule=Host(`dozzle.${LAB_DOMAIN}`)
+      - traefik.http.routers.dozzle-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.dozzle-lab-http.service=dozzle
       
       # Local .lab domain (HTTPS)
-      - traefik.http.routers.vaultwarden-lab.entrypoints=websecure
-      - traefik.http.routers.vaultwarden-lab.rule=Host(`vaultwarden.${LAB_DOMAIN}`) || Host(`vault.${LAB_DOMAIN}`)
-      - traefik.http.routers.vaultwarden-lab.tls=true
-      - traefik.http.routers.vaultwarden-lab.service=vaultwarden
+      - traefik.http.routers.dozzle-lab.entrypoints=websecure
+      - traefik.http.routers.dozzle-lab.rule=Host(`dozzle.${LAB_DOMAIN}`)
+      - traefik.http.routers.dozzle-lab.tls=true
+      - traefik.http.routers.dozzle-lab.service=dozzle
       
       # Service definition
-      - traefik.http.services.vaultwarden.loadbalancer.server.port=80
+      - traefik.http.services.dozzle.loadbalancer.server.port=8080
       - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
-
+  # =============================================================================
+  # SPEEDTEST TRACKER - Internet Speed Monitor  
+  # =============================================================================
+  # Web UI with scheduled tests and API for Glance widget
+  # Essential for monitoring network performance
+  # Requires one-time setup: http://speedtest.lab
+  # Default: admin@example.com / password
+  # =============================================================================
+  speedtest-tracker:
+    image: lscr.io/linuxserver/speedtest-tracker:latest
+    container_name: speedtest-tracker
+    networks:
+      - core-network
+      - shared-network
+    profiles:
+      - all
+      - core
+    ports:
+      - "${SPEEDTEST_PORT:-8765}:80"
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: ${TZ:-America/New_York}
+      DB_CONNECTION: sqlite
+      APP_KEY: base64:02KsGT9QvDav6HUStRvjqDjUqFKa96RDS7SibKfZ1VI=
+      APP_URL: http://${HOST_IP}:${SPEEDTEST_PORT:-8765}
+      SPEEDTEST_SCHEDULE: ${SPEEDTEST_SCHEDULE:-0 * * * *}
+    volumes:
+      - speedtest-data:/config
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: ${SPEEDTEST_MEMORY_LIMIT:-512m}
+    labels:
+      # Glance Configuration
+      - glance.id=speedtest
+      - glance.group=Core
+      - glance.name=Speedtest Tracker
+      - glance.icon=si:speedtest
+      - glance.url=/go/speedtest
+      - glance.description=Internet Speed Monitor
+      
+      # Traefik Configuration
+      - traefik.enable=true
+      
+      # Local .lab domain (HTTP)
+      - traefik.http.routers.speedtest-lab-http.entrypoints=web
+      - traefik.http.routers.speedtest-lab-http.rule=Host(`speedtest.${LAB_DOMAIN}`)
+      - traefik.http.routers.speedtest-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.speedtest-lab-http.service=speedtest
+      
+      # Local .lab domain (HTTPS)
+      - traefik.http.routers.speedtest-lab.entrypoints=websecure
+      - traefik.http.routers.speedtest-lab.rule=Host(`speedtest.${LAB_DOMAIN}`)
+      - traefik.http.routers.speedtest-lab.tls=true
+      - traefik.http.routers.speedtest-lab.service=speedtest
+      
+      # Service definition
+      - traefik.http.services.speedtest.loadbalancer.server.port=80
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}

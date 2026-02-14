@@ -16,8 +16,6 @@
 #   1 = Validation errors found
 # ============================================================================
 
-set -e
-
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -88,8 +86,9 @@ REQUIRED_VARS=(
 
 EMPTY_REQUIRED=0
 for var in "${REQUIRED_VARS[@]}"; do
-    VALUE=$(grep "^${var}=" .env | cut -d'=' -f2- | tr -d ' ')
-    if [ -z "$VALUE" ] || [ "$VALUE" = "#" ]; then
+    # Extract value and strip comments before processing
+    VALUE=$(grep "^${var}=" .env | cut -d'=' -f2- | sed 's/#.*//' | tr -d ' ')
+    if [ -z "$VALUE" ]; then
         echo -e "${RED}  ✗ Required field is empty: $var${NC}"
         EMPTY_REQUIRED=$((EMPTY_REQUIRED + 1))
         ERRORS=$((ERRORS + 1))
@@ -143,7 +142,7 @@ if grep -q "<GENERATE>" .env; then
 fi
 
 if grep -q "example.com" .env && ! grep -q "#.*example.com" .env; then
-    VALUE=$(grep "^DEFAULT_ADMIN_EMAIL=" .env | cut -d'=' -f2 | tr -d ' ')
+    VALUE=$(grep "^DEFAULT_ADMIN_EMAIL=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
     if [ "$VALUE" = "admin@example.com" ]; then
         echo -e "${YELLOW}  ⚠ DEFAULT_ADMIN_EMAIL still set to example.com${NC}"
         WARNINGS=$((WARNINGS + 1))
@@ -160,7 +159,7 @@ echo ""
 # ============================================================================
 echo -e "${BLUE}📁 Checking file paths...${NC}"
 
-FILES_BASE_DIR=$(grep "^FILES_BASE_DIR=" .env | cut -d'=' -f2 | tr -d ' ')
+FILES_BASE_DIR=$(grep "^FILES_BASE_DIR=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
 if [ "$FILES_BASE_DIR" != "./files" ]; then
     echo -e "${YELLOW}  ⚠ FILES_BASE_DIR is set to: $FILES_BASE_DIR${NC}"
     echo "    Recommended: Start with ./files for initial testing"
@@ -185,7 +184,7 @@ if [ "$FILES_BASE_DIR" = "./files" ]; then
 fi
 
 # Check HOST_IP format
-HOST_IP=$(grep "^HOST_IP=" .env | cut -d'=' -f2 | tr -d ' ')
+HOST_IP=$(grep "^HOST_IP=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
 if ! [[ $HOST_IP =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
     echo -e "${RED}  ✗ HOST_IP format invalid: $HOST_IP${NC}"
     echo "    Expected: xxx.xxx.xxx.xxx"
@@ -195,7 +194,7 @@ else
 fi
 
 # Check timezone format
-TZ=$(grep "^TZ=" .env | cut -d'=' -f2 | tr -d ' ')
+TZ=$(grep "^TZ=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
 if [ -z "$TZ" ]; then
     echo -e "${YELLOW}  ⚠ TZ (timezone) not set${NC}"
     WARNINGS=$((WARNINGS + 1))
@@ -211,7 +210,7 @@ echo ""
 echo -e "${BLUE}🛡️  Security recommendations:${NC}"
 
 # Check if default admin password is actually set
-DEFAULT_ADMIN_PASS=$(grep "^DEFAULT_ADMIN_PASSWORD=" .env | cut -d'=' -f2 | tr -d ' ')
+DEFAULT_ADMIN_PASS=$(grep "^DEFAULT_ADMIN_PASSWORD=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
 if [ ${#DEFAULT_ADMIN_PASS} -lt 32 ]; then
     echo -e "${YELLOW}  ⚠ Consider using longer passwords (32+ chars)${NC}"
 fi

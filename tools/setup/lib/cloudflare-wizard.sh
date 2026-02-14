@@ -5,7 +5,7 @@
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 check_cloudflare_config() {
-    local stack_dir="${SCRIPT_DIR}/.."
+    local stack_dir="${SCRIPT_DIR}"
     local config_file="$stack_dir/config/cloudflare/config.yml"
     local creds_pattern="$stack_dir/config/cloudflare/*.json"
     
@@ -70,13 +70,13 @@ setup_cloudflare_tunnel() {
 setup_tunnel_with_cli() {
     log_header "Cloudflare Tunnel Setup (CLI Method)"
     
-    local stack_dir="${SCRIPT_DIR}/.."
+    local stack_dir="${SCRIPT_DIR}"
     local tunnel_name
     local domain
     
     # Get domain from .env
     if [[ -f "$stack_dir/.env" ]]; then
-        domain=$(grep "^BASE_DOMAIN=" "$stack_dir/.env" | cut -d'=' -f2)
+        domain=$(grep "^BASE_DOMAIN=" "$stack_dir/.env" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
     fi
     
     if [[ -z "$domain" || "$domain" == "localhost" ]]; then
@@ -188,7 +188,7 @@ setup_tunnel_manual() {
         return 1
     fi
     
-    local stack_dir="${SCRIPT_DIR}/.."
+    local stack_dir="${SCRIPT_DIR}"
     local tunnel_name
     local tunnel_id
     local domain
@@ -203,7 +203,7 @@ setup_tunnel_manual() {
     
     # Get domain
     if [[ -f "$stack_dir/.env" ]]; then
-        domain=$(grep "^BASE_DOMAIN=" "$stack_dir/.env" | cut -d'=' -f2)
+        domain=$(grep "^BASE_DOMAIN=" "$stack_dir/.env" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
     fi
     
     if [[ -z "$domain" || "$domain" == "localhost" ]]; then
@@ -214,8 +214,13 @@ setup_tunnel_manual() {
     # Get credentials
     echo ""
     echo "How do you want to provide credentials?"
+    echo ""
+    echo "  1. JSON file path      - Provide path to downloaded credentials file"
+    echo "  2. Paste JSON content  - Copy/paste the JSON directly"
+    echo "  3. Tunnel token        - Use tunnel token (not yet supported)"
+    echo ""
     local creds_method
-    creds_method=$(prompt_select "Credentials method:" "JSON file path" "Paste JSON content" "Tunnel token")
+    creds_method=$(prompt_select "Select [1-3]:" "JSON file path" "Paste JSON content" "Tunnel token")
     
     case $creds_method in
         0) # File path
@@ -273,7 +278,7 @@ create_tunnel_config() {
     local tunnel_name="$1"
     local tunnel_id="$2"
     local domain="$3"
-    local stack_dir="${SCRIPT_DIR}/.."
+    local stack_dir="${SCRIPT_DIR}"
     local config_file="$stack_dir/config/cloudflare/config.yml"
     
     log_step "Creating tunnel configuration..."
@@ -305,7 +310,7 @@ update_env_cloudflare() {
     local tunnel_name="$1"
     local tunnel_id="$2"
     local domain="$3"
-    local stack_dir="${SCRIPT_DIR}/.."
+    local stack_dir="${SCRIPT_DIR}"
     local env_file="$stack_dir/.env"
     
     if [[ ! -f "$env_file" ]]; then
@@ -348,14 +353,14 @@ display_tunnel_status() {
 }
 
 test_tunnel_connectivity() {
-    local stack_dir="${SCRIPT_DIR}/.."
+    local stack_dir="${SCRIPT_DIR}"
     
     if [[ ! -f "$stack_dir/.env" ]]; then
         log_error "No .env file found"
         return 1
     fi
     
-    local domain=$(grep "^BASE_DOMAIN=" "$stack_dir/.env" | cut -d'=' -f2)
+    local domain=$(grep "^BASE_DOMAIN=" "$stack_dir/.env" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
     
     if [[ -z "$domain" || "$domain" == "localhost" ]]; then
         log_warn "No external domain configured"

@@ -71,37 +71,58 @@ get_files_subdirs_for_profiles() {
 create_base_directories() {
     local stack_dir="${SCRIPT_DIR}/.."
     
-    log_step "Creating base directory structure..."
+    log_step "Checking base directory structure..."
+    
+    local created=0
+    local exists=0
     
     for dir in "${REQUIRED_BASE_DIRS[@]}"; do
         local full_path="$stack_dir/$dir"
         if [[ ! -d "$full_path" ]]; then
             mkdir -p "$full_path"
-            log_success "Created: $dir/"
+            created=$((created + 1))
         else
-            log_info "Exists: $dir/"
+            exists=$((exists + 1))
         fi
     done
+    
+    if [[ $created -gt 0 ]]; then
+        log_success "Created $created base directories"
+    fi
+    if [[ $exists -gt 0 ]]; then
+        log_info "$exists base directories already exist"
+    fi
 }
 
 create_config_directories() {
     local stack_dir="${SCRIPT_DIR}/.."
     
-    log_step "Creating configuration directories..."
+    log_step "Checking configuration directories..."
+    
+    local created=0
+    local exists=0
     
     for subdir in "${CONFIG_SUBDIRS[@]}"; do
         local full_path="$stack_dir/config/$subdir"
         if [[ ! -d "$full_path" ]]; then
             mkdir -p "$full_path"
-            log_success "Created: config/$subdir/"
+            created=$((created + 1))
+        else
+            exists=$((exists + 1))
         fi
     done
+    
+    if [[ $created -gt 0 ]]; then
+        log_success "Created $created configuration directories"
+    fi
+    if [[ $exists -gt 0 ]]; then
+        log_info "$exists configuration directories already exist"
+    fi
     
     # Special permissions for certain directories
     local traefik_auth_dir="$stack_dir/config/traefik/auth"
     if [[ -d "$traefik_auth_dir" ]]; then
         chmod 755 "$traefik_auth_dir"
-        log_info "Set permissions: config/traefik/auth/ (755)"
     fi
 }
 
@@ -109,7 +130,7 @@ create_files_directories() {
     local stack_dir="${SCRIPT_DIR}/.."
     local profiles=("$@")
     
-    log_step "Creating user files directories..."
+    log_step "Checking user files directories..."
     
     # Get FILES_BASE_DIR from .env if it exists
     local files_base_dir="$stack_dir/files"
@@ -128,14 +149,25 @@ create_files_directories() {
     fi
     
     local subdirs=($(get_files_subdirs_for_profiles "${profiles[@]}"))
+    local created=0
+    local exists=0
     
     for subdir in "${subdirs[@]}"; do
         local full_path="$files_base_dir/$subdir"
         if [[ ! -d "$full_path" ]]; then
             mkdir -p "$full_path"
-            log_success "Created: files/$subdir/"
+            created=$((created + 1))
+        else
+            exists=$((exists + 1))
         fi
     done
+    
+    if [[ $created -gt 0 ]]; then
+        log_success "Created $created user files directories"
+    fi
+    if [[ $exists -gt 0 ]]; then
+        log_info "$exists user files directories already exist"
+    fi
     
     # Set ownership to PUID:PGID from .env
     if [[ -f "$stack_dir/.env" ]]; then
@@ -143,9 +175,8 @@ create_files_directories() {
         local pgid=$(grep "^PGID=" "$stack_dir/.env" | cut -d'=' -f2)
         
         if [[ -n "$puid" && -n "$pgid" ]]; then
-            log_step "Setting file ownership to $puid:$pgid..."
             chown -R "$puid:$pgid" "$files_base_dir" 2>/dev/null || \
-                log_warn "Could not set ownership (may need sudo)"
+                log_info "Ownership will be set when services start"
         fi
     fi
 }

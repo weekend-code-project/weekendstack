@@ -5,19 +5,19 @@
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 generate_setup_summary() {
-    local stack_dir="${SCRIPT_DIR}/.."
+    local stack_dir="${SCRIPT_DIR}"
     local profiles=("$@")
     local summary_file="$stack_dir/SETUP_SUMMARY.md"
     
     log_header "Generating Setup Summary"
     
     # Get configuration from .env
-    local lab_domain=$(grep "^LAB_DOMAIN=" "$stack_dir/.env" | cut -d'=' -f2 || echo "lab")
-    local base_domain=$(grep "^BASE_DOMAIN=" "$stack_dir/.env" | cut -d'=' -f2 || echo "localhost")
-    local host_ip=$(grep "^HOST_IP=" "$stack_dir/.env" | cut -d'=' -f2 || echo "192.168.1.100")
-    local admin_user=$(grep "^DEFAULT_ADMIN_USER=" "$stack_dir/.env" | cut -d'=' -f2 || echo "admin")
-    local admin_email=$(grep "^DEFAULT_ADMIN_EMAIL=" "$stack_dir/.env" | cut -d'=' -f2 || echo "admin@example.com")
-    local admin_password=$(grep "^DEFAULT_ADMIN_PASSWORD=" "$stack_dir/.env" | cut -d'=' -f2 || echo "<check .env file>")
+    local lab_domain=$(grep "^LAB_DOMAIN=" "$stack_dir/.env" | cut -d'=' -f2- | sed 's/#.*//' | tr -d ' ' || echo "lab")
+    local base_domain=$(grep "^BASE_DOMAIN=" "$stack_dir/.env" | cut -d'=' -f2- | sed 's/#.*//' | tr -d ' ' || echo "localhost")
+    local host_ip=$(grep "^HOST_IP=" "$stack_dir/.env" | cut -d'=' -f2- | sed 's/#.*//' | tr -d ' ' || echo "192.168.1.100")
+    local admin_user=$(grep "^DEFAULT_ADMIN_USER=" "$stack_dir/.env" | cut -d'=' -f2- | sed 's/#.*//' | tr -d ' ' || echo "admin")
+    local admin_email=$(grep "^DEFAULT_ADMIN_EMAIL=" "$stack_dir/.env" | cut -d'=' -f2- | sed 's/#.*//' | tr -d ' ' || echo "admin@example.com")
+    local admin_password=$(grep "^DEFAULT_ADMIN_PASSWORD=" "$stack_dir/.env" | cut -d'=' -f2- | sed 's/#.*//' | tr -d ' ' || echo "<check .env file>")
     
     # Generate summary file
     cat > "$summary_file" << 'EOF'
@@ -354,8 +354,8 @@ add_external_service_urls() {
 }
 
 display_summary_to_console() {
-    local stack_dir="${SCRIPT_DIR}/.."
-    local lab_domain=$(grep "^LAB_DOMAIN=" "$stack_dir/.env" | cut -d'=' -f2 || echo "lab")
+    local stack_dir="${SCRIPT_DIR}"
+    local lab_domain=$(grep "^LAB_DOMAIN=" "$stack_dir/.env" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ' || echo "lab")
     
     echo ""
     log_header "Setup Complete!"
@@ -369,7 +369,7 @@ display_summary_to_console() {
     echo ""
     echo "${BOLD}Next Steps:${NC}"
     echo "  1. Trust CA certificate (see SETUP_SUMMARY.md)"
-    echo "  2. Set DNS to Pi-hole ($(grep "^HOST_IP=" "$stack_dir/.env" | cut -d'=' -f2))"
+    echo "  2. Set DNS to Pi-hole ($(grep "^HOST_IP=" "$stack_dir/.env" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' '))"
     echo "  3. Create first user accounts on services"
     echo "  4. Change default passwords!"
     echo ""

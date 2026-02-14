@@ -12,16 +12,23 @@ declare -A REGISTRY_URLS=(
 )
 
 docker_login_hub() {
-    log_step "Authenticating with Docker Hub..."
+    log_step "Docker Hub Authentication"
     
-    if docker info 2>/dev/null | grep -q "Username:"; then
-        log_info "Already authenticated with Docker Hub"
-        return 0
+    # Check if already authenticated by looking at config file
+    local config_file="$HOME/.docker/config.json"
+    if [[ -f "$config_file" ]] && grep -q '"docker.io"\|"https://index.docker.io"' "$config_file" 2>/dev/null; then
+        local docker_user=$(docker info 2>/dev/null | grep "Username:" | awk '{print $2}')
+        if [[ -n "$docker_user" ]]; then
+            log_info "Already authenticated with Docker Hub as: $docker_user"
+            return 0
+        fi
     fi
     
     echo ""
-    echo "Docker Hub credentials (for rate limit protection):"
-    echo "If you don't have an account, press Enter to skip."
+    echo "Enter your Docker Hub credentials (FREE account works fine):"
+    echo "  • Create account at: https://hub.docker.com/signup"
+    echo "  • This is ONLY for rate limit protection on public images"
+    echo "  • Press Enter with empty username to skip"
     echo ""
     
     local username
@@ -30,7 +37,7 @@ docker_login_hub() {
     username=$(prompt_input "Docker Hub username" "")
     
     if [[ -z "$username" ]]; then
-        log_warn "Skipping Docker Hub authentication (may hit rate limits)"
+        log_warn "Skipped Docker Hub authentication"
         return 0
     fi
     
@@ -38,7 +45,7 @@ docker_login_hub() {
     echo ""
     
     if [[ -z "$password" ]]; then
-        log_warn "Skipping Docker Hub authentication (no password provided)"
+        log_warn "Skipped Docker Hub authentication (no password provided)"
         return 0
     fi
     
@@ -175,12 +182,43 @@ docker_login_private() {
 setup_docker_auth() {
     log_header "Docker Registry Authentication"
     
-    echo "WeekendStack uses images from multiple registries:"
-    echo "  • Docker Hub (docker.io) - Most common images"
-    echo "  • GitHub Container Registry (ghcr.io) - Some services"
-    echo "  • Google Container Registry (gcr.io) - Optional services"
+    # First, check current authentication status
+    echo "Checking current Docker authentication status..."
     echo ""
-    echo "Authentication helps avoid rate limits and access private images."
+    
+    local config_file="$HOME/.docker/config.json"
+    local already_authenticated=false
+    
+    if [[ -f "$config_file" ]]; then
+        if grep -q '"auths"' "$config_file" 2>/dev/null; then
+            echo "✓ Docker configuration found"
+            if grep -q '"docker.io"\|"https://index.docker.io"' "$config_file" 2>/dev/null; then
+                local docker_user=$(docker info 2>/dev/null | grep "Username:" | awk '{print $2}')
+                if [[ -n "$docker_user" ]]; then
+                    echo "✓ Already authenticated with Docker Hub as: $docker_user"
+                    already_authenticated=true
+                fi
+            fi
+        fi
+    fi
+    
+    echo ""
+    
+    if $already_authenticated; then
+        if ! prompt_yes_no "Docker Hub authentication already configured. Reconfigure?" "n"; then
+            log_info "Using existing Docker authentication"
+            return 0
+        fi
+        echo ""
+    fi
+    
+    echo "WeekendStack pulls images from Docker Hub (docker.io)."
+    echo ""
+    echo "Docker Hub has rate limits:"
+    echo "  • Anonymous users: 100 pulls per 6 hours"
+    echo "  • Authenticated users: 200 pulls per 6 hours (FREE account)"
+    echo ""
+    echo "Authenticating with Docker Hub is RECOMMENDED to avoid rate limit errors."
     echo ""
     
     if ! check_command docker; then
@@ -188,17 +226,21 @@ setup_docker_auth() {
         return 1
     fi
     
-    # Docker Hub (recommended)
-    docker_login_hub || true
+    # Docker Hub (recommended for rate limits)
+    if prompt_yes_no "Authenticate with Docker Hub to avoid rate limits?" "y"; then
+        docker_login_hub || log_warn "Docker Hub authentication failed"
+    else
+        log_warn "Skipping Docker Hub auth - you may hit rate limits during image pulls"
+    fi
     
-    # GitHub Container Registry (optional)
-    docker_login_ghcr || true
-    
-    # Google Container Registry (optional)
-    docker_login_gcr || true
-    
-    # Private registry (optional)
-    docker_login_private || true
+    # Optional: Other registries (most users won't need these)
+    echo ""
+    if prompt_yes_no "Do you need to authenticate with other registries? (GitHub, Google, private)" "n"; then
+        echo ""
+        docker_login_ghcr || true
+        docker_login_gcr || true
+        docker_login_private || true
+    fi
     
     log_success "Docker authentication setup complete"
     return 0

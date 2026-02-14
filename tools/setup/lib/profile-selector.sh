@@ -6,34 +6,30 @@ source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 # Profile definitions (from profile-matrix.md)
 declare -A PROFILES=(
-    ["all"]="All services (default profile)"
-    ["core"]="Essential services (Glance, Vaultwarden, Link Router)"
-    ["ai"]="AI & LLM services (Ollama, Open WebUI, etc.)"
+    ["all"]="All services (everything including personal & automation)"
+    ["core"]="Foundation (Glance, Link Router, Dozzle, Speedtest, Certs)"
+    ["networking"]="Network infrastructure (Traefik, Pi-hole, Cloudflare)"
+    ["monitoring"]="Full monitoring suite (Portainer, Uptime Kuma, Netdata)"
+    ["productivity"]="Business apps (Vaultwarden, Paperless, NocoDB, N8N)"
     ["dev"]="Development tools (Coder, Gitea, GitLab)"
-    ["productivity"]="Productivity apps (Paperless, N8N, NocoDB, etc.)"
-    ["personal"]="Personal services (Mealie, Firefly, Immich, wger)"
-    ["media"]="Media services (Kavita, Navidrome)"
-    ["monitoring"]="Monitoring tools (Portainer, Uptime Kuma, etc.)"
-    ["automation"]="Home automation (Home Assistant, Node-RED)"
-    ["networking"]="Network services (Traefik, Pi-hole, Cloudflare)"
+    ["ai"]="AI & LLM services (Ollama, Open WebUI, LocalAI)"
+    ["media"]="Media management (Kavita, Navidrome, Immich)"
 )
 
 # Service counts per profile (approximate)
 declare -A PROFILE_SERVICE_COUNTS=(
     ["all"]="65+"
-    ["core"]="3"
-    ["ai"]="11"
+    ["core"]="5"
+    ["networking"]="5"
+    ["monitoring"]="8"
+    ["productivity"]="25"
     ["dev"]="8"
-    ["productivity"]="24"
-    ["personal"]="7"
-    ["media"]="2"
-    ["monitoring"]="9"
-    ["automation"]="3"
-    ["networking"]="6"
+    ["ai"]="8-11"
+    ["media"]="6"
 )
 
 # Profile order for display
-PROFILE_ORDER=("all" "core" "networking" "ai" "dev" "productivity" "personal" "media" "monitoring" "automation")
+PROFILE_ORDER=("all" "core" "networking" "monitoring" "productivity" "dev" "ai" "media")
 
 show_profile_matrix() {
     log_header "Available Service Profiles"
@@ -51,66 +47,176 @@ show_profile_matrix() {
     echo ""
 }
 
+# Detect existing profile selection from .env file
+detect_existing_profiles() {
+    if [[ -f "$SCRIPT_DIR/.env" ]] && grep -q "^SELECTED_PROFILES=" "$SCRIPT_DIR/.env"; then
+        grep "^SELECTED_PROFILES=" "$SCRIPT_DIR/.env" | cut -d'=' -f2 | tr -d '"'
+    fi
+}
+
+# Prompt user to add to existing profiles or replace
+prompt_layer_mode() {
+    local existing_profiles="$1"
+    
+    {
+        echo ""
+        log_info "Previous profile selection detected: $existing_profiles"
+        echo ""
+        echo "Setup mode:"
+        echo "  1) Add to existing profiles (layer on more services)"
+        echo "  2) Replace with new selection"
+        echo ""
+    } >&2
+    
+    while true; do
+        read -p "Choose mode (1 or 2): " -r mode_choice </dev/tty
+        if [[ "$mode_choice" == "1" ]]; then
+            echo "add"
+            return
+        elif [[ "$mode_choice" == "2" ]]; then
+            echo "replace"
+            return
+        else
+            echo "Invalid choice. Please enter 1 or 2." >&2
+        fi
+    done
+}
+
+# Merge profiles (deduplicate)
+merge_profiles() {
+    local -a all_profiles=("$@")
+    
+    # Use associative array to deduplicate
+    declare -A seen
+    local -a unique=()
+    
+    for profile in "${all_profiles[@]}"; do
+        if [[ -z "${seen[$profile]}" ]]; then
+            seen[$profile]=1
+            unique+=("$profile")
+        fi
+    done
+    
+    echo "${unique[@]}"
+}
+
 select_profiles_interactive() {
-    show_profile_matrix
+    # Check for existing profiles
+    local existing_profiles_str=$(detect_existing_profiles)
+    local layer_mode="replace"
+    local -a existing_profiles=()
     
-    echo "Select deployment profiles:"
-    echo "  • Use arrow keys to navigate"
-    echo "  • Press SPACE to toggle selection"
-    echo "  • Press 'a' to select all, 'n' to select none"
-    echo "  • Press ENTER when done"
-    echo ""
-    
-    local profile_list=()
-    for profile in "${PROFILE_ORDER[@]}"; do
-        profile_list+=("$profile - ${PROFILE_SERVICE_COUNTS[$profile]} services")
-    done
-    
-    local selected_indices
-    selected_indices=$(prompt_multiselect "Choose profiles:" "${profile_list[@]}")
-    
-    local selected_profiles=()
-    for idx in $selected_indices; do
-        selected_profiles+=("${PROFILE_ORDER[$idx]}")
-    done
-    
-    if [[ ${#selected_profiles[@]} -eq 0 ]]; then
-        log_warn "No profiles selected, defaulting to 'all'"
-        selected_profiles=("all")
+    if [[ -n "$existing_profiles_str" ]]; then
+        existing_profiles=($existing_profiles_str)
+        layer_mode=$(prompt_layer_mode "$existing_profiles_str")
     fi
     
-    echo ""
-    log_success "Selected profiles: ${selected_profiles[*]}"
-    echo ""
+    # Display to stderr so it shows on terminal (stdout is captured by command substitution)
+    {
+        log_header "Service Profile Selection"
+        
+        if [[ "$layer_mode" == "add" ]]; then
+            echo "Current profiles: ${existing_profiles[*]}"
+            echo "Select additional profiles to add:"
+        else
+            echo "Available deployment profiles:"
+        fi
+        echo ""
+        printf "  %d) %-12s - %-8s %s\n" 0 "all" "${PROFILE_SERVICE_COUNTS[all]}" "${PROFILES[all]}"
+        echo ""
+        for i in $(seq 1 $((${#PROFILE_ORDER[@]} - 1))); do
+            local profile="${PROFILE_ORDER[$i]}"
+            printf "  %d) %-12s - %-8s %s\n" "$i" "$profile" "${PROFILE_SERVICE_COUNTS[$profile]}" "${PROFILES[$profile]}"
+        done
+        echo ""
+        echo "Recommended starter: 1 2 (core + networking)"
+        echo "Layer on more anytime by re-running setup."
+        echo ""
+        echo "Enter profile numbers (space-separated) or press Enter for 'all':"
+        echo "Example: '1 2' for core + networking"
+        echo ""
+    } >&2
     
-    echo "${selected_profiles[@]}"
+    read -p "Selection: " -r user_input </dev/tty
+    
+    local selected_indices
+    if [[ -z "$user_input" ]]; then
+        selected_indices="0"  # Default to 'all' which is index 0
+        {
+            log_info "No selection made, defaulting to 'all' profiles"
+        } >&2
+    else
+        selected_indices="$user_input"
+    fi
+    
+    local -a new_profiles=()
+    for idx in $selected_indices; do
+        # Skip if idx is not a number
+        if [[ "$idx" =~ ^[0-9]+$ ]] && [[ $idx -lt ${#PROFILE_ORDER[@]} ]]; then
+            new_profiles+=("${PROFILE_ORDER[$idx]}")
+        fi
+    done
+    
+    if [[ ${#new_profiles[@]} -eq 0 ]]; then
+        {
+            log_warn "No valid profiles selected, defaulting to 'all'"
+        } >&2
+        new_profiles=("all")
+    fi
+    
+    # Merge with existing if in add mode
+    local -a final_profiles=()
+    if [[ "$layer_mode" == "add" ]]; then
+        final_profiles=($(merge_profiles "${existing_profiles[@]}" "${new_profiles[@]}"))
+    else
+        final_profiles=("${new_profiles[@]}")
+    fi
+    
+    {
+        echo ""
+        if [[ "$layer_mode" == "add" ]]; then
+            log_success "Combined profiles: ${final_profiles[*]}"
+        else
+            log_success "Selected profiles: ${final_profiles[*]}"
+        fi
+        echo ""
+    } >&2
+    
+    # Echo to stdout for capture by calling script
+    echo "${final_profiles[@]}"
 }
 
 select_profiles_quick() {
     log_header "Quick Profile Selection"
     
     echo "Available quick deployment options:"
-    echo "  1) Minimal      - Core services only (Glance, Vaultwarden)"
-    echo "  2) Developer    - Core + Dev + AI services"
-    echo "  3) Productivity - Core + Productivity + Personal services"
-    echo "  4) Complete     - All services (default)"
-    echo "  5) Custom       - Choose specific profiles"
+    echo "  1) Foundation    - Core + Networking (recommended starter)"
+    echo "  2) Developer     - Foundation + Dev + AI services"
+    echo "  3) Productivity  - Foundation + Productivity + Media"
+    echo "  4) Complete      - All services (includes personal & automation)"
+    echo "  5) Custom        - Choose specific profiles"
     echo ""
     
     local choice
-    choice=$(prompt_select "Select deployment type:" "Minimal" "Developer" "Productivity" "Complete" "Custom")
+    # In DRY_RUN mode or if stdin is not a terminal, default to Foundation
+    if [[ "${DRY_RUN:-false}" == "true" ]] || ! [[ -t 0 ]]; then
+        log_info "Using default Foundation setup (core + networking)"
+        choice=0
+    else
+        choice=$(prompt_select "Select deployment type:" "Foundation" "Developer" "Productivity" "Complete" "Custom")
+    fi
     
     local selected_profiles=()
     
     case $choice in
-        0) # Minimal
+        0) # Foundation
             selected_profiles=("core" "networking")
             ;;
         1) # Developer
             selected_profiles=("core" "networking" "dev" "ai")
             ;;
         2) # Productivity
-            selected_profiles=("core" "networking" "productivity" "personal")
+            selected_profiles=("core" "networking" "productivity" "media")
             ;;
         3) # Complete
             selected_profiles=("all")
@@ -274,6 +380,7 @@ check_system_resources() {
         if ! prompt_yes_no "Continue anyway?" "n"; then
             return 1
         fi
+        clear
     fi
     
     return 0
@@ -281,4 +388,5 @@ check_system_resources() {
 
 # Export functions
 export -f show_profile_matrix select_profiles_interactive select_profiles_quick
+export -f detect_existing_profiles prompt_layer_mode merge_profiles
 export -f get_services_for_profiles estimate_resources check_system_resources

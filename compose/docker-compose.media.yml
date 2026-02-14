@@ -2,10 +2,9 @@
 # MEDIA SERVICES - DOCKER COMPOSE CONFIGURATION
 # ====================================================================
 # This file contains media-focused services:
+# - Immich: Photo & video management (Google Photos alternative)
 # - Kavita: eBook/manga/comic reader
 # - Navidrome: Music streaming server
-#
-# Note: Immich photo management moved to docker-compose.personal.yml
 #
 # Usage:
 #   docker compose --profile media up -d
@@ -19,6 +18,179 @@ networks:
     external: false
 
 services:
+  # ====================================================================
+  # IMMICH - Photo & Video Management (Google Photos Alternative)
+  # ====================================================================
+  # Self-hosted photo and video backup solution with mobile apps
+  # NFS-backed storage support for external NAS/server storage
+  # Includes ML for face recognition and object detection
+  # ====================================================================
+
+  immich-server:
+    image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
+    container_name: immich-server
+    networks:
+      - media-network
+      - shared-network
+    profiles:
+      - all
+      - media
+    ports:
+      - "${IMMICH_PORT:-2283}:2283"
+    volumes:
+      # NFS-backed upload storage (Docker-managed)
+      - immich-nfs-uploads:/usr/src/app/upload
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      DB_HOSTNAME: immich-db
+      DB_USERNAME: ${IMMICH_DB_USER:-immich}
+      DB_PASSWORD: ${IMMICH_DB_PASSWORD:-immich_password_2024}
+      DB_DATABASE_NAME: ${IMMICH_DB_NAME:-immich}
+      IMMICH_MEDIA_IMAGEMAGICK_HEIC: ${IMMICH_MEDIA_IMAGEMAGICK_HEIC:-true}
+      REDIS_HOSTNAME: immich-redis
+    depends_on:
+      - immich-redis
+      - immich-db
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: ${IMMICH_MEMORY_LIMIT:-2g}
+    labels:
+      # Glance Configuration
+      - glance.id=immich
+      - glance.group=Media
+      - glance.name=Immich
+      - glance.icon=si:immich
+      - glance.url=/go/immich
+      - glance.description=Photo & Video Management
+      
+      # Traefik Configuration
+      - traefik.enable=true
+      
+      # HTTP router with redirect
+      - traefik.http.routers.immich-lab-http.entrypoints=web
+      - traefik.http.routers.immich-lab-http.rule=Host(`immich.${LAB_DOMAIN}`)
+      - traefik.http.routers.immich-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.immich-lab-http.service=immich
+      
+      # HTTPS router for .lab domain
+      - traefik.http.routers.immich-lab.entrypoints=websecure
+      - traefik.http.routers.immich-lab.rule=Host(`immich.${LAB_DOMAIN}`)
+      - traefik.http.routers.immich-lab.tls=true
+      - traefik.http.routers.immich-lab.service=immich
+      
+      # HTTPS router for external domain
+      - traefik.http.routers.immich.entrypoints=websecure
+      - traefik.http.routers.immich.rule=Host(`immich.${BASE_DOMAIN}`)
+      - traefik.http.routers.immich.tls=true
+      - traefik.http.routers.immich.service=immich
+      
+      # Service definition
+      - traefik.http.services.immich.loadbalancer.server.port=2283
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
+
+  # IMMICH Machine Learning - CPU Version (Default)
+  immich-machine-learning:
+    image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-release}
+    container_name: immich-ml
+    labels:
+      - glance.parent=immich
+      - glance.name=Machine Learning
+    networks:
+      - media-network
+    profiles:
+      - all
+      - media
+    volumes:
+      - type: volume
+        source: immich-model-cache
+        target: /cache
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: ${IMMICH_ML_MEMORY_LIMIT:-4g}
+
+  # IMMICH Machine Learning - GPU Version (Optional)
+  # Enable GPU acceleration for faster face recognition and object detection
+  # Set IMMICH_GPU_ENABLE=true in .env and use --profile gpu-media
+  immich-machine-learning-gpu:
+    image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-release}-cuda
+    container_name: immich-ml-gpu
+    labels:
+      - glance.parent=immich
+      - glance.name=ML (GPU)
+    networks:
+      - media-network
+    profiles:
+      - gpu-media
+    volumes:
+      - type: volume
+        source: immich-model-cache
+        target: /cache
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: ${IMMICH_ML_MEMORY_LIMIT:-4g}
+        reservations:
+          devices:
+            - driver: nvidia
+              count: ${GPU_COUNT:-1}
+              capabilities: [gpu]
+
+  # IMMICH Redis - Cache and job queue
+  immich-redis:
+    image: redis:6.2-alpine
+    container_name: immich-redis
+    labels:
+      - glance.parent=immich
+      - glance.name=Redis
+    networks:
+      - media-network
+    profiles:
+      - all
+      - media
+    volumes:
+      - type: volume
+        source: immich-redis-data
+        target: /data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # IMMICH Database - PostgreSQL with pgvecto-rs
+  immich-db:
+    image: tensorchord/pgvecto-rs:pg14-v0.2.0
+    container_name: immich-db
+    labels:
+      - glance.parent=immich
+      - glance.name=Database
+    networks:
+      - media-network
+    profiles:
+      - all
+      - media
+    environment:
+      POSTGRES_USER: ${IMMICH_DB_USER:-immich}
+      POSTGRES_PASSWORD: ${IMMICH_DB_PASSWORD:-immich_password_2024}
+      POSTGRES_DB: ${IMMICH_DB_NAME:-immich}
+      POSTGRES_INITDB_ARGS: '--data-checksums'
+    volumes:
+      - type: volume
+        source: immich-db-data
+        target: /var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${IMMICH_DB_USER:-immich} -d ${IMMICH_DB_NAME:-immich}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # ====================================================================
   # KAVITA - eBook/Manga/Comic Reader
   # ====================================================================
@@ -169,11 +341,23 @@ services:
       - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
 volumes:
+  immich-model-cache:
+  immich-redis-data:
+  immich-db-data:
   kavita-data:
   navidrome-data:
   
   # NFS Volumes (Optional - see service documentation for setup)
   # Uncomment and configure NFS_SERVER_IP and service-specific NFS path variables in .env
+  
+  # Immich NFS-backed uploads
+  immich-nfs-uploads:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: "addr=${NFS_SERVER_IP:-192.168.2.3},rw,nfsvers=4,nolock"
+      device: ":${NFS_PHOTOS_PATH:-/mnt/user/files/immich}"
+  
   kavita-nfs-library:
     driver: local
     driver_opts:

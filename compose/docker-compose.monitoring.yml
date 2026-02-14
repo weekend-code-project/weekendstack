@@ -4,13 +4,16 @@
 # Services for monitoring, logging, backups, and infrastructure management
 #
 # Included services:
-# - Dozzle: Real-time Docker log viewer
-# - Watchtower: Automatic container updates
+# - Cockpit: Server management UI
+# - Watchtower: Automatic container updates  
 # - Uptime Kuma: Service uptime monitoring
 # - Netdata: Real-time system monitoring
 # - Netbox: Network documentation/IPAM
 # - Duplicati: Backup solution
-# - Komodo: Container management
+# - Portainer: Container management
+# - WUD: Container update notifications
+#
+# Note: Dozzle (logs) and Speedtest moved to core profile (docker-compose.core.yml)
 #
 # Usage: docker compose -f docker-compose.monitoring.yml --profile monitoring up -d
 # =============================================================================
@@ -31,7 +34,6 @@ volumes:
   duplicati-config:
   duplicati-backups:
   portainer-data:
-  speedtest-data:
 
 services:
   # =============================================================================
@@ -94,59 +96,6 @@ services:
       - traefik.http.services.cockpit.loadbalancer.server.port=9090
       - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
-  # =============================================================================
-  # DOZZLE - Real-time Docker Log Viewer
-  # =============================================================================
-  # Lightweight, web-based Docker log viewer. No database required.
-  # =============================================================================
-  dozzle:
-    image: amir20/dozzle:latest
-    container_name: dozzle
-    networks:
-      - monitoring-network
-      - shared-network
-    profiles:
-      - all
-      - monitoring
-    ports:
-      - "${DOZZLE_PORT:-9999}:8080"
-    environment:
-      DOZZLE_LEVEL: info
-      DOZZLE_TAILSIZE: 300
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 128m
-    labels:
-      # Glance Configuration
-      - glance.id=dozzle
-      - glance.group=Monitoring
-      - glance.name=Dozzle
-      - glance.icon=si:logstash
-      - glance.url=/go/dozzle
-      - glance.description=Log Viewer
-      - glance.hide=true
-      # Traefik Configuration
-      - traefik.enable=true
-      
-      # Local .lab domain (HTTP)
-      - traefik.http.routers.dozzle-lab-http.entrypoints=web
-      - traefik.http.routers.dozzle-lab-http.rule=Host(`dozzle.${LAB_DOMAIN}`)
-      - traefik.http.routers.dozzle-lab-http.middlewares=redirect-to-https@file
-      - traefik.http.routers.dozzle-lab-http.service=dozzle
-      
-      # Local .lab domain (HTTPS)
-      - traefik.http.routers.dozzle-lab.entrypoints=websecure
-      - traefik.http.routers.dozzle-lab.rule=Host(`dozzle.${LAB_DOMAIN}`)
-      - traefik.http.routers.dozzle-lab.tls=true
-      - traefik.http.routers.dozzle-lab.service=dozzle
-      
-      # Service definition
-      - traefik.http.services.dozzle.loadbalancer.server.port=8080
-      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
   # =============================================================================
   # WHAT'S UP DOCKER (WUD) - Container Update Manager
@@ -211,73 +160,6 @@ services:
       
       # Service definition
       - traefik.http.services.wud.loadbalancer.server.port=3000
-      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
-
-  # =============================================================================
-  # SPEEDTEST TRACKER - Internet Speed Monitor
-  # =============================================================================
-  # Tracks your internet speed over time with scheduled tests
-  # Default: Tests run every hour, stores historical data
-  # =============================================================================
-  # =============================================================================
-  # SPEEDTEST TRACKER - Internet Speed Monitoring
-  # =============================================================================
-  # Web UI with scheduled tests and API for Glance widget
-  # Requires one-time setup: http://192.168.2.50:8765/admin/login
-  # Default: admin@example.com / password
-  # =============================================================================
-  speedtest-tracker:
-    image: lscr.io/linuxserver/speedtest-tracker:latest
-    container_name: speedtest-tracker
-    networks:
-      - monitoring-network
-      - shared-network
-    profiles:
-      - all
-      - monitoring
-    ports:
-      - "${SPEEDTEST_PORT:-8765}:80"
-    environment:
-      PUID: 1000
-      PGID: 1000
-      TZ: ${TZ:-America/New_York}
-      DB_CONNECTION: sqlite
-      APP_KEY: base64:02KsGT9QvDav6HUStRvjqDjUqFKa96RDS7SibKfZ1VI=
-      APP_URL: http://${HOST_IP}:${SPEEDTEST_PORT:-8765}
-      SPEEDTEST_SCHEDULE: ${SPEEDTEST_SCHEDULE:-0 * * * *}
-    volumes:
-      - speedtest-data:/config
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: ${SPEEDTEST_MEMORY_LIMIT:-512m}
-    labels:
-      # Glance Configuration
-      - glance.id=speedtest
-      - glance.group=Monitoring
-      - glance.name=Speedtest Tracker
-      - glance.icon=si:speedtest
-      - glance.url=/go/speedtest
-      - glance.description=Internet Speed Monitor
-      - glance.hide=true
-      # Traefik Configuration
-      - traefik.enable=true
-      
-      # Local .lab domain (HTTP)
-      - traefik.http.routers.speedtest-lab-http.entrypoints=web
-      - traefik.http.routers.speedtest-lab-http.rule=Host(`speedtest.${LAB_DOMAIN}`)
-      - traefik.http.routers.speedtest-lab-http.middlewares=redirect-to-https@file
-      - traefik.http.routers.speedtest-lab-http.service=speedtest
-      
-      # Local .lab domain (HTTPS)
-      - traefik.http.routers.speedtest-lab.entrypoints=websecure
-      - traefik.http.routers.speedtest-lab.rule=Host(`speedtest.${LAB_DOMAIN}`)
-      - traefik.http.routers.speedtest-lab.tls=true
-      - traefik.http.routers.speedtest-lab.service=speedtest
-      
-      # Service definition
-      - traefik.http.services.speedtest.loadbalancer.server.port=80
       - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
   # =============================================================================

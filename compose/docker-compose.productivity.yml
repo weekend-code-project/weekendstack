@@ -20,6 +20,73 @@ networks:
 
 services:
   # =============================================================================
+  # VAULTWARDEN - PASSWORD MANAGER
+  # =============================================================================
+  # Lightweight Bitwarden-compatible password manager
+  # Local: http://vaultwarden.lab or http://vault.lab
+  # External: https://vaultwarden.domain.com or https://vault.domain.com
+  # =============================================================================
+  vaultwarden:
+    image: vaultwarden/server:latest
+    container_name: vaultwarden
+    networks:
+      - productivity-network
+      - shared-network
+    profiles:
+      - all
+      - productivity
+    ports:
+      - "${VAULTWARDEN_PORT:-8222}:80"
+    environment:
+      # Use HTTP for local access - the web vault will work with both HTTP and HTTPS
+      DOMAIN: "http://${HOST_IP}:8222"
+      SIGNUPS_ALLOWED: ${VAULTWARDEN_SIGNUPS_ALLOWED:-true}
+      ADMIN_TOKEN: ${VAULTWARDEN_ADMIN_TOKEN:-}
+      WEBSOCKET_ENABLED: "true"
+    volumes:
+      - type: volume
+        source: vaultwarden-data
+        target: /data
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: ${VAULTWARDEN_MEMORY_LIMIT:-256m}
+    labels:
+      # Glance Configuration
+      - glance.id=vaultwarden
+      - glance.group=Productivity
+      - glance.name=Vaultwarden
+      - glance.icon=si:vaultwarden
+      - glance.url=/go/vaultwarden
+      - glance.description=Password Manager
+      
+      # Traefik Configuration
+      - traefik.enable=true
+      
+      # External domain (HTTPS via Cloudflare)
+      - traefik.http.routers.vaultwarden-external.entrypoints=websecure
+      - traefik.http.routers.vaultwarden-external.rule=Host(`vaultwarden.${BASE_DOMAIN}`) || Host(`vault.${BASE_DOMAIN}`)
+      - traefik.http.routers.vaultwarden-external.tls=true
+      - traefik.http.routers.vaultwarden-external.service=vaultwarden
+      
+      # Local .lab domain (HTTP)
+      - traefik.http.routers.vaultwarden-lab-http.entrypoints=web
+      - traefik.http.routers.vaultwarden-lab-http.rule=Host(`vaultwarden.${LAB_DOMAIN}`) || Host(`vault.${LAB_DOMAIN}`)
+      - traefik.http.routers.vaultwarden-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.vaultwarden-lab-http.service=vaultwarden
+      
+      # Local .lab domain (HTTPS)
+      - traefik.http.routers.vaultwarden-lab.entrypoints=websecure
+      - traefik.http.routers.vaultwarden-lab.rule=Host(`vaultwarden.${LAB_DOMAIN}`) || Host(`vault.${LAB_DOMAIN}`)
+      - traefik.http.routers.vaultwarden-lab.tls=true
+      - traefik.http.routers.vaultwarden-lab.service=vaultwarden
+      
+      # Service definition
+      - traefik.http.services.vaultwarden.loadbalancer.server.port=80
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
+
+  # =============================================================================
   # NOCODB - AIRTABLE ALTERNATIVE
   # =============================================================================
   
@@ -1622,6 +1689,7 @@ services:
       - "description=ResourceSpace - Professional Digital Asset Management"
 
 volumes:
+  vaultwarden-data:
   nocodb-db-data:
   n8n-db-data:
   paperless-db-data:

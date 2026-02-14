@@ -97,7 +97,6 @@ prompt_input() {
 
 prompt_password() {
     local prompt="$1"
-    local min_length="${2:-16}"
     local password
     local confirm
     
@@ -105,8 +104,8 @@ prompt_password() {
         read -r -s -p "$(echo -e ${CYAN}?${NC}) $prompt: " password
         echo ""
         
-        if [[ ${#password} -lt $min_length ]]; then
-            log_error "Password must be at least $min_length characters"
+        if [[ -z "$password" ]]; then
+            log_error "Password cannot be empty"
             continue
         fi
         

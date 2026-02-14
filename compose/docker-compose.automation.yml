@@ -1,11 +1,15 @@
 # =============================================================================
 # AUTOMATION SERVICES - HOME AUTOMATION AND IOT
 # =============================================================================
-# This file contains home automation services:
+# This file contains home automation services available only with 'all' profile:
 # - Home Assistant: Smart home automation platform
+# - Node-RED: Flow-based automation
+#
+# Note: These services are only available when using the 'all' profile,
+#       not as a standalone 'automation' profile option.
 #
 # Usage:
-#   docker compose --profile automation up -d
+#   docker compose --profile all up -d
 #
 # Data Storage:
 #   Configuration and state stored under ./data/homeassistant/
@@ -39,7 +43,6 @@ services:
       - automation-network
     profiles:
       - all
-      - automation
     volumes:
       - type: bind
         source: ${DATA_BASE_DIR:-./data}/homeassistant/config
@@ -81,7 +84,6 @@ services:
         condition: service_completed_successfully
     profiles:
       - all
-      - automation
     ports:
       - "${HOMEASSISTANT_PORT:-8123}:8123"
     environment:
@@ -158,7 +160,6 @@ services:
       - shared-network
     profiles:
       - all
-      - automation
     ports:
       - "${NODERED_PORT:-1880}:1880"
     environment:
