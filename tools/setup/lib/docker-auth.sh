@@ -19,7 +19,7 @@ check_docker_hub_limits() {
     if [[ -z "$token" ]] || [[ "$token" == "null" ]]; then
         echo "STATUS=unknown"
         echo "MESSAGE=Unable to check rate limit status"
-        return 1
+        return 0  # Non-fatal: rate limit check is informational only
     fi
     
     # Query rate limit headers
@@ -29,7 +29,7 @@ check_docker_hub_limits() {
     if [[ -z "$response" ]]; then
         echo "STATUS=unknown"
         echo "MESSAGE=Unable to check rate limit status"
-        return 1
+        return 0  # Non-fatal: rate limit check is informational only
     fi
     
     # Parse rate limit headers
@@ -79,8 +79,8 @@ is_rate_limited() {
     
     local remaining="${data[REMAINING]}"
     
-    if [[ "$remaining" == "unknown" ]]; then
-        return 1
+    if [[ "$remaining" == "unknown" ]] || [[ -z "$remaining" ]]; then
+        return 1  # Assume not rate limited if unknown
     fi
     
     # Consider rate limited if less than 10 pulls remaining
