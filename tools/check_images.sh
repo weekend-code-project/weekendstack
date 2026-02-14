@@ -5,6 +5,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export SCRIPT_DIR
 
 # Load libraries
 source "$SCRIPT_DIR/tools/setup/lib/common.sh"

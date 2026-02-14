@@ -2,11 +2,14 @@
 # Unit tests for image analyzer library
 # Tests image extraction, categorization, and analysis functions
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+TEST_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$TEST_SCRIPT_DIR/../../.." && pwd)"
 
 # Source test helpers
-source "$SCRIPT_DIR/../test_helpers.sh"
+source "$TEST_SCRIPT_DIR/../test_helpers.sh"
+
+# The image-analyzer library expects SCRIPT_DIR to be the project root
+export SCRIPT_DIR="$PROJECT_ROOT"
 
 # Source image analyzer
 source "$PROJECT_ROOT/tools/setup/lib/image-analyzer.sh"

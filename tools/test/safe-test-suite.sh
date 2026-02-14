@@ -4,8 +4,12 @@
 
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+TEST_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$TEST_SCRIPT_DIR/../.." && pwd)"
+
+# The image-analyzer library expects SCRIPT_DIR to be the project root
+export SCRIPT_DIR="$PROJECT_ROOT"
+export PROJECT_ROOT
 
 # Colors
 RED='\033[0;31m'
@@ -51,7 +55,7 @@ main() {
     
     # Initial rate limit check
     log_header "Initial Rate Limit Check"
-    "$SCRIPT_DIR/check-rate-limit.sh"
+    "$TEST_SCRIPT_DIR/check-rate-limit.sh"
     
     # Test 1: Image Analysis
     log_header "Test 1: Image Analyzer Functions"
@@ -181,7 +185,7 @@ main() {
     # Final rate limit check
     log_header "Final Rate Limit Check"
     echo "Verifying no pulls were consumed during testing..."
-    "$SCRIPT_DIR/check-rate-limit.sh"
+    "$TEST_SCRIPT_DIR/check-rate-limit.sh"
     
     # Summary
     log_header "Test Suite Complete"
