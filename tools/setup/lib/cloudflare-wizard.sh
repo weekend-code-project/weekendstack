@@ -31,7 +31,11 @@ show_cloudflare_intro() {
     echo "Requirements:"
     echo "  • Cloudflare account (free tier is fine)"
     echo "  • Domain name added to Cloudflare"
-    echo "  • Cloudflared CLI installed (optional, can use web UI)"
+    echo ""
+    echo "Setup Methods:"
+    echo "  1. API (Recommended) - Fully automated, requires API token"
+    echo "  2. CLI - Uses cloudflared command-line tool (if installed)"
+    echo "  3. Manual - You create tunnel in dashboard, provide credentials"
     echo ""
 }
 
@@ -51,20 +55,50 @@ setup_cloudflare_tunnel() {
         return 0
     fi
     
-    # Check if cloudflared is installed
-    local use_cli=false
+    # Offer setup method selection
+    echo ""
+    echo "Choose setup method:"
+    echo ""
+    echo "  1. API (Recommended) - Automated tunnel creation via API"
+    echo "     Requires: Cloudflare API token"
+    echo "     Creates tunnel, credentials, and DNS automatically"
+    echo ""
+    echo "  2. CLI - Uses cloudflared command-line tool"
+    echo "     Requires: cloudflared CLI installed locally"
+    echo "     Semi-automated with local commands"
+    echo ""
+    echo "  3. Manual - You handle tunnel creation"
+    echo "     Requires: Manual tunnel creation in dashboard"
+    echo "     You provide tunnel ID and credentials"
+    echo ""
+    
+    local method
     if check_command cloudflared; then
-        log_success "cloudflared CLI detected"
-        if prompt_yes_no "Use cloudflared CLI for setup?" "y"; then
-            use_cli=true
-        fi
+        log_info "cloudflared CLI detected on system"
+        method=$(prompt_select "Select method [1-3]:" "API (Recommended)" "CLI" "Manual")
+    else
+        method=$(prompt_select "Select method [1-3]:" "API (Recommended)" "Manual")
     fi
     
-    if $use_cli; then
-        setup_tunnel_with_cli
-    else
-        setup_tunnel_manual
-    fi
+    case $method in
+        0) # API method
+            setup_tunnel_with_api
+            ;;
+        1) # CLI method (or Manual if no CLI)
+            if check_command cloudflared; then
+                setup_tunnel_with_cli
+            else
+                setup_tunnel_manual
+            fi
+            ;;
+        2) # Manual method
+            setup_tunnel_manual
+            ;;
+        *)
+            log_error "Invalid selection"
+            return 1
+            ;;
+    esac
 }
 
 setup_tunnel_with_cli() {
@@ -157,6 +191,129 @@ setup_tunnel_with_cli() {
     update_env_cloudflare "$tunnel_name" "$tunnel_id" "$domain"
     
     log_success "Cloudflare Tunnel setup complete!"
+    display_tunnel_status "$tunnel_name"
+}
+
+setup_tunnel_with_api() {
+    log_header "Cloudflare Tunnel Setup (API Method)"
+    
+    # Load API library
+    local api_lib="$(dirname "${BASH_SOURCE[0]}")/cloudflare-api.sh"
+    if [[ ! -f "$api_lib" ]]; then
+        log_error "API library not found: $api_lib"
+        return 1
+    fi
+    source "$api_lib"
+    
+    local stack_dir="${SCRIPT_DIR}"
+    local tunnel_name
+    local domain
+    
+    # Get domain from .env
+    if [[ -f "$stack_dir/.env" ]]; then
+        domain=$(grep "^BASE_DOMAIN=" "$stack_dir/.env" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+    fi
+    
+    if [[ -z "$domain" || "$domain" == "localhost" ]]; then
+        echo ""
+        log_warn "BASE_DOMAIN not set in .env or set to localhost"
+        domain=$(prompt_input "Domain name for tunnel (must be in your Cloudflare account)" "")
+        
+        if [[ -z "$domain" ]]; then
+            log_error "Domain name is required for Cloudflare Tunnel"
+            return 1
+        fi
+        
+        # Update .env
+        sed -i "s/^BASE_DOMAIN=.*/BASE_DOMAIN=$domain/" "$stack_dir/.env"
+    fi
+    
+    tunnel_name=$(prompt_input "Tunnel name" "weekendstack-tunnel")
+    
+    echo ""
+    log_step "API Token Configuration"
+    echo ""
+    echo "You need a Cloudflare API token with these permissions:"
+    echo "  • Account - Cloudflare Tunnel - Edit"
+    echo "  • Zone - DNS - Edit (for zone: $domain)"
+    echo ""
+    echo "Create token at: https://dash.cloudflare.com/profile/api-tokens"
+    echo ""
+    
+    # Check if API token already in .env
+    local api_token=""
+    if [[ -f "$stack_dir/.env" ]]; then
+        api_token=$(grep "^CLOUDFLARE_API_TOKEN=" "$stack_dir/.env" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+    fi
+    
+    if [[ -n "$api_token" ]]; then
+        log_info "Found existing API token in .env"
+        if ! prompt_yes_no "Use existing API token?" "y"; then
+            api_token=""
+        fi
+    fi
+    
+    if [[ -z "$api_token" ]]; then
+        api_token=$(prompt_input "Enter Cloudflare API token" "")
+        
+        if [[ -z "$api_token" ]]; then
+            log_warn "API token required for automated setup"
+            log_info "Falling back to manual method..."
+            echo ""
+            sleep 2
+            setup_tunnel_manual
+            return $?
+        fi
+        
+        # Save to .env
+        if grep -q "^CLOUDFLARE_API_TOKEN=" "$stack_dir/.env"; then
+            sed -i "s|^CLOUDFLARE_API_TOKEN=.*|CLOUDFLARE_API_TOKEN=$api_token|" "$stack_dir/.env"
+        else
+            echo "CLOUDFLARE_API_TOKEN=$api_token" >> "$stack_dir/.env"
+        fi
+    fi
+    
+    # Export for API library
+    export CLOUDFLARE_API_TOKEN="$api_token"
+    
+    echo ""
+    log_header "Creating Cloudflare Tunnel via API"
+    
+    # Run automated setup
+    local result
+    result=$(cf_setup_tunnel_automated "$tunnel_name" "$domain")
+    
+    if [[ $? -ne 0 ]]; then
+        log_error "Automated tunnel setup failed"
+        log_info "You can try the manual method instead"
+        return 1
+    fi
+    
+    # Parse result (format: tunnel_id|account_id)
+    local tunnel_id=$(echo "$result" | cut -d'|' -f1)
+    local account_id=$(echo "$result" | cut -d'|' -f2)
+    
+    # Create config.yml
+    create_tunnel_config "$tunnel_name" "$tunnel_id" "$domain"
+    
+    # Update .env with all Cloudflare settings
+    update_env_cloudflare "$tunnel_name" "$tunnel_id" "$domain"
+    
+    # Save account ID
+    if grep -q "^CLOUDFLARE_ACCOUNT_ID=" "$stack_dir/.env"; then
+        sed -i "s/^CLOUDFLARE_ACCOUNT_ID=.*/CLOUDFLARE_ACCOUNT_ID=$account_id/" "$stack_dir/.env"
+    else
+        echo "CLOUDFLARE_ACCOUNT_ID=$account_id" >> "$stack_dir/.env"
+    fi
+    
+    echo ""
+    log_success "Cloudflare Tunnel setup complete via API!"
+    echo ""
+    log_info "Tunnel created: $tunnel_name"
+    log_info "Tunnel ID: $tunnel_id"
+    log_info "DNS configured: *.$domain → ${tunnel_id}.cfargotunnel.com"
+    echo ""
+    
     display_tunnel_status "$tunnel_name"
 }
 
@@ -388,5 +545,5 @@ test_tunnel_connectivity() {
 
 # Export functions
 export -f check_cloudflare_config show_cloudflare_intro setup_cloudflare_tunnel
-export -f setup_tunnel_with_cli setup_tunnel_manual create_tunnel_config
+export -f setup_tunnel_with_cli setup_tunnel_with_api setup_tunnel_manual create_tunnel_config
 export -f update_env_cloudflare display_tunnel_status test_tunnel_connectivity

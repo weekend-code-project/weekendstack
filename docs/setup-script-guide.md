@@ -355,14 +355,54 @@ See [Certificate Trust Setup](#certificate-trust-setup) section for OS-specific 
 
 ### Step 10: Cloudflare Tunnel Setup (Optional)
 
-Configure external access via Cloudflare Tunnel:
+Configure external access via Cloudflare Tunnel. Three methods available:
 
 ```
 Set up Cloudflare Tunnel now? [Y/n]: y
 
-Use cloudflared CLI for setup? [Y/n]: y
+Choose setup method:
+
+  1. API (Recommended) - Automated tunnel creation via API
+     Requires: Cloudflare API token
+     Creates tunnel, credentials, and DNS automatically
+
+  2. CLI - Uses cloudflared command-line tool
+     Requires: cloudflared CLI installed locally
+     Semi-automated with local commands
+
+  3. Manual - You handle tunnel creation
+     Requires: Manual tunnel creation in dashboard
+     You provide tunnel ID and credentials
+
+Select method [1-3]: 1
+```
+
+#### API Method (Recommended)
+
+```
+Enter Cloudflare API token: xTj8F9sk3_AbC...
+✓ API token validated (Account ID: abc123...)
+
 Domain name for tunnel []: example.com
 Tunnel name [weekendstack-tunnel]: 
+
+Creating Cloudflare Tunnel via API
+✓ Created tunnel: weekendstack-tunnel (ID: abc123...)
+✓ Saved credentials to: config/cloudflare/abc123.json
+✓ Created config: config/cloudflare/config.yml
+✓ Created DNS record: *.example.com → abc123.cfargotunnel.com
+
+Cloudflare Tunnel setup complete via API!
+```
+
+**Create API Token**: https://dash.cloudflare.com/profile/api-tokens
+- Permissions: Account.Cloudflare Tunnel:Edit, Zone.DNS:Edit
+- See [Cloudflare API Setup Guide](cloudflare-api-setup.md)
+
+#### CLI Method
+
+```
+Select method [1-3]: 2
 
 Authenticating with Cloudflare...
 (Browser window opens for authentication)
@@ -375,7 +415,41 @@ Creating tunnel: weekendstack-tunnel
 ✓ Created wildcard DNS record: *.example.com
 ```
 
-See [Cloudflare Tunnel Setup](#cloudflare-tunnel-setup) for detailed instructions.
+**Requires**: `cloudflared` CLI installed
+
+#### Manual Method
+
+```
+Select method [1-3]: 3
+
+Follow these steps to create a Cloudflare Tunnel:
+  1. Go to Cloudflare Zero Trust Dashboard
+  2. Navigate to: Networks > Tunnels
+  3. Create tunnel, name it (e.g., 'weekendstack-tunnel')
+  4. Download credentials JSON
+
+Have you created the tunnel in Cloudflare dashboard? [y/N]: y
+
+Tunnel name [weekendstack-tunnel]: 
+Tunnel ID (UUID): abc-123-def-456
+
+How do you want to provide credentials?
+  1. JSON file path
+  2. Paste JSON content
+
+Select [1-2]: 1
+Path to credentials JSON file: ~/Downloads/tunnel-creds.json
+
+✓ Copied credentials file
+✓ Created config: config/cloudflare/config.yml
+
+Create DNS record manually:
+  Type: CNAME
+  Name: *.example.com
+  Target: abc-123.cfargotunnel.com
+```
+
+See [Cloudflare Tunnel Setup](../config/cloudflare/README.md) for detailed instructions.
 
 ### Step 11: Image Pulling
 
@@ -593,23 +667,57 @@ Validate changes:
 
 ## Cloudflare Tunnel Setup
 
-Two methods for Cloudflare Tunnel configuration:
+Three methods for Cloudflare Tunnel configuration:
 
-### Method 1: CLI-Based (Automated)
+### Method 1: API (Recommended) - Fully Automated ⭐
+
+Requirements:
+- Cloudflare account
+- Domain in Cloudflare
+- API token with Tunnel + DNS permissions
+
+**Create API Token**:
+1. Go to https://dash.cloudflare.com/profile/api-tokens
+2. Click "Create Token" → "Create Custom Token"
+3. Permissions:
+   - Account - Cloudflare Tunnel - Edit
+   - Zone - DNS - Edit (for your domain)
+4. Zone Resources: Include → Specific zone → [your-domain.com]
+5. Create and copy token (only shown once!)
+
+Steps (fully automated by script):
+1. Select API method in setup wizard
+2. Provide API token
+3. Enter domain name
+4. Script automatically:
+   - Creates tunnel (or detects existing)
+   - Generates credentials
+   - Creates config.yml
+   - Sets up wildcard DNS
+
+**Advantages**:
+- ✅ Fully automated, no manual steps
+- ✅ Works headlessly (no browser required)
+- ✅ Idempotent (can re-run safely)
+- ✅ No cloudflared CLI installation needed
+
+See [Cloudflare API Setup Guide](cloudflare-api-setup.md) for detailed walkthrough.
+
+### Method 2: CLI-Based (Semi-Automated)
 
 Requirements:
 - `cloudflared` CLI installed
 - Cloudflare account
 - Domain in Cloudflare
 
-Steps (automated by script):
+Steps (semi-automated by script):
 1. Authenticate with Cloudflare (browser)
 2. Create tunnel with name
 3. Generate credentials file
 4. Create DNS record
 5. Generate tunnel configuration
 
-### Method 2: Manual (Web Dashboard)
+### Method 3: Manual (Web Dashboard)
 
 Requirements:
 - Cloudflare account
@@ -625,7 +733,7 @@ Steps:
 7. Copy to `config/cloudflare/` directory
 8. Provide tunnel ID to setup script
 
-The script will guide you through both methods.
+The script will guide you through all three methods with interactive prompts.
 
 ### DNS Configuration
 

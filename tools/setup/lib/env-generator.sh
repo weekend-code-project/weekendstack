@@ -243,6 +243,36 @@ generate_env_interactive() {
                 log_error "Invalid domain format (e.g., example.com or sub.example.com)"
             fi
         done
+        
+        # Prompt for API token for automated setup
+        echo ""
+        echo -e "${BOLD}Cloudflare API Token (Optional):${NC}"
+        echo ""
+        echo "You can provide a Cloudflare API token for automated tunnel setup."
+        echo "This allows the setup script to automatically create and configure"
+        echo "your tunnel without manual steps."
+        echo ""
+        echo "Required permissions:"
+        echo "  • Account - Cloudflare Tunnel - Edit"
+        echo "  • Zone - DNS - Edit (for zone: $base_domain)"
+        echo ""
+        echo "Create token at: https://dash.cloudflare.com/profile/api-tokens"
+        echo ""
+        
+        if prompt_yes_no "Provide Cloudflare API token now?" "n"; then
+            local cf_api_token
+            cf_api_token=$(prompt_input "Cloudflare API token" "")
+            
+            if [[ -n "$cf_api_token" ]]; then
+                # Will be saved to .env
+                CLOUDFLARE_API_TOKEN="$cf_api_token"
+                log_success "API token saved - tunnel will be configured automatically"
+            else
+                log_info "Skipping API token - you can add it to .env later"
+            fi
+        else
+            log_info "Skipping API token - you can configure tunnel manually later"
+        fi
     else
         log_info "External access disabled - services will only be available on local network"
     fi
@@ -444,6 +474,12 @@ generate_env_interactive() {
     update_env_var "PGID" "$pgid" "$env_file"
     update_env_var "LAB_DOMAIN" "$lab_domain" "$env_file"
     update_env_var "BASE_DOMAIN" "$base_domain" "$env_file"
+    
+    # Set Cloudflare API token if provided
+    if [[ -n "${CLOUDFLARE_API_TOKEN:-}" ]]; then
+        update_env_var "CLOUDFLARE_API_TOKEN" "$CLOUDFLARE_API_TOKEN" "$env_file"
+    fi
+    
     update_env_var "DEFAULT_ADMIN_USER" "$admin_user" "$env_file"
     update_env_var "DEFAULT_ADMIN_EMAIL" "$admin_email" "$env_file"
     

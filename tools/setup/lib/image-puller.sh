@@ -98,7 +98,11 @@ show_pull_plan() {
     if [[ "$SETUP_MODE" == "interactive" ]]; then
         echo "This process may take several minutes depending on your connection."
         echo ""
-        read -p "Press Enter to begin pulling images..." -r
+        # Make read non-fatal in case stdin is unavailable
+        read -p "Press Enter to begin pulling images..." -r || {
+            echo "(Continuing automatically - stdin unavailable)"
+            sleep 2
+        }
         clear
     fi
 }

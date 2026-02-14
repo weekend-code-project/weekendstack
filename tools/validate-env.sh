@@ -258,6 +258,52 @@ echo -e "${GREEN}  ✓ Review Section 15 in .env for first-time setup guide${NC}
 echo ""
 
 # ============================================================================
+# Check Cloudflare Tunnel Configuration
+# ============================================================================
+echo -e "${BLUE}🌐 Checking Cloudflare Tunnel configuration...${NC}"
+
+CF_ENABLED=$(grep "^CLOUDFLARE_TUNNEL_ENABLED=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+CF_TUNNEL_ID=$(grep "^CLOUDFLARE_TUNNEL_ID=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+CF_API_TOKEN=$(grep "^CLOUDFLARE_API_TOKEN=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+CF_CONFIG_FILE=$(grep "^CLOUDFLARE_CONFIG_FILE=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+
+if [[ "$CF_ENABLED" == "true" ]]; then
+    # Check tunnel ID is set
+    if [[ -z "$CF_TUNNEL_ID" ]]; then
+        echo -e "${RED}  ✗ CLOUDFLARE_TUNNEL_ENABLED is true but CLOUDFLARE_TUNNEL_ID is empty${NC}"
+        ERRORS=$((ERRORS + 1))
+    fi
+    
+    # Check config file exists
+    if [[ -n "$CF_CONFIG_FILE" ]] && [[ ! -f "$CF_CONFIG_FILE" ]]; then
+        echo -e "${YELLOW}  ⚠ Cloudflare config file not found: $CF_CONFIG_FILE${NC}"
+        echo "    Run setup to create tunnel configuration"
+        WARNINGS=$((WARNINGS + 1))
+    fi
+    
+    # Check credentials file exists (if tunnel ID is set)
+    if [[ -n "$CF_TUNNEL_ID" ]]; then
+        CF_CREDS_DIR=$(grep "^CLOUDFLARE_CREDENTIALS_DIR=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+        if [[ -n "$CF_CREDS_DIR" ]] && [[ ! -f "$CF_CREDS_DIR/$CF_TUNNEL_ID.json" ]]; then
+            echo -e "${YELLOW}  ⚠ Cloudflare credentials file not found: $CF_CREDS_DIR/$CF_TUNNEL_ID.json${NC}"
+            echo "    Run setup to configure tunnel credentials"
+            WARNINGS=$((WARNINGS + 1))
+        elif [[ -n "$CF_CREDS_DIR" ]] && [[ -f "$CF_CREDS_DIR/$CF_TUNNEL_ID.json" ]]; then
+            echo -e "${GREEN}  ✓ Cloudflare credentials file found${NC}"
+        fi
+    fi
+    
+    echo -e "${GREEN}  ✓ Cloudflare Tunnel configuration validated${NC}"
+elif [[ -n "$CF_API_TOKEN" ]]; then
+    echo -e "${YELLOW}  ⚠ API token is set but tunnel is not enabled${NC}"
+    echo "    Run setup to configure Cloudflare Tunnel"
+    WARNINGS=$((WARNINGS + 1))
+else
+    echo -e "${BLUE}  ℹ Cloudflare Tunnel not enabled (services will be local-only)${NC}"
+fi
+echo ""
+
+# ============================================================================
 # Summary
 # ============================================================================
 echo "============================================================================"

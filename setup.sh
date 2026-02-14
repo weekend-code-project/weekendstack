@@ -458,7 +458,7 @@ main_setup() {
             fi
         fi
         
-        clear
+        clear || true  # Non-fatal clear in case stdout is not a terminal
     fi
     
     # 11. Pull Docker images (optimized)
