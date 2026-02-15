@@ -67,7 +67,10 @@
         "wger"
     ],
     "media": [
-        "immich",
+        "immich-server",
+        "immich-machine-learning",
+        "immich-redis",
+        "immich-db",
         "kavita",
         "navidrome"
     ],
