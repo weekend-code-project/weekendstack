@@ -380,14 +380,16 @@ main_setup() {
         exit 1
     fi
     
-    # 9. Certificate setup
-    show_setup_progress "Setting Up SSL Certificates"
-    if ! $SKIP_CERTS; then
-        setup_certificates || log_warn "Certificate setup incomplete (continuing anyway)"
-    else
-        log_info "Skipping certificate setup (--skip-certs)"
+    # 9. Certificate setup (only if networking profile selected)
+    if [[ " ${selected_profiles[@]} " =~ " networking " ]] || [[ " ${selected_profiles[@]} " =~ " all " ]]; then
+        show_setup_progress "Setting Up SSL Certificates"
+        if ! $SKIP_CERTS; then
+            setup_certificates || log_warn "Certificate setup incomplete (continuing anyway)"
+        else
+            log_info "Skipping certificate setup (--skip-certs)"
+        fi
     fi
-    
+
     # 10. Cloudflare Tunnel setup (only if networking profile selected)
     if [[ " ${selected_profiles[@]} " =~ " networking " ]] || [[ " ${selected_profiles[@]} " =~ " all " ]]; then
         show_setup_progress "Cloudflare Tunnel Configuration"

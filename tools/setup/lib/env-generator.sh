@@ -455,7 +455,8 @@ generate_env_interactive() {
     # Set storage paths
     update_env_var "FILES_BASE_DIR" "$files_dir" "$env_file"
     update_env_var "DATA_BASE_DIR" "$data_dir" "$env_file"
-    update_env_var "CONFIG_BASE_DIR" "$config_dir" "$env_file"
+    # Note: CONFIG_BASE_DIR not set in .env - compose files use ../config defaults
+    # to ensure correct path resolution regardless of compose file location
     update_env_var "WORKSPACE_DIR" "$workspace_dir" "$env_file"
     update_env_var "SSH_KEY_DIR" "$ssh_key_dir" "$env_file"
     
