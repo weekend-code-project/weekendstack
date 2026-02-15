@@ -375,8 +375,8 @@ services:
       - proxy
       - external
     volumes:
-      - ${CLOUDFLARE_CONFIG_FILE:-./config/cloudflare/config.yml}:/etc/cloudflared/config.yml:ro
-      - ${CLOUDFLARE_CREDENTIALS_DIR:-./config/cloudflare/.cloudflared}:/etc/cloudflared/.cloudflared:ro
+      - ${CLOUDFLARE_CONFIG_FILE:-../config/cloudflare/config.yml}:/etc/cloudflared/config.yml:ro
+      - ${CLOUDFLARE_CREDENTIALS_DIR:-../config/cloudflare/.cloudflared}:/etc/cloudflared/.cloudflared:ro
     command: tunnel --config /etc/cloudflared/config.yml run
     healthcheck:
       test: ["CMD-SHELL", "cloudflared tunnel info 2>&1 | grep -q 'Registered tunnel' || exit 1"]

@@ -495,7 +495,7 @@ services:
       - "${GUACAMOLE_PORT:-8098}:8080"
     volumes:
       - type: bind
-        source: ${GUACAMOLE_CONFIG_DIR:-./config/guacamole}
+        source: ${GUACAMOLE_CONFIG_DIR:-../config/guacamole}
         target: /config
     extra_hosts:
       - "host.docker.internal:host-gateway"
