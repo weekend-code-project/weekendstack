@@ -3,6 +3,11 @@
 # =============================================================================
 # This file contains AI-related services that can be enabled/disabled via .env file
 # Use AI_SERVICES variable to enable specific services: AI_SERVICES="chat,automation,search"
+#
+# IMPORTANT: Always run from project root directory
+#   ✓ Correct:  docker compose -f compose/docker-compose.ai.yml up
+#   ✗ Wrong:    cd compose && docker compose -f docker-compose.ai.yml up
+# =============================================================================
 
 services:
   # =============================================================================

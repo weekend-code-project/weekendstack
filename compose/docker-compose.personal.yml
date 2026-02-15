@@ -9,6 +9,10 @@
 # Note: These services are only available when using the 'all' profile,
 #       not as a standalone 'personal' profile option.
 #
+# IMPORTANT: Always run from project root directory
+#   ✓ Correct:  docker compose -f compose/docker-compose.personal.yml up
+#   ✗ Wrong:    cd compose && docker compose -f docker-compose.personal.yml up
+#
 # Usage:
 #   docker compose --profile all up -d
 #

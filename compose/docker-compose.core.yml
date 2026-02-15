@@ -10,6 +10,10 @@
 #
 # Additional development services are defined in separate compose files
 #
+# IMPORTANT: Always run from project root directory
+#   ✓ Correct:  docker compose -f compose/docker-compose.core.yml up
+#   ✗ Wrong:    cd compose && docker compose -f docker-compose.core.yml up
+#
 # Usage:
 #   docker compose --profile core up -d
 # =============================================================================

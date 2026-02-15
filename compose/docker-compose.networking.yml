@@ -7,6 +7,10 @@
 # - Pi-Hole: Network-wide ad blocking and DNS (internal only)
 # - Cert Generator: Automatic local HTTPS certificate generation
 #
+# IMPORTANT: Always run from project root directory
+#   ✓ Correct:  docker compose -f compose/docker-compose.networking.yml up
+#   ✗ Wrong:    cd compose && docker compose -f docker-compose.networking.yml up
+#
 # Usage:
 #   docker compose --profile networking up -d
 #   docker compose --profile proxy up -d  (legacy alias)

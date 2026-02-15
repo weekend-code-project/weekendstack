@@ -16,6 +16,10 @@
 #
 # Note: Dozzle (logs) and Speedtest moved to core profile (docker-compose.core.yml)
 #
+# IMPORTANT: Always run from project root directory
+#   ✓ Correct:  docker compose -f compose/docker-compose.monitoring.yml up
+#   ✗ Wrong:    cd compose && docker compose -f docker-compose.monitoring.yml up
+#
 # Usage: docker compose -f docker-compose.monitoring.yml --profile monitoring up -d
 # =============================================================================
 

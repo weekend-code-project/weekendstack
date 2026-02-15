@@ -1,3 +1,11 @@
+# =============================================================================
+# DEVELOPMENT SERVICES - CODER, GIT, REGISTRY
+# =============================================================================
+# IMPORTANT: Always run from project root directory
+#   ✓ Correct:  docker compose -f compose/docker-compose.dev.yml up
+#   ✗ Wrong:    cd compose && docker compose -f docker-compose.dev.yml up
+# =============================================================================
+
 networks:
   coder-network:
     name: coder-network

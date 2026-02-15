@@ -5,6 +5,10 @@
 # - NocoDB: Airtable alternative for database management
 # - Paperless-ngx: Document management system
 #
+# IMPORTANT: Always run from project root directory
+#   ✓ Correct:  docker compose -f compose/docker-compose.productivity.yml up
+#   ✗ Wrong:    cd compose && docker compose -f docker-compose.productivity.yml up
+#
 # Usage:
 #   docker compose --profile productivity up -d
 #

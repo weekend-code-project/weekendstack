@@ -6,6 +6,10 @@
 # - Kavita: eBook/manga/comic reader
 # - Navidrome: Music streaming server
 #
+# IMPORTANT: Always run from project root directory
+#   ✓ Correct:  docker compose -f compose/docker-compose.media.yml up
+#   ✗ Wrong:    cd compose && docker compose -f docker-compose.media.yml up
+#
 # Usage:
 #   docker compose --profile media up -d
 #

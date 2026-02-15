@@ -10,6 +10,7 @@
 # Generated files (auto-created by setup.sh)
 docker-compose.custom.yml
 SETUP_SUMMARY.md
+CLEANUP_SUMMARY.md
 
 # Cloudflare tunnel credentials and config
 config/cloudflare/.cloudflared/
@@ -75,6 +76,15 @@ docker-run/
 # DOCKER & RUNTIME
 # =============================================================================
 .config/
+
+# Prevent accidental runtime data in compose/ directory
+# (These should only exist at project root, not in compose/)
+compose/data/
+compose/config/
+compose/files/
+compose/git/
+compose/gitea/
+compose/ssh/
 
 # =============================================================================
 # SYSTEM & EDITOR FILES
