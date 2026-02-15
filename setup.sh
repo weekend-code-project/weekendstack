@@ -367,11 +367,13 @@ main_setup() {
     fi
     
     # 7. Create Docker networks
-    show_setup_progress "Creating Docker Networks"
-    if ! create_docker_networks; then
-        log_error "Failed to create Docker networks"
-        exit 1
-    fi
+    # SKIPPED: Docker Compose creates networks automatically with proper labels
+    # Manual creation causes "network exists but was not created by compose" errors
+    # show_setup_progress "Creating Docker Networks"
+    # if ! create_docker_networks; then
+    #     log_error "Failed to create Docker networks"
+    #     exit 1
+    # fi
     
     # 8. Create Docker volumes
     show_setup_progress "Creating Docker Volumes"
@@ -487,6 +489,26 @@ main_setup() {
     if prompt_yes_no "Start WeekendStack services now?" "y"; then
         clear
         start_services_with_profiles "${selected_profiles[@]}"
+        
+        # Deploy Coder templates if dev profile was selected
+        if [[ " ${selected_profiles[*]} " =~ " dev " ]]; then
+            echo ""
+            log_header "Deploying Coder Templates"
+            
+            local deploy_script="$SCRIPT_DIR/config/coder/scripts/deploy-all-templates.sh"
+            if [[ -x "$deploy_script" ]]; then
+                log_info "Auto-deploying Coder templates (first-time setup)..."
+                echo ""
+                if "$deploy_script"; then
+                    log_success "Coder template deployment completed"
+                else
+                    log_warn "Coder template deployment encountered issues (check output above)"
+                fi
+            else
+                log_warn "Coder template deployment script not found or not executable: $deploy_script"
+            fi
+        fi
+        
         display_summary_to_console
     else
         log_info "Services not started. Run './setup.sh --start' when ready."
