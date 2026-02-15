@@ -29,14 +29,16 @@
         "coder",
         "coder-database",
         "coder-init",
-        "gitea",
-        "gitea-db",
-        "gitlab",
-        "guacamole",
-        "guacamole-db",
-        "guacd",
         "registry-cache",
-        "socat"
+        "socat",
+        "it-tools"
+    ],
+    "gitea": [
+        "gitea",
+        "gitea-db"
+    ],
+    "gitlab": [
+        "gitlab"
     ],
     "productivity": [
         "nocodb",
@@ -51,7 +53,6 @@
         "focalboard",
         "trilium",
         "vikunja",
-        "it-tools",
         "excalidraw",
         "filebrowser",
         "hoarder",
@@ -77,7 +78,10 @@
         "netdata",
         "portainer",
         "netbox",
-        "duplicati"
+        "duplicati",
+        "guacamole",
+        "guacamole-db",
+        "guacd"
     ],
     "automation": [
         "homeassistant",

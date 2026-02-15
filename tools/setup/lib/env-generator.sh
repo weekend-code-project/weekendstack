@@ -102,7 +102,7 @@ generate_env_interactive() {
     # STEP 1: System Settings
     # ========================================================================
     clear
-    show_progress 1 5 "System Settings"
+    show_progress 1 $total_steps "System Settings"
     
     echo "This section configures basic system identification and network settings."
     echo ""
@@ -144,12 +144,24 @@ generate_env_interactive() {
     
     # Check if networking profile is selected
     local has_networking=false
+    local has_dev=false
     for profile in "$@"; do
         if [[ "$profile" == "networking" ]] || [[ "$profile" == "all" ]]; then
             has_networking=true
-            break
+        fi
+        if [[ "$profile" == "dev" ]] || [[ "$profile" == "all" ]]; then
+            has_dev=true
         fi
     done
+    
+    # Calculate total steps based on selected profiles
+    local total_steps=3  # Base: System Settings + Admin Credentials + File Storage
+    if $has_networking; then
+        ((total_steps++))  # Add Domain Configuration
+    fi
+    if $has_dev; then
+        ((total_steps++))  # Add Git Service Selection
+    fi
     
     local lab_domain="lab"
     local base_domain="localhost"
@@ -159,7 +171,7 @@ generate_env_interactive() {
     # ========================================================================
     if $has_networking; then
         clear
-        show_progress 2 5 "Domain & Certificate Configuration"
+        show_progress 2 $total_steps "Domain & Certificate Configuration"
         
         echo "You selected the networking profile which includes Traefik reverse proxy."
         echo ""
@@ -183,14 +195,77 @@ generate_env_interactive() {
     fi
     
     # ========================================================================
-    # STEP 3: Admin Credentials (always shown)
+    # STEP 2.5/3: Git Service Selection (only if dev profile selected)
+    # ========================================================================
+    local git_service="none"
+    
+    if $has_dev; then
+        clear
+        if $has_networking; then
+            show_progress 3 $total_steps "Git Service Selection"
+        else
+            show_progress 2 $total_steps "Git Service Selection"
+        fi
+        
+        echo "You selected the development profile which includes git hosting."
+        echo ""
+        echo "Choose which git service to use:"
+        echo ""
+        echo "  1) None          - Skip git service (IDE only)"
+        echo "  2) Gitea         - Lightweight, recommended (default)"
+        if $has_networking; then
+            echo "  3) GitLab        - Full CI/CD platform (requires HTTPS/Traefik)"
+        fi
+        echo ""
+        
+        local git_choice
+        if $has_networking; then
+            git_choice=$(prompt_input "Select git service [1-3]" "2")
+        else
+            git_choice=$(prompt_input "Select git service [1-2]" "2")
+        fi
+        
+        case "$git_choice" in
+            1)
+                git_service="none"
+                log_info "Git service disabled"
+                ;;
+            2)
+                git_service="gitea"
+                log_success "Gitea selected (lightweight git hosting)"
+                ;;
+            3)
+                if $has_networking; then
+                    git_service="gitlab"
+                    log_success "GitLab selected (full CI/CD platform)"
+                    log_warn "Note: GitLab requires HTTPS via Traefik. Ensure networking profile is enabled."
+                else
+                    log_error "GitLab requires the networking profile (Traefik). Please select Gitea or None."
+                    git_service="gitea"
+                    log_success "Defaulting to Gitea"
+                fi
+                ;;
+            *)
+                log_warn "Invalid selection. Defaulting to Gitea."
+                git_service="gitea"
+                ;;
+        esac
+        
+        log_success "Git service configuration complete"
+    fi
+    
+    # ========================================================================
+    # STEP 3/4: Admin Credentials (always shown)
     # ========================================================================
     clear
+    local admin_step=2
     if $has_networking; then
-        show_progress 3 5 "Default Admin Credentials"
-    else
-        show_progress 2 5 "Default Admin Credentials"
+        ((admin_step++))
     fi
+    if $has_dev; then
+        ((admin_step++))
+    fi
+    show_progress $admin_step $total_steps "Default Admin Credentials"
     
     echo "Many services (NocoDB, Paperless, Postiz, etc.) support auto-provisioning"
     echo "with default credentials. These will be used during initial setup."
@@ -230,14 +305,11 @@ generate_env_interactive() {
     log_success "Admin credentials configured"
     
     # ========================================================================
-    # STEP 4: File Storage Paths
+    # STEP 4/5: File Storage Paths
     # ========================================================================
     clear
-    if $has_networking; then
-        show_progress 4 5 "File Storage Paths"
-    else
-        show_progress 3 5 "File Storage Paths"
-    fi
+    local storage_step=$((admin_step + 1))
+    show_progress $storage_step $total_steps "File Storage Paths"
     
     echo "WeekendStack uses base directories for data storage:"
     echo ""
@@ -276,11 +348,7 @@ generate_env_interactive() {
     # STEP 5: Review & Generate
     # ========================================================================
     clear
-    if $has_networking; then
-        show_progress 5 5 "Review & Generate Configuration"
-    else
-        show_progress 4 5 "Review & Generate Configuration"
-    fi
+    show_progress $total_steps $total_steps "Review & Generate Configuration"
     
     echo "Configuration summary:"
     echo ""
@@ -391,6 +459,11 @@ generate_env_interactive() {
     update_env_var "WORKSPACE_DIR" "$workspace_dir" "$env_file"
     update_env_var "SSH_KEY_DIR" "$ssh_key_dir" "$env_file"
     
+    # Set git service selection (for dev profile)
+    if $has_dev; then
+        update_env_var "GIT_SERVICE" "$git_service" "$env_file"
+    fi
+    
     # Set registry cache configuration
     # The registry cache is used during setup to optimize Docker image pulls
     # and bypass Docker Hub rate limits. It starts automatically during setup.
@@ -404,6 +477,12 @@ generate_env_interactive() {
     # Step 4: Generate custom docker-compose profile
     log_step "Generating custom docker-compose profile..."
     local profiles_csv=$(IFS=, ; echo "${selected_profiles[*]}")
+    
+    # Add selected git service to profiles if dev was selected
+    if $has_dev && [[ "$git_service" != "none" ]]; then
+        profiles_csv="${profiles_csv},${git_service}"
+    fi
+    
     if "${SCRIPT_DIR}/tools/env/scripts/generate-custom-profile.sh" \
         --profiles "$profiles_csv" >/dev/null 2>&1; then
         log_success "Custom profile generated"
