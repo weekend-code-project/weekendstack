@@ -160,11 +160,11 @@ services:
       CODER_PROVISIONER_TAGS: "base_domain=${BASE_DOMAIN:-localhost}"
       COMPUTER_NAME: ${COMPUTER_NAME:-workstation}
       BASE_DOMAIN: ${BASE_DOMAIN:-localhost}
-      DATA_BASE_DIR: ${DATA_BASE_DIR}
+      DATA_BASE_DIR: ${DATA_BASE_DIR:-/home/ubuntu/weekendstack/data}
       TF_VAR_base_domain: ${BASE_DOMAIN:-localhost}
       TF_VAR_workspace_dir: ${WORKSPACE_DIR:-/mnt/workspace/wcp-coder/files/coder/workspace}
-      TF_VAR_traefik_auth_dir: ${TRAEFIK_AUTH_DIR}
-      TF_VAR_ssh_key_dir: ${SSH_KEY_DIR}
+      TF_VAR_traefik_auth_dir: ${TRAEFIK_AUTH_DIR:-/home/ubuntu/weekendstack/config/traefik/auth}
+      TF_VAR_ssh_key_dir: ${SSH_KEY_DIR:-/home/ubuntu/weekendstack/config/ssh}
     ports:
       - "${CODER_HTTP_PORT:-7080}:7080"
     depends_on:
