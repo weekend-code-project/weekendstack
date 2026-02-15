@@ -168,6 +168,14 @@ parse_args() {
 
 # Check prerequisites
 check_prerequisites() {
+    clear
+    echo ""
+    echo -e "${CYAN}╔══════════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${CYAN}║                                                                  ║${NC}"
+    echo -e "${CYAN}║${NC}        ${BOLD}WeekendStack Interactive Setup Script v$VERSION${NC}         ${CYAN}║${NC}"
+    echo -e "${CYAN}║                                                                  ║${NC}"
+    echo -e "${CYAN}╚══════════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
     log_header "Prerequisites Check"
     
     local errors=0
@@ -243,46 +251,6 @@ check_prerequisites() {
     return 0
 }
 
-# Show welcome banner
-show_welcome() {
-    clear
-    echo ""
-    echo -e "${CYAN}╔══════════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║                                                                  ║${NC}"
-    echo -e "${CYAN}║${NC}        ${BOLD}WeekendStack Interactive Setup Script v$VERSION${NC}         ${CYAN}║${NC}"
-    echo -e "${CYAN}║                                                                  ║${NC}"
-    echo -e "${CYAN}╚══════════════════════════════════════════════════════════════════╝${NC}"
-    echo ""
-    echo "This script will help you set up your self-hosted infrastructure with:"
-    echo ""
-    echo "  • 65+ open-source services across 7 core profiles"
-    echo "  • Local HTTPS with automatic certificate generation"
-    echo "  • Optional Cloudflare Tunnel for external access"
-    echo "  • Secure credential generation"
-    echo "  • Profile-based deployment with incremental layering"
-    echo "  • Foundation-first approach (Core → Networking → Add more)"
-    echo ""
-    
-    if [[ "$SETUP_MODE" == "quick" ]]; then
-        echo -e "Running in ${BOLD}QUICK MODE${NC} - using defaults where possible"
-    else
-        echo -e "Running in ${BOLD}INTERACTIVE MODE${NC} - you can customize all settings"
-    fi
-    
-    echo ""
-    echo "Estimated time: 5-15 minutes"
-    echo "Requirements: 8GB+ RAM, 50GB+ disk space, Docker installed"
-    echo ""
-    
-    if ! $DRY_RUN; then
-        if ! prompt_yes_no "Continue with setup?" "y"; then
-            log_info "Setup cancelled by user"
-            exit 0
-        fi
-        clear
-    fi
-}
-
 # Main setup workflow
 main_setup() {
     # Export configuration flags
@@ -309,11 +277,13 @@ main_setup() {
         exit 1
     fi
     
-    # Clear screen and show profile selection
+    # Ask to continue after prerequisites
     if [[ "$SETUP_MODE" == "interactive" ]] && ! $DRY_RUN; then
         echo ""
-        echo "Press Enter to continue to profile selection..."
-        read -r
+        if ! prompt_yes_no "Prerequisites check complete. Continue with setup?" "y"; then
+            log_error "Setup cancelled by user"
+            exit 0
+        fi
         clear
     fi
     
@@ -418,12 +388,14 @@ main_setup() {
         log_info "Skipping certificate setup (--skip-certs)"
     fi
     
-    # 10. Cloudflare Tunnel setup
-    show_setup_progress "Cloudflare Tunnel Configuration"
-    if ! $SKIP_CLOUDFLARE && [[ "$SETUP_MODE" == "interactive" ]]; then
-        setup_cloudflare_tunnel || log_warn "Cloudflare Tunnel setup skipped"
-    else
-        log_info "Skipping Cloudflare Tunnel setup"
+    # 10. Cloudflare Tunnel setup (only if networking profile selected)
+    if [[ " ${selected_profiles[@]} " =~ " networking " ]] || [[ " ${selected_profiles[@]} " =~ " all " ]]; then
+        show_setup_progress "Cloudflare Tunnel Configuration"
+        if ! $SKIP_CLOUDFLARE && [[ "$SETUP_MODE" == "interactive" ]]; then
+            setup_cloudflare_tunnel || log_warn "Cloudflare Tunnel setup skipped"
+        else
+            log_info "Skipping Cloudflare Tunnel setup"
+        fi
     fi
     
     # 10.5. Image Pull Planning
@@ -521,8 +493,6 @@ main_setup() {
         echo "  docker compose up -d"
         echo ""
     fi
-    
-    log_success "Setup complete! See SETUP_SUMMARY.md for details."
 }
 
 # Pull Docker images
@@ -595,6 +565,7 @@ validate_configuration() {
     
     # Check compose files
     log_step "Validating docker-compose files..."
+    # Suppress warnings about unset variables from unselected profiles
     if docker compose config >/dev/null 2>&1; then
         log_success "Docker Compose configuration is valid"
     else
@@ -705,7 +676,6 @@ restart_services() {
 main() {
     parse_args "$@"
     
-    # Change to script directory
     cd "$SCRIPT_DIR"
     
     if $DRY_RUN; then
@@ -713,7 +683,6 @@ main() {
         SETUP_MODE="interactive"
     fi
     
-    show_welcome
     main_setup
 }
 

@@ -22,37 +22,56 @@ show_cloudflare_intro() {
     echo "Cloudflare Tunnel provides secure access to your services from the internet"
     echo "without port forwarding or exposing your home IP address."
     echo ""
-    echo "Benefits:"
-    echo "  • No port forwarding required"
-    echo "  • DDoS protection via Cloudflare"
-    echo "  • Free SSL/TLS certificates"
-    echo "  • Access services from anywhere"
-    echo ""
     echo "Requirements:"
     echo "  • Cloudflare account (free tier is fine)"
     echo "  • Domain name added to Cloudflare"
+    echo ""
+    
+    # Prompt for domain at the beginning
+    local stack_dir="${SCRIPT_DIR}"
+    local current_domain=$(grep "^BASE_DOMAIN=" "$stack_dir/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+    
+    echo "Enter the domain name you want to use for external access."
+    echo "This domain must be added to your Cloudflare account."
+    echo ""
+    
+    local domain
+    if [[ -n "$current_domain" ]] && [[ "$current_domain" != "localhost" ]]; then
+        domain=$(prompt_input "Domain name" "$current_domain")
+    else
+        domain=$(prompt_input "Domain name (e.g., example.com or mystack.example.com)" "")
+    fi
+    
+    if [[ -z "$domain" ]]; then
+        log_error "Domain name is required for Cloudflare Tunnel"
+        return 1
+    fi
+    
+    # Update BASE_DOMAIN in .env
+    if [[ -f "$stack_dir/.env" ]]; then
+        sed -i "s|^BASE_DOMAIN=.*|BASE_DOMAIN=$domain|" "$stack_dir/.env"
+        export CLOUDFLARE_DOMAIN="$domain"
+    fi
+    
     echo ""
     echo "Setup Methods:"
     echo "  1. API (Recommended) - Fully automated, requires API token"
     echo "  2. CLI - Uses cloudflared command-line tool (if installed)"
     echo "  3. Manual - You create tunnel in dashboard, provide credentials"
+    echo "  4. None - Setup later"
     echo ""
 }
 
 setup_cloudflare_tunnel() {
-    show_cloudflare_intro
+    if ! show_cloudflare_intro; then
+        return 1
+    fi
     
     if check_cloudflare_config; then
         log_info "Cloudflare Tunnel configuration already exists"
         if ! prompt_yes_no "Reconfigure Cloudflare Tunnel?" "n"; then
             return 0
         fi
-    fi
-    
-    if ! prompt_yes_no "Set up Cloudflare Tunnel now?" "y"; then
-        log_info "Skipping Cloudflare Tunnel setup"
-        log_info "You can configure it manually later - see docs/cloudflare-tunnel-setup.md"
-        return 0
     fi
     
     # Offer setup method selection
@@ -71,28 +90,31 @@ setup_cloudflare_tunnel() {
     echo "     Requires: Manual tunnel creation in dashboard"
     echo "     You provide tunnel ID and credentials"
     echo ""
+    echo "  4. None - Setup later"
+    echo "     Skip Cloudflare configuration for now"
+    echo ""
     
-    local method
-    if check_command cloudflared; then
-        log_info "cloudflared CLI detected on system"
-        method=$(prompt_select "Select method [1-3]:" "API (Recommended)" "CLI" "Manual")
-    else
-        method=$(prompt_select "Select method [1-3]:" "API (Recommended)" "Manual")
-    fi
+    read -p "Select method [1-4]: " -r method
     
     case $method in
-        0) # API method
+        1) # API method
             setup_tunnel_with_api
             ;;
-        1) # CLI method (or Manual if no CLI)
+        2) # CLI method
             if check_command cloudflared; then
                 setup_tunnel_with_cli
             else
-                setup_tunnel_manual
+                log_error "cloudflared CLI not found. Install it or use another method."
+                return 1
             fi
             ;;
-        2) # Manual method
+        3) # Manual method
             setup_tunnel_manual
+            ;;
+        4) # Skip
+            log_info "Skipping Cloudflare Tunnel setup"
+            log_info "You can configure it manually later - see docs/cloudflare-tunnel-setup.md"
+            return 0
             ;;
         *)
             log_error "Invalid selection"
@@ -106,25 +128,16 @@ setup_tunnel_with_cli() {
     
     local stack_dir="${SCRIPT_DIR}"
     local tunnel_name
-    local domain
+    local domain="${CLOUDFLARE_DOMAIN}"
     
-    # Get domain from .env
-    if [[ -f "$stack_dir/.env" ]]; then
+    # Domain should already be set by show_cloudflare_intro
+    if [[ -z "$domain" ]]; then
         domain=$(grep "^BASE_DOMAIN=" "$stack_dir/.env" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
     fi
     
     if [[ -z "$domain" || "$domain" == "localhost" ]]; then
-        echo ""
-        log_warn "BASE_DOMAIN not set in .env or set to localhost"
-        domain=$(prompt_input "Domain name for tunnel (must be in your Cloudflare account)" "")
-        
-        if [[ -z "$domain" ]]; then
-            log_error "Domain name is required for Cloudflare Tunnel"
-            return 1
-        fi
-        
-        # Update .env
-        sed -i "s/^BASE_DOMAIN=.*/BASE_DOMAIN=$domain/" "$stack_dir/.env"
+        log_error "Domain name is required for Cloudflare Tunnel"
+        return 1
     fi
     
     tunnel_name=$(prompt_input "Tunnel name" "weekendstack-tunnel")
@@ -207,25 +220,16 @@ setup_tunnel_with_api() {
     
     local stack_dir="${SCRIPT_DIR}"
     local tunnel_name
-    local domain
+    local domain="${CLOUDFLARE_DOMAIN}"
     
-    # Get domain from .env
-    if [[ -f "$stack_dir/.env" ]]; then
+    # Domain should already be set by show_cloudflare_intro
+    if [[ -z "$domain" ]]; then
         domain=$(grep "^BASE_DOMAIN=" "$stack_dir/.env" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
     fi
     
     if [[ -z "$domain" || "$domain" == "localhost" ]]; then
-        echo ""
-        log_warn "BASE_DOMAIN not set in .env or set to localhost"
-        domain=$(prompt_input "Domain name for tunnel (must be in your Cloudflare account)" "")
-        
-        if [[ -z "$domain" ]]; then
-            log_error "Domain name is required for Cloudflare Tunnel"
-            return 1
-        fi
-        
-        # Update .env
-        sed -i "s/^BASE_DOMAIN=.*/BASE_DOMAIN=$domain/" "$stack_dir/.env"
+        log_error "Domain name is required for Cloudflare Tunnel"
+        return 1
     fi
     
     tunnel_name=$(prompt_input "Tunnel name" "weekendstack-tunnel")
@@ -348,7 +352,6 @@ setup_tunnel_manual() {
     local stack_dir="${SCRIPT_DIR}"
     local tunnel_name
     local tunnel_id
-    local domain
     
     tunnel_name=$(prompt_input "Tunnel name (as shown in dashboard)" "weekendstack-tunnel")
     tunnel_id=$(prompt_input "Tunnel ID (UUID from dashboard)" "")
@@ -358,14 +361,15 @@ setup_tunnel_manual() {
         return 1
     fi
     
-    # Get domain
-    if [[ -f "$stack_dir/.env" ]]; then
+    # Domain should already be set by show_cloudflare_intro
+    local domain="${CLOUDFLARE_DOMAIN}"
+    if [[ -z "$domain" ]]; then
         domain=$(grep "^BASE_DOMAIN=" "$stack_dir/.env" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
     fi
     
     if [[ -z "$domain" || "$domain" == "localhost" ]]; then
-        domain=$(prompt_input "Your domain name" "")
-        sed -i "s/^BASE_DOMAIN=.*/BASE_DOMAIN=$domain/" "$stack_dir/.env"
+        log_error "Domain name is required for Cloudflare Tunnel"
+        return 1
     fi
     
     # Get credentials

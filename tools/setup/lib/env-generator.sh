@@ -64,13 +64,7 @@ update_env_profiles_only() {
     update_env_var "SETUP_DATE" "$timestamp" "$env_file"
     update_env_var "SELECTED_PROFILES" "$profiles_string" "$env_file"
     
-    log_success "Profiles updated successfully"
-    echo ""
-    log_info "All other settings preserved from existing .env"
-    log_info "To reconfigure all settings, run: ./setup.sh --reconfigure"
-    echo ""
-    echo "Press Enter to continue..."
-    read -r
+    log_success "Profile update complete"
     
     return 0
 }
@@ -93,25 +87,6 @@ generate_env_interactive() {
         
         # User chose to reconfigure or update failed
         clear
-    fi
-    
-    clear
-    log_header "WeekendStack Configuration Wizard"
-    
-    echo "This wizard will guide you through configuring your WeekendStack deployment."
-    echo "We'll collect all necessary information, then generate your .env file at the end."
-    echo ""
-    echo -e "${BOLD}Total Steps: 5${NC}"
-    echo "  1. System Settings (hostname, IP, timezone)"
-    echo "  2. Domain Configuration (local and external access)"  
-    echo "  3. Admin Credentials (default username/password)"
-    echo "  4. File Storage Paths (where to store data)"
-    echo "  5. Review & Generate (create .env file)"
-    echo ""
-    
-    if ! prompt_yes_no "Ready to begin?" "y"; then
-        log_error "Setup cancelled by user"
-        return 1
     fi
     
     # Backup existing .env if it exists
@@ -159,134 +134,63 @@ generate_env_interactive() {
     local detected_tz=$(timedatectl show --property=Timezone --value 2>/dev/null || echo "America/New_York")
     local timezone=$(prompt_input "Timezone" "$detected_tz")
     
-    # PUID/PGID
-    echo ""
-    echo "File permissions: Docker containers need to run with specific user/group IDs"
-    echo "to properly access files on the host. Using your current user is recommended."
-    echo ""
+    # PUID/PGID - use current user by default
     local current_uid=$(id -u)
     local current_gid=$(id -g)
-    log_info "Current user: UID=$current_uid GID=$current_gid"
-    echo ""
-    
-    local puid pgid
-    if prompt_yes_no "Use current user's UID/GID for file permissions?" "y"; then
-        puid=$current_uid
-        pgid=$current_gid
-    else
-        puid=$(prompt_input "PUID" "1000")
-        pgid=$(prompt_input "PGID" "1000")
-    fi
+    local puid=$current_uid
+    local pgid=$current_gid
     
     log_success "System settings configured"
-    echo ""
-    echo "Press Enter to continue to domain configuration..."
-    read -r
     
-    # ========================================================================
-    # STEP 2: Domain Configuration  
-    # ========================================================================
-    clear
-    show_progress 2 5 "Domain Configuration"
+    # Check if networking profile is selected
+    local has_networking=false
+    for profile in "$@"; do
+        if [[ "$profile" == "networking" ]] || [[ "$profile" == "all" ]]; then
+            has_networking=true
+            break
+        fi
+    done
     
-    echo "WeekendStack services are accessed via domain names."
-    echo ""
-    echo "You'll configure:"
-    echo "  1. Local domain for LAN access (always required)"
-    echo "  2. External domain for internet access (optional, requires Cloudflare Tunnel)"
-    echo ""
-    
-    # Local domain
-    echo -e "${BOLD}Local Network Access:${NC}"
-    echo ""
-    echo "Choose a domain suffix for accessing services on your local network."
-    echo "This requires either Pi-hole DNS or manual /etc/hosts entries."
-    echo ""
-    echo "Examples:"
-    echo "  • 'lab'   → Services accessible at https://service.lab"
-    echo "  • 'home'  → Services accessible at https://service.home"
-    echo "  • 'local' → Services accessible at https://service.local"
-    echo ""
-    
-    local lab_domain=$(prompt_input "Local domain suffix (without leading dot)" "lab")
-    
-    echo ""
-    log_success "Local services will be accessible at: https://service.$lab_domain"
-    log_info "Examples: https://coder.$lab_domain, https://paperless.$lab_domain"
-    echo ""
-    
-    # External domain (Cloudflare Tunnel)
-    echo -e "${BOLD}External Internet Access (Optional):${NC}"
-    echo ""
-    echo "If you want to access services from anywhere on the internet, you can"
-    echo "set up Cloudflare Tunnel. This requires a domain name you control."
-    echo ""
-    
+    local lab_domain="lab"
     local base_domain="localhost"
     
-    if prompt_yes_no "Enable external access via Cloudflare Tunnel?" "n"; then
+    # ========================================================================
+    # STEP 2: Domain Configuration (only if networking profile selected)
+    # ========================================================================
+    if $has_networking; then
+        clear
+        show_progress 2 5 "Domain & Certificate Configuration"
+        
+        echo "You selected the networking profile which includes Traefik reverse proxy."
         echo ""
-        echo "Enter your domain name (e.g., mystack.example.com or example.com):"
+        echo "Configure your local domain suffix for accessing services:"
+        echo ""
+        echo "Examples:"
+        echo "  • 'lab'   → Services accessible at https://service.lab"
+        echo "  • 'home'  → Services accessible at https://service.home"
+        echo "  • 'local' → Services accessible at https://service.local"
         echo ""
         
-        while true; do
-            base_domain=$(prompt_input "External domain" "")
-            
-            if [[ -z "$base_domain" ]]; then
-                log_warn "Skipping external access (no domain provided)"
-                base_domain="localhost"
-                break
-            elif validate_domain "$base_domain"; then
-                log_success "External services will be accessible at: https://service.$base_domain"
-                break
-            else
-                log_error "Invalid domain format (e.g., example.com or sub.example.com)"
-            fi
-        done
+        lab_domain=$(prompt_input "Local domain suffix (without leading dot)" "lab")
         
-        # Prompt for API token for automated setup
         echo ""
-        echo -e "${BOLD}Cloudflare API Token (Optional):${NC}"
+        log_success "Services will be accessible at: https://service.$lab_domain"
         echo ""
-        echo "You can provide a Cloudflare API token for automated tunnel setup."
-        echo "This allows the setup script to automatically create and configure"
-        echo "your tunnel without manual steps."
-        echo ""
-        echo "Required permissions:"
-        echo "  • Account - Cloudflare Tunnel - Edit"
-        echo "  • Zone - DNS - Edit (for zone: $base_domain)"
-        echo ""
-        echo "Create token at: https://dash.cloudflare.com/profile/api-tokens"
-        echo ""
+        echo -e "${YELLOW}Note:${NC} Configure Pi-hole as your DNS server to resolve .$lab_domain,"
+        echo "or manually add entries to /etc/hosts on each device."
         
-        if prompt_yes_no "Provide Cloudflare API token now?" "n"; then
-            local cf_api_token
-            cf_api_token=$(prompt_input "Cloudflare API token" "")
-            
-            if [[ -n "$cf_api_token" ]]; then
-                # Will be saved to .env
-                CLOUDFLARE_API_TOKEN="$cf_api_token"
-                log_success "API token saved - tunnel will be configured automatically"
-            else
-                log_info "Skipping API token - you can add it to .env later"
-            fi
-        else
-            log_info "Skipping API token - you can configure tunnel manually later"
-        fi
-    else
-        log_info "External access disabled - services will only be available on local network"
+        log_success "Domain configuration complete"
     fi
     
-    log_success "Domain configuration complete"
-    echo ""
-    echo "Press Enter to continue to admin credentials..."
-    read -r
-    
     # ========================================================================
-    # STEP 3: Admin Credentials
+    # STEP 3: Admin Credentials (always shown)
     # ========================================================================
     clear
-    show_progress 3 5 "Default Admin Credentials"
+    if $has_networking; then
+        show_progress 3 5 "Default Admin Credentials"
+    else
+        show_progress 2 5 "Default Admin Credentials"
+    fi
     
     echo "Many services (NocoDB, Paperless, Postiz, etc.) support auto-provisioning"
     echo "with default credentials. These will be used during initial setup."
@@ -316,13 +220,7 @@ generate_env_interactive() {
         done
         
         echo ""
-        echo "Password options:"
-        echo "  • Enter custom password"
-        echo "  • Auto-generate secure random password (recommended)"
-        echo ""
-        if prompt_yes_no "Set custom admin password?" "n"; then
-            admin_password=$(prompt_password "Admin password")
-        fi
+        admin_password=$(prompt_password "Admin password (or leave empty for auto-generated)")
     fi
     
     if [[ -z "$admin_password" ]]; then
@@ -330,36 +228,37 @@ generate_env_interactive() {
     fi
     
     log_success "Admin credentials configured"
-    echo ""
-    echo "Press Enter to continue to file storage configuration..."
-    read -r
     
     # ========================================================================
     # STEP 4: File Storage Paths
     # ========================================================================
     clear
-    show_progress 4 5 "File Storage Paths"
+    if $has_networking; then
+        show_progress 4 5 "File Storage Paths"
+    else
+        show_progress 3 5 "File Storage Paths"
+    fi
     
-    echo "WeekendStack uses three base directories for data storage:"
+    echo "WeekendStack uses base directories for data storage:"
     echo ""
     echo "  1. FILES_BASE_DIR  - User content (documents, media, photos)"
     echo "  2. DATA_BASE_DIR   - Application databases and state"
-    echo "  3. CONFIG_BASE_DIR - Service configuration files"
     echo ""
-    echo "Default: Relative paths (./files, ./data, ./config)"
+    echo "Config files stay in ./config (part of repository)"
+    echo ""
+    echo "Default: Relative paths (./files, ./data)"
     echo "Advanced: Can use absolute paths or NFS mounts (e.g., /mnt/storage)"
     echo ""
     
     local files_dir="./files"
     local data_dir="./data"
-    local config_dir="./config"
+    local config_dir="./config"  # Always use repo config dir
     local workspace_dir="/mnt/workspace"
     local ssh_key_dir="\${CONFIG_BASE_DIR}/ssh"
     
     if prompt_yes_no "Customize storage paths?" "n"; then
         files_dir=$(prompt_input "User files directory" "./files")
         data_dir=$(prompt_input "Application data directory" "./data")
-        config_dir=$(prompt_input "Configuration directory" "./config")
         
         echo ""
         echo "Coder workspace directory (must be absolute path):"
@@ -369,22 +268,19 @@ generate_env_interactive() {
             log_error "Workspace directory must be an absolute path (start with /)"
             workspace_dir=$(prompt_input "Workspace directory" "/mnt/workspace")
         done
-        
-        if prompt_yes_no "Customize SSH key directory?" "n"; then
-            ssh_key_dir=$(prompt_input "SSH key directory" "\${CONFIG_BASE_DIR}/ssh")
-        fi
     fi
     
     log_success "Storage paths configured"
-    echo ""
-    echo "Press Enter to review and generate your .env file..."
-    read -r
     
     # ========================================================================
     # STEP 5: Review & Generate
     # ========================================================================
     clear
-    show_progress 5 5 "Review & Generate Configuration"
+    if $has_networking; then
+        show_progress 5 5 "Review & Generate Configuration"
+    else
+        show_progress 4 5 "Review & Generate Configuration"
+    fi
     
     echo "Configuration summary:"
     echo ""
@@ -531,10 +427,6 @@ generate_env_interactive() {
         echo ""
         log_warn "Change this password after your first login to each service!"
     fi
-    
-    echo ""
-    echo "Press Enter to continue with setup..."
-    read -r
 }
 
 add_setup_metadata() {

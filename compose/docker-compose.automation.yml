@@ -42,7 +42,7 @@ services:
     networks:
       - automation-network
     profiles:
-      - all
+      - automation
     volumes:
       - type: bind
         source: ${DATA_BASE_DIR:-./data}/homeassistant/config
@@ -83,7 +83,7 @@ services:
       homeassistant-perms:
         condition: service_completed_successfully
     profiles:
-      - all
+      - automation
     ports:
       - "${HOMEASSISTANT_PORT:-8123}:8123"
     environment:
@@ -159,7 +159,7 @@ services:
       - automation-network
       - shared-network
     profiles:
-      - all
+      - automation
     ports:
       - "${NODERED_PORT:-1880}:1880"
     environment:

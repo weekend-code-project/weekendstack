@@ -8,7 +8,7 @@ services:
   # =============================================================================
   # CODER DATABASE
   # =============================================================================
-  database:
+  coder-database:
     image: postgres:16
     container_name: coder-database
     labels:
@@ -19,7 +19,6 @@ services:
       - coder-network
       - shared-network
     profiles:
-      - all
       - dev
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
@@ -27,9 +26,10 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 5s
+      interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 30s
     volumes:
       - type: volume
         source: coder-db-data
@@ -53,9 +53,7 @@ services:
       - coder-network
       - shared-network
     profiles:
-      - all
       - dev
-      - development
     environment:
       POSTGRES_USER: ${GITEA_DBUSER}
       POSTGRES_PASSWORD: ${GITEA_DBPASS}
@@ -88,7 +86,6 @@ services:
       - coder-network
       - shared-network
     profiles:
-      - all
       - dev
       - networking
       - proxy
@@ -114,7 +111,6 @@ services:
       - glance.name=Init
       - glance.hide=true
     profiles:
-      - all
       - dev
     volumes:
       - type: bind
@@ -146,11 +142,10 @@ services:
       - shared-network
     restart: unless-stopped
     profiles:
-      - all
       - dev
     environment:
       CODER_ACCESS_URL: ${CODER_ACCESS_URL:-http://${HOST_IP}:${CODER_HTTP_PORT:-7080}}
-      CODER_PG_CONNECTION_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database/${POSTGRES_DB}?sslmode=disable"
+      CODER_PG_CONNECTION_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@coder-database/${POSTGRES_DB}?sslmode=disable"
       CODER_HTTP_ADDRESS: ${CODER_HTTP_ADDRESS}
       DOCKER_HOST: "tcp://socat:2375"
       CODER_TEMPLATE_PATHS: "/templates"
@@ -169,7 +164,7 @@ services:
         condition: service_completed_successfully
       socat:
         condition: service_started
-      database:
+      coder-database:
         condition: service_healthy
     volumes:
       - type: bind
@@ -264,7 +259,6 @@ services:
       - coder-network
       - shared-network
     profiles:
-      - all
       - dev
       - development
     environment:
@@ -353,7 +347,7 @@ services:
       - coder-network
       - shared-network
     profiles:
-      - all
+      - dev
       - dev-tools
       - setup-infrastructure
     environment:
@@ -421,7 +415,6 @@ services:
       - coder-network
       - shared-network
     profiles:
-      - all
       - dev
       - gitlab
     environment:
@@ -504,7 +497,6 @@ services:
     networks:
       - shared-network
     profiles:
-      - all
       - dev
     environment:
       POSTGRES_DB: ${GUACAMOLE_DBNAME:-guacamole}
@@ -539,7 +531,6 @@ services:
     networks:
       - shared-network
     profiles:
-      - all
       - dev
     deploy:
       resources:
@@ -561,7 +552,6 @@ services:
     networks:
       - shared-network
     profiles:
-      - all
       - dev
     environment:
       # Database

@@ -25,7 +25,6 @@ services:
     container_name: cert-generator
     restart: "no"
     profiles:
-      - all
       - networking
       - setup
     environment:
@@ -168,11 +167,10 @@ services:
   # =============================================================================
   link-router:
     build:
-      context: ./config/link-router
+      context: ../config/link-router
     container_name: link-router
     restart: unless-stopped
     profiles:
-      - all
       - networking
     environment:
       HOST_IP: ${HOST_IP:-192.168.2.50}
@@ -232,7 +230,6 @@ services:
     container_name: pihole-dnsmasq-init
     restart: "no"
     profiles:
-      - all
       - networking
     environment:
       HOST_IP: ${HOST_IP}
@@ -303,7 +300,7 @@ services:
     container_name: traefik
     restart: unless-stopped
     profiles:
-      - all
+      - networking
       - proxy
       - networking
     ports:
@@ -311,10 +308,10 @@ services:
       - "${TRAEFIK_HTTPS_PORT:-443}:443"
       - "${TRAEFIK_API_PORT:-8081}:8080"  # API/Dashboard port
     volumes:
-      - ${TRAEFIK_CONFIG_FILE:-./config/traefik/traefik.yml}:/etc/traefik/traefik.yml:ro
-      - ./config/traefik/auth:/config/traefik/auth:ro
+      - ${TRAEFIK_CONFIG_FILE:-../config/traefik/config.yml}:/etc/traefik/traefik.yml:ro
+      - ../config/traefik/auth:/config/traefik/auth:ro
       - type: bind
-        source: ./config/traefik/certs
+        source: ../config/traefik/certs
         target: /certs
         read_only: true
     networks:
@@ -370,6 +367,7 @@ services:
       - traefik-network
       - shared-network
     profiles:
+      - networking
       - proxy
       - external
     volumes:
@@ -398,7 +396,6 @@ services:
       - traefik-network
       - shared-network
     profiles:
-      - all
       - networking
     environment:
       TEMPLATE_NAME: ${ERROR_PAGES_THEME:-ghost}
@@ -435,7 +432,6 @@ services:
       - traefik-network
       - shared-network
     profiles:
-      - all
       - networking
     depends_on:
       pihole-dnsmasq-init:

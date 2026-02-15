@@ -16,34 +16,29 @@ declare -A PROFILES=(
     ["media"]="Media management (Kavita, Navidrome, Immich)"
 )
 
-# Service counts per profile (approximate)
-declare -A PROFILE_SERVICE_COUNTS=(
-    ["all"]="65+"
-    ["core"]="5"
-    ["networking"]="5"
-    ["monitoring"]="8"
-    ["productivity"]="25"
-    ["dev"]="8"
-    ["ai"]="8-11"
-    ["media"]="6"
-)
+# Core profile is always included (required for basic functionality)
+CORE_REQUIRED=true
 
-# Profile order for display
-PROFILE_ORDER=("all" "core" "networking" "monitoring" "productivity" "dev" "ai" "media")
+# Profile order for display (core is always installed, not shown as option)
+PROFILE_ORDER=("networking" "monitoring" "productivity" "dev" "ai" "media" "all")
 
 show_profile_matrix() {
     log_header "Available Service Profiles"
     
-    printf "%-15s %-10s %s\n" "PROFILE" "SERVICES" "DESCRIPTION"
-    printf "%-15s %-10s %s\n" "-------" "--------" "-----------"
+    printf "%-15s %s\n" "PROFILE" "DESCRIPTION"
+    printf "%-15s %s\n" "-------" "-----------"
     
     for profile in "${PROFILE_ORDER[@]}"; do
-        printf "%-15s %-10s %s\n" "$profile" "${PROFILE_SERVICE_COUNTS[$profile]}" "${PROFILES[$profile]}"
+        if [[ "$profile" == "core" ]]; then
+            printf "%-15s %s (always included)\n" "$profile" "${PROFILES[$profile]}"
+        else
+            printf "%-15s %s\n" "$profile" "${PROFILES[$profile]}"
+        fi
     done
     
     echo ""
-    echo "Note: 'all' profile includes core, networking, and all other services"
-    echo "      Multiple profiles can be selected for custom deployments"
+    echo "Note: Core profile is always included (required for basic functionality)"
+    echo "      'all' profile includes everything"
     echo ""
 }
 
@@ -122,18 +117,15 @@ select_profiles_interactive() {
             echo "Available deployment profiles:"
         fi
         echo ""
-        printf "  %d) %-12s - %-8s %s\n" 0 "all" "${PROFILE_SERVICE_COUNTS[all]}" "${PROFILES[all]}"
+        echo "Note: Core profile (Glance, Link Router, Dozzle, Speedtest, Certs) is always installed"
         echo ""
-        for i in $(seq 1 $((${#PROFILE_ORDER[@]} - 1))); do
-            local profile="${PROFILE_ORDER[$i]}"
-            printf "  %d) %-12s - %-8s %s\n" "$i" "$profile" "${PROFILE_SERVICE_COUNTS[$profile]}" "${PROFILES[$profile]}"
+        for i in $(seq 1 ${#PROFILE_ORDER[@]}); do
+            local profile="${PROFILE_ORDER[$((i-1))]}"
+            printf "  %d) %-12s - %s\n" "$i" "$profile" "${PROFILES[$profile]}"
         done
         echo ""
-        echo "Recommended starter: 1 2 (core + networking)"
-        echo "Layer on more anytime by re-running setup."
-        echo ""
         echo "Enter profile numbers (space-separated) or press Enter for 'all':"
-        echo "Example: '1 2' for core + networking"
+        echo "Example: '1 4' for networking + dev"
         echo ""
     } >&2
     
@@ -141,7 +133,7 @@ select_profiles_interactive() {
     
     local selected_indices
     if [[ -z "$user_input" ]]; then
-        selected_indices="0"  # Default to 'all' which is index 0
+        selected_indices="${#PROFILE_ORDER[@]}"  # Default to 'all' which is the last option
         {
             log_info "No selection made, defaulting to 'all' profiles"
         } >&2
@@ -151,9 +143,10 @@ select_profiles_interactive() {
     
     local -a new_profiles=()
     for idx in $selected_indices; do
-        # Skip if idx is not a number
-        if [[ "$idx" =~ ^[0-9]+$ ]] && [[ $idx -lt ${#PROFILE_ORDER[@]} ]]; then
-            new_profiles+=("${PROFILE_ORDER[$idx]}")
+        # Skip if idx is not a number or out of range
+        if [[ "$idx" =~ ^[0-9]+$ ]] && [[ $idx -ge 1 ]] && [[ $idx -le ${#PROFILE_ORDER[@]} ]]; then
+            # Convert 1-based index to 0-based array index
+            new_profiles+=("${PROFILE_ORDER[$((idx-1))]}")
         fi
     done
     
@@ -162,6 +155,11 @@ select_profiles_interactive() {
             log_warn "No valid profiles selected, defaulting to 'all'"
         } >&2
         new_profiles=("all")
+    fi
+    
+    # Always include core profile (unless 'all' is selected, which includes everything)
+    if [[ ! " ${new_profiles[*]} " =~ " all " ]] && [[ ! " ${new_profiles[*]} " =~ " core " ]]; then
+        new_profiles=("core" "${new_profiles[@]}")
     fi
     
     # Merge with existing if in add mode
@@ -198,8 +196,8 @@ select_profiles_quick() {
     echo ""
     
     local choice
-    # In DRY_RUN mode or if stdin is not a terminal, default to Foundation
-    if [[ "${DRY_RUN:-false}" == "true" ]] || ! [[ -t 0 ]]; then
+    # In quick mode, DRY_RUN mode, or if stdin is not a terminal, use default Foundation
+    if [[ "${SETUP_MODE:-interactive}" == "quick" ]] || [[ "${DRY_RUN:-false}" == "true" ]] || ! [[ -t 0 ]]; then
         log_info "Using default Foundation setup (core + networking)"
         choice=0
     else

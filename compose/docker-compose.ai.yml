@@ -19,8 +19,8 @@ services:
       - ai-network
       - shared-network
     profiles:
+      - ai
       - gpu
-      - all
     ports:
       - "${OLLAMA_PORT:-11434}:11434"
     environment:
@@ -178,7 +178,6 @@ services:
       - ai-network
       - shared-network
     profiles:
-      - all
       - ai
     ports:
       - "${OPENWEBUI_PORT:-3000}:8080"
@@ -241,7 +240,6 @@ services:
       - ai-network
       - shared-network
     profiles:
-      - all
       - ai
     ports:
       - "${SEARXNG_PORT:-4000}:8080"
@@ -314,7 +312,6 @@ services:
       - shared-network
     profiles:
       - ai
-      - all
     ports:
       - "${LOCALAI_PORT:-8084}:8080"
     environment:
@@ -406,7 +403,6 @@ services:
       - shared-network
     profiles:
       - ai
-      - all
     ports:
       - "${ANYTHINGLLM_PORT:-3003}:3001"
     environment:
@@ -483,7 +479,6 @@ services:
       - shared-network
     profiles:
       - ai
-      - all
     ports:
       - "${WHISPER_PORT:-9002}:9000"
     environment:
@@ -549,6 +544,7 @@ services:
       - ai-network
       - shared-network
     profiles:
+      - ai
       - gpu
     ports:
       - "${WHISPERX_PORT:-9001}:9000"
@@ -608,7 +604,6 @@ services:
       - shared-network
     profiles:
       - ai
-      - all
     ports:
       - "${LIBRECHAT_PORT:-3080}:3080"
     environment:
@@ -684,7 +679,6 @@ services:
       - ai-network
     profiles:
       - ai
-      - all
     volumes:
       - type: volume
         source: librechat-data
@@ -708,6 +702,7 @@ services:
       - ai-network
       - shared-network
     profiles:
+      - ai
       - gpu
     ports:
       - "${PRIVATEGPT_PORT:-8501}:8080"

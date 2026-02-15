@@ -50,52 +50,8 @@ show_pull_plan() {
         echo "║                                                                ║"
     fi
     
-    echo "╠════════════════════════════════════════════════════════════════╣"
-    echo "║                    DOCKER HUB RATE LIMITS                      ║"
-    echo "╠════════════════════════════════════════════════════════════════╣"
-    echo "║                                                                ║"
-    
-    if [[ -n "$limit_status" ]]; then
-        echo "$limit_status" | while IFS= read -r line; do
-            printf "║  %-60s  ║\n" "$line"
-        done
-    else
-        echo "║  Status: Using registry cache (bypasses rate limits)          ║"
-    fi
-    
-    echo "║                                                                ║"
-    echo "╠════════════════════════════════════════════════════════════════╣"
-    echo "║                      PULL STRATEGY                             ║"
-    echo "╠════════════════════════════════════════════════════════════════╣"
-    echo "║                                                                ║"
-    echo "║  Phase 1: Shared base images (postgres, redis, alpine)        ║"
-    echo "║  Phase 2: Non-Docker-Hub images (no rate limits)              ║"
-    echo "║  Phase 3: Docker Hub images via registry cache                ║"
-    echo "║                                                                ║"
-    echo "║  Registry cache will be started automatically to:              ║"
-    echo "║    ✓ Bypass Docker Hub rate limits                            ║"
-    echo "║    ✓ Cache layers for faster re-pulls                         ║"
-    echo "║    ✓ Enable parallel downloads                                ║"
-    echo "║                                                                ║"
     echo "╚════════════════════════════════════════════════════════════════╝"
     echo ""
-    
-    # Show top shared images if available
-    if [[ -n "${data[SHARED_LIST]}" ]] && [[ "${data[SHARED_LIST]}" != "" ]]; then
-        echo "Most commonly used images (pulled once, used multiple times):"
-        IFS=',' read -ra shared_array <<< "${data[SHARED_LIST]}"
-        local count=0
-        for shared in "${shared_array[@]}"; do
-            if [[ $count -lt 5 ]] && [[ -n "$shared" ]]; then
-                # Split on last colon to handle images like postgres:15-alpine:3
-                local image="${shared%:*}"  # Everything before last :
-                local uses="${shared##*:}"   # Everything after last :
-                echo "  • $image (used $uses times)"
-                ((count++)) || true  # Make arithmetic non-fatal
-            fi
-        done
-        echo ""
-    fi
     
     if [[ "$SETUP_MODE" == "interactive" ]]; then
         echo "This process may take several minutes depending on your connection."

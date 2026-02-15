@@ -33,7 +33,6 @@ services:
       - media-network
       - shared-network
     profiles:
-      - all
       - media
     ports:
       - "${IMMICH_PORT:-2283}:2283"
@@ -100,7 +99,6 @@ services:
     networks:
       - media-network
     profiles:
-      - all
       - media
     volumes:
       - type: volume
@@ -124,6 +122,7 @@ services:
     networks:
       - media-network
     profiles:
+      - media
       - gpu-media
     volumes:
       - type: volume
@@ -150,7 +149,6 @@ services:
     networks:
       - media-network
     profiles:
-      - all
       - media
     volumes:
       - type: volume
@@ -173,7 +171,6 @@ services:
     networks:
       - media-network
     profiles:
-      - all
       - media
     environment:
       POSTGRES_USER: ${IMMICH_DB_USER:-immich}
@@ -204,7 +201,6 @@ services:
       - media-network
       - shared-network
     profiles:
-      - all
       - media
     ports:
       - "${KAVITA_PORT:-5000}:5000"
@@ -275,7 +271,6 @@ services:
       - media-network
       - shared-network
     profiles:
-      - all
       - media
     ports:
       - "${NAVIDROME_PORT:-4533}:4533"

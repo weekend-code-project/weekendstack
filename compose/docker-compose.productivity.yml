@@ -33,7 +33,6 @@ services:
       - productivity-network
       - shared-network
     profiles:
-      - all
       - productivity
     ports:
       - "${VAULTWARDEN_PORT:-8222}:80"
@@ -96,6 +95,8 @@ services:
     labels:
       - glance.parent=nocodb
       - glance.name=Database
+    profiles:
+      - productivity
     environment:
       POSTGRES_DB: ${NOCODB_DBNAME:-nocodb}
       POSTGRES_USER: ${NOCODB_DBUSER:-nocodb}
@@ -152,7 +153,6 @@ services:
       - "${NOCODB_PORT}:8080"
     restart: unless-stopped
     profiles:
-      - all
       - productivity
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8080/api/v1/health || exit 1"]
@@ -226,7 +226,6 @@ services:
       - shared-network
     restart: unless-stopped
     profiles:
-      - all
       - productivity
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${N8N_DBUSER:-n8n} -d ${N8N_DBNAME:-n8n}"]
@@ -284,7 +283,6 @@ services:
         limits:
           memory: ${N8N_MEMORY_LIMIT:-2g}
     profiles:
-      - all
       - productivity
     labels:
       # Glance Configuration
@@ -335,6 +333,8 @@ services:
     labels:
       - glance.parent=paperless
       - glance.name=Database
+    profiles:
+      - productivity
     environment:
       POSTGRES_DB: ${PAPERLESS_DBNAME:-paperless}
       POSTGRES_USER: ${PAPERLESS_DBUSER:-paperless}
@@ -361,6 +361,8 @@ services:
     labels:
       - glance.parent=paperless
       - glance.name=Redis
+    profiles:
+      - productivity
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 30s
@@ -401,7 +403,6 @@ services:
       - /tmp
     shm_size: 2gb
     profiles:
-      - all
       - productivity
     labels:
       # Hide from main Glance view (no GUI)
@@ -425,7 +426,6 @@ services:
         limits:
           memory: 1g
     profiles:
-      - all
       - productivity
     labels:
       # Hide from main Glance view (no GUI)
@@ -530,7 +530,6 @@ services:
         limits:
           memory: ${PAPERLESS_MEMORY_LIMIT:-2g}
     profiles:
-      - all
       - productivity
     labels:
       # Glance Configuration
@@ -595,7 +594,6 @@ services:
       - shared-network
     restart: unless-stopped
     profiles:
-      - all
       - productivity
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${ACTIVEPIECES_DBUSER:-activepieces} -d ${ACTIVEPIECES_DBNAME:-activepieces}"]
@@ -627,7 +625,6 @@ services:
       - shared-network
     restart: unless-stopped
     profiles:
-      - all
       - productivity
 
   activepieces:
@@ -682,7 +679,6 @@ services:
         limits:
           memory: ${ACTIVEPIECES_MEMORY_LIMIT:-2g}
     profiles:
-      - all
       - productivity
     labels:
       # Glance Configuration
@@ -752,7 +748,6 @@ services:
       - shared-network
     restart: unless-stopped
     profiles:
-      - all
       - productivity
 
   postiz-redis:
@@ -776,7 +771,6 @@ services:
       - shared-network
     restart: unless-stopped
     profiles:
-      - all
       - productivity
 
   postiz:
@@ -834,7 +828,6 @@ services:
       - shared-network
     restart: unless-stopped
     profiles:
-      - all
       - productivity
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:5000/ || exit 1"]
@@ -895,7 +888,6 @@ services:
       - productivity-network
       - shared-network
     profiles:
-      - all
       - productivity
     ports:
       - "${FOCALBOARD_PORT:-8097}:8000"
@@ -954,7 +946,6 @@ services:
       - productivity-network
       - shared-network
     profiles:
-      - all
       - productivity
     ports:
       - "${TRILIUM_PORT:-8085}:8080"
@@ -1016,7 +1007,6 @@ services:
       - productivity-network
       - shared-network
     profiles:
-      - all
       - productivity
     ports:
       - "${VIKUNJA_PORT:-3456}:3456"
@@ -1083,7 +1073,6 @@ services:
       - productivity-network
       - shared-network
     profiles:
-      - all
       - productivity
     ports:
       - "${IT_TOOLS_PORT:-8091}:80"
@@ -1141,7 +1130,6 @@ services:
       - productivity-network
       - shared-network
     profiles:
-      - all
       - productivity
     ports:
       - "${EXCALIDRAW_PORT:-8092}:80"
@@ -1214,7 +1202,6 @@ services:
       - shared-network
     restart: unless-stopped
     profiles:
-      - all
       - productivity
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DOCMOST_DBUSER:-docmost} -d ${DOCMOST_DBNAME:-docmost}"]
@@ -1246,7 +1233,6 @@ services:
       - shared-network
     restart: unless-stopped
     profiles:
-      - all
       - productivity
 
   docmost:
@@ -1261,7 +1247,6 @@ services:
       - productivity-network
       - shared-network
     profiles:
-      - all
       - productivity
     ports:
       - "${DOCMOST_PORT:-8093}:3000"
@@ -1322,7 +1307,6 @@ services:
       - productivity-network
       - shared-network
     profiles:
-      - all
       - productivity
     ports:
       - "${FILEBROWSER_PORT:-8096}:80"
@@ -1399,7 +1383,6 @@ services:
       - productivity-network
       - shared-network
     profiles:
-      - all
       - productivity
     ports:
       - "${HOARDER_PORT:-3030}:3000"
@@ -1469,6 +1452,8 @@ services:
     labels:
       - glance.parent=hoarder
       - glance.name=Browser
+    profiles:
+      - productivity
     restart: unless-stopped
     networks:
       - productivity-network
@@ -1490,6 +1475,8 @@ services:
     labels:
       - glance.parent=hoarder
       - glance.name=Search Engine
+    profiles:
+      - productivity
     restart: unless-stopped
     networks:
       - productivity-network
@@ -1517,7 +1504,6 @@ services:
       - productivity-network
       - shared-network
     profiles:
-      - all
       - productivity
     ports:
       - "${BYTESTASH_PORT:-8094}:5000"
@@ -1605,7 +1591,6 @@ services:
       - shared-network
     restart: unless-stopped
     profiles:
-      - all
       - productivity
     deploy:
       resources:
@@ -1614,7 +1599,7 @@ services:
 
   resourcespace:
     build:
-      context: ${CONFIG_BASE_DIR:-./config}/resourcespace
+      context: ../config/resourcespace
       dockerfile: Dockerfile
     container_name: resourcespace
     depends_on:
@@ -1637,7 +1622,6 @@ services:
       - "${RESOURCESPACE_PORT:-8099}:80"
     restart: unless-stopped
     profiles:
-      - all
       - productivity
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost/ || exit 1"]

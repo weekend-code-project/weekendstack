@@ -55,7 +55,6 @@ services:
       - monitoring-network
       - shared-network
     profiles:
-      - all
       - monitoring
     restart: unless-stopped
     extra_hosts:
@@ -112,7 +111,6 @@ services:
       - monitoring-network
       - shared-network
     profiles:
-      - all
       - monitoring
     ports:
       - "${WUD_PORT:-3002}:3000"
@@ -174,7 +172,6 @@ services:
       - monitoring-network
       - shared-network
     profiles:
-      - all
       - monitoring
     ports:
       - "${UPTIME_KUMA_PORT:-3001}:3001"
@@ -230,7 +227,6 @@ services:
       - monitoring-network
       - shared-network
     profiles:
-      - all
       - monitoring
     ports:
       - "${NETDATA_PORT:-19999}:19999"
@@ -306,7 +302,6 @@ services:
       - monitoring-network
       - shared-network
     profiles:
-      - all
       - monitoring
     ports:
       - "${DUPLICATI_PORT:-8200}:8200"
@@ -368,7 +363,6 @@ services:
       - monitoring-network
       - shared-network
     profiles:
-      - all
       - monitoring
     ports:
       - "${PORTAINER_PORT:-9443}:9443"
@@ -424,7 +418,6 @@ services:
       - monitoring-network
       - shared-network
     profiles:
-      - all
       - monitoring
     ports:
       - "${NETBOX_PORT:-8484}:8080"
@@ -490,7 +483,6 @@ services:
     networks:
       - monitoring-network
     profiles:
-      - all
       - monitoring
     environment:
       POSTGRES_DB: netbox
@@ -515,7 +507,6 @@ services:
     networks:
       - monitoring-network
     profiles:
-      - all
       - monitoring
     volumes:
       - type: volume

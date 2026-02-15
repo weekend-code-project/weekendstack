@@ -60,7 +60,7 @@ start_registry_cache() {
     
     # Check for network label mismatch errors
     if echo "$compose_output" | grep -q "has incorrect label"; then
-        log_warn "Detected network label mismatch, recreating networks..."
+        log_info "Detected outdated network labels, refreshing networks..."
         
         # Remove existing networks (they'll be recreated with correct labels)
         docker network rm shared-network coder-network traefik-network 2>/dev/null || true
@@ -126,8 +126,8 @@ configure_docker_mirror() {
     
     # Check if we have permission to modify daemon config
     if [[ ! -w "$daemon_config" ]] && [[ ! -w "$(dirname "$daemon_config")" ]]; then
-        log_warn "Cannot modify Docker daemon config (no write permission)"
-        log_info "Registry cache will still work via explicit configuration"
+        log_info "Running without daemon config modification (works fine via explicit config)"
+        log_info "Registry cache will still work for all image pulls"
         return 0
     fi
     
