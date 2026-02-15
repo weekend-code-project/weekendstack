@@ -34,7 +34,7 @@ services:
     volumes:
       # Default: Local bind mount for AI models
       - type: bind
-        source: ${FILES_BASE_DIR:-./files}/ai-models/ollama
+        source: ${FILES_BASE_DIR:-../files}/ai-models/ollama
         target: /root/.ollama
         bind:
           create_host_path: true
@@ -117,7 +117,7 @@ services:
     volumes:
       # Default: Local bind mount for AI models
       - type: bind
-        source: ${FILES_BASE_DIR:-./files}/ai-models/ollama
+        source: ${FILES_BASE_DIR:-../files}/ai-models/ollama
         target: /root/.ollama
         bind:
           create_host_path: true
@@ -188,7 +188,7 @@ services:
       - "${OPENWEBUI_PORT:-3000}:8080"
     volumes:
       - type: bind
-        source: ${DATA_BASE_DIR:-./data}/open-webui
+        source: ${DATA_BASE_DIR:-../data}/open-webui
         target: /app/backend/data
     environment:
       - OLLAMA_BASE_URL=${OLLAMA_HOST:-http://host.docker.internal:11434}

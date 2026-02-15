@@ -214,7 +214,7 @@ services:
         target: /kavita/config
       # Default: Local bind mount for eBook library  
       - type: bind
-        source: ${KAVITA_LIBRARY_PATH:-./files/kavita/library}
+        source: ${KAVITA_LIBRARY_PATH:-../files/kavita/library}
         target: /manga
         bind:
           create_host_path: true
@@ -289,7 +289,7 @@ services:
         target: /data
       # Default: Local bind mount for music library
       - type: bind
-        source: ${NAVIDROME_MUSIC_PATH:-./files/navidrome/music}
+        source: ${NAVIDROME_MUSIC_PATH:-../files/navidrome/music}
         target: /music
         read_only: true
         bind:

@@ -148,7 +148,7 @@ services:
       
     volumes:
       - type: bind
-        source: ${DATA_BASE_DIR:-./data}/nocodb
+        source: ${DATA_BASE_DIR:-../data}/nocodb
         target: /usr/app/data
     networks:
       - productivity-network
@@ -277,7 +277,7 @@ services:
       N8N_SECURE_COOKIE: ${N8N_SECURE_COOKIE:-false}
     volumes:
       - type: bind
-        source: ${DATA_BASE_DIR:-./data}/n8n
+        source: ${DATA_BASE_DIR:-../data}/n8n
         target: /home/node/.n8n
     networks:
       - productivity-network
@@ -504,17 +504,17 @@ services:
         source: paperless-data
         target: /usr/src/paperless/data
       - type: bind
-        source: ${PAPERLESS_MEDIA_PATH:-${FILES_BASE_DIR:-./files}/paperless/media}
+        source: ${PAPERLESS_MEDIA_PATH:-${FILES_BASE_DIR:-../files}/paperless/media}
         target: /usr/src/paperless/media
         bind:
           create_host_path: true
       - type: bind
-        source: ${PAPERLESS_CONSUME_PATH:-${FILES_BASE_DIR:-./files}/paperless/consume}
+        source: ${PAPERLESS_CONSUME_PATH:-${FILES_BASE_DIR:-../files}/paperless/consume}
         target: /usr/src/paperless/consume
         bind:
           create_host_path: true
       - type: bind
-        source: ${PAPERLESS_EXPORT_PATH:-${FILES_BASE_DIR:-./files}/paperless/export}
+        source: ${PAPERLESS_EXPORT_PATH:-${FILES_BASE_DIR:-../files}/paperless/export}
         target: /usr/src/paperless/export
         bind:
           create_host_path: true
@@ -821,7 +821,7 @@ services:
       - "${POSTIZ_PORT:-8095}:5000"
     volumes:
       - type: bind
-        source: ${FILES_BASE_DIR:-./files}/postiz/uploads
+        source: ${FILES_BASE_DIR:-../files}/postiz/uploads
         target: /app/public/uploads
       - type: bind
         source: ./config/postiz/nginx.conf
@@ -1268,13 +1268,13 @@ services:
         target: /config
       # Only expose the repo ./files directory in the UI.
       - type: bind
-        source: ${FILES_BASE_DIR:-./files}
+        source: ${FILES_BASE_DIR:-../files}
         target: /srv
         bind:
           create_host_path: true
       # Initialization script to set admin password (runs via s6 custom-init)
       - type: bind
-        source: ${CONFIG_BASE_DIR:-./config}/filebrowser/init-filebrowser.sh
+        source: ${CONFIG_BASE_DIR:-../config}/filebrowser/init-filebrowser.sh
         target: /custom-cont-init.d/99-set-password.sh
         read_only: true
     restart: unless-stopped
@@ -1559,7 +1559,7 @@ services:
         source: resourcespace-data
         target: /var/www/html/filestore
       - type: bind
-        source: ${FILES_BASE_DIR:-./files}/resourcespace
+        source: ${FILES_BASE_DIR:-../files}/resourcespace
         target: /var/www/html/upload
     networks:
       - productivity-network

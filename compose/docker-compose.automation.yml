@@ -49,7 +49,7 @@ services:
       - automation
     volumes:
       - type: bind
-        source: ${DATA_BASE_DIR:-./data}/homeassistant/config
+        source: ${DATA_BASE_DIR:-../data}/homeassistant/config
         target: /config
         bind:
           create_host_path: true
@@ -94,7 +94,7 @@ services:
       TZ: ${TIMEZONE:-UTC}
     volumes:
       - type: bind
-        source: ${DATA_BASE_DIR:-./data}/homeassistant/config
+        source: ${DATA_BASE_DIR:-../data}/homeassistant/config
         target: /config
         bind:
           create_host_path: true
