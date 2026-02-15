@@ -24,7 +24,6 @@ services:
       - ai-network
       - shared-network
     profiles:
-      - ai
       - gpu
     ports:
       - "${OLLAMA_PORT:-11434}:11434"
@@ -700,14 +699,13 @@ services:
   # No data leaves your server
   # =============================================================================
   privategpt:
-    image: zylon-ai/private-gpt:latest
+    image: imartinez/privategpt:latest
     container_name: privategpt
     restart: unless-stopped
     networks:
       - ai-network
       - shared-network
     profiles:
-      - ai
       - gpu
     ports:
       - "${PRIVATEGPT_PORT:-8501}:8080"

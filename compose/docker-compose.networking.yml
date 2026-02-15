@@ -37,7 +37,7 @@ services:
       CA_VALID_DAYS: ${CA_VALID_DAYS:-3650}     # 10 years
     volumes:
       - type: bind
-        source: ${CONFIG_BASE_DIR:-../config}/traefik/certs
+        source: ../config/traefik/certs
         target: /certs
     labels:
       - glance.parent=traefik
@@ -246,7 +246,7 @@ services:
       - glance.name=Init Container
     volumes:
       - type: bind
-        source: ${CONFIG_BASE_DIR:-../config}/pihole/etc-dnsmasq.d
+        source: ../config/pihole/etc-dnsmasq.d
         target: /dnsmasq.d
         bind:
           create_host_path: true
@@ -312,10 +312,10 @@ services:
       - "${TRAEFIK_HTTPS_PORT:-443}:443"
       - "${TRAEFIK_API_PORT:-8081}:8080"  # API/Dashboard port
     volumes:
-      - ${TRAEFIK_CONFIG_FILE:-${CONFIG_BASE_DIR:-../config}/traefik/config.yml}:/etc/traefik/traefik.yml:ro
-      - ${CONFIG_BASE_DIR:-../config}/traefik/auth:/config/traefik/auth:ro
+      - ../config/traefik/config.yml:/etc/traefik/traefik.yml:ro
+      - ../config/traefik/auth:/config/traefik/auth:ro
       - type: bind
-        source: ${CONFIG_BASE_DIR:-../config}/traefik/certs
+        source: ../config/traefik/certs
         target: /certs
         read_only: true
     networks:
@@ -457,12 +457,12 @@ services:
       DHCP_ACTIVE: "false"
     volumes:
       - type: bind
-        source: ${CONFIG_BASE_DIR:-../config}/pihole/etc-pihole
+        source: ../config/pihole/etc-pihole
         target: /etc/pihole
         bind:
           create_host_path: true
       - type: bind
-        source: ${CONFIG_BASE_DIR:-../config}/pihole/etc-dnsmasq.d
+        source: ../config/pihole/etc-dnsmasq.d
         target: /etc/dnsmasq.d
         bind:
           create_host_path: true

@@ -126,7 +126,6 @@ services:
     networks:
       - media-network
     profiles:
-      - media
       - gpu-media
     volumes:
       - type: volume
@@ -207,7 +206,7 @@ services:
     profiles:
       - media
     ports:
-      - "${KAVITA_PORT:-5000}:5000"
+      - "${KAVITA_PORT:-5002}:5000"
     volumes:
       - type: volume
         source: kavita-data

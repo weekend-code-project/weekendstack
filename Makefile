@@ -8,7 +8,8 @@
 
 .PHONY: help setup start stop restart status logs ps clean update backup restore \
         pull validate env health test profile-dev profile-ai profile-all \
-        cloudflare-setup cert-setup docker-login prune shell config
+        cloudflare-setup cert-setup docker-login prune shell config \
+        deploy-coder-templates redeploy-coder-templates
 
 # Default target - show help
 .DEFAULT_GOAL := help
@@ -84,6 +85,25 @@ profile-media: ## Start media services
 
 profile-all: ## Start all services including optional ones
 	$(COMPOSE_CMD) $(COMPOSE_FILES) --profile all --profile personal --profile gpu up -d
+
+# =============================================================================
+# Coder Template Management
+# =============================================================================
+
+deploy-coder-templates: ## Deploy Coder templates (first-time or if marker removed)
+	@if [ ! -f config/coder/scripts/deploy-all-templates.sh ]; then \
+		echo "Error: Deploy script not found: config/coder/scripts/deploy-all-templates.sh"; \
+		exit 1; \
+	fi
+	@./config/coder/scripts/deploy-all-templates.sh
+
+redeploy-coder-templates: ## Force redeploy all Coder templates (removes marker)
+	@if [ ! -f config/coder/scripts/deploy-all-templates.sh ]; then \
+		echo "Error: Deploy script not found: config/coder/scripts/deploy-all-templates.sh"; \
+		exit 1; \
+	fi
+	@echo "Forcing Coder template redeployment..."
+	@./config/coder/scripts/deploy-all-templates.sh force
 
 # =============================================================================
 # Maintenance & Updates
