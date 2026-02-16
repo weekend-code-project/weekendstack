@@ -251,6 +251,74 @@ check_prerequisites() {
     return 0
 }
 
+# Interactive Coder template deployment
+deploy_coder_templates_interactive() {
+    local marker_file="$SCRIPT_DIR/config/coder/.template_deployment_complete"
+    local deploy_script="$SCRIPT_DIR/config/coder/scripts/deploy-all-templates.sh"
+    local template_info_script="$SCRIPT_DIR/config/coder/scripts/lib/get-template-info.sh"
+    
+    # Check if deploy script exists
+    if [[ ! -x "$deploy_script" ]]; then
+        log_warn "Coder template deployment script not found or not executable: $deploy_script"
+        return 1
+    fi
+    
+    # Check if templates already deployed
+    local already_deployed=false
+    local deployment_info=""
+    if [[ -f "$marker_file" ]]; then
+        already_deployed=true
+        # Try to extract deployment info from JSON marker
+        if grep -q "deployment_date" "$marker_file" 2>/dev/null; then
+            local deploy_date=$(grep "deployment_date" "$marker_file" | cut -d'"' -f4)
+            local successful=$(grep '"successful":' "$marker_file" | grep -o '[0-9]*')
+            deployment_info="Last deployed: $deploy_date ($successful templates)"
+        else
+            deployment_info="Templates previously deployed"
+        fi
+    fi
+    
+    # Show template information
+    echo ""
+    log_header "Coder Template Deployment"
+    
+    if [[ -x "$template_info_script" ]]; then
+        "$template_info_script" display
+    fi
+    
+    echo ""
+    
+    # Prompt based on deployment status
+    if [[ "$already_deployed" == "true" ]]; then
+        log_info "$deployment_info"
+        echo ""
+        echo "Options:"
+        echo "  1) Redeploy all templates"
+        echo "  2) Skip template deployment"
+        echo ""
+        read -p "Choose option [1-2]: " -n 1 -r choice
+        echo ""
+        
+        case "$choice" in
+            1)
+                log_info "Redeploying all templates..."
+                "$deploy_script" --force --interactive
+                ;;
+            *)
+                log_info "Skipping template deployment"
+                return 0
+                ;;
+        esac
+    else
+        if prompt_yes_no "Deploy Coder templates now?" "y"; then
+            "$deploy_script" --interactive
+        else
+            log_info "Skipping template deployment"
+            log_info "You can deploy templates later with: make coder-templates"
+        fi
+    fi
+}
+
 # Main setup workflow
 main_setup() {
     # Export configuration flags
@@ -492,21 +560,7 @@ main_setup() {
         
         # Deploy Coder templates if dev profile was selected
         if [[ " ${selected_profiles[*]} " =~ " dev " ]]; then
-            echo ""
-            log_header "Deploying Coder Templates"
-            
-            local deploy_script="$SCRIPT_DIR/config/coder/scripts/deploy-all-templates.sh"
-            if [[ -x "$deploy_script" ]]; then
-                log_info "Auto-deploying Coder templates (first-time setup)..."
-                echo ""
-                if "$deploy_script"; then
-                    log_success "Coder template deployment completed"
-                else
-                    log_warn "Coder template deployment encountered issues (check output above)"
-                fi
-            else
-                log_warn "Coder template deployment script not found or not executable: $deploy_script"
-            fi
+            deploy_coder_templates_interactive
         fi
         
         display_summary_to_console

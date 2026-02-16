@@ -9,7 +9,8 @@
 .PHONY: help setup start stop restart status logs ps clean update backup restore \
         pull validate env health test profile-dev profile-ai profile-all \
         cloudflare-setup cert-setup docker-login prune shell config \
-        deploy-coder-templates redeploy-coder-templates
+        deploy-coder-templates redeploy-coder-templates coder-templates \
+        coder-templates-info update-glance
 
 # Default target - show help
 .DEFAULT_GOAL := help
@@ -104,6 +105,20 @@ redeploy-coder-templates: ## Force redeploy all Coder templates (removes marker)
 	fi
 	@echo "Forcing Coder template redeployment..."
 	@./config/coder/scripts/deploy-all-templates.sh force
+
+coder-templates: ## Interactive template management (list, deploy, update)
+	@if [ ! -f config/coder/scripts/deploy-all-templates.sh ]; then \
+		echo "Error: Deploy script not found: config/coder/scripts/deploy-all-templates.sh"; \
+		exit 1; \
+	fi
+	@./config/coder/scripts/deploy-all-templates.sh --interactive
+
+coder-templates-info: ## Show information about available Coder templates
+	@if [ ! -f config/coder/scripts/lib/get-template-info.sh ]; then \
+		echo "Error: Template info script not found"; \
+		exit 1; \
+	fi
+	@./config/coder/scripts/lib/get-template-info.sh display
 
 # =============================================================================
 # Maintenance & Updates
