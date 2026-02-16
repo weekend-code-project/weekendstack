@@ -53,26 +53,44 @@ detect_existing_profiles() {
 prompt_layer_mode() {
     local existing_profiles="$1"
     
+    # Check if Coder is running
+    local coder_running=false
+    if docker ps --filter "name=^coder$" --format "{{.Names}}" 2>/dev/null | grep -q "^coder$"; then
+        coder_running=true
+    fi
+    
     {
         echo ""
         log_info "Previous profile selection detected: $existing_profiles"
+        echo "$existing_profiles"
         echo ""
         echo "Setup mode:"
         echo "  1) Add to existing profiles (layer on more services)"
         echo "  2) Replace with new selection"
+        if [[ "$coder_running" == "true" ]]; then
+            echo "  3) Just update Coder templates (skip full setup)"
+        fi
         echo ""
     } >&2
     
+    local valid_choices="1 or 2"
+    if [[ "$coder_running" == "true" ]]; then
+        valid_choices="1, 2, or 3"
+    fi
+    
     while true; do
-        read -p "Choose mode (1 or 2): " -r mode_choice </dev/tty
+        read -p "Choose mode ($valid_choices): " -r mode_choice </dev/tty
         if [[ "$mode_choice" == "1" ]]; then
             echo "add"
             return
         elif [[ "$mode_choice" == "2" ]]; then
             echo "replace"
             return
+        elif [[ "$mode_choice" == "3" && "$coder_running" == "true" ]]; then
+            echo "templates-only"
+            return
         else
-            echo "Invalid choice. Please enter 1 or 2." >&2
+            echo "Invalid choice. Please enter $valid_choices." >&2
         fi
     done
 }
@@ -104,6 +122,12 @@ select_profiles_interactive() {
     if [[ -n "$existing_profiles_str" ]]; then
         existing_profiles=($existing_profiles_str)
         layer_mode=$(prompt_layer_mode "$existing_profiles_str")
+        
+        # Handle templates-only mode
+        if [[ "$layer_mode" == "templates-only" ]]; then
+            echo "TEMPLATES_ONLY_MODE"
+            return 0
+        fi
     fi
     
     # Display to stderr so it shows on terminal (stdout is captured by command substitution)

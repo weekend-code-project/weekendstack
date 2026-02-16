@@ -403,6 +403,18 @@ main_setup() {
         selected_profiles=($(select_profiles_interactive))
     fi
     
+    # Check if user wants templates-only mode
+    if [[ "${selected_profiles[0]}" == "TEMPLATES_ONLY_MODE" ]]; then
+        clear
+        log_header "Coder Template Management"
+        echo ""
+        deploy_coder_templates_interactive
+        echo ""
+        log_success "Template management complete!"
+        log_info "To make changes to services, run ./setup.sh again"
+        exit 0
+    fi
+    
     export SELECTED_PROFILES=("${selected_profiles[@]}")
     
     # Clear screen after selection
