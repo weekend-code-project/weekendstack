@@ -18,6 +18,18 @@ TEMPLATES_DIR="$WORKSPACE_ROOT/config/coder/templates"
 MARKER_FILE="$WORKSPACE_ROOT/config/coder/.template_deployment_complete"
 PUSH_SCRIPT="$SCRIPT_DIR/push-template-local.sh"
 TEMPLATE_INFO_SCRIPT="$SCRIPT_DIR/lib/get-template-info.sh"
+CODER_API_SCRIPT="$SCRIPT_DIR/lib/coder-api.sh"
+
+# Load environment variables
+if [[ -f "$WORKSPACE_ROOT/.env" ]]; then
+    set -a
+    source "$WORKSPACE_ROOT/.env"
+    set +a
+fi
+
+# API Configuration
+CODER_URL="${CODER_ACCESS_URL:-http://localhost:7080}"
+CODER_TOKEN="${CODER_SESSION_TOKEN:-}"
 
 # Parse arguments
 FORCE_REDEPLOY="false"
@@ -101,6 +113,37 @@ if ! docker ps --format '{{.Names}}' | grep -q '^coder$'; then
     log_error "Coder container is not running. Start it with: docker compose -f compose/docker-compose.dev.yml up -d"
     exit 1
 fi
+
+# Check for authentication token
+if [[ -z "$CODER_TOKEN" ]]; then
+    log_error "CODER_SESSION_TOKEN not set in .env"
+    echo ""
+    log_info "Coder templates require authentication to deploy."
+    log_info "Please complete Coder setup:"
+    echo ""
+    echo "  1. Access Coder at: $CODER_URL"
+    echo "  2. Create your admin account (first user becomes admin)"
+    echo "  3. Go to Settings → Tokens"
+    echo "  4. Create a new API token"
+    echo "  5. Add to .env: CODER_SESSION_TOKEN=<your-token>"
+    echo ""
+    log_info "Or run the setup helper: $CODER_API_SCRIPT setup"
+    echo ""
+    exit 1
+fi
+
+# Test authentication
+log_info "Testing Coder authentication..."
+if [[ -x "$CODER_API_SCRIPT" ]]; then
+    if ! "$CODER_API_SCRIPT" test 2>/dev/null; then
+        log_error "Authentication failed"
+        log_info "Please verify your CODER_SESSION_TOKEN in .env"
+        log_info "You can update it by running: $CODER_API_SCRIPT setup"
+        exit 1
+    fi
+fi
+log_success "Authentication successful"
+echo ""
 
 # Wait for Coder to be healthy with progress indication
 log_info "Waiting for Coder to be healthy (max 120s)..."
@@ -205,8 +248,8 @@ for template in "${templates[@]}"; do
         continue
     fi
     
-    # Run push script and capture output
-    if "$PUSH_SCRIPT" "$template" 2>&1 | sed 's/^/  /'; then
+    # Run push script with session token
+    if CODER_SESSION_TOKEN="$CODER_TOKEN" "$PUSH_SCRIPT" "$template" 2>&1 | sed 's/^/  /'; then
         log_success "Successfully deployed: $template"
         successful_templates+=("$template:success")
         ((success_count++))

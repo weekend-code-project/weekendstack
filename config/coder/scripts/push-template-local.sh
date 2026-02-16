@@ -674,6 +674,16 @@ PUSH_ENV_VARS="-e TF_VAR_base_domain=${BASE_DOMAIN:-localhost}"
 PUSH_ENV_VARS+=" -e TF_VAR_host_ip=${HOST_IP:-127.0.0.1}"
 PUSH_ENV_VARS+=" -e TF_VAR_ssh_key_dir=${SSH_KEY_DIR:-/home/docker/.ssh}"
 PUSH_ENV_VARS+=" -e TF_VAR_traefik_auth_dir=${TRAEFIK_AUTH_DIR:-/opt/stacks/weekendstack/config/traefik/auth}"
+
+# Pass Coder authentication
+if [[ -n "${CODER_SESSION_TOKEN:-}" ]]; then
+    PUSH_ENV_VARS+=" -e CODER_SESSION_TOKEN=${CODER_SESSION_TOKEN}"
+    PUSH_ENV_VARS+=" -e CODER_URL=http://127.0.0.1:7080"
+    log "Using authenticated session for template push"
+else
+    log_warn "No CODER_SESSION_TOKEN set - template may not be assigned to user"
+fi
+
 log "Setting TF_VAR_base_domain=${BASE_DOMAIN:-localhost}"
 log "Setting TF_VAR_host_ip=${HOST_IP:-127.0.0.1}"
 log "Setting TF_VAR_ssh_key_dir=${SSH_KEY_DIR:-/home/docker/.ssh}"
