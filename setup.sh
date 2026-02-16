@@ -264,9 +264,8 @@ deploy_coder_templates_interactive() {
         return 1
     fi
     
-    echo ""
+    clear
     log_header "Coder Template Deployment"
-    echo ""
     
     # Check if user has configured authentication
     if [[ -z "${CODER_SESSION_TOKEN:-}" ]]; then
@@ -406,8 +405,6 @@ main_setup() {
     # Check if user wants templates-only mode
     if [[ "${selected_profiles[0]}" == "TEMPLATES_ONLY_MODE" ]]; then
         clear
-        log_header "Coder Template Management"
-        echo ""
         deploy_coder_templates_interactive
         echo ""
         log_success "Template management complete!"
