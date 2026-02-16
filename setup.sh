@@ -269,29 +269,22 @@ deploy_coder_templates_interactive() {
     
     # Check if user has configured authentication
     if [[ -z "${CODER_SESSION_TOKEN:-}" ]]; then
+        echo ""
         log_info "Coder templates require authentication to deploy."
         echo ""
         
         if [[ -x "$coder_api_script" ]]; then
-            if prompt_yes_no "Would you like to setup Coder authentication now?" "y"; then
-                if ! "$coder_api_script" setup; then
-                    log_warn "Coder authentication setup failed"
-                    log_info "You can complete this later by running: $coder_api_script setup"
-                    log_info "Then deploy templates with: make coder-templates"
-                    return 1
-                fi
-                # Reload .env to get the new token
-                if [[ -f "$SCRIPT_DIR/.env" ]]; then
-                    set -a
-                    source "$SCRIPT_DIR/.env"
-                    set +a
-                fi
-            else
-                log_info "Skipping Coder template deployment"
-                log_info "To deploy templates later:"
-                log_info "  1. Complete Coder setup: $coder_api_script setup"
-                log_info "  2. Deploy templates: make coder-templates"
-                return 0
+            if ! "$coder_api_script" setup; then
+                log_warn "Coder authentication setup cancelled or failed"
+                log_info "You can complete this later by running: $coder_api_script setup"
+                log_info "Then deploy templates with: make coder-templates"
+                return 1
+            fi
+            # Reload .env to get the new token
+            if [[ -f "$SCRIPT_DIR/.env" ]]; then
+                set -a
+                source "$SCRIPT_DIR/.env"
+                set +a
             fi
         else
             log_error "Coder API script not found: $coder_api_script"

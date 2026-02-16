@@ -181,7 +181,31 @@ prompt_for_coder_setup() {
         fi
     done
     
-    # Save to .env
+    # Test token BEFORE saving
+    export CODER_SESSION_TOKEN="$token"
+    CODER_TOKEN="$token"
+    
+    log_info "Testing authentication..."
+    if ! test_auth; then
+        log_error "Authentication test failed"
+        log_info "The token you provided is invalid or expired"
+        unset CODER_SESSION_TOKEN
+        CODER_TOKEN=""
+        
+        # Ask to retry
+        echo ""
+        read -p "Try again? [Y/n]: " -r retry
+        if [[ "$retry" =~ ^[Nn] ]]; then
+            log_info "Setup cancelled"
+            return 1
+        else
+            # Recursive call to retry
+            prompt_for_coder_setup
+            return $?
+        fi
+    fi
+    
+    # Token is valid, now save to .env
     if grep -q "^CODER_SESSION_TOKEN=" "$env_file" 2>/dev/null; then
         # Update existing line
         if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -194,23 +218,10 @@ prompt_for_coder_setup() {
         echo "CODER_SESSION_TOKEN=$token" >> "$env_file"
     fi
     
-    # Reload .env
-    export CODER_SESSION_TOKEN="$token"
-    CODER_TOKEN="$token"
-    
     log_success "Token saved to .env"
+    log_success "Coder authentication successful!"
     echo ""
-    
-    # Test authentication
-    if test_auth; then
-        log_success "Coder authentication successful!"
-        echo ""
-        return 0
-    else
-        log_error "Authentication test failed"
-        log_info "Please verify the token is correct and try again"
-        return 1
-    fi
+    return 0
 }
 
 # Main - can be sourced or run directly

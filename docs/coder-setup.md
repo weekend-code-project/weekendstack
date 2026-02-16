@@ -721,7 +721,7 @@ SSH_KEY_DIR=/home/yourusername/.ssh
 2. Review failed template manually:
    ```bash
    cd config/coder/scripts
-   ./push-template-versioned.sh <failed-template-name>
+   ./push-template-local.sh <failed-template-name>
    ```
 
 3. Check template validity:
