@@ -53,6 +53,21 @@ detect_existing_profiles() {
 prompt_layer_mode() {
     local existing_profiles="$1"
     
+    # Clean up profile list: remove duplicates and core (since it's default)
+    local -a profile_array=(${existing_profiles//,/ })
+    local -a cleaned_profiles=()
+    declare -A seen
+    
+    for prof in "${profile_array[@]}"; do
+        if [[ "$prof" != "core" && -z "${seen[$prof]}" ]]; then
+            seen[$prof]=1
+            cleaned_profiles+=("$prof")
+        fi
+    done
+    
+    local display_profiles="${cleaned_profiles[*]}"
+    display_profiles="${display_profiles// /, }"
+    
     # Check if Coder is running
     local coder_running=false
     if docker ps --filter "name=^coder$" --format "{{.Names}}" 2>/dev/null | grep -q "^coder$"; then
@@ -61,8 +76,11 @@ prompt_layer_mode() {
     
     {
         echo ""
-        log_info "Previous profile selection detected: $existing_profiles"
-        echo "$existing_profiles"
+        if [[ -n "$display_profiles" ]]; then
+            log_info "Current profiles: $display_profiles (+ core)"
+        else
+            log_info "Current profiles: core only"
+        fi
         echo ""
         echo "Setup mode:"
         echo "  1) Add to existing profiles (layer on more services)"
@@ -120,7 +138,24 @@ select_profiles_interactive() {
     local -a existing_profiles=()
     
     if [[ -n "$existing_profiles_str" ]]; then
-        existing_profiles=($existing_profiles_str)
+        # Convert comma-separated string to array and deduplicate
+        IFS=',' read -ra existing_profiles <<< "$existing_profiles_str"
+        
+        # Deduplicate existing profiles
+        local -a deduped=()
+        declare -A seen
+        for prof in "${existing_profiles[@]}"; do
+            if [[ -z "${seen[$prof]}" ]]; then
+                seen[$prof]=1
+                deduped+=("$prof")
+            fi
+        done
+        existing_profiles=("${deduped[@]}")
+        
+        # Reconstruct string for display
+        existing_profiles_str="${existing_profiles[*]}"
+        existing_profiles_str="${existing_profiles_str// /,}"
+        
         layer_mode=$(prompt_layer_mode "$existing_profiles_str")
         
         # Handle templates-only mode
