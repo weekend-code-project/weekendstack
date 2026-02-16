@@ -327,16 +327,21 @@ deploy_coder_templates_interactive() {
         log_info "$deployment_info"
         echo ""
         echo "Options:"
-        echo "  1) Redeploy all templates"
-        echo "  2) Skip template deployment"
+        echo "  1) Redeploy all templates (force reinstall)"
+        echo "  2) Install/update templates (deploy new or update existing)"
+        echo "  3) Skip template deployment"
         echo ""
-        read -p "Choose option [1-2]: " -n 1 -r choice
+        read -p "Choose option [1-3]: " -n 1 -r choice
         echo ""
         
         case "$choice" in
             1)
                 log_info "Redeploying all templates..."
                 "$deploy_script" --force --interactive
+                ;;
+            2)
+                log_info "Installing/updating templates..."
+                "$deploy_script" --interactive
                 ;;
             *)
                 log_info "Skipping template deployment"
