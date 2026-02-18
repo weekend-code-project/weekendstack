@@ -366,7 +366,16 @@ services:
       - shared-network
     profiles:
       - external
-    command: tunnel run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        if [ -z "$CLOUDFLARE_TUNNEL_TOKEN" ]; then
+          echo "ERROR: CLOUDFLARE_TUNNEL_TOKEN is not set. Run './setup.sh --cloudflare-only' to configure."
+          exit 1
+        fi
+        exec cloudflared --no-autoupdate tunnel run --token "$CLOUDFLARE_TUNNEL_TOKEN"
+    environment:
+      CLOUDFLARE_TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
     healthcheck:
       test: ["CMD-SHELL", "cloudflared tunnel info 2>&1 | grep -q 'Registered tunnel' || exit 1"]
       interval: 30s

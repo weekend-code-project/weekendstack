@@ -413,6 +413,12 @@ generate_metadata_params_file() {
     
     local output_file="$dest_dir/metadata-params.tf"
     
+    # Don't overwrite existing metadata-params.tf (template override takes priority)
+    if [[ -f "$output_file" ]]; then
+        log "📋 metadata-params.tf already exists (template override), skipping generation"
+        return 0
+    fi
+    
     # Count module-contributed metadata
     local module_count=${#metadata_options[@]}
     
@@ -494,17 +500,30 @@ EOF
     # Close the parameter block
     echo "}" >> "$output_file"
     
+    # Add the metadata module declaration (required by agent-params.tf)
+    cat >> "$output_file" <<'EOF'
+
+# Module: Metadata (auto-generated)
+module "metadata" {
+  source         = "git::https://github.com/weekend-code-project/weekendstack.git//config/coder/template-modules/modules/metadata-module?ref=PLACEHOLDER"
+  enabled_blocks = data.coder_parameter.metadata_blocks.value != "" ? jsondecode(data.coder_parameter.metadata_blocks.value) : []
+
+  # Accept custom blocks from other modules (defined in template's agent-params.tf)
+  custom_blocks = try(local.all_custom_metadata, [])
+}
+EOF
+    
     log "🏷️  Generated metadata-params.tf with $((8 + module_count)) options (8 core + $module_count from modules)"
 }
 
 copy_modules_from_manifest "$TEMPLATE_DIR" "$TEMP_DIR/$TEMPLATE_NAME"
 
-# Copy additional modules referenced in .tf files
-copy_referenced_modules "$TEMP_DIR/$TEMPLATE_NAME"
-
-# Extract and generate metadata-params.tf
+# Extract and generate metadata-params.tf (before copy_referenced_modules so it can detect the metadata module)
 mapfile -t METADATA_OPTIONS < <(extract_metadata_from_modules "$TEMPLATE_DIR")
 generate_metadata_params_file "$TEMP_DIR/$TEMPLATE_NAME" "${METADATA_OPTIONS[@]}"
+
+# Copy additional modules referenced in .tf files (including metadata-module from generated metadata-params.tf)
+copy_referenced_modules "$TEMP_DIR/$TEMPLATE_NAME"
 
 # Rewrite git module sources to local paths in temp .tf files
 rewrite_to_local_sources() {

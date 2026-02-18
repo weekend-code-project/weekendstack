@@ -616,11 +616,18 @@ main_setup() {
     echo ""
     if prompt_yes_no "Start WeekendStack services now?" "y"; then
         clear
-        # Add external profile if Cloudflare tunnel is enabled
+        # Add external profile if Cloudflare tunnel is enabled AND token is configured
         if grep -q "^CLOUDFLARE_TUNNEL_ENABLED=true" "$SCRIPT_DIR/.env" 2>/dev/null; then
-            if [[ ! " ${selected_profiles[*]} " =~ " external " ]]; then
-                selected_profiles+=("external")
-                log_info "Adding 'external' profile for Cloudflare Tunnel"
+            local cf_token
+            cf_token=$(grep "^CLOUDFLARE_TUNNEL_TOKEN=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' ')
+            if [[ -n "$cf_token" ]]; then
+                if [[ ! " ${selected_profiles[*]} " =~ " external " ]]; then
+                    selected_profiles+=("external")
+                    log_info "Adding 'external' profile for Cloudflare Tunnel"
+                fi
+            else
+                log_warn "Cloudflare tunnel enabled but token is empty — skipping tunnel"
+                log_info "Run './setup.sh --cloudflare-only' to configure the tunnel"
             fi
         fi
         start_services_with_profiles "${selected_profiles[@]}"

@@ -91,6 +91,16 @@ done < "$ENV_EXAMPLE"
 # Set setup metadata
 sed -i "s/^SETUP_DATE=.*/SETUP_DATE=$(date +%Y-%m-%d)/" "$ENV_FILE"
 
+# Strip inline comments from variable assignment lines
+# Docker Compose does not reliably handle inline comments in .env files
+# Pattern: VAR=value  # comment  ->  VAR=value
+# Preserves full-line comments (lines starting with #) and values containing #
+sed -i -E '/^[A-Za-z_][A-Za-z0-9_]*=/ {
+    /^[A-Za-z_][A-Za-z0-9_]*=[^#]*#/ {
+        s/^([A-Za-z_][A-Za-z0-9_]*=[^[:space:]#]*)[[:space:]]+#.*$/\1/
+    }
+}' "$ENV_FILE"
+
 # Count generated secrets
 secret_count=$(grep -c "^[A-Z0-9_]*=.*#.*<GENERATE>" "$ENV_EXAMPLE" || true)
 log_success ".env file generated successfully"
