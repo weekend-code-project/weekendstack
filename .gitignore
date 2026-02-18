@@ -12,6 +12,9 @@ docker-compose.custom.yml
 SETUP_SUMMARY.md
 CLEANUP_SUMMARY.md
 
+# Coder runtime state — must never be committed so fresh installs always deploy
+config/coder/.template_deployment_complete
+
 # Cloudflare tunnel credentials and config
 config/cloudflare/.cloudflared/
 config/cloudflare/*.json
