@@ -425,25 +425,34 @@ _cleanup_phantom_dirs() {
 }
 
 remove_files_and_config() {
-    log_header "Removing User Files and Configuration"
-    
-    local removed=0
-    
-    for dir in "files" "config"; do
-        local target="$SCRIPT_DIR/$dir"
-        if [[ -d "$target" ]]; then
-            local size=$(du -sh "$target" 2>/dev/null | cut -f1 || echo "unknown")
-            log_info "Removing $dir/ ($size)..."
-            rm -rf "$target" 2>/dev/null || sudo rm -rf "$target"
-            log_success "Removed $dir/"
-            removed=$((removed + 1))
-        else
-            log_info "$dir/ does not exist, skipping"
-        fi
-    done
-    
-    if [[ $removed -eq 0 ]]; then
-        log_info "No user directories to remove"
+    log_header "Removing User Files and Generated Configuration"
+
+    # Wipe user media files (not git-tracked)
+    local files_dir="$SCRIPT_DIR/files"
+    if [[ -d "$files_dir" ]]; then
+        local size=$(du -sh "$files_dir" 2>/dev/null | cut -f1 || echo "unknown")
+        log_info "Removing files/ ($size)..."
+        rm -rf "$files_dir" 2>/dev/null || sudo rm -rf "$files_dir"
+        log_success "Removed files/"
+    fi
+
+    # For config/: only wipe GENERATED content (gitignored + untracked files).
+    # Git-tracked files (coder scripts, traefik configs, glance config, etc.) are
+    # restored to their committed state — never permanently deleted.
+    local config_dir="$SCRIPT_DIR/config"
+    if [[ -d "$config_dir" ]] && git -C "$SCRIPT_DIR" rev-parse --git-dir &>/dev/null; then
+        log_info "Resetting config/ to clean git state (preserving tracked files)..."
+        # Remove untracked and gitignored files (certs, tunnel creds, runtime data)
+        git -C "$SCRIPT_DIR" clean -fdx -- config/ 2>&1 | grep -v "^$" | while read -r line; do
+            log_info "  $line"
+        done
+        # Restore any modified tracked files back to committed state
+        git -C "$SCRIPT_DIR" checkout -- config/ 2>/dev/null || true
+        log_success "config/ reset: generated files removed, tracked files restored"
+    elif [[ -d "$config_dir" ]]; then
+        log_warn "Not a git repo — falling back to full config/ wipe"
+        rm -rf "$config_dir" 2>/dev/null || sudo rm -rf "$config_dir"
+        log_success "Removed config/"
     fi
 }
 
