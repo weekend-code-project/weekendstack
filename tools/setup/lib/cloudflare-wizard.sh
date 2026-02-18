@@ -276,13 +276,88 @@ setup_tunnel_with_api() {
             setup_tunnel_manual
             return $?
         fi
-        
-        # Save to .env
-        if grep -q "^CLOUDFLARE_API_TOKEN=" "$stack_dir/.env"; then
-            sed -i "s|^CLOUDFLARE_API_TOKEN=.*|CLOUDFLARE_API_TOKEN=$api_token|" "$stack_dir/.env"
+    fi
+    
+    # Detect common mistake: entering Account ID (32-char hex) instead of API token
+    if [[ "$api_token" =~ ^[0-9a-f]{32}$ ]]; then
+        log_warn "This looks like a Cloudflare Account ID, not an API token."
+        echo ""
+        echo "  Account ID (32 hex chars):  $api_token"
+        echo ""
+        echo "  API tokens are ~40 chars and contain mixed case letters + numbers."
+        echo "  Create one at: https://dash.cloudflare.com/profile/api-tokens"
+        echo ""
+        local corrected_token
+        corrected_token=$(prompt_input "Enter the correct API token (or press Enter to skip)" "")
+        if [[ -n "$corrected_token" ]]; then
+            # Save the hex value as account ID since user likely has it
+            if grep -q "^CLOUDFLARE_ACCOUNT_ID=" "$stack_dir/.env"; then
+                sed -i "s|^CLOUDFLARE_ACCOUNT_ID=.*|CLOUDFLARE_ACCOUNT_ID=$api_token|" "$stack_dir/.env"
+            else
+                echo "CLOUDFLARE_ACCOUNT_ID=$api_token" >> "$stack_dir/.env"
+            fi
+            api_token="$corrected_token"
         else
-            echo "CLOUDFLARE_API_TOKEN=$api_token" >> "$stack_dir/.env"
+            log_warn "API token required for automated setup"
+            log_info "Falling back to manual method..."
+            echo ""
+            setup_tunnel_manual
+            return $?
         fi
+    fi
+    
+    # Validate the API token against Cloudflare before proceeding
+    log_step "Validating API token..."
+    local verify_response
+    verify_response=$(curl -s "https://api.cloudflare.com/client/v4/user/tokens/verify" \
+        -H "Authorization: Bearer $api_token" 2>&1)
+    
+    local token_status
+    token_status=$(echo "$verify_response" | jq -r '.result.status // empty' 2>/dev/null)
+    
+    if [[ "$token_status" != "active" ]]; then
+        local error_msg
+        error_msg=$(echo "$verify_response" | jq -r '.errors[0].message // "Unknown error"' 2>/dev/null)
+        log_error "API token validation failed: $error_msg"
+        echo ""
+        echo "  Possible causes:"
+        echo "    • Token was revoked or expired"
+        echo "    • Account ID was entered instead of API token"
+        echo "    • Token was copied incorrectly"
+        echo ""
+        echo "  Create a new token at: https://dash.cloudflare.com/profile/api-tokens"
+        echo "  Required permissions: Account:Cloudflare Tunnel:Edit, Zone:DNS:Edit"
+        echo ""
+        
+        if prompt_yes_no "Enter a different token?" "y"; then
+            api_token=$(prompt_input "Enter Cloudflare API token" "")
+            if [[ -z "$api_token" ]]; then
+                log_info "Falling back to manual method..."
+                setup_tunnel_manual
+                return $?
+            fi
+            # Re-validate
+            verify_response=$(curl -s "https://api.cloudflare.com/client/v4/user/tokens/verify" \
+                -H "Authorization: Bearer $api_token" 2>&1)
+            token_status=$(echo "$verify_response" | jq -r '.result.status // empty' 2>/dev/null)
+            if [[ "$token_status" != "active" ]]; then
+                log_error "Token still invalid. Falling back to manual method."
+                setup_tunnel_manual
+                return $?
+            fi
+        else
+            log_info "Falling back to manual method..."
+            setup_tunnel_manual
+            return $?
+        fi
+    fi
+    log_success "API token is valid"
+    
+    # Save validated token to .env
+    if grep -q "^CLOUDFLARE_API_TOKEN=" "$stack_dir/.env"; then
+        sed -i "s|^CLOUDFLARE_API_TOKEN=.*|CLOUDFLARE_API_TOKEN=$api_token|" "$stack_dir/.env"
+    else
+        echo "CLOUDFLARE_API_TOKEN=$api_token" >> "$stack_dir/.env"
     fi
     
     # Export for API library
