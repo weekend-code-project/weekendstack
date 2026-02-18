@@ -412,7 +412,6 @@ remove_data_directory() {
 _cleanup_phantom_dirs() {
     local phantom_paths=(
         "$SCRIPT_DIR/config/traefik/config.yml"
-        "$SCRIPT_DIR/config/cloudflare/config.yml"
         "$SCRIPT_DIR/config/glance/glance.yml"
         "$SCRIPT_DIR/config/filebrowser/init-filebrowser.sh"
     )

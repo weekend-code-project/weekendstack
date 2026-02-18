@@ -6,13 +6,17 @@ source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 check_cloudflare_config() {
     local stack_dir="${SCRIPT_DIR}"
-    local config_file="$stack_dir/config/cloudflare/config.yml"
-    local creds_pattern="$stack_dir/config/cloudflare/.cloudflared/*.json"
-    
-    if [[ -f "$config_file" ]] && compgen -G "$creds_pattern" > /dev/null; then
-        return 0
+    local env_file="$stack_dir/.env"
+
+    # Token-based setup: just need CLOUDFLARE_TUNNEL_TOKEN in .env
+    if [[ -f "$env_file" ]]; then
+        local token
+        token=$(grep "^CLOUDFLARE_TUNNEL_TOKEN=" "$env_file" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+        if [[ -n "$token" ]]; then
+            return 0
+        fi
     fi
-    
+
     return 1
 }
 
@@ -380,15 +384,39 @@ setup_tunnel_manual() {
     echo ""
     echo "How do you want to provide credentials?"
     echo ""
-    echo "  1. JSON file path      - Provide path to downloaded credentials file"
-    echo "  2. Paste JSON content  - Copy/paste the JSON directly"
-    echo "  3. Tunnel token        - Use tunnel token (not yet supported)"
+    echo "  1. Tunnel token       - Copy from Cloudflare dashboard (recommended)"
+    echo "  2. JSON file path     - Provide path to downloaded credentials file"
+    echo "  3. Paste JSON content - Copy/paste the JSON directly"
     echo ""
     local creds_method
-    creds_method=$(prompt_select "Select [1-3]:" "JSON file path" "Paste JSON content" "Tunnel token")
+    creds_method=$(prompt_select "Select [1-3]:" "Tunnel token" "JSON file path" "Paste JSON content")
     
     case $creds_method in
-        0) # File path
+        0) # Tunnel token
+            echo ""
+            echo "In the Cloudflare dashboard, go to:"
+            echo "  Networks > Tunnels > $tunnel_name > Overview > Install connector"
+            echo "Copy the token from the connector install command."
+            echo ""
+            local tunnel_token
+            tunnel_token=$(prompt_input "Tunnel token" "")
+            
+            if [[ -z "$tunnel_token" ]]; then
+                log_error "Tunnel token is required"
+                return 1
+            fi
+            
+            # Save token directly to .env
+            local env_file="$stack_dir/.env"
+            if grep -q "^CLOUDFLARE_TUNNEL_TOKEN=" "$env_file" 2>/dev/null; then
+                sed -i "s|^CLOUDFLARE_TUNNEL_TOKEN=.*|CLOUDFLARE_TUNNEL_TOKEN=$tunnel_token|" "$env_file"
+            else
+                echo "CLOUDFLARE_TUNNEL_TOKEN=$tunnel_token" >> "$env_file"
+            fi
+            log_success "Saved tunnel token to .env"
+            ;;
+            
+        1) # File path
             local creds_file
             creds_file=$(prompt_input "Path to credentials JSON file" "")
             
@@ -403,18 +431,12 @@ setup_tunnel_manual() {
             log_success "Copied credentials file"
             ;;
             
-        1) # Paste JSON
+        2) # Paste JSON
             mkdir -p "$stack_dir/config/cloudflare/.cloudflared"
             log_info "Paste the JSON credentials (press Ctrl+D when done):"
             cat > "$stack_dir/config/cloudflare/.cloudflared/$tunnel_id.json"
             chmod 600 "$stack_dir/config/cloudflare/.cloudflared/$tunnel_id.json"
             log_success "Saved credentials file"
-            ;;
-            
-        2) # Tunnel token
-            log_warn "Tunnel token method requires different configuration"
-            log_info "For now, use JSON credentials. Token support coming soon."
-            return 1
             ;;
     esac
     

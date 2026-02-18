@@ -148,10 +148,12 @@ create_config_directories() {
 
     # Pre-create files that must be FILES (not directories) before Docker starts.
     # Docker silently creates a directory at a bind-mount source path if the file is missing.
-    _ensure_file_not_dir "$stack_dir/config/traefik/config.yml"
-    _ensure_file_not_dir "$stack_dir/config/cloudflare/config.yml"
     _ensure_file_not_dir "$stack_dir/config/glance/glance.yml"
     _ensure_file_not_dir "$stack_dir/config/filebrowser/init-filebrowser.sh"
+
+    # Traefik config.yml must be a valid static config, not an empty placeholder.
+    # An empty file causes traefik to start without entrypoints (no ports 80/443).
+    _ensure_traefik_static_config "$stack_dir/config/traefik/config.yml"
 
     # Restore coder scripts from tools/coder/scripts (survives Level 2 uninstall)
     local coder_scripts_src="$stack_dir/tools/coder/scripts"
@@ -180,6 +182,50 @@ _ensure_file_not_dir() {
         mkdir -p "$dir_path"
         touch "$file_path"
         log_info "Pre-created placeholder file: $file_path"
+    fi
+}
+
+# Ensure traefik config.yml contains a valid static configuration.
+# An empty config.yml means traefik starts without entrypoints (no ports 80/443)
+# and without the Docker provider (can't discover container labels).
+_ensure_traefik_static_config() {
+    local config_path="$1"
+    local dir_path
+    dir_path=$(dirname "$config_path")
+
+    # Fix phantom directory
+    if [[ -d "$config_path" ]]; then
+        rmdir "$config_path" 2>/dev/null || rm -rf "$config_path"
+        log_info "Removed phantom directory at: $config_path"
+    fi
+
+    # Write config if missing or empty (placeholder from previous setup)
+    if [[ ! -s "$config_path" ]] || ! grep -q "entryPoints" "$config_path" 2>/dev/null; then
+        mkdir -p "$dir_path"
+        cat > "$config_path" << 'TRAEFIK_CONFIG'
+# Traefik v3 Static Configuration
+log:
+  level: INFO
+
+api:
+  dashboard: true
+  insecure: true
+
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+
+providers:
+  docker:
+    exposedByDefault: false
+    endpoint: "unix:///var/run/docker.sock"
+  file:
+    directory: /config/traefik/auth
+    watch: true
+TRAEFIK_CONFIG
+        log_info "Created traefik static config: $config_path"
     fi
 }
 

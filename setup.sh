@@ -616,6 +616,13 @@ main_setup() {
     echo ""
     if prompt_yes_no "Start WeekendStack services now?" "y"; then
         clear
+        # Add external profile if Cloudflare tunnel is enabled
+        if grep -q "^CLOUDFLARE_TUNNEL_ENABLED=true" "$SCRIPT_DIR/.env" 2>/dev/null; then
+            if [[ ! " ${selected_profiles[*]} " =~ " external " ]]; then
+                selected_profiles+=("external")
+                log_info "Adding 'external' profile for Cloudflare Tunnel"
+            fi
+        fi
         start_services_with_profiles "${selected_profiles[@]}"
         
         # Deploy Coder templates if dev profile was selected
@@ -664,8 +671,6 @@ pull_images() {
 # Docker silently creates a directory when a bind-mount source file is missing.
 preflight_fix_mounts() {
     local file_mounts=(
-        "$SCRIPT_DIR/config/traefik/config.yml"
-        "$SCRIPT_DIR/config/cloudflare/config.yml"
         "$SCRIPT_DIR/config/glance/glance.yml"
         "$SCRIPT_DIR/config/filebrowser/init-filebrowser.sh"
     )
@@ -680,6 +685,20 @@ preflight_fix_mounts() {
             fixed=$((fixed + 1))
         fi
     done
+
+    # Traefik config.yml needs a valid static config, not just a touch placeholder.
+    # Source directory-creator for the helper function.
+    if type _ensure_traefik_static_config &>/dev/null; then
+        _ensure_traefik_static_config "$SCRIPT_DIR/config/traefik/config.yml"
+    else
+        local traefik_cfg="$SCRIPT_DIR/config/traefik/config.yml"
+        if [[ -d "$traefik_cfg" ]]; then
+            rmdir "$traefik_cfg" 2>/dev/null || rm -rf "$traefik_cfg"
+            touch "$traefik_cfg"
+            log_success "Fixed phantom directory -> placeholder file: $traefik_cfg"
+            fixed=$((fixed + 1))
+        fi
+    fi
 
     if [[ $fixed -gt 0 ]]; then
         log_info "Fixed $fixed mount path(s). Run --cloudflare-only or --certs-only to populate config."
