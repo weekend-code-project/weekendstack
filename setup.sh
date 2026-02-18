@@ -663,6 +663,8 @@ preflight_fix_mounts() {
     local file_mounts=(
         "$SCRIPT_DIR/config/traefik/config.yml"
         "$SCRIPT_DIR/config/cloudflare/config.yml"
+        "$SCRIPT_DIR/config/glance/glance.yml"
+        "$SCRIPT_DIR/config/filebrowser/init-filebrowser.sh"
     )
     local fixed=0
 

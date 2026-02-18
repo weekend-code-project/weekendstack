@@ -150,6 +150,8 @@ create_config_directories() {
     # Docker silently creates a directory at a bind-mount source path if the file is missing.
     _ensure_file_not_dir "$stack_dir/config/traefik/config.yml"
     _ensure_file_not_dir "$stack_dir/config/cloudflare/config.yml"
+    _ensure_file_not_dir "$stack_dir/config/glance/glance.yml"
+    _ensure_file_not_dir "$stack_dir/config/filebrowser/init-filebrowser.sh"
 }
 
 # Ensure a path is a file, not a directory.
