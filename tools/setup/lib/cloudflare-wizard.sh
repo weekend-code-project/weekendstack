@@ -376,9 +376,14 @@ setup_tunnel_with_api() {
         return 1
     fi
     
-    # Parse result (format: tunnel_id|account_id)
+    # Parse result (format: tunnel_id|account_id|tunnel_name)
     local tunnel_id=$(echo "$result" | cut -d'|' -f1)
     local account_id=$(echo "$result" | cut -d'|' -f2)
+    local resolved_name=$(echo "$result" | cut -d'|' -f3)
+    # User may have picked an existing tunnel with a different name
+    if [[ -n "$resolved_name" ]]; then
+        tunnel_name="$resolved_name"
+    fi
     
     # Create config.yml
     create_tunnel_config "$tunnel_name" "$tunnel_id" "$domain"

@@ -349,6 +349,109 @@ cf_save_tunnel_credentials() {
     return 0
 }
 
+# List all tunnels and let user pick one or create new
+# Returns: tunnel_id|tunnel_name  or empty on "create new"
+cf_pick_existing_tunnel() {
+    local account_id="$1"
+    local default_name="$2"
+    
+    local tunnels_json
+    tunnels_json=$(cf_list_tunnels "$account_id")
+    if [[ $? -ne 0 ]]; then
+        return 1
+    fi
+    
+    # Get non-deleted tunnels
+    local tunnel_list
+    tunnel_list=$(echo "$tunnels_json" | jq -r '.result[] | select(.deleted_at == null) | "\(.id)|\(.name)"' 2>/dev/null)
+    
+    if [[ -z "$tunnel_list" ]]; then
+        log_info "No existing tunnels found in this account"
+        return 1
+    fi
+    
+    local count
+    count=$(echo "$tunnel_list" | wc -l)
+    
+    echo ""
+    log_info "Found $count existing tunnel(s) in your account:"
+    echo ""
+    
+    local i=1
+    local ids=() names=()
+    while IFS='|' read -r tid tname; do
+        echo "  $i. $tname (ID: ${tid:0:8}...)"
+        ids+=("$tid")
+        names+=("$tname")
+        i=$((i + 1))
+    done <<< "$tunnel_list"
+    
+    echo "  $i. Create a new tunnel"
+    echo ""
+    
+    local choice
+    read -p "Select tunnel [1-$i] (default: 1 — reuse existing): " -r choice
+    choice=${choice:-1}
+    
+    if [[ "$choice" -eq "$i" ]] 2>/dev/null; then
+        # User wants to create new
+        return 1
+    fi
+    
+    if [[ "$choice" -ge 1 ]] && [[ "$choice" -lt "$i" ]] 2>/dev/null; then
+        local idx=$((choice - 1))
+        echo "${ids[$idx]}|${names[$idx]}"
+        return 0
+    fi
+    
+    log_warn "Invalid selection, creating new tunnel"
+    return 1
+}
+
+# Delete old/unused tunnels to avoid token sprawl
+cf_cleanup_old_tunnels() {
+    local account_id="$1"
+    local keep_tunnel_id="$2"  # Don't delete this one
+    
+    local tunnels_json
+    tunnels_json=$(cf_list_tunnels "$account_id")
+    if [[ $? -ne 0 ]]; then
+        return 1
+    fi
+    
+    # Get non-deleted tunnels excluding the one to keep
+    local old_tunnels
+    old_tunnels=$(echo "$tunnels_json" | jq -r ".result[] | select(.deleted_at == null) | select(.id != \"$keep_tunnel_id\") | \"\(.id)|\(.name)\"" 2>/dev/null)
+    
+    if [[ -z "$old_tunnels" ]]; then
+        return 0
+    fi
+    
+    local count
+    count=$(echo "$old_tunnels" | wc -l)
+    
+    echo ""
+    log_warn "Found $count other tunnel(s) that may be unused:"
+    while IFS='|' read -r tid tname; do
+        echo "    • $tname (${tid:0:8}...)"
+    done <<< "$old_tunnels"
+    echo ""
+    echo "  Old tunnels create stale API tokens in your Cloudflare account."
+    echo ""
+    
+    if prompt_yes_no "Delete unused tunnels?" "y"; then
+        while IFS='|' read -r tid tname; do
+            # Must clean connections first
+            cf_api_call DELETE "/accounts/$account_id/cfd_tunnel/$tid/connections" >/dev/null 2>&1
+            if cf_delete_tunnel "$account_id" "$tid" >/dev/null 2>&1; then
+                log_success "Deleted tunnel: $tname"
+            else
+                log_warn "Could not delete tunnel: $tname (may have active connections)"
+            fi
+        done <<< "$old_tunnels"
+    fi
+}
+
 # Full automated setup workflow
 cf_setup_tunnel_automated() {
     local tunnel_name="$1"
@@ -367,18 +470,15 @@ cf_setup_tunnel_automated() {
         return 1
     fi
     
-    # Check if tunnel already exists
+    # Check for existing tunnels — offer to reuse before creating new
     local tunnel_id
-    tunnel_id=$(cf_get_tunnel "$account_id" "$tunnel_name")
-    local tunnel_exists=$?
+    local picked
+    picked=$(cf_pick_existing_tunnel "$account_id" "$tunnel_name")
     
-    if [[ $tunnel_exists -eq 0 ]]; then
-        log_info "Tunnel '$tunnel_name' already exists (ID: $tunnel_id)"
-        
-        if ! prompt_yes_no "Use existing tunnel?" "y"; then
-            log_info "Please choose a different tunnel name or delete the existing tunnel"
-            return 1
-        fi
+    if [[ $? -eq 0 && -n "$picked" ]]; then
+        tunnel_id=$(echo "$picked" | cut -d'|' -f1)
+        tunnel_name=$(echo "$picked" | cut -d'|' -f2)
+        log_success "Using existing tunnel: $tunnel_name (ID: $tunnel_id)"
     else
         # Create new tunnel
         log_header "Creating Cloudflare Tunnel"
@@ -419,8 +519,11 @@ cf_setup_tunnel_automated() {
         fi
     fi
     
-    # Output tunnel info
-    echo "$tunnel_id|$account_id"
+    # Offer to clean up old tunnels to prevent API token sprawl
+    cf_cleanup_old_tunnels "$account_id" "$tunnel_id"
+    
+    # Output tunnel info (include tunnel_name since user may have picked a different one)
+    echo "$tunnel_id|$account_id|$tunnel_name"
     return 0
 }
 
@@ -430,4 +533,5 @@ export -f cf_list_tunnels cf_get_tunnel cf_create_tunnel
 export -f cf_get_tunnel_token cf_delete_tunnel
 export -f cf_create_dns_record cf_check_dns_record
 export -f cf_validate_token cf_save_tunnel_credentials
+export -f cf_pick_existing_tunnel cf_cleanup_old_tunnels
 export -f cf_setup_tunnel_automated
