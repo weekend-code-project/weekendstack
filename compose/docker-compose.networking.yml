@@ -367,12 +367,9 @@ services:
     profiles:
       - external
     command: tunnel run --token ${CLOUDFLARE_TUNNEL_TOKEN:-disabled}
-    healthcheck:
-      test: ["CMD-SHELL", "cloudflared tunnel info 2>&1 | grep -q 'Registered tunnel' || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
+    # NOTE: No healthcheck — cloudflared uses a scratch/distroless image with
+    # no shell, so CMD-SHELL healthchecks always fail. The tunnel's own
+    # reconnect logic handles availability.
 
   # =============================================================================
   # ERROR PAGES - CUSTOM ERROR PAGES FOR TRAEFIK
