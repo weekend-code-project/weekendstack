@@ -34,6 +34,7 @@ CODER_TOKEN="${CODER_SESSION_TOKEN:-}"
 # Parse arguments
 FORCE_REDEPLOY="false"
 INTERACTIVE_MODE="false"
+SKIP_CONFIRM="false"
 SELECTED_TEMPLATES=()
 
 while [[ $# -gt 0 ]]; do
@@ -44,6 +45,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --interactive)
             INTERACTIVE_MODE="true"
+            shift
+            ;;
+        --skip-confirm|--yes|-y)
+            SKIP_CONFIRM="true"
             shift
             ;;
         --templates)
@@ -213,7 +218,7 @@ fi
 echo ""
 
 # Interactive confirmation if in interactive mode
-if [[ "$INTERACTIVE_MODE" == "true" ]]; then
+if [[ "$INTERACTIVE_MODE" == "true" && "$SKIP_CONFIRM" != "true" ]]; then
     read -p "Proceed with deployment? [Y/n]: " -r response
     case "$response" in
         [nN][oO]|[nN])

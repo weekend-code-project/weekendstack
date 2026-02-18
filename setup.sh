@@ -324,18 +324,35 @@ deploy_coder_templates_interactive() {
         fi
     fi
     
-    # Check if templates already deployed
+    # Check if templates already deployed — verify against live Coder API, not just marker
     local already_deployed=false
     local deployment_info=""
     if [[ -f "$marker_file" ]]; then
-        already_deployed=true
-        # Try to extract deployment info from JSON marker
-        if grep -q "deployment_date" "$marker_file" 2>/dev/null; then
-            local deploy_date=$(grep "deployment_date" "$marker_file" | cut -d'"' -f4)
-            local successful=$(grep '"successful":' "$marker_file" | grep -o '[0-9]*')
-            deployment_info="Last deployed: $deploy_date ($successful templates)"
+        # Verify templates actually exist in the live Coder instance
+        local coder_url="${CODER_ACCESS_URL:-http://localhost:7080}"
+        local live_count=0
+        if [[ -n "${CODER_SESSION_TOKEN:-}" ]]; then
+            live_count=$(curl -sf "$coder_url/api/v2/templates" \
+                -H "Coder-Session-Token: $CODER_SESSION_TOKEN" 2>/dev/null \
+                | jq '[.[] | select(.deprecated == false)] | length' 2>/dev/null || echo 0)
         else
-            deployment_info="Templates previously deployed"
+            live_count=$(curl -sf "$coder_url/api/v2/templates" 2>/dev/null \
+                | jq 'length' 2>/dev/null || echo 0)
+        fi
+
+        if [[ "${live_count:-0}" -gt 0 ]]; then
+            already_deployed=true
+            # Try to extract deployment info from JSON marker
+            if grep -q "deployment_date" "$marker_file" 2>/dev/null; then
+                local deploy_date=$(grep "deployment_date" "$marker_file" | cut -d'"' -f4)
+                local successful=$(grep '"successful":' "$marker_file" | grep -o '[0-9]*')
+                deployment_info="Last deployed: $deploy_date ($successful templates, $live_count active in Coder)"
+            else
+                deployment_info="Templates previously deployed ($live_count active in Coder)"
+            fi
+        else
+            log_info "Marker file found but no templates exist in Coder — will deploy"
+            rm -f "$marker_file"
         fi
     fi
     

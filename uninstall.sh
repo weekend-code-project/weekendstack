@@ -315,6 +315,14 @@ remove_setup_files() {
         log_success "Removed previous CLEANUP_SUMMARY.md"
         files_removed=$((files_removed + 1))
     fi
+
+    # Remove Coder template deployment marker so fresh installs always re-deploy
+    local coder_marker="$SCRIPT_DIR/config/coder/.template_deployment_complete"
+    if [[ -f "$coder_marker" ]]; then
+        rm -f "$coder_marker"
+        log_success "Removed Coder template deployment marker"
+        files_removed=$((files_removed + 1))
+    fi
     
     if [[ $files_removed -eq 0 ]]; then
         log_info "No setup files to remove"
