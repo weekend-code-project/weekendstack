@@ -369,7 +369,19 @@ remove_volumes() {
 remove_networks() {
     log_header "Removing Docker Networks"
     
-    local networks=("shared-network" "traefik-network" "coder-network" "core-network" "productivity-network")
+    local networks=(
+        "shared-network"
+        "traefik-network"
+        "coder-network"
+        "core-network"
+        "productivity-network"
+        "media-network"
+        "ai-network"
+        "automation-network"
+        "monitoring-network"
+        "personal-network"
+        "weekendstack_default"
+    )
     local removed=0
     
     for network in "${networks[@]}"; do
