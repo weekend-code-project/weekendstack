@@ -34,6 +34,7 @@ CODER_TOKEN="${CODER_SESSION_TOKEN:-}"
 # Parse arguments
 FORCE_REDEPLOY="false"
 INTERACTIVE_MODE="false"
+SKIP_CONFIRM="false"
 SELECTED_TEMPLATES=()
 
 while [[ $# -gt 0 ]]; do
@@ -44,6 +45,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --interactive)
             INTERACTIVE_MODE="true"
+            shift
+            ;;
+        --skip-confirm)
+            SKIP_CONFIRM="true"
             shift
             ;;
         --templates)
@@ -82,8 +87,8 @@ if [[ -f "$MARKER_FILE" && "$FORCE_REDEPLOY" != "true" && "$INTERACTIVE_MODE" !=
     
     # Try to parse marker file if it's JSON
     if grep -q "deployment_date" "$MARKER_FILE" 2>/dev/null; then
-        local deploy_date=$(grep "deployment_date" "$MARKER_FILE" | cut -d'"' -f4)
-        local successful=$(grep '"successful":' "$MARKER_FILE" | grep -o '[0-9]*')
+        deploy_date=$(grep "deployment_date" "$MARKER_FILE" | cut -d'"' -f4)
+        successful=$(grep '"successful":' "$MARKER_FILE" | grep -o '[0-9]*')
         log_info "Last deployment: $deploy_date ($successful templates)"
     fi
     
@@ -135,9 +140,15 @@ fi
 log_info "Testing Coder authentication..."
 if [[ -x "$CODER_API_SCRIPT" ]]; then
     if ! "$CODER_API_SCRIPT" test 2>/dev/null; then
-        log_error "Authentication failed"
-        log_info "Please verify your CODER_SESSION_TOKEN in .env"
-        log_info "You can update it by running: $CODER_API_SCRIPT setup"
+        log_error "Authentication failed - token is invalid or expired"
+        echo ""
+        log_info "To get a fresh session token:"
+        echo "  1. Open: $CODER_URL/cli-auth"
+        echo "  2. Copy the new token"
+        echo "  3. Update .env: CODER_SESSION_TOKEN=<new-token>"
+        echo ""
+        log_info "Or run: $CODER_API_SCRIPT setup"
+        echo ""
         exit 1
     fi
 fi
@@ -212,8 +223,8 @@ else
 fi
 echo ""
 
-# Interactive confirmation if in interactive mode
-if [[ "$INTERACTIVE_MODE" == "true" ]]; then
+# Interactive confirmation if in interactive mode (unless skip-confirm is set)
+if [[ "$INTERACTIVE_MODE" == "true" && "$SKIP_CONFIRM" != "true" ]]; then
     read -p "Proceed with deployment? [Y/n]: " -r response
     case "$response" in
         [nN][oO]|[nN])
@@ -225,6 +236,9 @@ if [[ "$INTERACTIVE_MODE" == "true" ]]; then
             echo ""
             ;;
     esac
+elif [[ "$SKIP_CONFIRM" != "true" ]]; then
+    log_info "Starting deployment..."
+    echo ""
 fi
 
 # Deploy each template
@@ -236,14 +250,14 @@ total_templates=${#templates[@]}
 current=0
 
 for template in "${templates[@]}"; do
-    ((current++))
+    current=$((current + 1))
     log_info "📤 Deploying template $current/$total_templates: $template"
     
     if [[ ! -x "$PUSH_SCRIPT" ]]; then
         log_error "Push script not executable: $PUSH_SCRIPT"
         log_info "Run: chmod +x $PUSH_SCRIPT"
         failed_templates+=("$template:script not executable")
-        ((failure_count++))
+        failure_count=$((failure_count + 1))
         continue
     fi
     
@@ -251,11 +265,11 @@ for template in "${templates[@]}"; do
     if CODER_SESSION_TOKEN="$CODER_TOKEN" "$PUSH_SCRIPT" "$template" 2>&1 | sed 's/^/  /'; then
         log_success "Successfully deployed: $template"
         successful_templates+=("$template:success")
-        ((success_count++))
+        success_count=$((success_count + 1))
     else
         log_error "Failed to deploy: $template"
         failed_templates+=("$template:deployment failed")
-        ((failure_count++))
+        failure_count=$((failure_count + 1))
     fi
     echo ""
 done

@@ -86,16 +86,6 @@ resource "docker_container" "workspace" {
     }
   }
   
-  # Server port mappings (conditional - only when server is configured)
-  dynamic "ports" {
-    for_each = try(module.setup_server[0].docker_ports, [])
-    content {
-      internal = ports.value.internal
-      external = ports.value.external
-      protocol = "tcp"
-    }
-  }
-  
   # Traefik routing labels (conditional - only when Traefik module is enabled)
   dynamic "labels" {
     for_each = try(module.traefik[0].traefik_labels, {})

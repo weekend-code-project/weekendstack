@@ -318,31 +318,16 @@ deploy_coder_templates_interactive() {
     if [[ "$already_deployed" == "true" ]]; then
         log_info "$deployment_info"
         echo ""
-        echo "Options:"
-        echo "  1) Redeploy all templates (force reinstall)"
-        echo "  2) Install/update templates (deploy new or update existing)"
-        echo "  3) Skip template deployment"
-        echo ""
-        read -p "Choose option [1-3]: " -n 1 -r choice
-        echo ""
-        
-        case "$choice" in
-            1)
-                log_info "Redeploying all templates..."
-                "$deploy_script" --force --interactive
-                ;;
-            2)
-                log_info "Installing/updating templates..."
-                "$deploy_script" --interactive
-                ;;
-            *)
-                log_info "Skipping template deployment"
-                return 0
-                ;;
-        esac
+        if prompt_yes_no "Install/update templates (deploy new or update existing)?" "n"; then
+            log_info "Installing/updating templates..."
+            "$deploy_script" --interactive --skip-confirm
+        else
+            log_info "Skipping template deployment"
+            log_info "You can deploy templates later with: make coder-templates"
+        fi
     else
         if prompt_yes_no "Deploy Coder templates now?" "y"; then
-            "$deploy_script" --interactive
+            "$deploy_script" --interactive --skip-confirm
         else
             log_info "Skipping template deployment"
             log_info "You can deploy templates later with: make coder-templates"

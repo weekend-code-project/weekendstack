@@ -358,6 +358,9 @@ services:
       - dev
       - dev-tools
       - setup-infrastructure
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     environment:
       REGISTRY_PROXY_REMOTEURL: https://registry-1.docker.io
       REGISTRY_STORAGE_DELETE_ENABLED: "true"

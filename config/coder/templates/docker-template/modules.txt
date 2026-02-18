@@ -1,7 +1,7 @@
 # =============================================================================
 # MODULES.TXT - Declarative Module List
 # =============================================================================
-# VERSION: 47
+# VERSION: 7
 #
 # This file declares which parameter modules to include in the template.
 # Modules are loaded in the order listed here (top to bottom = execution order).
@@ -11,7 +11,6 @@
 #   - One module filename per line (e.g., docker-params.tf)
 #   - Lines starting with # are comments
 #   - Blank lines are ignored
-#   - Inline comments are stripped (everything after # on same line)
 #
 # SOURCE AUTO-DETECTION:
 #   - Script checks template directory first (local override)
@@ -23,18 +22,10 @@
 #   - Injection happens at the "# INJECT_MODULES_HERE" marker
 #   - Script outputs follow naming convention: {module_name}_script
 #
-# EXAMPLE MODULES (uncomment to enable):
-# metadata-params.tf        # Resource monitoring blocks (CPU, RAM, disk)
-# ssh-params.tf             # SSH server configuration
-# git-params.tf             # Git integration and repository cloning
-# traefik-params.tf         # Traefik routing and authentication
-# setup-server-params.tf    # Development server startup
-#
 # =============================================================================
 
-# Modules (one per line)
-docker-params.tf
-ssh-params.tf
-git-params.tf
-setup-server-params.tf
-traefik-params.tf
+# Core modules for Docker Template (minimal baseline)
+docker-params.tf        # Docker-in-Docker support
+ssh-params.tf           # SSH server configuration
+git-params.tf           # Git identity and integration
+traefik-params.tf       # Traefik routing and authentication

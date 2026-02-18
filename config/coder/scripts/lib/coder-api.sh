@@ -140,6 +140,14 @@ test_auth() {
     if [[ $? -eq 0 ]]; then
         local username=$(echo "$user_info" | grep -o '"username":"[^"]*"' | cut -d'"' -f4)
         local email=$(echo "$user_info" | grep -o '"email":"[^"]*"' | cut -d'"' -f4)
+        
+        # Verify we got actual user data back (not null/empty)
+        if [[ -z "$username" || "$username" == "null" ]]; then
+            log_error "Authentication failed - token is invalid or expired"
+            log_info "Please get a fresh session token from: $CODER_URL/cli-auth"
+            return 1
+        fi
+        
         log_success "Authenticated as: $username ($email)"
         return 0
     else

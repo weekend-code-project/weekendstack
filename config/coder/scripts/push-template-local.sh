@@ -491,8 +491,19 @@ EOF
 EOF
     done
     
-    # Close the parameter block
-    echo "}" >> "$output_file"
+    # Close the parameter block and add the module declaration
+    cat >> "$output_file" <<'EOF'
+}
+
+# Module: Metadata (always loaded, but content depends on selection)
+module "metadata" {
+  source         = "./module-metadata"
+  enabled_blocks = data.coder_parameter.metadata_blocks.value != "" ? jsondecode(data.coder_parameter.metadata_blocks.value) : []
+  
+  # Accept custom blocks from other modules (defined in template's agent-params.tf)
+  custom_blocks = try(local.all_custom_metadata, [])
+}
+EOF
     
     log "🏷️  Generated metadata-params.tf with $((8 + module_count)) options (8 core + $module_count from modules)"
 }
@@ -502,9 +513,23 @@ copy_modules_from_manifest "$TEMPLATE_DIR" "$TEMP_DIR/$TEMPLATE_NAME"
 # Copy additional modules referenced in .tf files
 copy_referenced_modules "$TEMP_DIR/$TEMPLATE_NAME"
 
-# Extract and generate metadata-params.tf
-mapfile -t METADATA_OPTIONS < <(extract_metadata_from_modules "$TEMPLATE_DIR")
-generate_metadata_params_file "$TEMP_DIR/$TEMPLATE_NAME" "${METADATA_OPTIONS[@]}"
+# Extract and generate metadata-params.tf (only if not already present from modules.txt)
+if [[ ! -f "$TEMP_DIR/$TEMPLATE_NAME/metadata-params.tf" ]]; then
+    mapfile -t METADATA_OPTIONS < <(extract_metadata_from_modules "$TEMPLATE_DIR")
+    generate_metadata_params_file "$TEMP_DIR/$TEMPLATE_NAME" "${METADATA_OPTIONS[@]}"
+    
+    # Copy metadata module since it's referenced by the auto-generated file
+    metadata_module_src="$MODULES_DIR/metadata-module"
+    metadata_module_dest="$TEMP_DIR/$TEMPLATE_NAME/module-metadata"
+    if [[ -d "$metadata_module_src" ]]; then
+        cp -r "$metadata_module_src" "$metadata_module_dest"
+        log "  ✓ Copied metadata module: metadata-module -> module-metadata/"
+    else
+        log_warn "  ⚠ Metadata module not found: $metadata_module_src"
+    fi
+else
+    log "📋 metadata-params.tf already present (skipping auto-generation)"
+fi
 
 # Rewrite git module sources to local paths in temp .tf files
 rewrite_to_local_sources() {
@@ -669,16 +694,18 @@ RETRY_COUNT=0
 
 # (Coder CLI version does not support --icon flag; icon.svg retained for future use)
 
-# Pass core vars as TF_VAR values so Terraform plans capture the real host paths/IPs
-PUSH_ENV_VARS="-e TF_VAR_base_domain=${BASE_DOMAIN:-localhost}"
-PUSH_ENV_VARS+=" -e TF_VAR_host_ip=${HOST_IP:-127.0.0.1}"
-PUSH_ENV_VARS+=" -e TF_VAR_ssh_key_dir=${SSH_KEY_DIR:-/home/docker/.ssh}"
-PUSH_ENV_VARS+=" -e TF_VAR_traefik_auth_dir=${TRAEFIK_AUTH_DIR:-/opt/stacks/weekendstack/config/traefik/auth}"
+# Build environment variable array for docker exec
+PUSH_ENV_VARS=(
+    -e "TF_VAR_base_domain=${BASE_DOMAIN:-localhost}"
+    -e "TF_VAR_host_ip=${HOST_IP:-127.0.0.1}"
+    -e "TF_VAR_ssh_key_dir=${SSH_KEY_DIR:-/home/docker/.ssh}"
+    -e "TF_VAR_traefik_auth_dir=${TRAEFIK_AUTH_DIR:-/opt/stacks/weekendstack/config/traefik/auth}"
+)
 
-# Pass Coder authentication
+# Add Coder authentication if available
 if [[ -n "${CODER_SESSION_TOKEN:-}" ]]; then
-    PUSH_ENV_VARS+=" -e CODER_SESSION_TOKEN=${CODER_SESSION_TOKEN}"
-    PUSH_ENV_VARS+=" -e CODER_URL=http://127.0.0.1:7080"
+    PUSH_ENV_VARS+=(-e "CODER_SESSION_TOKEN=${CODER_SESSION_TOKEN}")
+    PUSH_ENV_VARS+=(-e "CODER_URL=http://127.0.0.1:7080")
     log "Using authenticated session for template push"
 else
     log_warn "No CODER_SESSION_TOKEN set - template may not be assigned to user"
@@ -690,7 +717,7 @@ log "Setting TF_VAR_ssh_key_dir=${SSH_KEY_DIR:-/home/docker/.ssh}"
 log "Setting TF_VAR_traefik_auth_dir=${TRAEFIK_AUTH_DIR:-/opt/stacks/weekendstack/config/traefik/auth}"
 
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    if docker exec $PUSH_ENV_VARS coder coder templates push "$TEMPLATE_NAME" \
+    if docker exec "${PUSH_ENV_VARS[@]}" coder coder templates push "$TEMPLATE_NAME" \
         --directory "/tmp/$TEMPLATE_NAME" \
         --name "$VERSION_NAME" \
         --yes 2>&1 | tee /tmp/push-output.txt; then

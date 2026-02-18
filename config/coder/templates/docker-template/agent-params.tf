@@ -9,14 +9,12 @@ locals {
   docker_metadata = try(module.docker[0].metadata_blocks, [])
   ssh_metadata    = try(module.ssh[0].metadata_blocks, [])
   git_metadata    = try(module.git_integration[0].metadata_blocks, [])
-  server_metadata = try(module.setup_server[0].metadata_blocks, [])
   
   # Combine all module metadata - add more as modules are added
   all_custom_metadata = concat(
     local.docker_metadata,
     local.ssh_metadata,
-    local.git_metadata,
-    local.server_metadata
+    local.git_metadata
   )
 }
 
@@ -71,9 +69,7 @@ module "agent" {
     "# Traefik Auth Setup (only runs when password is provided)",
     try(module.traefik[0].auth_setup_script, ""),
     "",
-    "# Phase 6 Module: setup-server (Issue #32) - Conditional",
-    try(module.setup_server[0].setup_server_script, "# Server disabled"),
-    "",
+
     "echo '[WORKSPACE] Workspace ready!'"
   ])
 }
