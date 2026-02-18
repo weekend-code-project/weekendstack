@@ -616,6 +616,16 @@ main_setup() {
     echo ""
     if prompt_yes_no "Start WeekendStack services now?" "y"; then
         clear
+        # Re-source .env to pick up any changes made by cloudflare wizard, cert setup, etc.
+        if [[ -f "$SCRIPT_DIR/.env" ]]; then
+            set -a
+            source "$SCRIPT_DIR/.env"
+            set +a
+        fi
+        
+        # Ensure cloudflare-tunnel is in custom profile if wizard configured it
+        ensure_cloudflare_in_custom_profile
+        
         # Add external profile if Cloudflare tunnel is enabled AND token is configured
         if grep -q "^CLOUDFLARE_TUNNEL_ENABLED=true" "$SCRIPT_DIR/.env" 2>/dev/null; then
             local cf_token
@@ -671,6 +681,28 @@ pull_images() {
             exit 1
         fi
         clear
+    fi
+}
+
+# Ensure cloudflare-tunnel is in docker-compose.custom.yml when the tunnel
+# is enabled and has a token. The custom profile is generated during env setup
+# (before the cloudflare wizard), so this appends the service if missing.
+ensure_cloudflare_in_custom_profile() {
+    [[ -f "$SCRIPT_DIR/docker-compose.custom.yml" ]] || return 0
+    
+    local cf_enabled cf_token_val
+    cf_enabled=$(grep "^CLOUDFLARE_TUNNEL_ENABLED=true" "$SCRIPT_DIR/.env" 2>/dev/null || true)
+    cf_token_val=$(grep "^CLOUDFLARE_TUNNEL_TOKEN=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' ')
+    
+    if [[ -n "$cf_enabled" && -n "$cf_token_val" ]] && \
+       ! grep -q "cloudflare-tunnel:" "$SCRIPT_DIR/docker-compose.custom.yml"; then
+        cat >> "$SCRIPT_DIR/docker-compose.custom.yml" << 'CFEOF'
+  cloudflare-tunnel:
+    profiles:
+      - custom
+
+CFEOF
+        log_info "Added cloudflare-tunnel to custom profile"
     fi
 }
 
@@ -830,6 +862,16 @@ rollback_configuration() {
 start_services() {
     log_header "Starting Services"
     
+    # Re-source .env for latest config
+    if [[ -f "$SCRIPT_DIR/.env" ]]; then
+        set -a
+        source "$SCRIPT_DIR/.env"
+        set +a
+    fi
+    
+    # Ensure cloudflare-tunnel is in custom profile if enabled
+    ensure_cloudflare_in_custom_profile
+    
     if docker compose up -d; then
         log_success "Services started"
         docker compose ps
@@ -855,7 +897,18 @@ stop_services() {
 restart_services() {
     log_header "Restarting Services"
     
-    if docker compose restart; then
+    # Re-source .env for latest config
+    if [[ -f "$SCRIPT_DIR/.env" ]]; then
+        set -a
+        source "$SCRIPT_DIR/.env"
+        set +a
+    fi
+    
+    # Ensure cloudflare-tunnel is in custom profile if enabled
+    ensure_cloudflare_in_custom_profile
+    
+    # Use up -d instead of restart to also start any newly-enabled services
+    if docker compose up -d --force-recreate; then
         log_success "Services restarted"
         docker compose ps
     else
