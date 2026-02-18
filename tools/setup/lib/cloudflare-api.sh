@@ -373,24 +373,26 @@ cf_pick_existing_tunnel() {
     local count
     count=$(echo "$tunnel_list" | wc -l)
     
-    echo ""
+    echo "" >&2
     log_info "Found $count existing tunnel(s) in your account:"
-    echo ""
+    echo "" >&2
     
     local i=1
     local ids=() names=()
     while IFS='|' read -r tid tname; do
-        echo "  $i. $tname (ID: ${tid:0:8}...)"
+        echo "  $i. $tname (ID: ${tid:0:8}...)" >&2
         ids+=("$tid")
         names+=("$tname")
         i=$((i + 1))
     done <<< "$tunnel_list"
     
-    echo "  $i. Create a new tunnel"
-    echo ""
+    echo "  $i. Create a new tunnel" >&2
+    echo "" >&2
     
     local choice
-    read -p "Select tunnel [1-$i] (default: 1 — reuse existing): " -r choice
+    # Read from /dev/tty so the prompt works correctly inside $() captures
+    echo -n "Select tunnel [1-$i] (default: 1 — reuse existing): " >&2
+    read -r choice </dev/tty
     choice=${choice:-1}
     
     if [[ "$choice" -eq "$i" ]] 2>/dev/null; then
@@ -430,14 +432,14 @@ cf_cleanup_old_tunnels() {
     local count
     count=$(echo "$old_tunnels" | wc -l)
     
-    echo ""
+    echo "" >&2
     log_warn "Found $count other tunnel(s) that may be unused:"
     while IFS='|' read -r tid tname; do
-        echo "    • $tname (${tid:0:8}...)"
+        echo "    • $tname (${tid:0:8}...)" >&2
     done <<< "$old_tunnels"
-    echo ""
-    echo "  Old tunnels create stale API tokens in your Cloudflare account."
-    echo ""
+    echo "" >&2
+    echo "  Old tunnels create stale API tokens in your Cloudflare account." >&2
+    echo "" >&2
     
     if prompt_yes_no "Delete unused tunnels?" "y"; then
         while IFS='|' read -r tid tname; do
