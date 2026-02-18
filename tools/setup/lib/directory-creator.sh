@@ -42,26 +42,47 @@ get_files_subdirs_for_profiles() {
     # Common directories
     dirs+=("ai-models/ollama")
     
+    # Check if 'all' profile is selected — if so, include everything
+    local include_all=false
+    for profile in "${profiles[@]}"; do
+        if [[ "$profile" == "all" ]]; then
+            include_all=true
+            break
+        fi
+    done
+    
     for profile in "${profiles[@]}"; do
         case "$profile" in
-            all|ai)
+            ai)
                 dirs+=("stable-diffusion/models" "stable-diffusion/outputs")
                 dirs+=("diffrhythm/models" "diffrhythm/output")
                 ;;
-            all|dev)
+            dev)
                 dirs+=("coder/workspace" "coder/templates")
                 ;;
-            all|productivity)
+            productivity)
                 dirs+=("paperless/media" "paperless/consume" "paperless/export")
                 dirs+=("postiz/uploads")
                 dirs+=("resourcespace")
                 ;;
-            all|media)
+            media)
                 dirs+=("navidrome/music")
                 dirs+=("kavita/library")
                 ;;
         esac
     done
+    
+    # If 'all' profile, add everything that wasn't matched above
+    if $include_all; then
+        dirs+=("stable-diffusion/models" "stable-diffusion/outputs")
+        dirs+=("diffrhythm/models" "diffrhythm/output")
+        dirs+=("coder/workspace" "coder/templates")
+        dirs+=("paperless/media" "paperless/consume" "paperless/export")
+        dirs+=("postiz/uploads")
+        dirs+=("resourcespace")
+        dirs+=("navidrome/music")
+        dirs+=("kavita/library")
+    fi
     
     # Remove duplicates
     local unique_dirs=($(echo "${dirs[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' '))
@@ -124,6 +145,30 @@ create_config_directories() {
     if [[ -d "$traefik_auth_dir" ]]; then
         chmod 755 "$traefik_auth_dir"
     fi
+
+    # Pre-create files that must be FILES (not directories) before Docker starts.
+    # Docker silently creates a directory at a bind-mount source path if the file is missing.
+    _ensure_file_not_dir "$stack_dir/config/traefik/config.yml"
+    _ensure_file_not_dir "$stack_dir/config/cloudflare/config.yml"
+}
+
+# Ensure a path is a file, not a directory.
+# Docker creates a directory at a missing bind-mount source — this reverses that.
+_ensure_file_not_dir() {
+    local file_path="$1"
+    local dir_path
+    dir_path=$(dirname "$file_path")
+
+    if [[ -d "$file_path" ]]; then
+        rmdir "$file_path" 2>/dev/null || rm -rf "$file_path"
+        log_info "Removed phantom directory at: $file_path"
+    fi
+
+    if [[ ! -f "$file_path" ]]; then
+        mkdir -p "$dir_path"
+        touch "$file_path"
+        log_info "Pre-created placeholder file: $file_path"
+    fi
 }
 
 create_files_directories() {
@@ -175,8 +220,12 @@ create_files_directories() {
         local pgid=$(grep "^PGID=" "$stack_dir/.env" | cut -d'=' -f2)
         
         if [[ -n "$puid" && -n "$pgid" ]]; then
-            chown -R "$puid:$pgid" "$files_base_dir" 2>/dev/null || \
-                log_info "Ownership will be set when services start"
+            # Try without sudo first; fall back to sudo for root-owned dirs
+            if ! chown -R "$puid:$pgid" "$files_base_dir" 2>/dev/null; then
+                log_info "Some directories are root-owned (created by Docker), using sudo to fix ownership..."
+                sudo chown -R "$puid:$pgid" "$files_base_dir" 2>/dev/null || \
+                    log_warn "Could not fix ownership on $files_base_dir — run: sudo chown -R $puid:$pgid $files_base_dir"
+            fi
         fi
     fi
 }
@@ -341,6 +390,6 @@ setup_all_directories() {
 
 # Export functions
 export -f get_files_subdirs_for_profiles create_base_directories
-export -f create_config_directories create_files_directories
+export -f create_config_directories create_files_directories _ensure_file_not_dir
 export -f create_workspace_directory create_ssh_directory
 export -f generate_ssh_key validate_directory_structure setup_all_directories

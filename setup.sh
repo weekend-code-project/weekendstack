@@ -49,6 +49,9 @@ OPTIONS:
     --validate              Validate configuration without starting services
     --status                Show current deployment status
     --rollback              Restore previous .env from backup
+    --cloudflare-only       Run only the Cloudflare Tunnel setup wizard
+    --certs-only            Run only certificate generation and CA installation
+    --docker-only           Run only Docker registry authentication
     --start                 Start the stack after setup
     --stop                  Stop all services
     --restart               Restart all services
@@ -157,6 +160,27 @@ parse_args() {
                 restart_services
                 exit $?
                 ;;
+            --cloudflare-only)
+                # Load .env if it exists
+                if [[ -f "$SCRIPT_DIR/.env" ]]; then
+                    set -a; source "$SCRIPT_DIR/.env"; set +a
+                fi
+                setup_cloudflare_tunnel
+                exit $?
+                ;;
+            --certs-only)
+                # Load .env if it exists
+                if [[ -f "$SCRIPT_DIR/.env" ]]; then
+                    set -a; source "$SCRIPT_DIR/.env"; set +a
+                fi
+                setup_certificates
+                exit $?
+                ;;
+            --docker-only)
+                source "$SCRIPT_DIR/tools/setup/lib/docker-auth.sh"
+                docker_login_hub
+                exit $?
+                ;;
             *)
                 log_error "Unknown option: $1"
                 echo "Run '$0 --help' for usage"
@@ -260,7 +284,12 @@ deploy_coder_templates_interactive() {
     
     # Check if deploy script exists
     if [[ ! -x "$deploy_script" ]]; then
-        log_warn "Coder template deployment script not found or not executable: $deploy_script"
+        log_warn "Coder template deployment script not found: $deploy_script"
+        log_info "This script is not bundled with the initial setup."
+        log_info "To set up Coder templates manually:"
+        log_info "  1. Log into Coder at https://coder.${LAB_DOMAIN:-lab}"
+        log_info "  2. Create templates via the Coder web UI or CLI"
+        log_info "  See: docs/coder-templates-guide.md"
         return 1
     fi
     
@@ -476,23 +505,25 @@ main_setup() {
         exit 1
     fi
     
-    # 9. Certificate setup (only if networking profile selected)
-    if [[ " ${selected_profiles[@]} " =~ " networking " ]] || [[ " ${selected_profiles[@]} " =~ " all " ]]; then
-        show_setup_progress "Setting Up SSL Certificates"
-        if ! $SKIP_CERTS; then
-            setup_certificates || log_warn "Certificate setup incomplete (continuing anyway)"
-        else
-            log_info "Skipping certificate setup (--skip-certs)"
-        fi
-    fi
-
-    # 10. Cloudflare Tunnel setup (only if networking profile selected)
+    # 9. Cloudflare Tunnel setup (only if networking profile selected)
     if [[ " ${selected_profiles[@]} " =~ " networking " ]] || [[ " ${selected_profiles[@]} " =~ " all " ]]; then
         show_setup_progress "Cloudflare Tunnel Configuration"
         if ! $SKIP_CLOUDFLARE && [[ "$SETUP_MODE" == "interactive" ]]; then
             setup_cloudflare_tunnel || log_warn "Cloudflare Tunnel setup skipped"
         else
             log_info "Skipping Cloudflare Tunnel setup"
+        fi
+    fi
+
+    # 10. Certificate setup (only if networking profile selected)
+    # Generates self-signed CA + wildcard cert for local *.lab HTTPS access
+    # These certs are for LAN access only — Cloudflare handles TLS for remote access
+    if [[ " ${selected_profiles[@]} " =~ " networking " ]] || [[ " ${selected_profiles[@]} " =~ " all " ]]; then
+        show_setup_progress "Setting Up SSL Certificates"
+        if ! $SKIP_CERTS; then
+            setup_certificates || log_warn "Certificate setup incomplete (continuing anyway)"
+        else
+            log_info "Skipping certificate setup (--skip-certs)"
         fi
     fi
     
@@ -626,10 +657,36 @@ pull_images() {
     fi
 }
 
+# Detect and remove Docker phantom directories at paths that must be files.
+# Docker silently creates a directory when a bind-mount source file is missing.
+preflight_fix_mounts() {
+    local file_mounts=(
+        "$SCRIPT_DIR/config/traefik/config.yml"
+        "$SCRIPT_DIR/config/cloudflare/config.yml"
+    )
+    local fixed=0
+
+    for path in "${file_mounts[@]}"; do
+        if [[ -d "$path" ]]; then
+            log_warn "Found directory where a file is expected: $path"
+            rmdir "$path" 2>/dev/null || rm -rf "$path"
+            touch "$path"
+            log_success "Fixed phantom directory -> placeholder file: $path"
+            fixed=$((fixed + 1))
+        fi
+    done
+
+    if [[ $fixed -gt 0 ]]; then
+        log_info "Fixed $fixed mount path(s). Run --cloudflare-only or --certs-only to populate config."
+    fi
+}
+
 # Start services with profiles
 start_services_with_profiles() {
     local profiles=("$@")
-    
+
+    preflight_fix_mounts
+
     log_header "Starting Services"
     
     local profile_args=""

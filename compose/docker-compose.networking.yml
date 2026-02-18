@@ -355,6 +355,8 @@ services:
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
       - --providers.docker.endpoint=tcp://socat:2375
+      - --providers.file.directory=/config/traefik/auth
+      - --providers.file.watch=true
       - --entrypoints.web.address=:80
       - --entrypoints.websecure.address=:443
 
@@ -367,12 +369,13 @@ services:
     labels:
       - glance.hide=true
     restart: unless-stopped
+    depends_on:
+      traefik:
+        condition: service_started
     networks:
       - traefik-network
       - shared-network
     profiles:
-      - networking
-      - proxy
       - external
     volumes:
       - ${CLOUDFLARE_CONFIG_FILE:-../config/cloudflare/config.yml}:/etc/cloudflared/config.yml:ro

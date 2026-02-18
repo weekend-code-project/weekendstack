@@ -7,7 +7,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 check_cloudflare_config() {
     local stack_dir="${SCRIPT_DIR}"
     local config_file="$stack_dir/config/cloudflare/config.yml"
-    local creds_pattern="$stack_dir/config/cloudflare/*.json"
+    local creds_pattern="$stack_dir/config/cloudflare/.cloudflared/*.json"
     
     if [[ -f "$config_file" ]] && compgen -G "$creds_pattern" > /dev/null; then
         return 0
@@ -56,6 +56,8 @@ show_cloudflare_intro() {
     echo ""
     echo "Setup Methods:"
     echo "  1. API (Recommended) - Fully automated, requires API token"
+    echo "     Create token at: https://dash.cloudflare.com/profile/api-tokens"
+    echo "     Required permissions: Account:Cloudflare Tunnel:Edit, Zone:DNS:Edit"
     echo "  2. CLI - Uses cloudflared command-line tool (if installed)"
     echo "  3. Manual - You create tunnel in dashboard, provide credentials"
     echo "  4. None - Setup later"
@@ -94,7 +96,8 @@ setup_cloudflare_tunnel() {
     echo "     Skip Cloudflare configuration for now"
     echo ""
     
-    read -p "Select method [1-4]: " -r method
+    read -p "Select method [1-4] (default: 1): " -r method
+    method=${method:-1}
     
     case $method in
         1) # API method
@@ -175,12 +178,13 @@ setup_tunnel_with_cli() {
     
     # Copy credentials file
     local creds_source="$HOME/.cloudflared/$tunnel_id.json"
-    local creds_dest="$stack_dir/config/cloudflare/$tunnel_id.json"
+    local creds_dest="$stack_dir/config/cloudflare/.cloudflared/$tunnel_id.json"
     
+    mkdir -p "$stack_dir/config/cloudflare/.cloudflared"
     if [[ -f "$creds_source" ]]; then
         cp "$creds_source" "$creds_dest"
         chmod 600 "$creds_dest"
-        log_success "Copied credentials to config/cloudflare/"
+        log_success "Copied credentials to config/cloudflare/.cloudflared/"
     else
         log_error "Credentials file not found: $creds_source"
         return 1
@@ -393,15 +397,17 @@ setup_tunnel_manual() {
                 return 1
             fi
             
-            cp "$creds_file" "$stack_dir/config/cloudflare/$tunnel_id.json"
-            chmod 600 "$stack_dir/config/cloudflare/$tunnel_id.json"
+            mkdir -p "$stack_dir/config/cloudflare/.cloudflared"
+            cp "$creds_file" "$stack_dir/config/cloudflare/.cloudflared/$tunnel_id.json"
+            chmod 600 "$stack_dir/config/cloudflare/.cloudflared/$tunnel_id.json"
             log_success "Copied credentials file"
             ;;
             
         1) # Paste JSON
+            mkdir -p "$stack_dir/config/cloudflare/.cloudflared"
             log_info "Paste the JSON credentials (press Ctrl+D when done):"
-            cat > "$stack_dir/config/cloudflare/$tunnel_id.json"
-            chmod 600 "$stack_dir/config/cloudflare/$tunnel_id.json"
+            cat > "$stack_dir/config/cloudflare/.cloudflared/$tunnel_id.json"
+            chmod 600 "$stack_dir/config/cloudflare/.cloudflared/$tunnel_id.json"
             log_success "Saved credentials file"
             ;;
             
@@ -501,15 +507,28 @@ EOF
 
 display_tunnel_status() {
     local tunnel_name="$1"
+    local stack_dir="${SCRIPT_DIR}"
+    local domain
+    domain=$(grep "^BASE_DOMAIN=" "$stack_dir/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
     
     echo ""
-    echo "${BOLD}Next Steps:${NC}"
-    echo "1. Start the tunnel: docker compose --profile networking up -d cloudflared"
-    echo "2. Check tunnel status: docker logs cloudflare-tunnel"
-    echo "3. Test external access: https://yourservice.$domain"
+    echo "${BOLD}Cloudflare Tunnel Setup Complete!${NC}"
     echo ""
-    echo "Your services will be accessible via Cloudflare Tunnel at:"
-    echo "  https://*.$domain → Traefik → Internal services"
+    echo "Remote Access (via Cloudflare — TLS handled automatically):"
+    echo "  https://<service>.$domain → Cloudflare → Tunnel → Traefik → Service"
+    echo "  No certificates to install on client devices for remote access."
+    echo ""
+    echo "Local LAN Access (via Pi-hole DNS + self-signed certs):"
+    local lab_domain
+    lab_domain=$(grep "^LAB_DOMAIN=" "$stack_dir/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+    lab_domain=${lab_domain:-lab}
+    echo "  https://<service>.$lab_domain → Traefik → Service"
+    echo "  CA cert for LAN devices: config/traefik/certs/ca-cert.pem"
+    echo ""
+    echo "${BOLD}Next Steps:${NC}"
+    echo "1. Start the stack:   ./setup.sh --start"
+    echo "2. Check tunnel logs: docker logs cloudflare-tunnel"
+    echo "3. Test remote:       https://home.$domain"
     echo ""
 }
 

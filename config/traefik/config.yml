@@ -1,35 +1,7 @@
-api:
-  dashboard: true
-  insecure: true  # Enable insecure API for direct IP access on port 8080
-
-log:
-  level: DEBUG # Set to DEBUG to see logs
-
-entryPoints:
-  web:
-    address: ":80"
-  websecure:
-    address: ":443"
-
+# Traefik v3 Static Configuration
+# Entrypoints and Docker provider are declared in docker-compose command args.
+# This file enables the file provider so dynamic configs (TLS, auth) are loaded.
 providers:
-  docker:
-    endpoint: "tcp://socat:2375"
-    exposedByDefault: false
-    network: ${TRAEFIK_DOCKER_NETWORK:-shared-network}
   file:
     directory: /config/traefik/auth
     watch: true
-
-# TLS configuration for local .lab domains
-tls:
-  certificates:
-    - certFile: /certs/cert.pem
-      keyFile: /certs/key.pem
-  stores:
-    default:
-      defaultCertificate:
-        certFile: /certs/cert.pem
-        keyFile: /certs/key.pem
-
-ping:
-  entryPoint: web

@@ -392,9 +392,9 @@ cf_setup_tunnel_automated() {
         fi
         
         # Save credentials
-        mkdir -p "$stack_dir/config/cloudflare"
+        mkdir -p "$stack_dir/config/cloudflare/.cloudflared"
         local temp_tunnel_id=$(echo "$tunnel_response" | jq -r '.result.id')
-        local creds_file="$stack_dir/config/cloudflare/${temp_tunnel_id}.json"
+        local creds_file="$stack_dir/config/cloudflare/.cloudflared/${temp_tunnel_id}.json"
         
         tunnel_id=$(cf_save_tunnel_credentials "$tunnel_response" "$creds_file")
         

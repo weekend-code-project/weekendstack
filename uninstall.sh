@@ -43,22 +43,24 @@ show_usage() {
     echo "    --non-interactive       Use specified level without prompts"
     echo ""
     echo "CLEANUP LEVELS:"
-    echo -e "    ${GREEN}Level 1${NC} - Quick Reset (safest)"
+    echo -e "    ${GREEN}Level 1${NC} - Quick Reset (soft reset)"
     echo "      • Stop and remove all containers"
     echo "      • Remove .env, docker-compose.custom.yml, SETUP_SUMMARY.md"
-    echo "      • Keep: Docker images, volumes, networks, data, user files, config"
-    echo ""
-    echo -e "    ${YELLOW}Level 2${NC} - Full Reset (DANGER! - removes databases)"
-    echo "      • Everything from Level 1"
     echo "      • Remove all Docker volumes (deletes databases)"
     echo "      • Remove all Docker networks"
-    echo "      • Remove data/ directory (application state)"
-    echo "      • Keep: Docker images (no re-download needed), user files, config"
+    echo "      • Keep: Docker images, data/, files/, config/"
     echo ""
-    echo -e "    ${RED}Level 3${NC} - Complete Cleanup (DANGER! + re-download)"
+    echo -e "    ${YELLOW}Level 2${NC} - Full Reset (re-staging)"
+    echo "      • Everything from Level 1"
+    echo "      • Remove data/ directory (application state)"
+    echo "      • Remove files/ directory (your documents/photos)"
+    echo "      • Remove config/ directory (certificates/settings)"
+    echo "      • Keep: Docker images (no re-download needed)"
+    echo ""
+    echo -e "    ${RED}Level 3${NC} - Complete Cleanup (nuclear)"
     echo "      • Everything from Level 2"
     echo "      • Remove all Docker images (will need to re-download)"
-    echo "      • Keep: files/ and config/ directories (your data)"
+    echo "      • Nothing is kept"
     echo ""
     echo "EXAMPLES:"
     echo "    # Interactive mode (default - prompts for level)"
@@ -75,8 +77,9 @@ show_usage() {
     echo ""
     echo "NOTES:"
     echo "    • .env is always backed up to _trash/ before removal"
-    echo "    • files/ directory is NEVER deleted (your documents/photos)"
-    echo "    • config/ directory is NEVER deleted (certificates/settings)"
+    echo "    • Level 1 deletes databases but keeps files/, config/, data/"
+    echo "    • Level 2 deletes everything except Docker images"
+    echo "    • Level 3 deletes absolutely everything"
     echo "    • Use ./setup.sh to reinstall after cleanup"
     echo ""
 }
@@ -124,24 +127,24 @@ show_cleanup_level_menu() {
     echo ""
     echo -e "${BOLD}Select cleanup level:${NC}"
     echo ""
-    echo -e "${GREEN}1)${NC} ${BOLD}Quick Reset${NC} (safest - keeps images and data)"
+    echo -e "${GREEN}1)${NC} ${BOLD}Quick Reset${NC} (soft reset - keeps images and user data)"
     echo "   • Stop and remove all containers"
     echo "   • Remove .env, docker-compose.custom.yml, SETUP_SUMMARY.md"
-    echo -e "   ${GREEN}✓ Keep:${NC} Images, volumes, networks, data, user files, config"
-    echo ""
-    echo -e "${YELLOW}2)${NC} ${BOLD}Full Reset${NC} (DANGER! - removes databases)"
-    echo "   • Everything from Level 1"
     echo "   • Remove all Docker volumes (deletes databases)"
     echo "   • Remove all Docker networks"
-    echo "   • Remove data/ directory (application state)"
-    echo -e "   ${GREEN}✓ Keep:${NC} Images (no re-download), user files, config"
+    echo -e "   ${GREEN}✓ Keep:${NC} Images, data/, files/, config/"
     echo ""
-    echo -e "${RED}3)${NC} ${BOLD}Complete Cleanup${NC} (DANGER! + re-download)"
+    echo -e "${YELLOW}2)${NC} ${BOLD}Full Reset${NC} (re-staging - removes all data)"
+    echo "   • Everything from Level 1"
+    echo "   • Remove data/ directory (application state)"
+    echo "   • Remove files/ directory (your documents/photos)"
+    echo "   • Remove config/ directory (certificates/settings)"
+    echo -e "   ${GREEN}✓ Keep:${NC} Images (no re-download needed)"
+    echo ""
+    echo -e "${RED}3)${NC} ${BOLD}Complete Cleanup${NC} (nuclear - removes everything)"
     echo "   • Everything from Level 2"
     echo "   • Remove all Docker images (~2-10GB)"
-    echo -e "   ${GREEN}✓ Keep:${NC} User files (files/), config files (config/)"
-    echo ""
-    echo -e "${BOLD}${RED}NEVER DELETED:${NC} files/ (your documents/photos), config/ (certificates)"
+    echo -e "   ${RED}✗ Nothing is kept${NC}"
     echo ""
     echo -ne "Enter level [1-3] or 'q' to quit: "
 }
@@ -188,55 +191,50 @@ show_confirmation() {
     
     case "$level" in
         1)
-            echo -e "${BOLD}Level 1 - Quick Reset${NC}"
+            echo -e "${BOLD}Level 1 - Quick Reset${NC} (soft reset)"
+            echo ""
+            echo -e "${YELLOW}${BOLD}⚠️  WARNING: This will DELETE all databases! ⚠️${NC}"
             echo ""
             echo "This will:"
             echo -e "  ${RED}✗${NC} Stop and remove all containers"
             echo -e "  ${RED}✗${NC} Remove .env file (backed up to _trash/)"
             echo -e "  ${RED}✗${NC} Remove docker-compose.custom.yml"
             echo -e "  ${RED}✗${NC} Remove SETUP_SUMMARY.md"
+            echo -e "  ${RED}✗${NC} Remove ALL Docker volumes (databases DELETED)"
+            echo -e "  ${RED}✗${NC} Remove ALL Docker networks"
             echo ""
             echo "This will keep:"
             echo -e "  ${GREEN}✓${NC} Docker images (no re-download needed)"
-            echo -e "  ${GREEN}✓${NC} Docker volumes (databases preserved)"
-            echo -e "  ${GREEN}✓${NC} Docker networks"
             echo -e "  ${GREEN}✓${NC} Application data (data/)"
             echo -e "  ${GREEN}✓${NC} User files (files/)"
             echo -e "  ${GREEN}✓${NC} Configuration (config/)"
             ;;
         2)
-            echo -e "${BOLD}${YELLOW}Level 2 - Full Reset${NC}"
+            echo -e "${BOLD}${YELLOW}Level 2 - Full Reset${NC} (re-staging)"
             echo ""
-            echo -e "${RED}${BOLD}⚠️  WARNING: This will DELETE databases and application state! ⚠️${NC}"
+            echo -e "${RED}${BOLD}⚠️  WARNING: This will DELETE databases, files, and config! ⚠️${NC}"
             echo ""
             echo "This will:"
             echo -e "  ${RED}✗${NC} Everything from Level 1"
-            echo -e "  ${RED}✗${NC} Remove ALL Docker volumes (databases DELETED)"
-            echo -e "  ${RED}✗${NC} Remove ALL Docker networks"
-            echo -e "  ${RED}✗${NC} Remove data/ directory (app state DELETED)"
+            echo -e "  ${RED}✗${NC} Remove data/ directory (application state)"
+            echo -e "  ${RED}✗${NC} Remove files/ directory (YOUR documents/photos/media)"
+            echo -e "  ${RED}✗${NC} Remove config/ directory (certificates/settings)"
             echo ""
             echo "This will keep:"
             echo -e "  ${GREEN}✓${NC} Docker images (no re-download needed)"
-            echo -e "  ${GREEN}✓${NC} User files (files/)"
-            echo -e "  ${GREEN}✓${NC} Configuration (config/)"
             echo ""
             echo -e "${YELLOW}Note:${NC} Images are kept - quick re-setup possible"
             ;;
         3)
-            echo -e "${BOLD}${RED}Level 3 - Complete Cleanup${NC}"
+            echo -e "${BOLD}${RED}Level 3 - Complete Cleanup${NC} (nuclear)"
             echo ""
-            echo -e "${RED}${BOLD}⚠️  WARNING: This will DELETE EVERYTHING including images! ⚠️${NC}"
+            echo -e "${RED}${BOLD}⚠️  WARNING: This deletes EVERYTHING. Nothing is kept! ⚠️${NC}"
             echo ""
             echo "This will:"
             echo -e "  ${RED}✗${NC} Everything from Level 2"
             echo -e "  ${RED}✗${NC} Remove ALL Docker images (~2-10GB)"
             echo ""
-            echo "This will keep:"
-            echo -e "  ${GREEN}✓${NC} User files (files/) - YOUR documents/photos"
-            echo -e "  ${GREEN}✓${NC} Configuration (config/) - certificates/settings"
-            echo ""
-            echo -e "${YELLOW}Note:${NC} Images will need to be re-downloaded on next setup"
-            echo -e "${YELLOW}Note:${NC} Your files/ and config/ are NEVER deleted"
+            echo -e "${RED}Nothing is preserved. Full re-download required on next setup.${NC}"
             ;;
     esac
     
@@ -247,21 +245,13 @@ show_confirmation() {
         return 0
     fi
     
-    if ! prompt_yes_no "Proceed with Level $level cleanup?"; then
+    echo ""
+    log_warn "Type 'UNINSTALL' to confirm and proceed with Level $level cleanup:"
+    read -r confirmation
+    
+    if [[ "$confirmation" != "UNINSTALL" ]]; then
         log_info "Cleanup cancelled"
         exit 0
-    fi
-    
-    # Extra confirmation for Level 2 and 3 (both delete databases)
-    if [[ "$level" -ge "2" ]]; then
-        echo ""
-        log_warn "Type 'UNINSTALL' to confirm you want to delete databases and data:"
-        read -r confirmation
-        
-        if [[ "$confirmation" != "UNINSTALL" ]]; then
-            log_info "Cleanup cancelled"
-            exit 0
-        fi
     fi
     
     return 0
@@ -411,8 +401,48 @@ remove_data_directory() {
     local size=$(du -sh "$data_dir" 2>/dev/null | cut -f1 || echo "unknown")
     log_info "Data directory size: $size"
     
-    rm -rf "$data_dir"
+    rm -rf "$data_dir" 2>/dev/null || sudo rm -rf "$data_dir"
     log_success "Data directory removed"
+
+    _cleanup_phantom_dirs
+}
+
+# Remove Docker-created phantom directories at paths that must be files.
+# These block the next docker compose up if left behind as directories.
+_cleanup_phantom_dirs() {
+    local phantom_paths=(
+        "$SCRIPT_DIR/config/traefik/config.yml"
+        "$SCRIPT_DIR/config/cloudflare/config.yml"
+    )
+    for path in "${phantom_paths[@]}"; do
+        if [[ -d "$path" ]]; then
+            rmdir "$path" 2>/dev/null || rm -rf "$path"
+            log_info "Removed phantom directory: $path"
+        fi
+    done
+}
+
+remove_files_and_config() {
+    log_header "Removing User Files and Configuration"
+    
+    local removed=0
+    
+    for dir in "files" "config"; do
+        local target="$SCRIPT_DIR/$dir"
+        if [[ -d "$target" ]]; then
+            local size=$(du -sh "$target" 2>/dev/null | cut -f1 || echo "unknown")
+            log_info "Removing $dir/ ($size)..."
+            rm -rf "$target" 2>/dev/null || sudo rm -rf "$target"
+            log_success "Removed $dir/"
+            removed=$((removed + 1))
+        else
+            log_info "$dir/ does not exist, skipping"
+        fi
+    done
+    
+    if [[ $removed -eq 0 ]]; then
+        log_info "No user directories to remove"
+    fi
 }
 
 generate_cleanup_summary() {
@@ -433,11 +463,13 @@ EOF
     echo "- ✓ .env file (backed up to _trash/)" >> "$summary_file"
     echo "- ✓ docker-compose.custom.yml" >> "$summary_file"
     echo "- ✓ SETUP_SUMMARY.md" >> "$summary_file"
+    echo "- ✓ All Docker volumes (databases deleted)" >> "$summary_file"
+    echo "- ✓ All Docker networks" >> "$summary_file"
     
     if [[ "$level" -ge 2 ]]; then
-        echo "- ✓ All Docker volumes (databases deleted)" >> "$summary_file"
-        echo "- ✓ All Docker networks" >> "$summary_file"
         echo "- ✓ data/ directory (application state deleted)" >> "$summary_file"
+        echo "- ✓ files/ directory (user documents/photos deleted)" >> "$summary_file"
+        echo "- ✓ config/ directory (certificates/settings deleted)" >> "$summary_file"
     fi
     
     if [[ "$level" -ge 3 ]]; then
@@ -451,17 +483,15 @@ EOF
 EOF
     
     if [[ "$level" -lt 2 ]]; then
-        echo "- ✓ Docker volumes (databases preserved)" >> "$summary_file"
-        echo "- ✓ Docker networks" >> "$summary_file"
-        echo "- ✓ data/ directory" >> "$summary_file"
+        echo "- ✓ Application data (data/)" >> "$summary_file"
+        echo "- ✓ files/ directory (your documents/photos)" >> "$summary_file"
+        echo "- ✓ config/ directory (certificates/settings)" >> "$summary_file"
     fi
     
     if [[ "$level" -lt 3 ]]; then
         echo "- ✓ Docker images (no re-download needed)" >> "$summary_file"
     fi
     
-    echo "- ✓ files/ directory (your documents/photos)" >> "$summary_file"
-    echo "- ✓ config/ directory (certificates/settings)" >> "$summary_file"
     echo "- ✓ Docker Compose files" >> "$summary_file"
     echo "- ✓ Documentation (docs/)" >> "$summary_file"
     echo "- ✓ Scripts (tools/)" >> "$summary_file"
@@ -535,18 +565,19 @@ execute_cleanup() {
     # Always backup .env if it exists
     backup_env
     
-    # Level 1: Basic cleanup
+    # Level 1+: containers, setup files, volumes, networks
     stop_and_remove_containers
     remove_setup_files
+    remove_volumes
+    remove_networks
     
-    # Level 2: Add volumes, networks, and data removal
+    # Level 2+: data directory, user files, config
     if [[ "$level" -ge 2 ]]; then
-        remove_volumes
-        remove_networks
         remove_data_directory
+        remove_files_and_config
     fi
     
-    # Level 3: Add image removal
+    # Level 3: images
     if [[ "$level" -ge 3 ]]; then
         remove_images
     fi
