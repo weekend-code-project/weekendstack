@@ -152,6 +152,16 @@ create_config_directories() {
     _ensure_file_not_dir "$stack_dir/config/cloudflare/config.yml"
     _ensure_file_not_dir "$stack_dir/config/glance/glance.yml"
     _ensure_file_not_dir "$stack_dir/config/filebrowser/init-filebrowser.sh"
+
+    # Restore coder scripts from tools/coder/scripts (survives Level 2 uninstall)
+    local coder_scripts_src="$stack_dir/tools/coder/scripts"
+    local coder_scripts_dst="$stack_dir/config/coder/scripts"
+    if [[ -d "$coder_scripts_src" ]]; then
+        mkdir -p "$coder_scripts_dst/lib"
+        cp -r "$coder_scripts_src"/. "$coder_scripts_dst/"
+        chmod +x "$coder_scripts_dst"/*.sh "$coder_scripts_dst/lib"/*.sh 2>/dev/null || true
+        log_info "Restored coder scripts from tools/coder/scripts"
+    fi
 }
 
 # Ensure a path is a file, not a directory.

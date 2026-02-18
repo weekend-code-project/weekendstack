@@ -281,15 +281,18 @@ deploy_coder_templates_interactive() {
     local deploy_script="$SCRIPT_DIR/config/coder/scripts/deploy-all-templates.sh"
     local template_info_script="$SCRIPT_DIR/config/coder/scripts/lib/get-template-info.sh"
     local coder_api_script="$SCRIPT_DIR/config/coder/scripts/lib/coder-api.sh"
+
+    # Fall back to tools/coder/scripts if config copy is missing (e.g. after Level 2 uninstall)
+    if [[ ! -x "$deploy_script" && -x "$SCRIPT_DIR/tools/coder/scripts/deploy-all-templates.sh" ]]; then
+        local tools_scripts="$SCRIPT_DIR/tools/coder/scripts"
+        mkdir -p "$SCRIPT_DIR/config/coder/scripts/lib"
+        cp -r "$tools_scripts"/. "$SCRIPT_DIR/config/coder/scripts/"
+        chmod +x "$SCRIPT_DIR/config/coder/scripts"/*.sh "$SCRIPT_DIR/config/coder/scripts/lib"/*.sh 2>/dev/null || true
+    fi
     
     # Check if deploy script exists
     if [[ ! -x "$deploy_script" ]]; then
-        log_warn "Coder template deployment script not found: $deploy_script"
-        log_info "This script is not bundled with the initial setup."
-        log_info "To set up Coder templates manually:"
-        log_info "  1. Log into Coder at https://coder.${LAB_DOMAIN:-lab}"
-        log_info "  2. Create templates via the Coder web UI or CLI"
-        log_info "  See: docs/coder-templates-guide.md"
+        log_warn "Coder template deployment script not found or not executable: $deploy_script"
         return 1
     fi
     

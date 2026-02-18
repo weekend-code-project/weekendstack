@@ -1,27 +1,19 @@
 #!/bin/bash
 # =============================================================================
-# LOCAL MODULE TEMPLATE PUSH
+# SIMPLE VERSIONED TEMPLATE PUSH
 # =============================================================================
 # Pushes a template with incremental version naming (v1, v2, v3...)
-# Uses LOCAL module copying instead of GitHub fetching for fast iteration.
-#
-# This script:
-#   1. Reads modules.txt to determine which modules to include
-#   2. Copies module directories from template-modules/modules/ to temp folder
-#   3. Copies param files from template-modules/params/ to temp folder
-#   4. Rewrites module sources to use local paths (./module-docker)
-#   5. Auto-injects startup script assembly in agent-params.tf
-#   6. Substitutes environment variables (BASE_DOMAIN, HOST_IP, etc.)
-#   7. Pushes self-contained template to Coder
 #
 # Usage:
-#   ./push-template-local.sh [--dry-run] <template-name>
+#   ./push-template-versioned.sh [--dry-run] [--ref <ref>] [--fallback <ref>] <template-name>
 #
 # Flags:
-#   --dry-run         Show intended substitutions and copied modules; do not push
+#   --dry-run         Show resolved ref and intended substitutions; do not push
+#   --ref <ref>       Override auto-detected ref (e.g., v0.1.1, main, feature/x)
+#   --fallback <ref>  Fallback ref if detected ref not found on remote (default: main)
 #
 # Example:
-#   ./push-template-local.sh modular-test
+#   ./push-template-versioned.sh docker-workspace
 # =============================================================================
 
 set -euo pipefail
@@ -40,6 +32,8 @@ log_error() { echo -e "${RED}[$(date +'%H:%M:%S')] ERROR:${NC} $1"; }
 # Argument parsing & defaults
 # -----------------------------------------------------------------------------
 DRY_RUN=false
+REF_OVERRIDE="${REF_OVERRIDE:-}"
+FALLBACK_REF="${FALLBACK_REF:-main}"
 
 ARGS=()
 while [[ $# -gt 0 ]]; do
@@ -48,8 +42,16 @@ while [[ $# -gt 0 ]]; do
             DRY_RUN=true
             shift
             ;;
+        --ref)
+            REF_OVERRIDE="${2:-}"
+            shift 2
+            ;;
+        --fallback)
+            FALLBACK_REF="${2:-main}"
+            shift 2
+            ;;
         -h|--help)
-            echo "Usage: $0 [--dry-run] <template-name>"
+            echo "Usage: $0 [--dry-run] [--ref <ref>] [--fallback <ref>] <template-name>"
             exit 0
             ;;
         --)
@@ -112,8 +114,48 @@ if [[ ! -d "$TEMPLATE_DIR" ]]; then
 fi
 
 # -----------------------------------------------------------------------------
-# Local module utilities
+# Git ref detection & validation
 # -----------------------------------------------------------------------------
+detect_git_ref() {
+    # Priority: explicit override > exact tag (v*) > main branch > current branch name
+    if [[ -n "${REF_OVERRIDE}" ]]; then
+        echo "${REF_OVERRIDE}"
+        return 0
+    fi
+
+    # Exact tag? prefer semver-like tags
+    if TAG=$(git describe --tags --exact-match 2>/dev/null); then
+        if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+.*$ ]]; then
+            echo "$TAG"; return 0
+        fi
+    fi
+
+    BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "HEAD")
+    if [[ "$BRANCH" == "main" ]]; then
+        echo "main"; return 0
+    fi
+
+    if [[ "$BRANCH" != "HEAD" ]]; then
+        echo "$BRANCH"; return 0
+    fi
+
+    # Detached HEAD without tag: fallback
+    echo "$FALLBACK_REF"
+}
+
+validate_remote_ref() {
+    local ref="$1"
+    if git ls-remote --exit-code origin "$ref" > /dev/null 2>&1; then
+        return 0
+    fi
+    return 1
+}
+
+url_encode_ref() {
+    # Minimal encode: replace '/' with '%2F' to keep query param valid
+    local ref="$1"
+    echo "${ref//\//%2F}"
+}
 
 # Get next version number from modules.txt VERSION line
 get_next_version() {
@@ -177,7 +219,21 @@ VERSION_NAME="v${VERSION_NUM}"
 log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 log "📤 Pushing Template: $TEMPLATE_NAME"
 log "🔢 Version: $VERSION_NAME"
-log "🔧 Mode: LOCAL (copying modules directly)"
+
+# Resolve git ref
+RESOLVED_REF=$(detect_git_ref)
+if validate_remote_ref "$RESOLVED_REF"; then
+    log "🔗 Resolved git ref: $RESOLVED_REF (validated on origin)"
+else
+    log_warn "Ref '$RESOLVED_REF' not found on origin; using fallback '$FALLBACK_REF'"
+    if ! validate_remote_ref "$FALLBACK_REF"; then
+        log_error "Fallback ref '$FALLBACK_REF' not found on origin. Aborting."
+        exit 1
+    fi
+    RESOLVED_REF="$FALLBACK_REF"
+fi
+ENC_REF=$(url_encode_ref "$RESOLVED_REF")
+log "🔐 Encoded ref for URL: $ENC_REF"
 log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 # Copy template to temp directory
@@ -219,7 +275,6 @@ overlay_shared_params() {
 overlay_shared_params "$SHARED_PARAMS_DIR" "$TEMP_DIR/$TEMPLATE_NAME"
 
 # Copy modules from modules.txt (new declarative system)
-# This function copies both param files AND the actual module directories
 copy_modules_from_manifest() {
     local template_dir="$1"
     local dest_dir="$2"
@@ -230,8 +285,7 @@ copy_modules_from_manifest() {
     fi
     
     log "📋 Processing modules from modules.txt..."
-    local param_count=0
-    local module_count=0
+    local count=0
     
     # Read modules.txt and process each module line
     while IFS= read -r line; do
@@ -247,92 +301,23 @@ copy_modules_from_manifest() {
         # Check if module already exists in template dir (local override)
         if [[ -f "$template_dir/$module_file" ]]; then
             log "  ✓ Using local override: $module_file"
-            param_count=$((param_count+1))
-        else
-            # Copy from shared params directory
-            local shared_module="$SHARED_PARAMS_DIR/$module_file"
-            if [[ -f "$shared_module" ]]; then
-                cp "$shared_module" "$dest_dir/$module_file"
-                log "  ✓ Copied param file: $module_file"
-                param_count=$((param_count+1))
-            else
-                log_error "Param file not found: $module_file (not in template or shared params)"
-                exit 1
-            fi
-        fi
-        
-        # Now copy the corresponding module directory
-        # Convert param filename to module name (e.g., docker-params.tf -> docker-module)
-        local module_name
-        module_name=$(echo "$module_file" | sed 's/-params\.tf$/-module/')
-        
-        local module_source_dir="$MODULES_DIR/$module_name"
-        if [[ -d "$module_source_dir" ]]; then
-            # Copy to temp dir with simplified name (module-docker instead of docker-module)
-            local simple_name="${module_name%-module}"
-            local module_dest_dir="$dest_dir/module-$simple_name"
-            
-            cp -r "$module_source_dir" "$module_dest_dir"
-            log "  ✓ Copied module dir: $module_name -> module-$simple_name/"
-            module_count=$((module_count+1))
-        else
-            log_warn "  ⚠ Module directory not found: $module_source_dir (param file without module)"
-        fi
-    done < "$modules_file"
-    
-    log "📦 Copied: $param_count param file(s) + $module_count module dir(s)"
-}
-
-# Copy modules referenced directly in .tf files (not just from modules.txt)
-# This catches modules like metadata-module, init-shell-module, etc. in main.tf
-copy_referenced_modules() {
-    local dest_dir="$1"
-    local -a module_refs
-    local copied=0
-    
-    log "📋 Scanning .tf files for additional module references..."
-    
-    # Find all module names from git:: URLs in .tf files
-    # Example: git::.../modules/metadata-module?ref=... -> metadata
-    while IFS= read -r line; do
-        if [[ "$line" =~ modules/([^/]+)-module ]]; then
-            module_refs+=("${BASH_REMATCH[1]}")
-        fi
-    done < <(grep -Rh 'source.*git::.*modules/.*-module' "$dest_dir"/*.tf 2>/dev/null || true)
-    
-    # Remove duplicates
-    mapfile -t module_refs < <(printf '%s\n' "${module_refs[@]}" | sort -u)
-    
-    if [[ ${#module_refs[@]} -eq 0 ]]; then
-        log "No additional module references found in .tf files"
-        return 0
-    fi
-    
-    for module_base in "${module_refs[@]}"; do
-        [[ -z "$module_base" ]] && continue
-        
-        local module_name="${module_base}-module"
-        local module_source_dir="$MODULES_DIR/$module_name"
-        local module_dest_dir="$dest_dir/module-$module_base"
-        
-        # Skip if already copied
-        if [[ -d "$module_dest_dir" ]]; then
-            log "  ↷ Already copied: module-$module_base/"
+            count=$((count+1))
             continue
         fi
         
-        if [[ -d "$module_source_dir" ]]; then
-            cp -r "$module_source_dir" "$module_dest_dir"
-            log "  ✓ Copied module: $module_name -> module-$module_base/"
-            copied=$((copied+1))
+        # Copy from shared params directory
+        local shared_module="$SHARED_PARAMS_DIR/$module_file"
+        if [[ -f "$shared_module" ]]; then
+            cp "$shared_module" "$dest_dir/$module_file"
+            log "  ✓ Copied from shared: $module_file"
+            count=$((count+1))
         else
-            log_warn "  ⚠ Module not found: $module_source_dir"
+            log_error "Module not found: $module_file (not in template or shared params)"
+            exit 1
         fi
-    done
+    done < "$modules_file"
     
-    if [[ $copied -gt 0 ]]; then
-        log "📦 Copied $copied additional module(s) from .tf file references"
-    fi
+    log "📦 Modules copied: $count module(s) from modules.txt"
 }
 
 # Extract metadata from modules
@@ -499,37 +484,25 @@ EOF
 
 copy_modules_from_manifest "$TEMPLATE_DIR" "$TEMP_DIR/$TEMPLATE_NAME"
 
-# Copy additional modules referenced in .tf files
-copy_referenced_modules "$TEMP_DIR/$TEMPLATE_NAME"
-
 # Extract and generate metadata-params.tf
 mapfile -t METADATA_OPTIONS < <(extract_metadata_from_modules "$TEMPLATE_DIR")
 generate_metadata_params_file "$TEMP_DIR/$TEMPLATE_NAME" "${METADATA_OPTIONS[@]}"
 
-# Rewrite git module sources to local paths in temp .tf files
-rewrite_to_local_sources() {
+# Substitute ref in temp .tf files for this repository's git module sources
+substitute_ref_in_temp() {
     local root="$1"
     local -a files
-    # Find all Terraform files with git module sources
-    mapfile -t files < <(grep -RIl --include='*.tf' 'source[[:space:]]*=[[:space:]]*"git::' "$root" || true)
-    
+    # Limit to Terraform files referencing this repo
+    mapfile -t files < <(grep -RIl --include='*.tf' 'git::https://github.com/weekend-code-project/weekendstack.git' "$root" || true)
     if [[ ${#files[@]} -eq 0 ]]; then
-        log "No git module sources found to rewrite (may be all local already)"
+        log_warn "No weekendstack git module sources found to rewrite in $root"
         return 0
     fi
-    
     for f in "${files[@]}"; do
-        # Replace git:: URLs with local paths
-        # Match pattern: source = "git::https://...//path/to/modules/MODULE-NAME-module?ref=..."
-        # Extract MODULE-NAME from the path and convert to: source = "./module-MODULE-NAME"
-        
-        # Use perl for more sophisticated regex replacement
-        perl -i -pe 's|source\s*=\s*"git::https://[^"]+/([^/]+)-module(\?ref=[^"]+)?"|source = "./module-$1"|g' "$f"
-        
-        log "  ✓ Rewrote git sources to local paths in: $(basename "$f")"
+        # Replace existing ?ref= value with resolved ref
+        sed -E -i "s|(git::https://github.com/weekend-code-project/weekendstack.git//[^?]+\?ref=)[^\"]+|\1${ENC_REF}|g" "$f"
     done
-    
-    log "✏️  Rewrote module sources to local paths in ${#files[@]} file(s)."
+    log "✏️  Updated ref to '$RESOLVED_REF' in ${#files[@]} file(s)."
 }
 
 # Substitute base_domain default value in variables.tf
@@ -590,59 +563,37 @@ substitute_host_ip() {
     log "✏️  Updated host_ip default to '$ip' in ${#files[@]} file(s)."
 }
 
-# Auto-inject module startup scripts into agent-params.tf
-# NOTE: This is currently disabled because module names in param files
-# don't always match directory names (e.g., traefik vs traefik_routing).
-# Future improvement: parse param files to get actual module names.
-auto_inject_startup_scripts() {
-    local root="$1"
-    log "⚠️  Auto-injection currently disabled - requires manual startup_script editing"
-    return 0
-    
-    # TODO: Implement proper auto-injection that:
-    # 1. Reads modules.txt for order
-    # 2. Parses param files to get actual module "name" declarations  
-    # 3. Detects which modules use count vs always-loaded
-    # 4. Generates correct references (module.name vs module.name[0])
-}
-
 
 DRY_RUN_PREVIEW() {
     local root="$1"
-    log "🔍 Dry run preview: showing module sources before rewriting"
-    grep -Rn --include='*.tf' 'source[[:space:]]*=' "$root" | grep -E '(git::|\./module-)' || true
+    log "🔍 Dry run preview: showing lines with '?ref=' before substitution"
+    grep -Rn --include='*.tf' '\?ref=' "$root" || true
 }
 
 # If dry-run, preview before and after substitution and exit
 if $DRY_RUN; then
     log "(dry-run) Template staging dir: $TEMP_DIR/$TEMPLATE_NAME"
     DRY_RUN_PREVIEW "$TEMP_DIR/$TEMPLATE_NAME"
-    rewrite_to_local_sources "$TEMP_DIR/$TEMPLATE_NAME"
-    auto_inject_startup_scripts "$TEMP_DIR/$TEMPLATE_NAME"
+    substitute_ref_in_temp "$TEMP_DIR/$TEMPLATE_NAME"
     substitute_base_domain "$TEMP_DIR/$TEMPLATE_NAME"
     substitute_host_ip "$TEMP_DIR/$TEMPLATE_NAME"
-    log "🔍 Dry run preview: showing module sources after rewriting"
-    grep -Rn --include='*.tf' 'source[[:space:]]*=' "$TEMP_DIR/$TEMPLATE_NAME" | grep -E '(git::|\./module-)' || true
+    log "🔍 Dry run preview: showing lines with '?ref=' after substitution"
+    grep -Rn --include='*.tf' '\?ref=' "$TEMP_DIR/$TEMPLATE_NAME" || true
     log "🔍 Dry run preview: showing base_domain after substitution"
     grep -A4 'variable "base_domain"' "$TEMP_DIR/$TEMPLATE_NAME"/*.tf || true
     log "🔍 Dry run preview: showing host_ip after substitution"
     grep -A4 'variable "host_ip"' "$TEMP_DIR/$TEMPLATE_NAME"/*.tf || true
-    log "🔍 Dry run preview: showing auto-injected startup scripts"
-    grep -A30 'startup_script = join' "$TEMP_DIR/$TEMPLATE_NAME/agent-params.tf" | head -40 || true
     if [[ -f "$TEMP_DIR/$TEMPLATE_NAME/metadata-params.tf" ]]; then
-        log "🔍 Dry run preview: showing generated metadata-params.tf (first 50 lines)"
-        head -50 "$TEMP_DIR/$TEMPLATE_NAME/metadata-params.tf"
+        log "🔍 Dry run preview: showing generated metadata-params.tf"
+        cat "$TEMP_DIR/$TEMPLATE_NAME/metadata-params.tf"
     fi
-    log "🔍 Dry run preview: showing copied module directories"
-    ls -la "$TEMP_DIR/$TEMPLATE_NAME" | grep '^d' | grep module- || true
     log "✅ Dry run complete. No changes pushed."
     rm -rf "$TEMP_DIR"
     exit 0
 fi
 
 # Perform substitution for actual push
-rewrite_to_local_sources "$TEMP_DIR/$TEMPLATE_NAME"
-auto_inject_startup_scripts "$TEMP_DIR/$TEMPLATE_NAME"
+substitute_ref_in_temp "$TEMP_DIR/$TEMPLATE_NAME"
 substitute_base_domain "$TEMP_DIR/$TEMPLATE_NAME"
 substitute_host_ip "$TEMP_DIR/$TEMPLATE_NAME"
 
@@ -674,16 +625,6 @@ PUSH_ENV_VARS="-e TF_VAR_base_domain=${BASE_DOMAIN:-localhost}"
 PUSH_ENV_VARS+=" -e TF_VAR_host_ip=${HOST_IP:-127.0.0.1}"
 PUSH_ENV_VARS+=" -e TF_VAR_ssh_key_dir=${SSH_KEY_DIR:-/home/docker/.ssh}"
 PUSH_ENV_VARS+=" -e TF_VAR_traefik_auth_dir=${TRAEFIK_AUTH_DIR:-/opt/stacks/weekendstack/config/traefik/auth}"
-
-# Pass Coder authentication
-if [[ -n "${CODER_SESSION_TOKEN:-}" ]]; then
-    PUSH_ENV_VARS+=" -e CODER_SESSION_TOKEN=${CODER_SESSION_TOKEN}"
-    PUSH_ENV_VARS+=" -e CODER_URL=http://127.0.0.1:7080"
-    log "Using authenticated session for template push"
-else
-    log_warn "No CODER_SESSION_TOKEN set - template may not be assigned to user"
-fi
-
 log "Setting TF_VAR_base_domain=${BASE_DOMAIN:-localhost}"
 log "Setting TF_VAR_host_ip=${HOST_IP:-127.0.0.1}"
 log "Setting TF_VAR_ssh_key_dir=${SSH_KEY_DIR:-/home/docker/.ssh}"
