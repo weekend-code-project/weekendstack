@@ -446,31 +446,53 @@ create_tunnel_config() {
     local tunnel_id="$2"
     local domain="$3"
     local stack_dir="${SCRIPT_DIR}"
-    local config_file="$stack_dir/config/cloudflare/config.yml"
     
-    log_step "Creating tunnel configuration..."
+    log_step "Configuring tunnel ingress rules via Cloudflare API..."
     
-    # Backup existing config
-    if [[ -f "$config_file" ]]; then
-        backup_file "$config_file"
+    local account_id="${CLOUDFLARE_ACCOUNT_ID}"
+    if [[ -z "$account_id" ]]; then
+        account_id=$(grep "^CLOUDFLARE_ACCOUNT_ID=" "$stack_dir/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
     fi
     
-    cat > "$config_file" << EOF
-tunnel: $tunnel_name
-credentials-file: /etc/cloudflared/.cloudflared/$tunnel_id.json
-
-ingress:
-  # Route all subdomains to Traefik
-  - hostname: "*.$domain"
-    service: https://traefik:443
-    originRequest:
-      noTLSVerify: true  # Trust Traefik's self-signed cert
-  
-  # Catch-all rule (required)
-  - service: http_status:404
-EOF
+    if [[ -z "$account_id" ]]; then
+        log_warn "Account ID not available, skipping remote ingress config"
+        log_info "Configure ingress rules in the Cloudflare dashboard:"
+        log_info "  https://one.dash.cloudflare.com/ → Tunnels → $tunnel_name → Public Hostname"
+        return 0
+    fi
     
-    log_success "Created config: config/cloudflare/config.yml"
+    # Set ingress rules via API (remote config)
+    local ingress_config
+    ingress_config=$(cat <<JSONEOF
+{
+  "config": {
+    "ingress": [
+      {
+        "hostname": "*.$domain",
+        "service": "https://traefik:443",
+        "originRequest": {
+          "noTLSVerify": true
+        }
+      },
+      {
+        "service": "http_status:404"
+      }
+    ]
+  }
+}
+JSONEOF
+)
+    
+    local response
+    response=$(cf_api_call PUT "/accounts/$account_id/cfd_tunnel/$tunnel_id/configurations" "$ingress_config")
+    
+    if [[ $? -eq 0 ]]; then
+        log_success "Ingress rules configured via Cloudflare API"
+    else
+        log_warn "Failed to set ingress rules via API"
+        log_info "Configure manually in Cloudflare dashboard:"
+        log_info "  Public hostname: *.$domain → https://traefik:443 (noTLSVerify)"
+    fi
 }
 
 update_env_cloudflare() {
@@ -503,6 +525,27 @@ EOF
     
     # Ensure BASE_DOMAIN is set
     sed -i "s/^BASE_DOMAIN=.*/BASE_DOMAIN=$domain/" "$env_file"
+    
+    # Save tunnel token for token-based run
+    local account_id="${CLOUDFLARE_ACCOUNT_ID}"
+    if [[ -z "$account_id" ]]; then
+        account_id=$(grep "^CLOUDFLARE_ACCOUNT_ID=" "$env_file" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+    fi
+    
+    if [[ -n "$account_id" ]]; then
+        local tunnel_token
+        tunnel_token=$(cf_get_tunnel_token "$account_id" "$tunnel_id")
+        if [[ $? -eq 0 && -n "$tunnel_token" ]]; then
+            if grep -q "^CLOUDFLARE_TUNNEL_TOKEN=" "$env_file"; then
+                sed -i "s|^CLOUDFLARE_TUNNEL_TOKEN=.*|CLOUDFLARE_TUNNEL_TOKEN=$tunnel_token|" "$env_file"
+            else
+                echo "CLOUDFLARE_TUNNEL_TOKEN=$tunnel_token" >> "$env_file"
+            fi
+            log_success "Saved tunnel token to .env"
+        else
+            log_warn "Could not retrieve tunnel token"
+        fi
+    fi
 }
 
 display_tunnel_status() {

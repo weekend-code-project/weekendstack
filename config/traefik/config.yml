@@ -1,7 +1,21 @@
 # Traefik v3 Static Configuration
-# Entrypoints and Docker provider are declared in docker-compose command args.
-# This file enables the file provider so dynamic configs (TLS, auth) are loaded.
+log:
+  level: INFO
+
+api:
+  dashboard: true
+  insecure: true
+
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+
 providers:
+  docker:
+    exposedByDefault: false
+    endpoint: "unix:///var/run/docker.sock"
   file:
     directory: /config/traefik/auth
     watch: true

@@ -1,13 +1,13 @@
 {
-  "deployment_date": "2026-02-17T21:46:14Z",
+  "deployment_date": "2026-02-18T12:30:56Z",
   "total": 5,
-  "successful": 5,
-  "failed": 0,
+  "successful": 1,
+  "failed": 4,
   "templates": {
-    "docker-template": {"status": "success"},
-    "modular-test": {"status": "success"},
-    "node-template": {"status": "success"},
-    "vite-template": {"status": "success"},
-    "wordpress-template": {"status": "success"}
+    "wordpress-template": {"status": "success"},
+    "docker-template": {"status": "failed", "error": "deployment failed"},
+    "modular-test": {"status": "failed", "error": "deployment failed"},
+    "node-template": {"status": "failed", "error": "deployment failed"},
+    "vite-template": {"status": "failed", "error": "deployment failed"}
   }
 }

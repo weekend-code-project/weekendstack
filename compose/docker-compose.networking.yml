@@ -300,18 +300,18 @@ services:
   # TRAEFIK - REVERSE PROXY
   # =============================================================================
   traefik:
-    image: traefik:v3.0
+    image: traefik:v3.6
     container_name: traefik
     restart: unless-stopped
     profiles:
       - networking
       - proxy
-      - networking
     ports:
       - "${TRAEFIK_HTTP_PORT:-80}:80"
       - "${TRAEFIK_HTTPS_PORT:-443}:443"
       - "${TRAEFIK_API_PORT:-8081}:8080"  # API/Dashboard port
     volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
       - ../config/traefik/config.yml:/etc/traefik/traefik.yml:ro
       - ../config/traefik/auth:/config/traefik/auth:ro
       - type: bind
@@ -323,7 +323,6 @@ services:
       - traefik-network
       - shared-network
     depends_on:
-      - socat
       - cert-generator
     labels:
       # Glance Configuration
@@ -349,16 +348,6 @@ services:
       - traefik.http.routers.traefik-lab.rule=Host(`traefik.${LAB_DOMAIN}`)
       - traefik.http.routers.traefik-lab.tls=true
       - traefik.http.routers.traefik-lab.service=api@internal
-    command:
-      - --api.dashboard=true
-      - --api.insecure=true
-      - --providers.docker=true
-      - --providers.docker.exposedbydefault=false
-      - --providers.docker.endpoint=tcp://socat:2375
-      - --providers.file.directory=/config/traefik/auth
-      - --providers.file.watch=true
-      - --entrypoints.web.address=:80
-      - --entrypoints.websecure.address=:443
 
   # =============================================================================
   # CLOUDFLARE TUNNEL - SECURE EXTERNAL ACCESS
@@ -377,10 +366,7 @@ services:
       - shared-network
     profiles:
       - external
-    volumes:
-      - ${CLOUDFLARE_CONFIG_FILE:-../config/cloudflare/config.yml}:/etc/cloudflared/config.yml:ro
-      - ${CLOUDFLARE_CREDENTIALS_DIR:-../config/cloudflare/.cloudflared}:/etc/cloudflared/.cloudflared:ro
-    command: tunnel --config /etc/cloudflared/config.yml run
+    command: tunnel run --token ${CLOUDFLARE_TUNNEL_TOKEN}
     healthcheck:
       test: ["CMD-SHELL", "cloudflared tunnel info 2>&1 | grep -q 'Registered tunnel' || exit 1"]
       interval: 30s

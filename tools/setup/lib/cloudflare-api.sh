@@ -391,20 +391,13 @@ cf_setup_tunnel_automated() {
             return 1
         fi
         
-        # Save credentials
-        mkdir -p "$stack_dir/config/cloudflare/.cloudflared"
-        local temp_tunnel_id=$(echo "$tunnel_response" | jq -r '.result.id')
-        local creds_file="$stack_dir/config/cloudflare/.cloudflared/${temp_tunnel_id}.json"
-        
-        tunnel_id=$(cf_save_tunnel_credentials "$tunnel_response" "$creds_file")
-        
-        if [[ $? -ne 0 ]]; then
-            log_error "Failed to save credentials"
-            return 1
-        fi
+        tunnel_id=$(echo "$tunnel_response" | jq -r '.result.id')
         
         log_success "Created tunnel: $tunnel_name (ID: $tunnel_id)"
     fi
+    
+    # Export account ID so update_env_cloudflare can fetch the tunnel token
+    export CLOUDFLARE_ACCOUNT_ID="$account_id"
     
     # Get zone ID for domain
     local zone_id

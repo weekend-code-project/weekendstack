@@ -236,14 +236,14 @@ total_templates=${#templates[@]}
 current=0
 
 for template in "${templates[@]}"; do
-    ((current++))
+    ((current++)) || true
     log_info "📤 Deploying template $current/$total_templates: $template"
     
     if [[ ! -x "$PUSH_SCRIPT" ]]; then
         log_error "Push script not executable: $PUSH_SCRIPT"
         log_info "Run: chmod +x $PUSH_SCRIPT"
         failed_templates+=("$template:script not executable")
-        ((failure_count++))
+        ((failure_count++)) || true
         continue
     fi
     
@@ -251,11 +251,11 @@ for template in "${templates[@]}"; do
     if CODER_SESSION_TOKEN="$CODER_TOKEN" "$PUSH_SCRIPT" "$template" 2>&1 | sed 's/^/  /'; then
         log_success "Successfully deployed: $template"
         successful_templates+=("$template:success")
-        ((success_count++))
+        ((success_count++)) || true
     else
         log_error "Failed to deploy: $template"
         failed_templates+=("$template:deployment failed")
-        ((failure_count++))
+        ((failure_count++)) || true
     fi
     echo ""
 done
