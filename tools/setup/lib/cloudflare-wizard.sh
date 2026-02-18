@@ -4,6 +4,58 @@
 
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
+# Verify API token against Cloudflare.
+# Tries the User Token endpoint first, then falls back to the Account Token
+# endpoint (Account API Tokens only validate on the account-scoped path).
+# Returns 0 if active, 1 otherwise.
+_cf_verify_token() {
+    local token="$1"
+    local status
+
+    # 1) Try User API Token endpoint
+    status=$(curl -s "https://api.cloudflare.com/client/v4/user/tokens/verify" \
+        -H "Authorization: Bearer $token" 2>/dev/null \
+        | jq -r '.result.status // empty' 2>/dev/null)
+    if [[ "$status" == "active" ]]; then
+        return 0
+    fi
+
+    # 2) Fall back to Account API Token endpoint (needs account ID)
+    #    Get account ID from .env or by querying the /accounts endpoint
+    local account_id=""
+    if [[ -f "${SCRIPT_DIR}/.env" ]]; then
+        account_id=$(grep "^CLOUDFLARE_ACCOUNT_ID=" "${SCRIPT_DIR}/.env" 2>/dev/null \
+            | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+    fi
+
+    if [[ -z "$account_id" ]]; then
+        # Try to discover account ID via the token itself
+        account_id=$(curl -s "https://api.cloudflare.com/client/v4/accounts" \
+            -H "Authorization: Bearer $token" \
+            -H "Content-Type: application/json" 2>/dev/null \
+            | jq -r '.result[0].id // empty' 2>/dev/null)
+    fi
+
+    if [[ -n "$account_id" ]]; then
+        status=$(curl -s "https://api.cloudflare.com/client/v4/accounts/$account_id/tokens/verify" \
+            -H "Authorization: Bearer $token" 2>/dev/null \
+            | jq -r '.result.status // empty' 2>/dev/null)
+        if [[ "$status" == "active" ]]; then
+            # Persist account ID so later steps don't need to re-discover it
+            if [[ -f "${SCRIPT_DIR}/.env" ]]; then
+                if grep -q "^CLOUDFLARE_ACCOUNT_ID=" "${SCRIPT_DIR}/.env"; then
+                    sed -i "s|^CLOUDFLARE_ACCOUNT_ID=.*|CLOUDFLARE_ACCOUNT_ID=$account_id|" "${SCRIPT_DIR}/.env"
+                else
+                    echo "CLOUDFLARE_ACCOUNT_ID=$account_id" >> "${SCRIPT_DIR}/.env"
+                fi
+            fi
+            return 0
+        fi
+    fi
+
+    return 1
+}
+
 check_cloudflare_config() {
     local stack_dir="${SCRIPT_DIR}"
     local env_file="$stack_dir/.env"
@@ -308,17 +360,9 @@ setup_tunnel_with_api() {
     
     # Validate the API token against Cloudflare before proceeding
     log_step "Validating API token..."
-    local verify_response
-    verify_response=$(curl -s "https://api.cloudflare.com/client/v4/user/tokens/verify" \
-        -H "Authorization: Bearer $api_token" 2>&1)
     
-    local token_status
-    token_status=$(echo "$verify_response" | jq -r '.result.status // empty' 2>/dev/null)
-    
-    if [[ "$token_status" != "active" ]]; then
-        local error_msg
-        error_msg=$(echo "$verify_response" | jq -r '.errors[0].message // "Unknown error"' 2>/dev/null)
-        log_error "API token validation failed: $error_msg"
+    if ! _cf_verify_token "$api_token"; then
+        log_error "API token validation failed"
         echo ""
         echo "  Possible causes:"
         echo "    • Token was revoked or expired"
@@ -337,10 +381,7 @@ setup_tunnel_with_api() {
                 return $?
             fi
             # Re-validate
-            verify_response=$(curl -s "https://api.cloudflare.com/client/v4/user/tokens/verify" \
-                -H "Authorization: Bearer $api_token" 2>&1)
-            token_status=$(echo "$verify_response" | jq -r '.result.status // empty' 2>/dev/null)
-            if [[ "$token_status" != "active" ]]; then
+            if ! _cf_verify_token "$api_token"; then
                 log_error "Token still invalid. Falling back to manual method."
                 setup_tunnel_manual
                 return $?
