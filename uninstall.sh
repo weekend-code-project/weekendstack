@@ -476,6 +476,10 @@ remove_files_and_config() {
     _rm_generated "$SCRIPT_DIR/config/coder/scripts/deploy-all-templates.sh"
     _rm_generated "$SCRIPT_DIR/config/coder/scripts/lib"
 
+    # Coder runtime state files — generated during template push / setup
+    _rm_generated "$SCRIPT_DIR/config/coder/.versions.json"
+    _rm_generated "$SCRIPT_DIR/config/coder/.template_deployment_complete"
+
     # Traefik static config — copied from config.yml.example by setup
     _rm_generated "$SCRIPT_DIR/config/traefik/config.yml"
 
