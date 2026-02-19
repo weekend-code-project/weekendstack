@@ -1,3 +1,22 @@
+# ==============================================================================
+# Glance Dashboard Configuration — TEMPLATE FILE
+# ==============================================================================
+# setup.sh copies this to glance.yml on first run.
+# Edit glance.yml directly to change a running instance.
+# Edit this file to change defaults for new installs.
+#
+# TODO (future refactor): This file should be generated dynamically by setup.sh
+# based on enabled profiles rather than copied statically. The current file
+# contains hardcoded service links and widgets for ALL services regardless of
+# whether they are actually enabled (e.g. Immich, Navidrome, Kavita widgets
+# are shown even when the media profile is not selected). The generation should:
+#   - Only include bookmarks for services whose profile is enabled
+#   - Only include service-specific widgets (monitor checks, custom-api stats)
+#     when the corresponding service is running
+#   - Replace hardcoded IPs (192.168.2.50) with ${HOST_IP} substitution
+#   - Replace hardcoded BASE_DOMAIN (*.lab) with ${BASE_DOMAIN} substitution
+# ==============================================================================
+
 server:
   port: 8080
   proxied: true
@@ -140,8 +159,8 @@ pages:
           - type: custom-api
             cache: 5m
             title: Immich Stats
-            title-url: http://192.168.2.50:2283
-            url: http://192.168.2.50:2283/api/server-info/stats
+            title-url: http://${HOST_IP}:2283
+            url: http://${HOST_IP}:2283/api/server-info/stats
             headers:
               x-api-key: "your_immich_api_key_here"
             template: |
@@ -165,8 +184,8 @@ pages:
           - type: custom-api
             cache: 5m
             title: Kavita Latest
-            title-url: http://192.168.2.50:5000
-            url: http://192.168.2.50:5000/api/Series/recently-updated?pageSize=5
+            title-url: http://${HOST_IP}:5000
+            url: http://${HOST_IP}:5000/api/Series/recently-updated?pageSize=5
             headers:
               Authorization: "Bearer kavita_api_key_here"
             template: |
@@ -179,8 +198,8 @@ pages:
           - type: custom-api
             cache: 5m
             title: Navidrome Stats
-            title-url: http://192.168.2.50:4533
-            url: http://192.168.2.50:4533/rest/getUser.view?u=admin&p=admin&v=1.16.1&c=glance&f=json
+            title-url: http://${HOST_IP}:4533
+            url: http://${HOST_IP}:4533/rest/getUser.view?u=admin&p=admin&v=1.16.1&c=glance&f=json
             template: |
               {{ $artists := .JSON.Int "subsonic-response.user.artistCount" }}
               {{ $albums := .JSON.Int "subsonic-response.user.albumCount" }}
@@ -232,7 +251,7 @@ pages:
 
           - type: custom-api
             title: What's Up Docker?
-            title-url: http://192.168.2.50:3000
+            title-url: http://${HOST_IP}:3000
             cache: 1h
             url: http://wud:3000/api/containers/
             method: GET
@@ -291,7 +310,7 @@ pages:
                           {{ else }}
                             <span class="color-negative">●</span>
                           {{ end }}
-                          <a href="http://192.168.2.50:3002" target="_blank" style="color: inherit; text-decoration: none;">{{ .String "name" }}</a>
+                          <a href="http://${HOST_IP}:3002" target="_blank" style="color: inherit; text-decoration: none;">{{ .String "name" }}</a>
                         </div>
                         <div style="display: flex; gap: 1rem; margin-top: 0.25rem; font-size: 0.9rem; opacity: 0.8;">
                           {{ if $showLocalVersion }}
@@ -418,8 +437,8 @@ pages:
           - type: custom-api
             cache: 5m
             title: Immich Stats
-            title-url: http://192.168.2.50:2283
-            url: http://192.168.2.50:2283/api/server-info/stats
+            title-url: http://${HOST_IP}:2283
+            url: http://${HOST_IP}:2283/api/server-info/stats
             headers:
               x-api-key: "your_immich_api_key_here"
             template: |
@@ -440,11 +459,12 @@ pages:
                   <div style="font-size: 0.9rem; opacity: 0.8;">Total</div>
                 </div>
               </div>
+
           - type: custom-api
             cache: 5m
             title: Kavita Latest
-            title-url: http://192.168.2.50:5000
-            url: http://192.168.2.50:5000/api/Series/recently-updated?pageSize=5
+            title-url: http://${HOST_IP}:5000
+            url: http://${HOST_IP}:5000/api/Series/recently-updated?pageSize=5
             headers:
               Authorization: "Bearer kavita_api_key_here"
             template: |
@@ -454,11 +474,12 @@ pages:
                   <div style="font-size: 0.9rem; opacity: 0.8;">{{ .String "libraryName" }}</div>
                 </li>
               {{ end }}
+
           - type: custom-api
             cache: 5m
             title: Navidrome Stats
-            title-url: http://192.168.2.50:4533
-            url: http://192.168.2.50:4533/rest/getUser.view?u=admin&p=admin&v=1.16.1&c=glance&f=json
+            title-url: http://${HOST_IP}:4533
+            url: http://${HOST_IP}:4533/rest/getUser.view?u=admin&p=admin&v=1.16.1&c=glance&f=json
             template: |
               {{ $artists := .JSON.Int "subsonic-response.user.artistCount" }}
               {{ $albums := .JSON.Int "subsonic-response.user.albumCount" }}

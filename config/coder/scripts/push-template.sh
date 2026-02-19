@@ -33,9 +33,9 @@ HELPERS_DIR="$V2_ROOT/helpers"
 DIST_DIR="$V2_ROOT/dist"
 
 # Find workspace root and load .env
-# v2 is at: /opt/stacks/weekendstack/config/coder/v2
-# .env is at: /opt/stacks/weekendstack/.env
-WORKSPACE_ROOT="$(cd "$V2_ROOT/../../.." && pwd)"
+# Script lives at: config/coder/scripts/push-template.sh
+# .env lives at:   <workspace>/.env
+WORKSPACE_ROOT="$(cd "$V2_ROOT/../.." && pwd)"
 ENV_FILE="$WORKSPACE_ROOT/.env"
 
 # =============================================================================
@@ -404,7 +404,14 @@ push_to_coder() {
     push_env_vars+=" -e TF_VAR_host_ip=$HOST_IP"
     push_env_vars+=" -e TF_VAR_ssh_key_dir=$SSH_KEY_DIR"
     push_env_vars+=" -e TF_VAR_traefik_auth_dir=$TRAEFIK_AUTH_DIR"
-    
+
+    # Forward session token so Coder CLI inside the container is authenticated
+    if [[ -n "${CODER_SESSION_TOKEN:-}" ]]; then
+        push_env_vars+=" -e CODER_SESSION_TOKEN=${CODER_SESSION_TOKEN}"
+    else
+        log_warn "No CODER_SESSION_TOKEN set - template push may fail if CLI is not pre-authenticated"
+    fi
+
     if docker exec $push_env_vars coder coder templates push "$TEMPLATE_NAME" \
         --directory "/tmp/${TEMPLATE_NAME}-push" \
         --name "v${version}" \

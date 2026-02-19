@@ -95,12 +95,6 @@ setup_cloudflare_tunnel() {
         fi
     fi
 
-    if ! prompt_yes_no "Set up Cloudflare Tunnel now?" "y"; then
-        log_info "Skipping Cloudflare Tunnel setup"
-        log_info "You can configure it later by running: ./setup.sh --cloudflare-only"
-        return 0
-    fi
-
     echo ""
     echo "Choose setup method:"
     echo ""

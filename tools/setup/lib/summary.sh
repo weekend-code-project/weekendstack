@@ -119,7 +119,7 @@ They will be automatically processed and indexed.
 
 #### Coder
 Access at https://coder.$lab_domain
-Create development environments using the templates in \`config/coder/templates/\`
+Create development environments using the templates in \`config/coder/v2/templates/\`
 
 EOF
 

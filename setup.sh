@@ -725,6 +725,7 @@ CFEOF
 
 # Detect and remove Docker phantom directories at paths that must be files.
 # Docker silently creates a directory when a bind-mount source file is missing.
+# For files with a .example counterpart, copies the example after fixing the phantom.
 preflight_fix_mounts() {
     local file_mounts=(
         "$SCRIPT_DIR/config/glance/glance.yml"
@@ -736,22 +737,34 @@ preflight_fix_mounts() {
         if [[ -d "$path" ]]; then
             log_warn "Found directory where a file is expected: $path"
             rmdir "$path" 2>/dev/null || rm -rf "$path"
-            touch "$path"
-            log_success "Fixed phantom directory -> placeholder file: $path"
+            # Copy from .example if available, otherwise create an empty placeholder
+            local example="${path}.example"
+            if [[ -f "$example" ]]; then
+                cp "$example" "$path"
+                log_success "Fixed phantom directory -> copied from .example: $path"
+            else
+                touch "$path"
+                log_success "Fixed phantom directory -> placeholder file: $path"
+            fi
             fixed=$((fixed + 1))
         fi
     done
 
     # Traefik config.yml needs a valid static config, not just a touch placeholder.
-    # Source directory-creator for the helper function.
     if type _ensure_traefik_static_config &>/dev/null; then
         _ensure_traefik_static_config "$SCRIPT_DIR/config/traefik/config.yml"
     else
         local traefik_cfg="$SCRIPT_DIR/config/traefik/config.yml"
         if [[ -d "$traefik_cfg" ]]; then
             rmdir "$traefik_cfg" 2>/dev/null || rm -rf "$traefik_cfg"
-            touch "$traefik_cfg"
-            log_success "Fixed phantom directory -> placeholder file: $traefik_cfg"
+            local traefik_example="${traefik_cfg}.example"
+            if [[ -f "$traefik_example" ]]; then
+                cp "$traefik_example" "$traefik_cfg"
+                log_success "Fixed phantom directory -> copied from .example: $traefik_cfg"
+            else
+                touch "$traefik_cfg"
+                log_success "Fixed phantom directory -> placeholder file: $traefik_cfg"
+            fi
             fixed=$((fixed + 1))
         fi
     fi

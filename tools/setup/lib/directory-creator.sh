@@ -20,7 +20,6 @@ CONFIG_SUBDIRS=(
     "cloudflare"
     "ssh"
     "glance"
-    "coder/templates"
     "coder/scripts"
     "pihole/etc-dnsmasq.d"
     "filebrowser"
@@ -148,26 +147,29 @@ create_config_directories() {
 
     # Pre-create files that must be FILES (not directories) before Docker starts.
     # Docker silently creates a directory at a bind-mount source path if the file is missing.
-    _ensure_file_not_dir "$stack_dir/config/glance/glance.yml"
+    # For files with .example counterparts, copy the example; otherwise create a placeholder.
+    _ensure_from_example "$stack_dir/config/glance/glance.yml"
     _ensure_file_not_dir "$stack_dir/config/filebrowser/init-filebrowser.sh"
 
-    # Traefik config.yml must be a valid static config, not an empty placeholder.
-    # An empty file causes traefik to start without entrypoints (no ports 80/443).
+    # Traefik config.yml — copy from .example if missing or empty.
     _ensure_traefik_static_config "$stack_dir/config/traefik/config.yml"
 
-    # Restore coder scripts from tools/coder/scripts (survives Level 2 uninstall)
+    # Copy coder deploy scripts from tools/coder/scripts -> config/coder/scripts.
+    # tools/ is the source of truth; config/ holds the active copy.
+    # This runs on every setup so uninstall can safely delete config/coder/scripts/.
     local coder_scripts_src="$stack_dir/tools/coder/scripts"
     local coder_scripts_dst="$stack_dir/config/coder/scripts"
     if [[ -d "$coder_scripts_src" ]]; then
         mkdir -p "$coder_scripts_dst/lib"
         cp -r "$coder_scripts_src"/. "$coder_scripts_dst/"
         chmod +x "$coder_scripts_dst"/*.sh "$coder_scripts_dst/lib"/*.sh 2>/dev/null || true
-        log_info "Restored coder scripts from tools/coder/scripts"
+        log_info "Deployed coder scripts from tools/coder/scripts"
     fi
 }
 
 # Ensure a path is a file, not a directory.
 # Docker creates a directory at a missing bind-mount source — this reverses that.
+# Use _ensure_from_example instead when there is a .example counterpart.
 _ensure_file_not_dir() {
     local file_path="$1"
     local dir_path
@@ -182,6 +184,33 @@ _ensure_file_not_dir() {
         mkdir -p "$dir_path"
         touch "$file_path"
         log_info "Pre-created placeholder file: $file_path"
+    fi
+}
+
+# Ensure a config file exists by copying from its .example counterpart.
+# If no .example exists, falls back to an empty placeholder.
+# Safe to call on every setup — never overwrites an existing file.
+_ensure_from_example() {
+    local file_path="$1"
+    local example_path="${file_path}.example"
+    local dir_path
+    dir_path=$(dirname "$file_path")
+
+    # Fix phantom directory left by Docker
+    if [[ -d "$file_path" ]]; then
+        rmdir "$file_path" 2>/dev/null || rm -rf "$file_path"
+        log_info "Removed phantom directory at: $file_path"
+    fi
+
+    if [[ ! -f "$file_path" ]]; then
+        mkdir -p "$dir_path"
+        if [[ -f "$example_path" ]]; then
+            cp "$example_path" "$file_path"
+            log_info "Created $(basename "$file_path") from .example template"
+        else
+            touch "$file_path"
+            log_info "Pre-created placeholder file (no .example found): $file_path"
+        fi
     fi
 }
 
@@ -202,7 +231,13 @@ _ensure_traefik_static_config() {
     # Write config if missing or empty (placeholder from previous setup)
     if [[ ! -s "$config_path" ]] || ! grep -q "entryPoints" "$config_path" 2>/dev/null; then
         mkdir -p "$dir_path"
-        cat > "$config_path" << 'TRAEFIK_CONFIG'
+        local example_path="${config_path}.example"
+        if [[ -f "$example_path" ]]; then
+            cp "$example_path" "$config_path"
+            log_info "Created traefik static config from .example: $config_path"
+        else
+            # Fallback if .example is somehow missing
+            cat > "$config_path" << 'TRAEFIK_CONFIG'
 # Traefik v3 Static Configuration
 log:
   level: INFO
@@ -225,7 +260,8 @@ providers:
     directory: /config/traefik/auth
     watch: true
 TRAEFIK_CONFIG
-        log_info "Created traefik static config: $config_path"
+            log_info "Created traefik static config (no .example found): $config_path"
+        fi
     fi
 }
 

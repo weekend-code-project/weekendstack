@@ -16,7 +16,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 TEMPLATES_DIR="$WORKSPACE_ROOT/config/coder/templates"
 MARKER_FILE="$WORKSPACE_ROOT/config/coder/.template_deployment_complete"
-PUSH_SCRIPT="$SCRIPT_DIR/push-template-local.sh"
+PUSH_SCRIPT="$WORKSPACE_ROOT/config/coder/scripts/push-template.sh"
 TEMPLATE_INFO_SCRIPT="$SCRIPT_DIR/lib/get-template-info.sh"
 CODER_API_SCRIPT="$SCRIPT_DIR/lib/coder-api.sh"
 
@@ -176,6 +176,20 @@ done
 printf "\n"
 log_success "Coder is healthy and ready"
 echo ""
+
+# Pre-authenticate Coder CLI inside the container so push scripts have valid sessions
+# even if they don't forward the token explicitly. Safe to run multiple times.
+if [[ -n "$CODER_TOKEN" ]]; then
+    log_info "Pre-authenticating Coder CLI inside container..."
+    # Use the internal URL (localhost:7080) — the container always binds there
+    if docker exec -e CODER_SESSION_TOKEN="$CODER_TOKEN" coder \
+        coder login http://localhost:7080 --token "$CODER_TOKEN" >/dev/null 2>&1; then
+        log_success "Coder CLI authenticated"
+    else
+        log_warning "Pre-auth failed (will try with per-template token forwarding)"
+    fi
+    echo ""
+fi
 
 # Discover templates
 if [[ ! -d "$TEMPLATES_DIR" ]]; then

@@ -1,3 +1,0 @@
-# Legacy version tracking (deprecated - now using modules.txt VERSION line)
-.template_versions.json
-**/.version
