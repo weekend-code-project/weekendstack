@@ -158,13 +158,19 @@ services:
       DOCKER_HOST: "tcp://socat:2375"
       CODER_TEMPLATE_PATHS: "/templates"
       CODER_PROVISIONER_TAGS: "base_domain=${BASE_DOMAIN:-localhost}"
+      # GitHub External Auth - enables Git operations with user's GitHub identity
+      # Create OAuth App at: https://github.com/settings/developers
+      # Callback URL: {CODER_ACCESS_URL}/external-auth/github/callback
+      CODER_EXTERNAL_AUTH_0_TYPE: github
+      CODER_EXTERNAL_AUTH_0_ID: github
+      CODER_EXTERNAL_AUTH_0_CLIENT_ID: ${GITHUB_OAUTH_CLIENT_ID:-}
+      CODER_EXTERNAL_AUTH_0_CLIENT_SECRET: ${GITHUB_OAUTH_CLIENT_SECRET:-}
       COMPUTER_NAME: ${COMPUTER_NAME:-workstation}
       BASE_DOMAIN: ${BASE_DOMAIN:-localhost}
       DATA_BASE_DIR: ${DATA_BASE_DIR:-/home/ubuntu/weekendstack/data}
       TF_VAR_base_domain: ${BASE_DOMAIN:-localhost}
       TF_VAR_workspace_dir: ${WORKSPACE_DIR:-/mnt/workspace/wcp-coder/files/coder/workspace}
       TF_VAR_traefik_auth_dir: ${TRAEFIK_AUTH_DIR:-/home/ubuntu/weekendstack/config/traefik/auth}
-      TF_VAR_ssh_key_dir: ${SSH_KEY_DIR:-/home/ubuntu/weekendstack/config/ssh}
     ports:
       - "${CODER_HTTP_PORT:-7080}:7080"
     depends_on:
@@ -181,10 +187,6 @@ services:
       - type: bind
         source: ${CODER_TEMPLATE_DIR:-../config/coder/templates}
         target: /templates
-      - type: bind
-        source: ${SSH_KEY_DIR:-../config/ssh}
-        target: /mnt/host-ssh
-        read_only: true
       - type: bind
         source: ${TRAEFIK_AUTH_DIR:-../config/traefik/auth}
         target: /traefik-auth

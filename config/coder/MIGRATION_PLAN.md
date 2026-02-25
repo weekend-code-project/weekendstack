@@ -1,185 +1,227 @@
-# Coder Template System: v1 → v2 Migration Plan
+# Coder Template System: Module Migration Plan
 
-**Created:** 2026-02-19  
-**Branch:** feature/smart-image-pull-optimization  
-**Status:** Planning — v2 partially built, v1 is live and working
-
----
-
-## Current State
-
-### What's Working (v1)
-Five templates deployed and live in Coder via the v1 system:
-- `docker-template` — minimal Docker workspace
-- `modular-test` — test harness for module development  
-- `node-template` — Node.js dev environment
-- `vite-template` — Vite + Node frontend dev environment
-- `wordpress-template` — WordPress dev environment
-
-### v2 Progress (partial)
-The v2 system was started on 2026-01-11 and is located at `config/coder/v2/`.
-Two modules exist, one template works:
-- ✅ `modules/feature/code-server` — code-server web IDE
-- ✅ `modules/feature/traefik-routing` — Traefik label injection
-- ⏳ `modules/platform/` — empty (coder-agent, docker-workspace needed)
-- ⏳ `modules/step/` — empty (startup script steps needed)
-- ✅ `templates/base/` — minimal working template (pushed as `new-modular-template` v4)
-- ✅ `scripts/push-template.sh` — new manifest-driven push script
+**Updated:** 2026-02-25
+**Status:** Active — core modules migrated and verified, continuing with CLI tools & Node.js
 
 ---
 
-## What Calls v1 Templates (Full Callsite Map)
+## Architecture Overview
 
-### Deployment Callsites
-| File | Line(s) | Reference | Action Needed |
-|------|---------|-----------|---------------|
-| `config/coder/scripts/deploy-all-templates.sh` | 17 | `TEMPLATES_DIR="$WORKSPACE_ROOT/config/coder/templates"` | Change to `v2/templates` |
-| `config/coder/scripts/deploy-all-templates.sh` | 20 | `PUSH_SCRIPT="$SCRIPT_DIR/push-template-local.sh"` | Change to `v2/scripts/push-template.sh` |
-| `tools/coder/scripts/deploy-all-templates.sh` | 17, 20 | Same as above (mirror copy) | Same changes |
-| `setup.sh` | 281 | `config/coder/scripts/deploy-all-templates.sh` | No change — script path stays, internals change |
-| `Makefile` | 99, 107, 114 | `config/coder/scripts/deploy-all-templates.sh` | No change — script path stays |
+```
+config/coder/
+├── modules/                          # v2 modules (LIVE)
+│   ├── feature/                      # Terraform modules called from templates
+│   │   ├── code-server/         ✅   # Web IDE
+│   │   ├── git-config/          ✅   # Git identity + repo cloning (with retry)
+│   │   ├── ssh-server/          ✅   # SSH server with deterministic port
+│   │   └── traefik-routing/     ✅   # External preview + Traefik labels + auth
+│   ├── platform/                     # (empty — .gitkeep)
+│   └── step/                         # (empty — .gitkeep)
+├── templates/
+│   ├── base/                         # Minimal template (code-server + traefik)
+│   └── new-modular-template/         # Extended template (all modules)
+├── scripts/
+│   ├── push-template.sh              # Builds temp dir, copies modules, pushes to Coder
+│   ├── deploy-all-templates.sh       # Iterates templates, calls push-template.sh
+│   └── lib/                          # coder-api.sh, get-template-info.sh
+└── helpers/
+    └── startup-lib.sh                # Shared logging/idempotency helpers
 
-### Documentation References (non-breaking)
-| File | Reference |
-|------|-----------|
-| `tools/setup/lib/summary.sh:122` | Text mention of `config/coder/templates/` — update to remove path |
-| `config/coder/template-modularization-plan.md` | Old planning doc — archive or delete |
-| `config/coder/docs/modular-template-refactor-roadmap.md` | Living doc — keep, update status |
-
-### Scripts That Will Be Retired
-| Script | Purpose | Retirement Condition |
-|--------|---------|---------------------|
-| `config/coder/scripts/push-template-local.sh` | v1 push — copies modules from template-modules/ | After all v2 templates verified |
-| `tools/coder/scripts/push-template-local.sh` | Mirror of above | Same |
-| `config/coder/template-modules/` | Shared modules/params for v1 | After all v2 templates verified |
-
----
-
-## Migration Phases
-
-### Phase 1: Complete the v2 Module Library
-**Goal:** Have all modules needed to replicate v1 template capabilities  
-**Scope:** `config/coder/v2/modules/`
-
-#### 1.1 Platform Modules (required by every template)
-- [ ] `modules/platform/coder-agent/` — Coder agent resource + workspace data sources
-- [ ] `modules/platform/docker-workspace/` — Docker container, image, volume resources
-
-#### 1.2 Feature Modules
-- [x] `modules/feature/code-server/` — web IDE ✅
-- [x] `modules/feature/traefik-routing/` — routing labels ✅
-- [ ] `modules/feature/ssh/` — SSH access (port forward via Coder)
-- [ ] `modules/feature/git-integration/` — gitconfig + SSH key injection
-- [ ] `modules/feature/node-tooling/` — nvm, Node.js version management
-- [ ] `modules/feature/wordpress/` — WordPress + MySQL sidecar container
-
-#### 1.3 Step Modules (startup script parts)
-- [ ] `modules/step/init-shell/` — baseline shell config (aliases, PATH)
-- [ ] `modules/step/setup-workspace/` — clone repo, directory scaffold
-- [ ] `modules/step/node-install/` — nvm install + node version pin
-- [ ] `modules/step/preview-server/` — start and register preview link
-
-**Acceptance:** `push-template.sh --dry-run base` compiles a startup script from at least 3 step modules cleanly.
-
----
-
-### Phase 2: Port the Four Production Templates to v2
-**Goal:** One v2 template for each v1 template (drop `modular-test` — replaced by `base`)
-
-Templates to create in `config/coder/v2/templates/`:
-
-#### 2.1 `docker` (replaces `docker-template`)
-- Modules: platform/coder-agent, platform/docker-workspace, feature/code-server
-- No SSH, no Git, no Node
-- Manifest: minimal, 3 modules + 2 step modules
-
-#### 2.2 `node` (replaces `node-template`)
-- Modules: docker, code-server, ssh, git-integration, node-tooling, traefik-routing
-- Steps: init-shell, setup-workspace, node-install, preview-server
-- Paramters: node version, git repo, preview port
-
-#### 2.3 `vite` (replaces `vite-template`)
-- Same as `node` + vite-specific startup command default
-- Could be same template as `node` with a different default startup_command parameter
-
-#### 2.4 `wordpress` (replaces `wordpress-template`)
-- Modules: docker, code-server, ssh, git-integration, wordpress, traefik-routing
-- Steps: init-shell, setup-wordpress, preview-server
-- Requires MySQL sidecar defined in platform/docker-workspace variant
-
-**Acceptance:** Each template can be pushed with `push-template.sh <name>` and creates a working Coder workspace.
-
----
-
-### Phase 3: Wire v2 into the Deployment Pipeline
-**Goal:** `make deploy-coder-templates` and `./setup.sh` use v2, not v1
-
-#### 3.1 Update `deploy-all-templates.sh` (both copies)
-Change two lines in both `config/coder/scripts/deploy-all-templates.sh` and `tools/coder/scripts/deploy-all-templates.sh`:
-
-```bash
-# Before
-TEMPLATES_DIR="$WORKSPACE_ROOT/config/coder/templates"
-PUSH_SCRIPT="$SCRIPT_DIR/push-template-local.sh"
-
-# After
-TEMPLATES_DIR="$WORKSPACE_ROOT/config/coder/v2/templates"
-PUSH_SCRIPT="$WORKSPACE_ROOT/config/coder/v2/scripts/push-template.sh"
+_trash/coder-v1/template-modules/     # Legacy modules (SOURCE for migration)
+├── modules/                          # 20 module directories
+└── params/                           # 7 param files (glue that wired modules to templates)
 ```
 
-The template discovery loop in `deploy-all-templates.sh` iterates `$TEMPLATES_DIR/*/` — this will work unchanged for v2 templates as long as template directory names don't start with `_`.
+### How It Works
 
-#### 3.2 Verify `setup.sh` integration
-`setup.sh:281` calls `config/coder/scripts/deploy-all-templates.sh` — no change needed once step 3.1 is done.
+1. **Templates** live in `config/coder/templates/<name>/` with `main.tf` + `variables.tf`
+2. Templates reference modules via `source = "./modules/feature/<name>"`
+3. `push-template.sh` copies the template to a temp dir, then copies referenced modules from `config/coder/modules/` into it
+4. Variables (`base_domain`, `host_ip`) are substituted from `.env`
+5. The assembled directory is pushed to Coder via `docker exec coder coder templates push`
 
-#### 3.3 Update Makefile `redeploy-coder-templates`
-The `force` positional arg in `deploy-all-templates.sh` is already handled. No change needed.
+### Current Template Design (new-modular-template)
 
-#### 3.4 Update `tools/setup/lib/summary.sh`
-Remove the hardcoded path reference on line 122. Replace with generic language.
+The `new-modular-template/main.tf` is a **monolithic template** — it defines:
+- Coder agent inline (not a module)
+- Docker container inline (not a module)
+- Docker image + volume inline
+- `coder_script` for startup command inline
+- `coder_app` for local preview inline
+- Calls `code-server` module for web IDE
+- Calls `traefik-routing` module for external preview + auth
 
-**Acceptance:** `make deploy-coder-templates` deploys all 4 v2 templates to a fresh Coder instance.
-
----
-
-### Phase 4: Cutover and Cleanup
-**Goal:** Remove v1 code. Done only after Phase 3 is verified in a clean install.
-
-#### 4.1 Archive v1 templates (don't delete immediately)
-```bash
-git mv config/coder/templates config/coder/templates-v1-archive
-```
-This keeps the git history accessible while making it clear they're retired.
-
-#### 4.2 Remove v1 scripts
-```bash
-git rm config/coder/scripts/push-template-local.sh
-git rm tools/coder/scripts/push-template-local.sh
-```
-
-#### 4.3 Remove template-modules (v1 shared modules)
-```bash
-git rm -r config/coder/template-modules
-```
-
-#### 4.4 Remove archive after one release
-Once v2 is confirmed stable across two clean installs, remove:
-```bash
-git rm -r config/coder/templates-v1-archive
-```
+The legacy v1 system tried to modularize *everything* (agent, container, metadata, etc.) which created complex interdependencies. The v2 approach keeps the agent and container inline in the template and only extracts **features** as modules.
 
 ---
 
-## Key Differences: v1 vs v2
+## Full Audit: Legacy Modules → v2 Status
 
-| Concern | v1 | v2 |
-|---------|----|----|
-| Module discovery | `modules.txt` list → `push-template-local.sh` copies from `template-modules/` | `manifest.json` → `push-template.sh` compiles from `v2/modules/` |
-| Startup script | Each module injects into `agent-params.tf` at push time | `push-template.sh` compiles one `startup.sh` from `step/*.part.sh` files |
-| Terraform structure | Flat files scattered in template dir + copied module dirs | Clean Terraform modules with defined outputs |
-| Host path deps | Had some (`/opt/stacks/...`) | None — labels + named volumes only |
-| Version naming | Auto-increments (v1, v2, v3...) via `push-template-local.sh` | Same behavior in `push-template.sh` |
-| Deploy orchestrator | `deploy-all-templates.sh` → `push-template-local.sh` | `deploy-all-templates.sh` → `push-template.sh` (same outer script) |
+### Already Migrated (in v2)
+
+| Legacy Module | v2 Location | Notes |
+|---|---|---|
+| `code-server-module` | `modules/feature/code-server/` | Simplified: removed `workspace_start_count` (not needed when module is unconditional) |
+| `traefik-routing-module` | `modules/feature/traefik-routing/` | Rewritten: auth via `coder_script` + labels instead of separate auth module |
+| `password-protection-module` | merged into `traefik-routing` | Auth setup is now a `coder_script` inside the routing module |
+| `workspace-auth-module` | merged into `traefik-routing` | Duplicate of password-protection-module |
+| `routing-labels-test-module` | merged into `traefik-routing` | Labels are now generated inside the routing module |
+| `git-identity-module` | merged into `modules/feature/git-config/` | Git identity (user.name/email) + safe.directory + OAuth credential helper |
+| `git-integration-module` | merged into `modules/feature/git-config/` | Repo cloning with SSH/HTTPS auto-detection, retry logic, mirror-clone approach |
+| `ssh-module` | `modules/feature/ssh-server/` | SSH server with deterministic port, persistent host keys, known_hosts, flock-based apt serialization |
+| `init-shell-module` | merged into template `coder_script.startup` | First-run home init is now inline in the template's startup script |
+
+### Not Needed (functionality is inline in template)
+
+| Legacy Module | Why Not Needed |
+|---|---|
+| `coder-agent-module` | Agent is defined inline in each template's `main.tf` — extracting it adds complexity without benefit (every template needs different `env`, `metadata`, `display_apps`) |
+| `docker-module` | Docker-in-Docker setup. Only needed for container-dev templates. Can be added later if needed |
+| `metadata-module` | Resource monitoring metadata is defined inline in agent block. The v1 "selectable metadata" via multi-select parameter caused flickering issues |
+| `preview-link-module` | Local preview `coder_app` is defined inline. The v1 module had 3 modes (internal/traefik/custom) which was overcomplicated |
+
+### Need to Migrate (ordered by priority)
+
+| # | Legacy Module | v2 Target | Complexity | Why Needed |
+|---|---|---|---|---|
+| 1 | `github-cli-module` | `modules/feature/github-cli/` | Low | `gh` CLI installation |
+| 2 | `gitea-cli-module` | `modules/feature/gitea-cli/` | Low | `tea` CLI installation |
+| 3 | `node-version-module` | `modules/feature/node-version/` | Medium | NVM/Volta/fnm/n + Node.js version management |
+| 4 | `node-tooling-module` | `modules/feature/node-tooling/` | Medium | Global npm packages (TypeScript, ESLint, etc.) |
+| 5 | `node-modules-persistence-module` | `modules/feature/node-modules-persist/` | High | Bind-mount persistent node_modules across restarts |
+| 6 | `coder-user-setup-module` | `modules/feature/user-setup/` | Low | Creates coder user for non-Coder base images (e.g., `node:20`) |
+| 7 | `setup-server-module` | *Skip* | High | Overcomplicated — replaced by inline `coder_script` in template |
+
+---
+
+## Migration Strategy
+
+### Approach: One Module at a Time
+
+Each module migration follows this process:
+
+1. **Read** the legacy module code and understand inputs/outputs
+2. **Adapt** to v2 conventions (see below)
+3. **Create** the module in `config/coder/modules/feature/<name>/`
+4. **Wire** it into `new-modular-template/main.tf` (or create a test template)
+5. **Push** with `push-template.sh --dry-run new-modular-template` to validate
+6. **Test** by pushing for real and creating a workspace
+7. **Confirm** it works before moving to the next module
+
+### v2 Module Conventions
+
+Every v2 feature module should follow these patterns:
+
+```
+modules/feature/<name>/
+├── main.tf        # Resources, variables, outputs — all in one file
+└── README.md      # Brief description, inputs, outputs
+```
+
+**Design Rules:**
+- **Self-contained**: Each module is a Terraform module with `variable` inputs and `output` values
+- **No cross-module dependencies**: Modules don't reference other modules. The template wires them together
+- **`coder_script` for startup work**: Instead of outputting shell script strings that get composed in an agent `startup_script`, create `coder_script` resources that Coder runs independently. This eliminates script ordering bugs
+- **No `count` based on parameters**: The template decides whether to include a module. If a module is included, it runs unconditionally. This avoids the v1 flickering issues
+- **Variables use simple types**: `string`, `bool`, `number`, `list(string)`. No complex objects
+- **Outputs expose only what templates need**: Labels map, URLs, IDs — not shell scripts
+
+### Template Integration Pattern
+
+```hcl
+# In template main.tf:
+
+module "git_identity" {
+  source = "./modules/feature/git-identity"
+
+  agent_id     = coder_agent.main.id
+  author_name  = coalesce(data.coder_workspace_owner.me.full_name, data.coder_workspace_owner.me.name)
+  author_email = data.coder_workspace_owner.me.email
+}
+```
+
+The push script handles copying `modules/feature/git-identity/` into the temp build directory automatically (it scans `source = "./modules/"` references).
+
+---
+
+## Migration Queue (Do These One at a Time)
+
+### Round 1: Git & SSH — ✅ COMPLETE
+
+All core modules for Git identity, repo cloning, and SSH server access are migrated and verified.
+
+#### ✅ `git-config` (combines git-identity + git-integration)
+- Git identity: `git config --global user.name/email`, safe.directory
+- GitHub OAuth credential helper for HTTPS private repos
+- Repo cloning: SSH and HTTPS URLs, mirror-clone approach
+- **Coder native SSH auth**: Uses `$GIT_SSH_COMMAND` (`coder gitssh`) — no manual key generation
+- **Retry logic**: Clone retries up to 3 times with increasing delays (handles `coder gitssh` startup timing)
+- **Proper error handling**: Checks git's exit code directly (not grep on output)
+- Tracks remote branches, initializes submodules
+
+#### ✅ `ssh-server`
+- OpenSSH server on deterministic port (23000-29999 based on workspace_id)
+- Persistent host keys (survive workspace restarts)
+- Known hosts for GitHub, GitLab, Bitbucket, Gitea
+- **flock-based apt serialization** to prevent dpkg lock contention with parallel scripts
+- Password auth with configurable password
+- Git SSH auth delegated to Coder native `$GIT_SSH_COMMAND`
+
+#### ✅ `init-shell` (merged into template startup script)
+- First-run home directory initialization is inline in the template's `coder_script.startup`
+
+### Round 2: CLI Tools — TODO
+
+#### Migration 1: `github-cli`
+**Legacy:** `github-cli-module` — outputs an install script
+**v2 approach:** `coder_script` resource that installs `gh`
+**Inputs:** `agent_id`
+
+#### Migration 2: `gitea-cli`
+**Legacy:** `gitea-cli-module` — outputs an install script
+**v2 approach:** `coder_script` resource that installs `tea`
+**Inputs:** `agent_id`
+
+### Round 3: Node.js — TODO
+
+#### Migration 3: `node-version`
+**Legacy:** `node-version-module` — NVM/Volta/fnm/n install strategies
+**v2 approach:** `coder_script` resource with simplified strategy
+**Inputs:** `agent_id`, `node_version`, `install_strategy`, `package_manager`
+**Simplification:** Consider defaulting to just NVM (most common) and dropping Volta/fnm/n unless requested
+
+#### Migration 4: `node-tooling`
+**Legacy:** `node-tooling-module` — global package installation
+**v2 approach:** `coder_script` resource
+**Inputs:** `agent_id`, `enable_typescript`, `enable_eslint`, `package_manager`
+**Depends on:** node-version (must run after Node is installed)
+
+#### Migration 5: `node-modules-persist`
+**Legacy:** `node-modules-persistence-module` — bind-mount node_modules
+**v2 approach:** `coder_script` + output for Docker volume/mount config
+**Inputs:** `agent_id`, `node_modules_paths`, `workspace_folder`
+**Complexity:** Highest — involves `mount --bind` and package manager detection. Consider deferring
+
+### Round 4: Specialized — TODO
+
+#### Migration 6: `user-setup`
+**Legacy:** `coder-user-setup-module` — creates coder user for non-Coder images
+**v2 approach:** `coder_script` that runs early in startup
+**Inputs:** `agent_id`
+**When needed:** Only for templates using base images like `node:20` instead of `codercom/enterprise-base`
+
+---
+
+## Key Differences: v1 → v2 Module Design
+
+| Concern | v1 (Legacy) | v2 (New) |
+|---------|-------------|----------|
+| Script execution | Module outputs a shell string → composed into `startup_script` | Module creates a `coder_script` resource → Coder runs it independently |
+| Script ordering | Manual: order matters in `join("\n", [...])` | Automatic: Coder manages `coder_script` execution |
+| Conditional inclusion | `count = condition ? 1 : 0` on module → `try(module.x[0].output, "")` | Template simply includes or omits the `module` block |
+| Parameter ownership | Params defined in shared `params/*.tf` files → copied to template | Params defined inline in the template's `main.tf` |
+| Module interface | Outputs shell script strings | Creates Coder resources directly (scripts, apps, metadata) |
+| Cross-module state | Modules output values consumed by agent module startup script | No cross-module state — each module is self-contained |
 
 ---
 
@@ -187,11 +229,11 @@ git rm -r config/coder/templates-v1-archive
 
 | Risk | Mitigation |
 |------|-----------|
-| v2 templates not yet complete — clean installs fail | Keep v1 as fallback until Phase 3 is done and verified |
-| `push-template.sh` has different arg signature than `push-template-local.sh` | Audit `deploy-all-templates.sh` call sites before Phase 3; adapt args |
-| `vite` and `node` may be so similar one could replace both | Test first; if identical, use one template with different parameter defaults |
-| WordPress sidecar (MySQL) complicates platform/docker-workspace | May need a separate `platform/docker-wordpress/` variant |
-| Coder template version history reset on rename | Use same template names (`node`, not `node-template`) so Coder sees them as new templates, not updates |
+| `coder_script` ordering can't be guaranteed | Use `start_blocks_login = true` for critical setup scripts (git, SSH) and `false` for optional ones |
+| Module A breaks Module B during migration | Migrate one at a time; push + test after each; don't commit the next until current is verified |
+| SSH module needs port output for Docker container | Module outputs the port; template uses it in `docker_container.ports` block |
+| Node modules need NVM loaded first | `coder_script` for node-tooling should source NVM inline before installing packages |
+| The `traefik_auth_dir` host mount may not exist | Already handled — the mount is in the template's container block, not in any module |
 
 ---
 
@@ -199,22 +241,28 @@ git rm -r config/coder/templates-v1-archive
 
 | Date | Decision | Reason |
 |------|----------|--------|
-| 2026-01-11 | Start v2 in `/config/coder/v2/` instead of modifying v1 | Clean slate avoids breaking working templates during migration |
-| 2026-01-11 | Build-time script compilation (not runtime sourcing) | Eliminates startup order bugs present in v1 |
-| 2026-01-11 | Traefik BasicAuth via labels (not host bind mount) | Removes host path dependency |
-| 2026-02-19 | Defer cutover until all 4 templates are verified working | Don't break clean install while migrating |
+| 2026-01-11 | Keep agent + container inline in templates | Extracting to modules added complexity without benefit (v1 had this, caused issues) |
+| 2026-01-11 | Use `coder_script` instead of composed startup strings | Eliminates script ordering bugs from v1 |
+| 2026-01-11 | Traefik auth via labels + coder_script (not separate module) | Single module handles routing + auth together |
+| 2026-02-19 | Defer cutover until all templates verified | Don't break clean install while migrating |
+| 2026-02-24 | Migrate modules one-at-a-time with user verification | Past bulk migrations broke inter-module dependencies |
+| 2026-02-24 | Drop `setup-server-module` — too complex, replaced by inline coder_script | v1 version had port mapping, HTML generation, wrapper scripts — all handled simpler inline |
+| 2026-02-24 | Drop `metadata-module` — keep metadata inline | Multi-select parameter caused flickering; simpler to hardcode useful metrics |
+| 2026-02-24 | Merge password/auth modules into traefik-routing | Three separate modules (password-protection, workspace-auth, routing-labels-test) all did overlapping work |
+| 2026-02-25 | Use Coder native SSH keys (`$GIT_SSH_COMMAND` / `coder gitssh`) | Coder auto-generates per-user SSH key, injects via agent env. No manual key gen/mount needed |
+| 2026-02-25 | Merge git-identity + git-integration into single `git-config` module | Both are git-related, run as one `coder_script`. Simpler than two separate modules |
+| 2026-02-25 | Add clone retry logic (3 attempts with backoff) | `coder gitssh` has a startup timing issue — not ready on first attempt, succeeds on retry |
+| 2026-02-25 | Remove SSH key generation/mounting from all modules | Coder's native `$GIT_SSH_COMMAND` handles auth. No per-workspace or shared host keys needed |
+| 2026-02-25 | Use `flock` for apt serialization across parallel scripts | Prevents dpkg lock contention when ssh-server and traefik-routing both install packages |
 
 ---
 
-## Next Session Checklist
+## Next Steps
 
-Start here next time:
-1. `cd config/coder/v2`
-2. Run `./scripts/push-template.sh --dry-run base` to verify v2 push script still works
-3. Begin Phase 1.1: create `modules/platform/coder-agent/main.tf`
-4. Create `modules/platform/docker-workspace/main.tf`
-5. Create first step module: `modules/step/init-shell/`
-6. Update `templates/base/` to use the new platform modules via manifset
-7. Push and create a test workspace
+**Start with Migration 1: `github-cli`**
 
-**The goal of the first coding session is:** a `base` template that works end-to-end using only v2 modules (no v1 module copies), with at least one step module in the compiled startup script.
+1. Create `config/coder/modules/feature/github-cli/main.tf`
+2. Wire into `new-modular-template/main.tf` (optional, behind a parameter)
+3. `push-template.sh --dry-run new-modular-template` to validate
+4. Push and test
+5. Confirm working → move to Migration 2: `gitea-cli`

@@ -11,9 +11,7 @@
 #   - Basic resource monitoring
 #
 # This template does NOT include:
-#   - SSH access (add ssh module)
-#   - Git integration (add git module)  
-#   - Traefik routing (add traefik module)
+#   - Git integration (add git module)
 #
 # =============================================================================
 
@@ -25,6 +23,10 @@ terraform {
     }
     docker = {
       source  = "kreuzwerker/docker"
+      version = ">= 3.0.0"
+    }
+    random = {
+      source  = "hashicorp/random"
       version = ">= 3.0.0"
     }
   }
@@ -43,6 +45,15 @@ provider "docker" {}
 data "coder_workspace" "me" {}
 data "coder_workspace_owner" "me" {}
 data "coder_provisioner" "me" {}
+
+# GitHub External Auth (optional - requires Coder server configuration)
+# When enabled, provides OAuth token for private repo access via HTTPS.
+# Users see a "Connect to GitHub" button on first workspace if not yet authorized.
+data "coder_external_auth" "github" {
+  count    = var.github_external_auth ? 1 : 0
+  id       = "github"
+  optional = true
+}
 
 # =============================================================================
 # PARAMETERS (User-configurable in Coder UI)
@@ -90,12 +101,32 @@ data "coder_parameter" "external_preview" {
 
 data "coder_parameter" "workspace_password" {
   name         = "workspace_password"
-  display_name = "Preview Password"
-  description  = "Password for external preview basic auth. Required when external preview is enabled."
+  display_name = "Workspace Password"
+  description  = "Password for SSH access and external preview. If empty, a random password is generated for SSH."
   type         = "string"
   default      = ""
   mutable      = true
   order        = 201
+}
+
+data "coder_parameter" "enable_ssh" {
+  name         = "enable_ssh"
+  display_name = "Enable SSH"
+  description  = "Start SSH server and generate SSH keys for Git. Provides remote terminal access and auto-generates an ed25519 key pair."
+  type         = "bool"
+  default      = "true"
+  mutable      = true
+  order        = 300
+}
+
+data "coder_parameter" "repo_url" {
+  name         = "repo_url"
+  display_name = "Repository URL"
+  description  = "Git repository to clone into workspace (SSH or HTTPS). Leave empty to skip."
+  type         = "string"
+  default      = ""
+  mutable      = true
+  order        = 400
 }
 
 # =============================================================================
@@ -139,6 +170,20 @@ locals {
   # External preview settings
   external_preview_enabled = data.coder_parameter.external_preview.value
   workspace_password       = data.coder_parameter.workspace_password.value
+  
+  # SSH settings
+  ssh_enabled  = data.coder_parameter.enable_ssh.value
+  ssh_password = local.workspace_password != "" ? local.workspace_password : random_password.ssh_fallback.result
+  ssh_port     = try(module.ssh_server[0].ssh_port, 0)
+}
+
+# =============================================================================
+# AUTO-GENERATED SSH PASSWORD (fallback when user doesn't set one)
+# =============================================================================
+
+resource "random_password" "ssh_fallback" {
+  length  = 16
+  special = false
 }
 
 # =============================================================================
@@ -177,8 +222,8 @@ resource "coder_agent" "main" {
   os   = "linux"
   dir  = local.workspace_folder
   
-  # Startup script - basic environment setup only
-  # The startup command runs via coder_script with high order to ensure it's LAST
+  # Startup script - environment initialization
+  # Handles first-time home directory setup + workspace folder creation
   startup_script = <<-SCRIPT
     #!/bin/bash
     set -e
@@ -187,7 +232,31 @@ resource "coder_agent" "main" {
     echo "[STARTUP] Workspace initialization starting..."
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     
-    # Ensure workspace folder exists
+    # First-time home directory initialization
+    if [ ! -f "$HOME/.init_done" ]; then
+      echo "[STARTUP] First startup detected, initializing home..."
+      cp -rT /etc/skel "$HOME" 2>/dev/null || true
+      
+      # Standard directories
+      mkdir -p "$HOME/workspace"
+      mkdir -p "$HOME/.config"
+      mkdir -p "$HOME/.local/bin"
+      chmod 755 "$HOME/workspace"
+      
+      # Auto-cd to workspace in interactive shells
+      if ! grep -q "cd ~/workspace" "$HOME/.bashrc" 2>/dev/null; then
+        echo "" >> "$HOME/.bashrc"
+        echo "# Auto-navigate to workspace directory" >> "$HOME/.bashrc"
+        echo "cd ~/workspace 2>/dev/null || true" >> "$HOME/.bashrc"
+      fi
+      
+      touch "$HOME/.init_done"
+      echo "[STARTUP] Home directory initialized"
+    else
+      echo "[STARTUP] Home directory already initialized"
+    fi
+    
+    # Ensure workspace folder exists (always)
     mkdir -p "${local.workspace_folder}"
     
     echo "[STARTUP] User: $(whoami)"
@@ -237,6 +306,30 @@ resource "coder_agent" "main" {
     interval     = 60
     timeout      = 1
   }
+  
+  metadata {
+    display_name = "SSH"
+    key          = "ssh"
+    script       = local.ssh_enabled ? "if pgrep sshd >/dev/null; then echo 'Port ${local.ssh_port}'; else echo 'Starting...'; fi" : "echo 'Disabled'"
+    interval     = 10
+    timeout      = 1
+  }
+  
+  metadata {
+    display_name = "Git Repo"
+    key          = "git_repo"
+    script       = "cd /home/coder/workspace 2>/dev/null && git remote get-url origin 2>/dev/null | sed 's|.*[:/]||;s|\\.git$||' | grep . || echo 'None'"
+    interval     = 60
+    timeout      = 2
+  }
+  
+  metadata {
+    display_name = "Git Branch"
+    key          = "git_branch"
+    script       = "cd /home/coder/workspace 2>/dev/null && git branch --show-current 2>/dev/null | grep . || echo '-'"
+    interval     = 10
+    timeout      = 1
+  }
 }
 
 # =============================================================================
@@ -272,6 +365,44 @@ module "traefik_routing" {
   external_preview_enabled = local.external_preview_enabled
   workspace_password       = local.workspace_password
   # Note: traefik_auth_dir not passed - module uses fixed /traefik-auth mount point
+}
+
+# =============================================================================
+# SSH SERVER (Remote access + key generation)
+# =============================================================================
+# When enabled, provides SSH access and generates ed25519 key pair for Git.
+# SSH port is deterministic per workspace (same across restarts).
+# Public key is displayed in the build log for easy copying.
+# =============================================================================
+
+module "ssh_server" {
+  count  = local.ssh_enabled ? 1 : 0
+  source = "./modules/feature/ssh-server"
+  
+  agent_id       = coder_agent.main.id
+  workspace_id   = data.coder_workspace.me.id
+  workspace_name = local.workspace_name
+  password       = local.ssh_password
+  host_ip        = var.host_ip
+}
+
+# =============================================================================
+# GIT CONFIGURATION + REPOSITORY CLONE
+# =============================================================================
+# Sets git config (user.name, user.email, safe.directory) and optionally
+# clones a repository into the workspace on first startup.
+# Git SSH auth is handled natively by Coder via $GIT_SSH_COMMAND.
+# =============================================================================
+
+module "git_config" {
+  source = "./modules/feature/git-config"
+  
+  agent_id            = coder_agent.main.id
+  owner_name          = coalesce(data.coder_workspace_owner.me.full_name, data.coder_workspace_owner.me.name)
+  owner_email         = data.coder_workspace_owner.me.email
+  workspace_folder    = local.workspace_folder
+  repo_url            = data.coder_parameter.repo_url.value
+  github_access_token = try(data.coder_external_auth.github[0].access_token, "")
 }
 
 # =============================================================================
@@ -358,7 +489,8 @@ resource "coder_script" "startup_command" {
       echo "[STARTUP-CMD] Timeout waiting for code-server ($MAX_WAIT s), proceeding anyway"
     fi
     
-    # Change to workspace directory first
+    # Change to workspace directory first (create if git clone hasn't run yet)
+    mkdir -p "$WORKSPACE_DIR"
     cd "$WORKSPACE_DIR"
     
     # Auto-generate HTML if enabled
@@ -554,6 +686,15 @@ resource "docker_container" "workspace" {
     }
   }
   
+  # SSH port mapping (when SSH is enabled)
+  dynamic "ports" {
+    for_each = try([module.ssh_server[0].ssh_port], [])
+    content {
+      internal = try(module.ssh_server[0].internal_port, 2222)
+      external = ports.value
+    }
+  }
+  
   # Hide from Glance dashboard
   labels {
     label = "glance.hide"
@@ -575,7 +716,7 @@ resource "docker_container" "workspace" {
     target    = "/traefik-auth"
     read_only = false
   }
-  
+
   # Basic environment
   env = [
     "CODER_AGENT_TOKEN=${coder_agent.main.token}",

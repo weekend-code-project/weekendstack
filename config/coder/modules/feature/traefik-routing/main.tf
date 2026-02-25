@@ -156,7 +156,11 @@ resource "coder_script" "setup_auth" {
     # Install htpasswd if not available
     if ! command -v htpasswd >/dev/null 2>&1; then
       echo "[AUTH] Installing apache2-utils for htpasswd..."
-      sudo apt-get update -qq && sudo apt-get install -y -qq apache2-utils
+      # Use flock to serialize apt operations across concurrent startup scripts
+      (
+        flock -w 300 9 || { echo "[AUTH] WARNING: Could not acquire apt lock"; exit 1; }
+        sudo apt-get update -qq && sudo apt-get install -y -qq apache2-utils
+      ) 9>/tmp/coder-apt.lock
     fi
     
     # Ensure auth directory exists and is writable

@@ -18,5 +18,11 @@ variable "host_ip" {
 variable "traefik_auth_dir" {
   type        = string
   description = "Host directory path for Traefik auth files (mounted to /traefik-auth in container)"
-  default     = "/opt/stacks/weekendstack/config/traefik/auth"
+  default     = "/home/ubuntu/weekendstack/config/traefik/auth"
+}
+
+variable "github_external_auth" {
+  type        = bool
+  description = "Whether GitHub External Auth is configured on the Coder server (enables OAuth token for private repos)"
+  default     = false
 }

@@ -133,8 +133,7 @@ load_env() {
     # Set defaults
     BASE_DOMAIN="${BASE_DOMAIN:-localhost}"
     HOST_IP="${HOST_IP:-127.0.0.1}"
-    SSH_KEY_DIR="${SSH_KEY_DIR:-/home/docker/.ssh}"
-    TRAEFIK_AUTH_DIR="${TRAEFIK_AUTH_DIR:-/opt/stacks/weekendstack/config/traefik/auth}"
+    TRAEFIK_AUTH_DIR="${TRAEFIK_AUTH_DIR:-$WORKSPACE_ROOT/config/traefik/auth}"
 }
 
 # =============================================================================
@@ -253,6 +252,11 @@ substitute_variables() {
         if grep -q 'variable "host_ip"' "$file"; then
             sed -i "/variable \"host_ip\"/,/^}/ s|default[[:space:]]*=[[:space:]]*\"[^\"]*\"|default     = \"$HOST_IP\"|" "$file"
             log_info "  Updated host_ip in $(basename "$file")"
+        fi
+        
+        if grep -q 'variable "traefik_auth_dir"' "$file"; then
+            sed -i "/variable \"traefik_auth_dir\"/,/^}/ s|default[[:space:]]*=[[:space:]]*\"[^\"]*\"|default     = \"$TRAEFIK_AUTH_DIR\"|" "$file"
+            log_info "  Updated traefik_auth_dir in $(basename "$file")"
         fi
     done
 }
@@ -402,7 +406,6 @@ push_to_coder() {
     # Set environment variables for Terraform
     local push_env_vars="-e TF_VAR_base_domain=$BASE_DOMAIN"
     push_env_vars+=" -e TF_VAR_host_ip=$HOST_IP"
-    push_env_vars+=" -e TF_VAR_ssh_key_dir=$SSH_KEY_DIR"
     push_env_vars+=" -e TF_VAR_traefik_auth_dir=$TRAEFIK_AUTH_DIR"
 
     # Forward session token so Coder CLI inside the container is authenticated
@@ -412,9 +415,29 @@ push_to_coder() {
         log_warn "No CODER_SESSION_TOKEN set - template push may fail if CLI is not pre-authenticated"
     fi
 
+    # Build --variable flags to set Coder template variable values
+    # These are critical: Coder stores variable values in its database,
+    # and they persist across template versions. Without --variable flags,
+    # old values from previous pushes are inherited.
+    local var_flags=""
+    var_flags+=" --variable base_domain=$BASE_DOMAIN"
+    var_flags+=" --variable host_ip=$HOST_IP"
+    var_flags+=" --variable traefik_auth_dir=$TRAEFIK_AUTH_DIR"
+
+    # Auto-detect GitHub External Auth: enabled if GITHUB_OAUTH_CLIENT_ID is set
+    local github_auth="false"
+    if [[ -n "${GITHUB_OAUTH_CLIENT_ID:-}" ]]; then
+        github_auth="true"
+        log_info "GitHub External Auth: enabled (OAuth app configured)"
+    else
+        log_info "GitHub External Auth: disabled (set GITHUB_OAUTH_CLIENT_ID in .env)"
+    fi
+    var_flags+=" --variable github_external_auth=$github_auth"
+
     if docker exec $push_env_vars coder coder templates push "$TEMPLATE_NAME" \
         --directory "/tmp/${TEMPLATE_NAME}-push" \
         --name "v${version}" \
+        $var_flags \
         --yes 2>&1 | tee /tmp/push-output.txt; then
         
         log_success "Successfully pushed $TEMPLATE_NAME (v${version})"
