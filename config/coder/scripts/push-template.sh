@@ -134,6 +134,7 @@ load_env() {
     BASE_DOMAIN="${BASE_DOMAIN:-localhost}"
     HOST_IP="${HOST_IP:-127.0.0.1}"
     TRAEFIK_AUTH_DIR="${TRAEFIK_AUTH_DIR:-$WORKSPACE_ROOT/config/traefik/auth}"
+    GITLAB_HOST="${GITLAB_HOST:-}"  # Empty = use gitlab.com; set to hostname for self-hosted
 }
 
 # =============================================================================
@@ -257,6 +258,11 @@ substitute_variables() {
         if grep -q 'variable "traefik_auth_dir"' "$file"; then
             sed -i "/variable \"traefik_auth_dir\"/,/^}/ s|default[[:space:]]*=[[:space:]]*\"[^\"]*\"|default     = \"$TRAEFIK_AUTH_DIR\"|" "$file"
             log_info "  Updated traefik_auth_dir in $(basename "$file")"
+        fi
+
+        if grep -q 'variable "gitlab_host"' "$file"; then
+            sed -i "/variable \"gitlab_host\"/,/^}/ s|default[[:space:]]*=[[:space:]]*\"[^\"]*\"|default     = \"$GITLAB_HOST\"|" "$file"
+            log_info "  Updated gitlab_host in $(basename "$file")"
         fi
     done
 }

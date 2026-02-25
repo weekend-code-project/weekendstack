@@ -156,15 +156,6 @@ data "coder_parameter" "git_cli" {
   }
 }
 
-data "coder_parameter" "gitlab_host" {
-  name         = "gitlab_host"
-  display_name = "GitLab Host (self-hosted)"
-  description  = "Self-hosted GitLab hostname (e.g. git.example.com). Only used when Git Platform CLI is set to GitLab. Leave empty for gitlab.com."
-  type         = "string"
-  default      = ""
-  mutable      = true
-  order        = 402
-}
 
 # =============================================================================
 # LOCALS
@@ -215,7 +206,7 @@ locals {
 
   # Git platform CLI
   git_cli     = data.coder_parameter.git_cli.value
-  gitlab_host = data.coder_parameter.gitlab_host.value
+  gitlab_host = var.gitlab_host  # Set from GITLAB_HOST in .env at push time
 }
 
 # =============================================================================

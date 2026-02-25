@@ -14,7 +14,7 @@ creating a workspace, so an explicit dropdown is cleaner and more reliable.
 |---|---|---|---|
 | `agent_id` | string | required | Coder agent ID |
 | `git_cli` | string | `"none"` | Platform CLI to install: `none`, `github`, `gitlab`, `gitea` |
-| `gitlab_host` | string | `""` | Self-hosted GitLab hostname (e.g. `git.example.com`). Only used when `git_cli = "gitlab"`. Empty = use gitlab.com |
+| `gitlab_host` | string | `""` | Self-hosted GitLab hostname (e.g. `git.example.com`). Set from `GITLAB_HOST` in `.env` at template push time — not a user-facing parameter. Empty = use gitlab.com |
 
 ## Outputs
 
