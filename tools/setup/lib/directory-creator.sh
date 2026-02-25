@@ -20,7 +20,6 @@ CONFIG_SUBDIRS=(
     "cloudflare"
     "ssh"
     "glance"
-    "coder/templates"
     "coder/scripts"
     "pihole/etc-dnsmasq.d"
     "filebrowser"
@@ -42,26 +41,47 @@ get_files_subdirs_for_profiles() {
     # Common directories
     dirs+=("ai-models/ollama")
     
+    # Check if 'all' profile is selected — if so, include everything
+    local include_all=false
+    for profile in "${profiles[@]}"; do
+        if [[ "$profile" == "all" ]]; then
+            include_all=true
+            break
+        fi
+    done
+    
     for profile in "${profiles[@]}"; do
         case "$profile" in
-            all|ai)
+            ai)
                 dirs+=("stable-diffusion/models" "stable-diffusion/outputs")
                 dirs+=("diffrhythm/models" "diffrhythm/output")
                 ;;
-            all|dev)
+            dev)
                 dirs+=("coder/workspace" "coder/templates")
                 ;;
-            all|productivity)
+            productivity)
                 dirs+=("paperless/media" "paperless/consume" "paperless/export")
                 dirs+=("postiz/uploads")
                 dirs+=("resourcespace")
                 ;;
-            all|media)
+            media)
                 dirs+=("navidrome/music")
                 dirs+=("kavita/library")
                 ;;
         esac
     done
+    
+    # If 'all' profile, add everything that wasn't matched above
+    if $include_all; then
+        dirs+=("stable-diffusion/models" "stable-diffusion/outputs")
+        dirs+=("diffrhythm/models" "diffrhythm/output")
+        dirs+=("coder/workspace" "coder/templates")
+        dirs+=("paperless/media" "paperless/consume" "paperless/export")
+        dirs+=("postiz/uploads")
+        dirs+=("resourcespace")
+        dirs+=("navidrome/music")
+        dirs+=("kavita/library")
+    fi
     
     # Remove duplicates
     local unique_dirs=($(echo "${dirs[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' '))
@@ -124,6 +144,125 @@ create_config_directories() {
     if [[ -d "$traefik_auth_dir" ]]; then
         chmod 755 "$traefik_auth_dir"
     fi
+
+    # Pre-create files that must be FILES (not directories) before Docker starts.
+    # Docker silently creates a directory at a bind-mount source path if the file is missing.
+    # For files with .example counterparts, copy the example; otherwise create a placeholder.
+    _ensure_from_example "$stack_dir/config/glance/glance.yml"
+    _ensure_file_not_dir "$stack_dir/config/filebrowser/init-filebrowser.sh"
+
+    # Traefik config.yml — copy from .example if missing or empty.
+    _ensure_traefik_static_config "$stack_dir/config/traefik/config.yml"
+
+    # Copy coder deploy scripts from tools/coder/scripts -> config/coder/scripts.
+    # tools/ is the source of truth; config/ holds the active copy.
+    # This runs on every setup so uninstall can safely delete config/coder/scripts/.
+    local coder_scripts_src="$stack_dir/tools/coder/scripts"
+    local coder_scripts_dst="$stack_dir/config/coder/scripts"
+    if [[ -d "$coder_scripts_src" ]]; then
+        mkdir -p "$coder_scripts_dst/lib"
+        cp -r "$coder_scripts_src"/. "$coder_scripts_dst/"
+        chmod +x "$coder_scripts_dst"/*.sh "$coder_scripts_dst/lib"/*.sh 2>/dev/null || true
+        log_info "Deployed coder scripts from tools/coder/scripts"
+    fi
+}
+
+# Ensure a path is a file, not a directory.
+# Docker creates a directory at a missing bind-mount source — this reverses that.
+# Use _ensure_from_example instead when there is a .example counterpart.
+_ensure_file_not_dir() {
+    local file_path="$1"
+    local dir_path
+    dir_path=$(dirname "$file_path")
+
+    if [[ -d "$file_path" ]]; then
+        rmdir "$file_path" 2>/dev/null || rm -rf "$file_path"
+        log_info "Removed phantom directory at: $file_path"
+    fi
+
+    if [[ ! -f "$file_path" ]]; then
+        mkdir -p "$dir_path"
+        touch "$file_path"
+        log_info "Pre-created placeholder file: $file_path"
+    fi
+}
+
+# Ensure a config file exists by copying from its .example counterpart.
+# If no .example exists, falls back to an empty placeholder.
+# Safe to call on every setup — never overwrites an existing file.
+_ensure_from_example() {
+    local file_path="$1"
+    local example_path="${file_path}.example"
+    local dir_path
+    dir_path=$(dirname "$file_path")
+
+    # Fix phantom directory left by Docker
+    if [[ -d "$file_path" ]]; then
+        rmdir "$file_path" 2>/dev/null || rm -rf "$file_path"
+        log_info "Removed phantom directory at: $file_path"
+    fi
+
+    if [[ ! -f "$file_path" ]]; then
+        mkdir -p "$dir_path"
+        if [[ -f "$example_path" ]]; then
+            cp "$example_path" "$file_path"
+            log_info "Created $(basename "$file_path") from .example template"
+        else
+            touch "$file_path"
+            log_info "Pre-created placeholder file (no .example found): $file_path"
+        fi
+    fi
+}
+
+# Ensure traefik config.yml contains a valid static configuration.
+# An empty config.yml means traefik starts without entrypoints (no ports 80/443)
+# and without the Docker provider (can't discover container labels).
+_ensure_traefik_static_config() {
+    local config_path="$1"
+    local dir_path
+    dir_path=$(dirname "$config_path")
+
+    # Fix phantom directory
+    if [[ -d "$config_path" ]]; then
+        rmdir "$config_path" 2>/dev/null || rm -rf "$config_path"
+        log_info "Removed phantom directory at: $config_path"
+    fi
+
+    # Write config if missing or empty (placeholder from previous setup)
+    if [[ ! -s "$config_path" ]] || ! grep -q "entryPoints" "$config_path" 2>/dev/null; then
+        mkdir -p "$dir_path"
+        local example_path="${config_path}.example"
+        if [[ -f "$example_path" ]]; then
+            cp "$example_path" "$config_path"
+            log_info "Created traefik static config from .example: $config_path"
+        else
+            # Fallback if .example is somehow missing
+            cat > "$config_path" << 'TRAEFIK_CONFIG'
+# Traefik v3 Static Configuration
+log:
+  level: INFO
+
+api:
+  dashboard: true
+  insecure: true
+
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+
+providers:
+  docker:
+    exposedByDefault: false
+    endpoint: "unix:///var/run/docker.sock"
+  file:
+    directory: /config/traefik/auth
+    watch: true
+TRAEFIK_CONFIG
+            log_info "Created traefik static config (no .example found): $config_path"
+        fi
+    fi
 }
 
 create_files_directories() {
@@ -175,8 +314,12 @@ create_files_directories() {
         local pgid=$(grep "^PGID=" "$stack_dir/.env" | cut -d'=' -f2)
         
         if [[ -n "$puid" && -n "$pgid" ]]; then
-            chown -R "$puid:$pgid" "$files_base_dir" 2>/dev/null || \
-                log_info "Ownership will be set when services start"
+            # Try without sudo first; fall back to sudo for root-owned dirs
+            if ! chown -R "$puid:$pgid" "$files_base_dir" 2>/dev/null; then
+                log_info "Some directories are root-owned (created by Docker), using sudo to fix ownership..."
+                sudo chown -R "$puid:$pgid" "$files_base_dir" 2>/dev/null || \
+                    log_warn "Could not fix ownership on $files_base_dir — run: sudo chown -R $puid:$pgid $files_base_dir"
+            fi
         fi
     fi
 }
@@ -341,6 +484,6 @@ setup_all_directories() {
 
 # Export functions
 export -f get_files_subdirs_for_profiles create_base_directories
-export -f create_config_directories create_files_directories
+export -f create_config_directories create_files_directories _ensure_file_not_dir
 export -f create_workspace_directory create_ssh_directory
 export -f generate_ssh_key validate_directory_structure setup_all_directories

@@ -11,6 +11,164 @@ declare -A REGISTRY_URLS=(
     ["google"]="gcr.io"
 )
 
+# Check Docker Hub rate limit status
+check_docker_hub_limits() {
+    # Get authentication token (anonymous or authenticated)
+    local token=$(curl -sf "https://auth.docker.io/token?service=registry.docker.io&scope=repository:ratelimitpreview/test:pull" 2>/dev/null | jq -r '.token' 2>/dev/null)
+    
+    if [[ -z "$token" ]] || [[ "$token" == "null" ]]; then
+        echo "STATUS=unknown"
+        echo "MESSAGE=Unable to check rate limit status"
+        return 0  # Non-fatal: rate limit check is informational only
+    fi
+    
+    # Query rate limit headers
+    local response=$(curl -sf -H "Authorization: Bearer $token" \
+        -I "https://registry-1.docker.io/v2/ratelimitpreview/test/manifests/latest" 2>/dev/null)
+    
+    if [[ -z "$response" ]]; then
+        echo "STATUS=unknown"
+        echo "MESSAGE=Unable to check rate limit status"
+        return 0  # Non-fatal: rate limit check is informational only
+    fi
+    
+    # Parse rate limit headers
+    local limit=$(echo "$response" | grep -i "ratelimit-limit:" | awk -F'[:;]' '{print $2}' | tr -d ' \r')
+    local remaining=$(echo "$response" | grep -i "ratelimit-remaining:" | awk -F'[:;]' '{print $2}' | tr -d ' \r')
+    
+    if [[ -z "$limit" ]] || [[ -z "$remaining" ]]; then
+        # Fallback: check if authenticated
+        if docker info 2>/dev/null | grep -q "Username:"; then
+            echo "STATUS=authenticated"
+            echo "LIMIT=200"
+            echo "REMAINING=unknown"
+            echo "MESSAGE=Authenticated (200 pulls per 6 hours)"
+        else
+            echo "STATUS=anonymous"
+            echo "LIMIT=100"
+            echo "REMAINING=unknown"
+            echo "MESSAGE=Anonymous (100 pulls per 6 hours)"
+        fi
+        return 0
+    fi
+    
+    # Determine status color/level
+    local status="ok"
+    if [[ $remaining -le 10 ]]; then
+        status="critical"
+    elif [[ $remaining -le 50 ]]; then
+        status="warning"
+    fi
+    
+    echo "STATUS=$status"
+    echo "LIMIT=$limit"
+    echo "REMAINING=$remaining"
+    echo "MESSAGE=$remaining of $limit pulls remaining"
+    
+    return 0
+}
+
+# Check if currently rate limited
+is_rate_limited() {
+    local limit_data=$(check_docker_hub_limits)
+    
+    declare -A data
+    while IFS='=' read -r key value; do
+        data[$key]="$value"
+    done <<< "$limit_data"
+    
+    local remaining="${data[REMAINING]}"
+    
+    if [[ "$remaining" == "unknown" ]] || [[ -z "$remaining" ]]; then
+        return 1  # Assume not rate limited if unknown
+    fi
+    
+    # Consider rate limited if less than 10 pulls remaining
+    if [[ $remaining -lt 10 ]]; then
+        return 0
+    fi
+    
+    return 1
+}
+
+# Format rate limit status for display
+format_rate_limit_status() {
+    local limit_data=$(check_docker_hub_limits)
+    
+    declare -A data
+    while IFS='=' read -r key value; do
+        data[$key]="$value"
+    done <<< "$limit_data"
+    
+    local status="${data[STATUS]}"
+    local remaining="${data[REMAINING]}"
+    local limit="${data[LIMIT]}"
+    local message="${data[MESSAGE]}"
+    
+    case "$status" in
+        critical)
+            echo -e "${RED}⚠${NC}  Rate Limit: ${RED}CRITICAL${NC} - $message"
+            echo "   Consider authenticating or enabling registry cache"
+            ;;
+        warning)
+            echo -e "${YELLOW}⚠${NC}  Rate Limit: ${YELLOW}WARNING${NC} - $message"
+            echo "   Registry cache will help avoid hitting the limit"
+            ;;
+        ok)
+            echo -e "${GREEN}✓${NC}  Rate Limit: ${GREEN}OK${NC} - $message"
+            ;;
+        authenticated)
+            echo -e "${GREEN}✓${NC}  Docker Hub: ${GREEN}Authenticated${NC} - $message"
+            ;;
+        anonymous)
+            echo -e "${YELLOW}⚠${NC}  Docker Hub: ${YELLOW}Anonymous${NC} - $message"
+            echo "   Authenticating doubles your limit to 200/6hr"
+            ;;
+        *)
+            echo "  Rate Limit: Status unknown"
+            ;;
+    esac
+}
+
+# Prompt for Docker Hub authentication with context
+prompt_hub_auth_contextual() {
+    local image_count="${1:-0}"
+    
+    echo ""
+    log_step "Docker Hub Authentication (Optional)"
+    echo ""
+    echo "Your setup requires approximately $image_count Docker Hub images."
+    echo ""
+    echo "Benefits of authenticating:"
+    echo "  • Increases rate limit from 100 to 200 pulls per 6 hours"
+    echo "  • Recommended if pulling many images"
+    echo "  • Free Docker Hub account works fine"
+    echo ""
+    
+    format_rate_limit_status
+    echo ""
+    
+    # Check if already at risk
+    if is_rate_limited; then
+        log_warn "You are close to or at the rate limit!"
+        echo "Authentication is strongly recommended."
+        echo ""
+        
+        if prompt_yes_no "Authenticate with Docker Hub now?" "y"; then
+            return 0
+        else
+            return 1
+        fi
+    fi
+    
+    # Offer quick auth with timeout
+    if prompt_yes_no "Authenticate with Docker Hub now?" "n"; then
+        return 0
+    fi
+    
+    return 1
+}
+
 docker_login_hub() {
     log_step "Docker Hub Authentication"
     

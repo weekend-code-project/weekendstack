@@ -507,23 +507,64 @@ Shared services:
 
 ## 📡 Public Access Setup
 
-### Cloudflare Tunnel Configuration
+### Cloudflare Tunnel - Secure External Access
 
-1. Create a tunnel in Cloudflare Zero Trust dashboard
-2. Get your tunnel token
-3. Configure in `.env`:
-   ```bash
-   CLOUDFLARE_TUNNEL_TOKEN=your-token
-   ```
-4. Configure routes in `config/cloudflare/config.yml`:
-   ```yaml
-   ingress:
-     - hostname: coder.yourdomain.com
-       service: http://traefik:80
-     - hostname: chat.yourdomain.com
-       service: http://traefik:80
-     - service: http_status:404
-   ```
+WeekendStack supports Cloudflare Tunnel for secure external access without port forwarding. Three setup methods available:
+
+#### Method 1: API (Recommended) - Fully Automated ⭐
+
+Run the setup script and provide a Cloudflare API token:
+
+```bash
+./setup.sh
+# Select: Cloudflare Tunnel → API method → Enter API token
+```
+
+**Advantages**: Fully automated, no manual steps, works headlessly
+
+**Requirements**: Cloudflare API token with Tunnel + DNS permissions
+
+**Documentation**: [Cloudflare API Setup Guide](docs/cloudflare-api-setup.md)
+
+#### Method 2: CLI - Semi-Automated
+
+Use `cloudflared` CLI for tunnel creation:
+
+```bash
+# Install cloudflared
+wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+sudo dpkg -i cloudflared-linux-amd64.deb
+
+# Run setup
+./setup.sh
+# Select: Cloudflare Tunnel → CLI method
+```
+
+**Advantages**: Interactive browser authentication, local control
+
+#### Method 3: Manual - Full Control
+
+Create tunnel in Cloudflare dashboard, provide credentials to setup script.
+
+**Advantages**: Complete control over each step
+
+### Configuration
+
+After setup (any method), configure in `.env`:
+
+```bash
+BASE_DOMAIN=yourdomain.com
+CLOUDFLARE_TUNNEL_ENABLED=true
+CLOUDFLARE_TUNNEL_NAME=your-tunnel-name
+CLOUDFLARE_TUNNEL_ID=your-tunnel-uuid
+
+# For API method (optional, enables automation)
+CLOUDFLARE_API_TOKEN=your-api-token
+```
+
+Services accessible at: `https://service.yourdomain.com`
+
+**Full Documentation**: [Cloudflare Tunnel Setup](config/cloudflare/README.md)
 
 ---
 

@@ -12,6 +12,10 @@ generate_certificates() {
     echo "Generating self-signed CA and wildcard certificate for local HTTPS..."
     echo "This enables https://service.lab access on your local network."
     echo ""
+    echo "Note: These certificates are for LOCAL network access only (*.lab)."
+    echo "If you're using Cloudflare Tunnel for remote access, Cloudflare handles"
+    echo "TLS automatically — no extra certificates needed for remote users."
+    echo ""
     
     # Check if certificates already exist
     if [[ -f "$stack_dir/config/traefik/certs/ca-cert.pem" ]]; then
@@ -298,13 +302,9 @@ setup_certificates() {
     fi
     
     echo ""
-    if prompt_yes_no "Install CA certificate for HTTPS trust?" "y"; then
-        install_ca_certificate
-        verify_certificate_trust
-    else
-        log_warn "Skipped CA installation - browsers will show security warnings"
-        log_info "You can install the CA later from: config/traefik/certs/ca-cert.pem"
-    fi
+    log_step "Installing CA certificate on this server for local HTTPS trust..."
+    install_ca_certificate
+    verify_certificate_trust
     
     return 0
 }

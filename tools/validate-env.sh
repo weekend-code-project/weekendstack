@@ -7,9 +7,13 @@
 #   - Empty required fields  
 #   - Invalid values
 #   - Security concerns
+#   - Profile-aware validation (only validates enabled services)
 #
 # Usage:
-#   ./tools/validate-env.sh
+#   ./tools/validate-env.sh [--strict]
+#
+# Options:
+#   --strict    Validate all variables (ignore profile selection)
 #
 # Exit codes:
 #   0 = All checks passed
@@ -25,6 +29,22 @@ NC='\033[0m'
 
 ERRORS=0
 WARNINGS=0
+STRICT_MODE=false
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --strict)
+            STRICT_MODE=true
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Usage: ./tools/validate-env.sh [--strict]"
+            exit 1
+            ;;
+    esac
+done
 
 echo "============================================================================"
 echo "  WeekendStack - Configuration Validator"
@@ -39,6 +59,19 @@ if [ ! -f .env ]; then
 fi
 
 echo "📋 Checking .env configuration..."
+
+# Get selected profiles
+SELECTED_PROFILES=$(grep "^SELECTED_PROFILES=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+
+if [ "$STRICT_MODE" = true ]; then
+    echo -e "${YELLOW}⚙️  Mode: STRICT (validating all variables)${NC}"
+elif [ -n "$SELECTED_PROFILES" ]; then
+    echo -e "${BLUE}📦 Selected Profiles: $SELECTED_PROFILES${NC}"
+    echo -e "${GREEN}⚙️  Mode: Profile-aware (validating only enabled services)${NC}"
+else
+    echo -e "${YELLOW}⚠ No SELECTED_PROFILES found - validating all variables${NC}"
+    STRICT_MODE=true
+fi
 echo ""
 
 # ============================================================================
@@ -222,6 +255,52 @@ if grep "SIGNUPS_ALLOWED=true" .env >/dev/null 2>&1; then
 fi
 
 echo -e "${GREEN}  ✓ Review Section 15 in .env for first-time setup guide${NC}"
+echo ""
+
+# ============================================================================
+# Check Cloudflare Tunnel Configuration
+# ============================================================================
+echo -e "${BLUE}🌐 Checking Cloudflare Tunnel configuration...${NC}"
+
+CF_ENABLED=$(grep "^CLOUDFLARE_TUNNEL_ENABLED=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+CF_TUNNEL_ID=$(grep "^CLOUDFLARE_TUNNEL_ID=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+CF_API_TOKEN=$(grep "^CLOUDFLARE_API_TOKEN=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+CF_CONFIG_FILE=$(grep "^CLOUDFLARE_CONFIG_FILE=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+
+if [[ "$CF_ENABLED" == "true" ]]; then
+    # Check tunnel ID is set
+    if [[ -z "$CF_TUNNEL_ID" ]]; then
+        echo -e "${RED}  ✗ CLOUDFLARE_TUNNEL_ENABLED is true but CLOUDFLARE_TUNNEL_ID is empty${NC}"
+        ERRORS=$((ERRORS + 1))
+    fi
+    
+    # Check config file exists
+    if [[ -n "$CF_CONFIG_FILE" ]] && [[ ! -f "$CF_CONFIG_FILE" ]]; then
+        echo -e "${YELLOW}  ⚠ Cloudflare config file not found: $CF_CONFIG_FILE${NC}"
+        echo "    Run setup to create tunnel configuration"
+        WARNINGS=$((WARNINGS + 1))
+    fi
+    
+    # Check credentials file exists (if tunnel ID is set)
+    if [[ -n "$CF_TUNNEL_ID" ]]; then
+        CF_CREDS_DIR=$(grep "^CLOUDFLARE_CREDENTIALS_DIR=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+        if [[ -n "$CF_CREDS_DIR" ]] && [[ ! -f "$CF_CREDS_DIR/$CF_TUNNEL_ID.json" ]]; then
+            echo -e "${YELLOW}  ⚠ Cloudflare credentials file not found: $CF_CREDS_DIR/$CF_TUNNEL_ID.json${NC}"
+            echo "    Run setup to configure tunnel credentials"
+            WARNINGS=$((WARNINGS + 1))
+        elif [[ -n "$CF_CREDS_DIR" ]] && [[ -f "$CF_CREDS_DIR/$CF_TUNNEL_ID.json" ]]; then
+            echo -e "${GREEN}  ✓ Cloudflare credentials file found${NC}"
+        fi
+    fi
+    
+    echo -e "${GREEN}  ✓ Cloudflare Tunnel configuration validated${NC}"
+elif [[ -n "$CF_API_TOKEN" ]]; then
+    echo -e "${YELLOW}  ⚠ API token is set but tunnel is not enabled${NC}"
+    echo "    Run setup to configure Cloudflare Tunnel"
+    WARNINGS=$((WARNINGS + 1))
+else
+    echo -e "${BLUE}  ℹ Cloudflare Tunnel not enabled (services will be local-only)${NC}"
+fi
 echo ""
 
 # ============================================================================

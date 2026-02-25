@@ -7,6 +7,10 @@
 # - Pi-Hole: Network-wide ad blocking and DNS (internal only)
 # - Cert Generator: Automatic local HTTPS certificate generation
 #
+# IMPORTANT: Always run from project root directory
+#   ✓ Correct:  docker compose -f compose/docker-compose.networking.yml up
+#   ✗ Wrong:    cd compose && docker compose -f docker-compose.networking.yml up
+#
 # Usage:
 #   docker compose --profile networking up -d
 #   docker compose --profile proxy up -d  (legacy alias)
@@ -25,7 +29,6 @@ services:
     container_name: cert-generator
     restart: "no"
     profiles:
-      - all
       - networking
       - setup
     environment:
@@ -34,7 +37,7 @@ services:
       CA_VALID_DAYS: ${CA_VALID_DAYS:-3650}     # 10 years
     volumes:
       - type: bind
-        source: ./config/traefik/certs
+        source: ../config/traefik/certs
         target: /certs
     labels:
       - glance.parent=traefik
@@ -168,11 +171,10 @@ services:
   # =============================================================================
   link-router:
     build:
-      context: ./config/link-router
+      context: ../config/link-router
     container_name: link-router
     restart: unless-stopped
     profiles:
-      - all
       - networking
     environment:
       HOST_IP: ${HOST_IP:-192.168.2.50}
@@ -232,7 +234,6 @@ services:
     container_name: pihole-dnsmasq-init
     restart: "no"
     profiles:
-      - all
       - networking
     environment:
       HOST_IP: ${HOST_IP}
@@ -245,7 +246,7 @@ services:
       - glance.name=Init Container
     volumes:
       - type: bind
-        source: ${CONFIG_BASE_DIR:-./config}/pihole/etc-dnsmasq.d
+        source: ../config/pihole/etc-dnsmasq.d
         target: /dnsmasq.d
         bind:
           create_host_path: true
@@ -299,22 +300,22 @@ services:
   # TRAEFIK - REVERSE PROXY
   # =============================================================================
   traefik:
-    image: traefik:v3.0
+    image: traefik:v3.6
     container_name: traefik
     restart: unless-stopped
     profiles:
-      - all
-      - proxy
       - networking
+      - proxy
     ports:
       - "${TRAEFIK_HTTP_PORT:-80}:80"
       - "${TRAEFIK_HTTPS_PORT:-443}:443"
       - "${TRAEFIK_API_PORT:-8081}:8080"  # API/Dashboard port
     volumes:
-      - ${TRAEFIK_CONFIG_FILE}:/etc/traefik/traefik.yml:ro
-      - ./config/traefik/auth:/config/traefik/auth:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ../config/traefik/config.yml:/etc/traefik/traefik.yml:ro
+      - ../config/traefik/auth:/config/traefik/auth:ro
       - type: bind
-        source: ./config/traefik/certs
+        source: ../config/traefik/certs
         target: /certs
         read_only: true
     networks:
@@ -322,7 +323,6 @@ services:
       - traefik-network
       - shared-network
     depends_on:
-      - socat
       - cert-generator
     labels:
       # Glance Configuration
@@ -348,14 +348,6 @@ services:
       - traefik.http.routers.traefik-lab.rule=Host(`traefik.${LAB_DOMAIN}`)
       - traefik.http.routers.traefik-lab.tls=true
       - traefik.http.routers.traefik-lab.service=api@internal
-    command:
-      - --api.dashboard=true
-      - --api.insecure=true
-      - --providers.docker=true
-      - --providers.docker.exposedbydefault=false
-      - --providers.docker.endpoint=tcp://socat:2375
-      - --entrypoints.web.address=:80
-      - --entrypoints.websecure.address=:443
 
   # =============================================================================
   # CLOUDFLARE TUNNEL - SECURE EXTERNAL ACCESS
@@ -366,16 +358,18 @@ services:
     labels:
       - glance.hide=true
     restart: unless-stopped
+    depends_on:
+      traefik:
+        condition: service_started
     networks:
       - traefik-network
       - shared-network
     profiles:
-      - proxy
       - external
-    volumes:
-      - ${CLOUDFLARE_CONFIG_FILE}:/etc/cloudflared/config.yml:ro
-      - ${CLOUDFLARE_CREDENTIALS_DIR}:/etc/cloudflared/.cloudflared:ro
-    command: tunnel --config /etc/cloudflared/config.yml run
+    command: tunnel run --token ${CLOUDFLARE_TUNNEL_TOKEN:-disabled}
+    # NOTE: No healthcheck — cloudflared uses a scratch/distroless image with
+    # no shell, so CMD-SHELL healthchecks always fail. The tunnel's own
+    # reconnect logic handles availability.
 
   # =============================================================================
   # ERROR PAGES - CUSTOM ERROR PAGES FOR TRAEFIK
@@ -392,7 +386,6 @@ services:
       - traefik-network
       - shared-network
     profiles:
-      - all
       - networking
     environment:
       TEMPLATE_NAME: ${ERROR_PAGES_THEME:-ghost}
@@ -429,7 +422,6 @@ services:
       - traefik-network
       - shared-network
     profiles:
-      - all
       - networking
     depends_on:
       pihole-dnsmasq-init:
@@ -443,20 +435,20 @@ services:
       - "${PIHOLE_PORT_WEB:-8088}:80/tcp"
     environment:
       TZ: ${TIMEZONE:-UTC}
-      WEBPASSWORD: ${PIHOLE_WEBPASSWORD:-pihole-admin-2024}
+      WEBPASSWORD: ${PIHOLE_WEBPASSWORD}
       PIHOLE_DNS_: ${PIHOLE_DNS1:-1.1.1.1};${PIHOLE_DNS2:-1.0.0.1}
-      FTLCONF_webserver_api_password: ${PIHOLE_WEBPASSWORD:-pihole-admin-2024}
+      FTLCONF_webserver_api_password: ${PIHOLE_WEBPASSWORD}
       DNSMASQ_LISTENING: all
       # Disable DHCP - use router for DHCP
       DHCP_ACTIVE: "false"
     volumes:
       - type: bind
-        source: ${CONFIG_BASE_DIR:-./config}/pihole/etc-pihole
+        source: ../config/pihole/etc-pihole
         target: /etc/pihole
         bind:
           create_host_path: true
       - type: bind
-        source: ${CONFIG_BASE_DIR:-./config}/pihole/etc-dnsmasq.d
+        source: ../config/pihole/etc-dnsmasq.d
         target: /etc/dnsmasq.d
         bind:
           create_host_path: true

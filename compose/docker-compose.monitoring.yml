@@ -12,8 +12,13 @@
 # - Duplicati: Backup solution
 # - Portainer: Container management
 # - WUD: Container update notifications
+# - Guacamole: Remote desktop gateway
 #
 # Note: Dozzle (logs) and Speedtest moved to core profile (docker-compose.core.yml)
+#
+# IMPORTANT: Always run from project root directory
+#   ✓ Correct:  docker compose -f compose/docker-compose.monitoring.yml up
+#   ✗ Wrong:    cd compose && docker compose -f docker-compose.monitoring.yml up
 #
 # Usage: docker compose -f docker-compose.monitoring.yml --profile monitoring up -d
 # =============================================================================
@@ -34,6 +39,7 @@ volumes:
   duplicati-config:
   duplicati-backups:
   portainer-data:
+  guacamole-db-data:
 
 services:
   # =============================================================================
@@ -55,7 +61,6 @@ services:
       - monitoring-network
       - shared-network
     profiles:
-      - all
       - monitoring
     restart: unless-stopped
     extra_hosts:
@@ -112,7 +117,6 @@ services:
       - monitoring-network
       - shared-network
     profiles:
-      - all
       - monitoring
     ports:
       - "${WUD_PORT:-3002}:3000"
@@ -120,9 +124,9 @@ services:
       - WUD_TRIGGER_DOCKERHUB_ENABLE=false
       - WUD_WATCHER_LOCAL_CRON=0 0 * * *
       - WUD_WATCHER_LOCAL_WATCHBYDEFAULT=true
-      # Built-in basic auth - Default: admin / admin
-      # Generate hash: docker run --rm httpd:2-alpine htpasswd -nbm USER PASS
-      # Copy hash part (after colon) to WUD_AUTH_HASH in .env (wrap in single quotes)
+      # Built-in basic auth (OPTIONAL - Leave WUD_AUTH_HASH empty for no auth on initial setup)
+      # To enable auth later: docker run --rm httpd:2-alpine htpasswd -nbm USER PASS
+      # Copy hash part (after colon) to WUD_AUTH_HASH in .env
       - WUD_AUTH_BASIC_MYAUTH_USER=${WUD_AUTH_USER:-admin}
       - WUD_AUTH_BASIC_MYAUTH_HASH=${WUD_AUTH_HASH:-}
       - TZ=${TZ:-America/New_York}
@@ -174,7 +178,6 @@ services:
       - monitoring-network
       - shared-network
     profiles:
-      - all
       - monitoring
     ports:
       - "${UPTIME_KUMA_PORT:-3001}:3001"
@@ -230,7 +233,6 @@ services:
       - monitoring-network
       - shared-network
     profiles:
-      - all
       - monitoring
     ports:
       - "${NETDATA_PORT:-19999}:19999"
@@ -306,7 +308,6 @@ services:
       - monitoring-network
       - shared-network
     profiles:
-      - all
       - monitoring
     ports:
       - "${DUPLICATI_PORT:-8200}:8200"
@@ -368,7 +369,6 @@ services:
       - monitoring-network
       - shared-network
     profiles:
-      - all
       - monitoring
     ports:
       - "${PORTAINER_PORT:-9443}:9443"
@@ -413,6 +413,133 @@ services:
       - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
   # =============================================================================
+  # GUACAMOLE DATABASE
+  # =============================================================================
+  guacamole-db:
+    image: postgres:15-alpine
+    container_name: guacamole-db
+    labels:
+      - glance.parent=guacamole
+      - glance.name=Database
+    restart: unless-stopped
+    networks:
+      - shared-network
+    profiles:
+      - monitoring
+    environment:
+      POSTGRES_DB: ${GUACAMOLE_DBNAME:-guacamole}
+      POSTGRES_USER: ${GUACAMOLE_DBUSER:-guacamole}
+      POSTGRES_PASSWORD: ${GUACAMOLE_DBPASS:-guacamole_password_2024}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${GUACAMOLE_DBUSER:-guacamole} -d ${GUACAMOLE_DBNAME:-guacamole}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    volumes:
+      - type: volume
+        source: guacamole-db-data
+        target: /var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  # =============================================================================
+  # GUACAMOLE DAEMON (Protocol handler)
+  # =============================================================================
+  guacd:
+    image: lscr.io/linuxserver/guacd:latest
+    container_name: guacd
+    labels:
+      - glance.parent=guacamole
+      - glance.name=Daemon
+      - glance.hide=true
+    restart: unless-stopped
+    networks:
+      - shared-network
+    profiles:
+      - monitoring
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  # =============================================================================
+  # GUACAMOLE WEB APPLICATION
+  # =============================================================================
+  guacamole:
+    image: guacamole/guacamole:latest
+    container_name: guacamole
+    depends_on:
+      guacamole-db:
+        condition: service_healthy
+      guacd:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - shared-network
+    profiles:
+      - monitoring
+    environment:
+      # Database
+      POSTGRESQL_HOSTNAME: guacamole-db
+      POSTGRESQL_DATABASE: ${GUACAMOLE_DBNAME:-guacamole}
+      POSTGRESQL_USER: ${GUACAMOLE_DBUSER:-guacamole}
+      POSTGRESQL_PASSWORD: ${GUACAMOLE_DBPASS:-guacamole_password_2024}
+      
+      # Guacd connection
+      GUACD_HOSTNAME: guacd
+      GUACD_PORT: 4822
+    ports:
+      - "${GUACAMOLE_PORT:-8098}:8080"
+    volumes:
+      - type: bind
+        source: ${GUACAMOLE_CONFIG_DIR:-../config/guacamole}
+        target: /config
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    deploy:
+      resources:
+        limits:
+          memory: ${GUACAMOLE_MEMORY_LIMIT:-1g}
+    labels:
+      # Glance Configuration
+      - glance.id=guacamole
+      - glance.group=Monitoring
+      - glance.name=Guacamole
+      - glance.icon=si:apacheguacamole
+      - glance.url=/go/guacamole
+      - glance.description=Remote Desktop Gateway
+      
+      # Traefik Configuration
+      - traefik.enable=true
+      
+      # External domain (HTTPS via Cloudflare) - WITH AUTH
+      - traefik.http.routers.guacamole-external.entrypoints=websecure
+      - traefik.http.routers.guacamole-external.rule=Host(`guacamole.${BASE_DOMAIN}`)
+      - traefik.http.routers.guacamole-external.tls=true
+      - traefik.http.routers.guacamole-external.service=guacamole
+      - traefik.http.routers.guacamole-external.middlewares=it-tools-auth@file,guacamole-redirect@file
+      
+      # Local .lab domain (HTTP redirect)
+      - traefik.http.routers.guacamole-lab-http.entrypoints=web
+      - traefik.http.routers.guacamole-lab-http.rule=Host(`guacamole.${LAB_DOMAIN}`)
+      - traefik.http.routers.guacamole-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.guacamole-lab-http.service=guacamole
+      
+      # Local .lab domain (HTTPS) - NO AUTH
+      - traefik.http.routers.guacamole-lab.entrypoints=websecure
+      - traefik.http.routers.guacamole-lab.rule=Host(`guacamole.${LAB_DOMAIN}`)
+      - traefik.http.routers.guacamole-lab.tls=true
+      - traefik.http.routers.guacamole-lab.service=guacamole
+      - traefik.http.routers.guacamole-lab.middlewares=guacamole-redirect@file
+      
+      # Service definition
+      - traefik.http.services.guacamole.loadbalancer.server.port=8080
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
+
+  # =============================================================================
   # NETBOX - Network Documentation & IPAM
   # =============================================================================
   # IP address management (IPAM) and data center infrastructure management (DCIM)
@@ -424,14 +551,13 @@ services:
       - monitoring-network
       - shared-network
     profiles:
-      - all
       - monitoring
     ports:
       - "${NETBOX_PORT:-8484}:8080"
     environment:
-      SUPERUSER_NAME: ${NETBOX_SUPERUSER:-admin}
-      SUPERUSER_EMAIL: ${NETBOX_SUPERUSER_EMAIL:-admin@example.com}
-      SUPERUSER_PASSWORD: ${NETBOX_SUPERUSER_PASSWORD:-admin}
+      SUPERUSER_NAME: ${NETBOX_SUPERUSER}
+      SUPERUSER_EMAIL: ${NETBOX_SUPERUSER_EMAIL}
+      SUPERUSER_PASSWORD: ${NETBOX_SUPERUSER_PASSWORD}
       ALLOWED_HOSTS: "*"
       DB_HOST: netbox-postgres
       DB_NAME: netbox
@@ -490,7 +616,6 @@ services:
     networks:
       - monitoring-network
     profiles:
-      - all
       - monitoring
     environment:
       POSTGRES_DB: netbox
@@ -515,7 +640,6 @@ services:
     networks:
       - monitoring-network
     profiles:
-      - all
       - monitoring
     volumes:
       - type: volume

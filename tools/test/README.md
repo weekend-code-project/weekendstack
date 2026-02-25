@@ -35,6 +35,13 @@ Test individual functions and components in isolation.
   - Existing profile detection
   - .env parsing
 
+- **test_image_analyzer.sh**: Tests for Docker image analysis
+  - Registry categorization (Docker Hub, ghcr.io, lscr.io, etc.)
+  - Image extraction from compose files
+  - Profile-based image filtering
+  - Shared image detection
+  - Cache functionality and performance
+
 ### Integration Tests (`tools/test/integration/`)
 Test interactions between components.
 
@@ -48,6 +55,57 @@ Quick tests to verify basic functionality.
 
 - **test_services_start.sh**: Basic environment checks
   - Docker daemon status
+
+## Testing Utilities
+
+### Safe Test Suite (`tools/test/safe-test-suite.sh`)
+Comprehensive testing without consuming Docker Hub rate limits.
+
+```bash
+# Run full safe test suite
+./tools/test/safe-test-suite.sh
+```
+
+Tests performed:
+- Image analysis for all profiles
+- Shared image detection
+- Local cache status
+- Compose file parsing
+- Registry categorization
+- Cache performance
+
+**Important:** This suite does NOT pull any images or consume rate limits!
+
+### Rate Limit Checker (`tools/test/check-rate-limit.sh`)
+Check Docker Hub rate limit status without consuming pulls.
+
+```bash
+# Check current rate limit
+./tools/test/check-rate-limit.sh
+```
+
+Shows:
+- Current rate limit status (OK/WARNING/CRITICAL)
+- Remaining pulls available
+- Whether authenticated or anonymous
+- Recommended actions
+
+### Image Analysis Tool (`tools/check_images.sh`)
+Analyze Docker images required for profiles.
+
+```bash
+# Check images for a specific profile
+./tools/check_images.sh --profile dev
+
+# Check with rate limit status
+./tools/check_images.sh --profile all --check-limits
+
+# Show which images are cached
+./tools/check_images.sh --profile ai --show-cached
+
+# JSON output for automation
+./tools/check_images.sh --profile all --format json
+```
   - Docker Compose availability
   - Network creation capability
   - Image pull capability

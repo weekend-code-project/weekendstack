@@ -1,3 +1,11 @@
+# =============================================================================
+# DEVELOPMENT SERVICES - CODER, GIT, REGISTRY
+# =============================================================================
+# IMPORTANT: Always run from project root directory
+#   ✓ Correct:  docker compose -f compose/docker-compose.dev.yml up
+#   ✗ Wrong:    cd compose && docker compose -f docker-compose.dev.yml up
+# =============================================================================
+
 networks:
   coder-network:
     name: coder-network
@@ -8,7 +16,7 @@ services:
   # =============================================================================
   # CODER DATABASE
   # =============================================================================
-  database:
+  coder-database:
     image: postgres:16
     container_name: coder-database
     labels:
@@ -19,7 +27,6 @@ services:
       - coder-network
       - shared-network
     profiles:
-      - all
       - dev
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
@@ -27,9 +34,10 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 5s
+      interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 30s
     volumes:
       - type: volume
         source: coder-db-data
@@ -53,9 +61,7 @@ services:
       - coder-network
       - shared-network
     profiles:
-      - all
-      - dev
-      - development
+      - gitea
     environment:
       POSTGRES_USER: ${GITEA_DBUSER}
       POSTGRES_PASSWORD: ${GITEA_DBPASS}
@@ -88,7 +94,6 @@ services:
       - coder-network
       - shared-network
     profiles:
-      - all
       - dev
       - networking
       - proxy
@@ -114,17 +119,16 @@ services:
       - glance.name=Init
       - glance.hide=true
     profiles:
-      - all
       - dev
     volumes:
       - type: bind
         source: ${WORKSPACE_DIR:-/mnt/workspace/wcp-coder/files/coder/workspace}
         target: /workspace
       - type: bind
-        source: ${TRAEFIK_AUTH_DIR}
+        source: ${TRAEFIK_AUTH_DIR:-../config/traefik/auth}
         target: /traefik-auth
       - type: bind
-        source: ${CODER_TEMPLATE_DIR}
+        source: ${CODER_TEMPLATE_DIR:-../config/coder/templates}
         target: /templates
     command: >
       sh -c "
@@ -146,22 +150,27 @@ services:
       - shared-network
     restart: unless-stopped
     profiles:
-      - all
       - dev
     environment:
       CODER_ACCESS_URL: ${CODER_ACCESS_URL:-http://${HOST_IP}:${CODER_HTTP_PORT:-7080}}
-      CODER_PG_CONNECTION_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database/${POSTGRES_DB}?sslmode=disable"
+      CODER_PG_CONNECTION_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@coder-database/${POSTGRES_DB}?sslmode=disable"
       CODER_HTTP_ADDRESS: ${CODER_HTTP_ADDRESS}
       DOCKER_HOST: "tcp://socat:2375"
       CODER_TEMPLATE_PATHS: "/templates"
       CODER_PROVISIONER_TAGS: "base_domain=${BASE_DOMAIN:-localhost}"
+      # GitHub External Auth - enables Git operations with user's GitHub identity
+      # Create OAuth App at: https://github.com/settings/developers
+      # Callback URL: {CODER_ACCESS_URL}/external-auth/github/callback
+      CODER_EXTERNAL_AUTH_0_TYPE: github
+      CODER_EXTERNAL_AUTH_0_ID: github
+      CODER_EXTERNAL_AUTH_0_CLIENT_ID: ${GITHUB_OAUTH_CLIENT_ID:-}
+      CODER_EXTERNAL_AUTH_0_CLIENT_SECRET: ${GITHUB_OAUTH_CLIENT_SECRET:-}
       COMPUTER_NAME: ${COMPUTER_NAME:-workstation}
       BASE_DOMAIN: ${BASE_DOMAIN:-localhost}
-      DATA_BASE_DIR: ${DATA_BASE_DIR}
+      DATA_BASE_DIR: ${DATA_BASE_DIR:-/home/ubuntu/weekendstack/data}
       TF_VAR_base_domain: ${BASE_DOMAIN:-localhost}
       TF_VAR_workspace_dir: ${WORKSPACE_DIR:-/mnt/workspace/wcp-coder/files/coder/workspace}
-      TF_VAR_traefik_auth_dir: ${TRAEFIK_AUTH_DIR}
-      TF_VAR_ssh_key_dir: ${SSH_KEY_DIR}
+      TF_VAR_traefik_auth_dir: ${TRAEFIK_AUTH_DIR:-/home/ubuntu/weekendstack/config/traefik/auth}
     ports:
       - "${CODER_HTTP_PORT:-7080}:7080"
     depends_on:
@@ -169,21 +178,17 @@ services:
         condition: service_completed_successfully
       socat:
         condition: service_started
-      database:
+      coder-database:
         condition: service_healthy
     volumes:
       - type: bind
         source: ${WORKSPACE_DIR:-/mnt/workspace/wcp-coder/files/coder/workspace}
         target: /workspace
       - type: bind
-        source: ${CODER_TEMPLATE_DIR}
+        source: ${CODER_TEMPLATE_DIR:-../config/coder/templates}
         target: /templates
       - type: bind
-        source: ${SSH_KEY_DIR:-./config/ssh}
-        target: /mnt/host-ssh
-        read_only: true
-      - type: bind
-        source: ${TRAEFIK_AUTH_DIR}
+        source: ${TRAEFIK_AUTH_DIR:-../config/traefik/auth}
         target: /traefik-auth
     deploy:
       resources:
@@ -264,8 +269,7 @@ services:
       - coder-network
       - shared-network
     profiles:
-      - all
-      - dev
+      - gitea
       - development
     environment:
       USER_UID: "1000"
@@ -291,13 +295,13 @@ services:
       GITEA__log__MODE: console
       GITEA__log__LEVEL: Info
     ports:
-      - "${GITEA_PORT}:3000"
-      - "${GITEA_SSH_PORT}:22"
+      - "${GITEA_PORT:-3300}:3000"
+      - "${GITEA_SSH_PORT:-2223}:22"
     depends_on:
       - gitea-db
     volumes:
       - type: bind
-        source: ${GITEA_DATA_DIR}
+        source: ${GITEA_DATA_DIR:-../data/gitea}
         target: /data
       - type: bind
         source: /etc/timezone
@@ -348,15 +352,20 @@ services:
   registry-cache:
     image: registry:2
     container_name: coder-registry
-    restart: unless-stopped
+    restart: "no"
     networks:
       - coder-network
       - shared-network
     profiles:
-      - all
+      - dev
       - dev-tools
+      - setup-infrastructure
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     environment:
       REGISTRY_PROXY_REMOTEURL: https://registry-1.docker.io
+      REGISTRY_STORAGE_DELETE_ENABLED: "true"
     ports:
       - "${REGISTRY_PORT:-5000}:5000"
     healthcheck:
@@ -367,9 +376,17 @@ services:
       start_period: 10s
     volumes:
       - type: bind
-        source: ${REGISTRY_DATA_DIR}
+        source: ${REGISTRY_DATA_DIR:-../data/registry-cache}
         target: /var/lib/registry
+    deploy:
+      resources:
+        limits:
+          memory: ${REGISTRY_MEMORY_LIMIT:-256m}
     labels:
+      # WeekendStack metadata
+      - weekendstack.role=setup-cache
+      - weekendstack.description=Pull-through cache for Docker Hub images
+      
       # Glance Configuration
       - glance.parent=coder
       - glance.name=Registry Cache
@@ -411,8 +428,6 @@ services:
       - coder-network
       - shared-network
     profiles:
-      - all
-      - dev
       - gitlab
     environment:
       GITLAB_OMNIBUS_CONFIG: |
@@ -434,13 +449,13 @@ services:
       - "${GITLAB_SSH_PORT:-2222}:22"
     volumes:
       - type: bind
-        source: ${GITLAB_CONFIG_DIR:-./data/gitlab/config}
+        source: ${GITLAB_CONFIG_DIR:-../data/gitlab/config}
         target: /etc/gitlab
       - type: bind
-        source: ${GITLAB_LOGS_DIR:-./data/gitlab/logs}
+        source: ${GITLAB_LOGS_DIR:-../data/gitlab/logs}
         target: /var/log/gitlab
       - type: bind
-        source: ${GITLAB_DATA_DIR:-./data/gitlab/data}
+        source: ${GITLAB_DATA_DIR:-../data/gitlab/data}
         target: /var/opt/gitlab
     shm_size: '256m'
     deploy:
@@ -482,139 +497,66 @@ services:
       - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
   # =============================================================================
-  # GUACAMOLE DATABASE
+  # IT-TOOLS - Developer Utilities Collection
   # =============================================================================
-  guacamole-db:
-    image: postgres:15-alpine
-    container_name: guacamole-db
-    labels:
-      - glance.parent=guacamole
-      - glance.name=Database
-    restart: unless-stopped
+  # A collection of handy online tools for developers: converters, encoders,
+  # formatters, generators, and many more.
+  # =============================================================================
+  it-tools:
+    image: corentinth/it-tools:latest
+    container_name: it-tools
     networks:
+      - coder-network
       - shared-network
     profiles:
-      - all
       - dev
-    environment:
-      POSTGRES_DB: ${GUACAMOLE_DBNAME:-guacamole}
-      POSTGRES_USER: ${GUACAMOLE_DBUSER:-guacamole}
-      POSTGRES_PASSWORD: ${GUACAMOLE_DBPASS:-guacamole_password_2024}
-      PGDATA: /var/lib/postgresql/data/pgdata
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${GUACAMOLE_DBUSER:-guacamole} -d ${GUACAMOLE_DBNAME:-guacamole}"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    volumes:
-      - type: volume
-        source: guacamole-db-data
-        target: /var/lib/postgresql/data
-    deploy:
-      resources:
-        limits:
-          memory: 512m
-
-  # =============================================================================
-  # GUACAMOLE DAEMON (Protocol handler)
-  # =============================================================================
-  guacd:
-    image: lscr.io/linuxserver/guacd:latest
-    container_name: guacd
-    labels:
-      - glance.parent=guacamole
-      - glance.name=Daemon
-      - glance.hide=true
-    restart: unless-stopped
-    networks:
-      - shared-network
-    profiles:
-      - all
-      - dev
-    deploy:
-      resources:
-        limits:
-          memory: 512m
-
-  # =============================================================================
-  # GUACAMOLE WEB APPLICATION
-  # =============================================================================
-  guacamole:
-    image: guacamole/guacamole:latest
-    container_name: guacamole
-    depends_on:
-      guacamole-db:
-        condition: service_healthy
-      guacd:
-        condition: service_started
-    restart: unless-stopped
-    networks:
-      - shared-network
-    profiles:
-      - all
-      - dev
-    environment:
-      # Database
-      POSTGRESQL_HOSTNAME: guacamole-db
-      POSTGRESQL_DATABASE: ${GUACAMOLE_DBNAME:-guacamole}
-      POSTGRESQL_USER: ${GUACAMOLE_DBUSER:-guacamole}
-      POSTGRESQL_PASSWORD: ${GUACAMOLE_DBPASS:-guacamole_password_2024}
-      
-      # Guacd connection
-      GUACD_HOSTNAME: guacd
-      GUACD_PORT: 4822
     ports:
-      - "${GUACAMOLE_PORT:-8098}:8080"
-    volumes:
-      - type: bind
-        source: ${GUACAMOLE_CONFIG_DIR:-./config/guacamole}
-        target: /config
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - "${IT_TOOLS_PORT:-8091}:80"
+    restart: unless-stopped
     deploy:
       resources:
         limits:
-          memory: ${GUACAMOLE_MEMORY_LIMIT:-1g}
+          memory: ${IT_TOOLS_MEMORY_LIMIT:-256m}
     labels:
       # Glance Configuration
-      - glance.id=guacamole
+      - glance.id=it-tools
       - glance.group=Dev
-      - glance.name=Guacamole
-      - glance.icon=si:apacheguacamole
-      - glance.url=/go/guacamole
-      - glance.description=Remote Desktop Gateway
+      - glance.name=IT-Tools
+      - glance.icon=si:docker
+      - glance.url=/go/it-tools
+      - glance.description=Developer Utilities
       
       # Traefik Configuration
       - traefik.enable=true
       
-      # External domain (HTTPS via Cloudflare) - WITH AUTH
-      - traefik.http.routers.guacamole-external.entrypoints=websecure
-      - traefik.http.routers.guacamole-external.rule=Host(`guacamole.${BASE_DOMAIN}`)
-      - traefik.http.routers.guacamole-external.tls=true
-      - traefik.http.routers.guacamole-external.service=guacamole
-      - traefik.http.routers.guacamole-external.middlewares=it-tools-auth@file,guacamole-redirect@file
+      # HTTP router with redirect
+      - traefik.http.routers.it-tools-lab-http.entrypoints=web
+      - traefik.http.routers.it-tools-lab-http.rule=Host(`it-tools.${LAB_DOMAIN}`)
+      - traefik.http.routers.it-tools-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.it-tools-lab-http.service=it-tools
       
-      # Local .lab domain (HTTP redirect)
-      - traefik.http.routers.guacamole-lab-http.entrypoints=web
-      - traefik.http.routers.guacamole-lab-http.rule=Host(`guacamole.${LAB_DOMAIN}`)
-      - traefik.http.routers.guacamole-lab-http.middlewares=redirect-to-https@file
-      - traefik.http.routers.guacamole-lab-http.service=guacamole
+      # HTTPS router for .lab domain - No auth for local network
+      - traefik.http.routers.it-tools-lab.entrypoints=websecure
+      - traefik.http.routers.it-tools-lab.rule=Host(`it-tools.${LAB_DOMAIN}`)
+      - traefik.http.routers.it-tools-lab.tls=true
+      - traefik.http.routers.it-tools-lab.service=it-tools
       
-      # Local .lab domain (HTTPS) - NO AUTH
-      - traefik.http.routers.guacamole-lab.entrypoints=websecure
-      - traefik.http.routers.guacamole-lab.rule=Host(`guacamole.${LAB_DOMAIN}`)
-      - traefik.http.routers.guacamole-lab.tls=true
-      - traefik.http.routers.guacamole-lab.service=guacamole
-      - traefik.http.routers.guacamole-lab.middlewares=guacamole-redirect@file
+      # HTTPS router for external domain
+      - traefik.http.routers.it-tools.entrypoints=websecure
+      - traefik.http.routers.it-tools.rule=Host(`it-tools.${BASE_DOMAIN}`)
+      - traefik.http.routers.it-tools.tls=true
+      - traefik.http.routers.it-tools.middlewares=it-tools-auth@file
+      - traefik.http.routers.it-tools.service=it-tools
       
       # Service definition
-      - traefik.http.services.guacamole.loadbalancer.server.port=8080
+      - traefik.http.services.it-tools.loadbalancer.server.port=80
       - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
+      - "com.docker.compose.service=it-tools"
+      - "description=IT-Tools - Developer Utilities Collection"
 
 volumes:
   coder-db-data:
   gitea-db-data:
-  guacamole-db-data:
 
 
 

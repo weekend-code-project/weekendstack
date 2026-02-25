@@ -5,6 +5,10 @@
 # - NocoDB: Airtable alternative for database management
 # - Paperless-ngx: Document management system
 #
+# IMPORTANT: Always run from project root directory
+#   ✓ Correct:  docker compose -f compose/docker-compose.productivity.yml up
+#   ✗ Wrong:    cd compose && docker compose -f docker-compose.productivity.yml up
+#
 # Usage:
 #   docker compose --profile productivity up -d
 #
@@ -33,7 +37,6 @@ services:
       - productivity-network
       - shared-network
     profiles:
-      - all
       - productivity
     ports:
       - "${VAULTWARDEN_PORT:-8222}:80"
@@ -96,6 +99,8 @@ services:
     labels:
       - glance.parent=nocodb
       - glance.name=Database
+    profiles:
+      - productivity
     environment:
       POSTGRES_DB: ${NOCODB_DBNAME:-nocodb}
       POSTGRES_USER: ${NOCODB_DBUSER:-nocodb}
@@ -138,21 +143,20 @@ services:
       NC_REDIS_URL: ""
       
       # Admin Configuration
-      NC_ADMIN_EMAIL: admin@example.com
-      NC_ADMIN_PASSWORD: ${NOCODB_ADMIN_PASSWORD:-secure_nocodb_password_2024}
+      NC_ADMIN_EMAIL: ${NOCODB_ADMIN_EMAIL:-admin@example.com}
+      NC_ADMIN_PASSWORD: ${NOCODB_ADMIN_PASSWORD}
       
     volumes:
       - type: bind
-        source: ${DATA_BASE_DIR:-./data}/nocodb
+        source: ${DATA_BASE_DIR:-../data}/nocodb
         target: /usr/app/data
     networks:
       - productivity-network
       - shared-network
     ports:
-      - "${NOCODB_PORT}:8080"
+      - "${NOCODB_PORT:-8083}:8080"
     restart: unless-stopped
     profiles:
-      - all
       - productivity
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8080/api/v1/health || exit 1"]
@@ -162,7 +166,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: ${NOCODB_MEMORY_LIMIT}
+          memory: ${NOCODB_MEMORY_LIMIT:-512m}
     labels:
       # Glance Configuration
       - glance.id=nocodb
@@ -226,7 +230,6 @@ services:
       - shared-network
     restart: unless-stopped
     profiles:
-      - all
       - productivity
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${N8N_DBUSER:-n8n} -d ${N8N_DBNAME:-n8n}"]
@@ -274,7 +277,7 @@ services:
       N8N_SECURE_COOKIE: ${N8N_SECURE_COOKIE:-false}
     volumes:
       - type: bind
-        source: ${DATA_BASE_DIR:-./data}/n8n
+        source: ${DATA_BASE_DIR:-../data}/n8n
         target: /home/node/.n8n
     networks:
       - productivity-network
@@ -284,7 +287,6 @@ services:
         limits:
           memory: ${N8N_MEMORY_LIMIT:-2g}
     profiles:
-      - all
       - productivity
     labels:
       # Glance Configuration
@@ -335,6 +337,8 @@ services:
     labels:
       - glance.parent=paperless
       - glance.name=Database
+    profiles:
+      - productivity
     environment:
       POSTGRES_DB: ${PAPERLESS_DBNAME:-paperless}
       POSTGRES_USER: ${PAPERLESS_DBUSER:-paperless}
@@ -361,6 +365,8 @@ services:
     labels:
       - glance.parent=paperless
       - glance.name=Redis
+    profiles:
+      - productivity
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 30s
@@ -401,7 +407,6 @@ services:
       - /tmp
     shm_size: 2gb
     profiles:
-      - all
       - productivity
     labels:
       # Hide from main Glance view (no GUI)
@@ -425,7 +430,6 @@ services:
         limits:
           memory: 1g
     profiles:
-      - all
       - productivity
     labels:
       # Hide from main Glance view (no GUI)
@@ -472,9 +476,9 @@ services:
       PAPERLESS_OCR_LANGUAGE: eng
       
       # Admin User Configuration
-      PAPERLESS_ADMIN_USER: ${PAPERLESS_ADMIN_USER:-admin}
-      PAPERLESS_ADMIN_PASSWORD: ${PAPERLESS_ADMIN_PASSWORD:-secure_paperless_password_2024}
-      PAPERLESS_ADMIN_MAIL: admin@localhost
+      PAPERLESS_ADMIN_USER: ${PAPERLESS_ADMIN_USER}
+      PAPERLESS_ADMIN_PASSWORD: ${PAPERLESS_ADMIN_PASSWORD}
+      PAPERLESS_ADMIN_MAIL: ${PAPERLESS_ADMIN_EMAIL:-admin@example.com}
       
       # Document Processing
       PAPERLESS_CONSUMER_POLLING: 10
@@ -500,17 +504,17 @@ services:
         source: paperless-data
         target: /usr/src/paperless/data
       - type: bind
-        source: ${PAPERLESS_MEDIA_PATH:-${FILES_BASE_DIR:-./files}/paperless/media}
+        source: ${PAPERLESS_MEDIA_PATH:-${FILES_BASE_DIR:-../files}/paperless/media}
         target: /usr/src/paperless/media
         bind:
           create_host_path: true
       - type: bind
-        source: ${PAPERLESS_CONSUME_PATH:-${FILES_BASE_DIR:-./files}/paperless/consume}
+        source: ${PAPERLESS_CONSUME_PATH:-${FILES_BASE_DIR:-../files}/paperless/consume}
         target: /usr/src/paperless/consume
         bind:
           create_host_path: true
       - type: bind
-        source: ${PAPERLESS_EXPORT_PATH:-${FILES_BASE_DIR:-./files}/paperless/export}
+        source: ${PAPERLESS_EXPORT_PATH:-${FILES_BASE_DIR:-../files}/paperless/export}
         target: /usr/src/paperless/export
         bind:
           create_host_path: true
@@ -530,7 +534,6 @@ services:
         limits:
           memory: ${PAPERLESS_MEMORY_LIMIT:-2g}
     profiles:
-      - all
       - productivity
     labels:
       # Glance Configuration
@@ -595,7 +598,6 @@ services:
       - shared-network
     restart: unless-stopped
     profiles:
-      - all
       - productivity
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${ACTIVEPIECES_DBUSER:-activepieces} -d ${ACTIVEPIECES_DBNAME:-activepieces}"]
@@ -627,7 +629,6 @@ services:
       - shared-network
     restart: unless-stopped
     profiles:
-      - all
       - productivity
 
   activepieces:
@@ -682,7 +683,6 @@ services:
         limits:
           memory: ${ACTIVEPIECES_MEMORY_LIMIT:-2g}
     profiles:
-      - all
       - productivity
     labels:
       # Glance Configuration
@@ -752,7 +752,6 @@ services:
       - shared-network
     restart: unless-stopped
     profiles:
-      - all
       - productivity
 
   postiz-redis:
@@ -776,7 +775,6 @@ services:
       - shared-network
     restart: unless-stopped
     profiles:
-      - all
       - productivity
 
   postiz:
@@ -812,8 +810,8 @@ services:
       UPLOAD_DIRECTORY: /app/public/uploads
       
       # Admin Configuration
-      ADMIN_EMAIL: ${POSTIZ_ADMIN_EMAIL:-admin@example.com}
-      ADMIN_PASSWORD: ${POSTIZ_ADMIN_PASSWORD:-secure_postiz_password_2024}
+      ADMIN_EMAIL: ${POSTIZ_ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${POSTIZ_ADMIN_PASSWORD}
       
       # Environment
       NODE_ENV: production
@@ -823,7 +821,7 @@ services:
       - "${POSTIZ_PORT:-8095}:5000"
     volumes:
       - type: bind
-        source: ${FILES_BASE_DIR:-./files}/postiz/uploads
+        source: ${FILES_BASE_DIR:-../files}/postiz/uploads
         target: /app/public/uploads
       - type: bind
         source: ./config/postiz/nginx.conf
@@ -834,7 +832,6 @@ services:
       - shared-network
     restart: unless-stopped
     profiles:
-      - all
       - productivity
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:5000/ || exit 1"]
@@ -895,7 +892,6 @@ services:
       - productivity-network
       - shared-network
     profiles:
-      - all
       - productivity
     ports:
       - "${FOCALBOARD_PORT:-8097}:8000"
@@ -954,7 +950,6 @@ services:
       - productivity-network
       - shared-network
     profiles:
-      - all
       - productivity
     ports:
       - "${TRILIUM_PORT:-8085}:8080"
@@ -1016,7 +1011,6 @@ services:
       - productivity-network
       - shared-network
     profiles:
-      - all
       - productivity
     ports:
       - "${VIKUNJA_PORT:-3456}:3456"
@@ -1071,65 +1065,6 @@ services:
       - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
   # =============================================================================
-  # IT-TOOLS - Developer Utilities Collection
-  # =============================================================================
-  # A collection of handy online tools for developers: converters, encoders,
-  # formatters, generators, and many more.
-  # =============================================================================
-  it-tools:
-    image: corentinth/it-tools:latest
-    container_name: it-tools
-    networks:
-      - productivity-network
-      - shared-network
-    profiles:
-      - all
-      - productivity
-    ports:
-      - "${IT_TOOLS_PORT:-8091}:80"
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: ${IT_TOOLS_MEMORY_LIMIT:-256m}
-    labels:
-      # Glance Configuration
-      - glance.id=it-tools
-      - glance.group=Productivity
-      - glance.name=IT-Tools
-      - glance.icon=si:docker
-      - glance.url=/go/it-tools
-      - glance.description=Developer Utilities
-      
-      # Traefik Configuration
-      - traefik.enable=true
-      
-      # HTTP router with redirect
-      - traefik.http.routers.it-tools-lab-http.entrypoints=web
-      - traefik.http.routers.it-tools-lab-http.rule=Host(`it-tools.${LAB_DOMAIN}`)
-      - traefik.http.routers.it-tools-lab-http.middlewares=redirect-to-https@file
-      - traefik.http.routers.it-tools-lab-http.service=it-tools
-      
-      # HTTPS router for .lab domain - No auth for local network
-      - traefik.http.routers.it-tools-lab.entrypoints=websecure
-      - traefik.http.routers.it-tools-lab.rule=Host(`it-tools.${LAB_DOMAIN}`)
-      - traefik.http.routers.it-tools-lab.tls=true
-      - traefik.http.routers.it-tools-lab.service=it-tools
-      
-      # HTTPS router for external domain
-      - traefik.http.routers.it-tools.entrypoints=websecure
-      - traefik.http.routers.it-tools.rule=Host(`it-tools.${BASE_DOMAIN}`)
-      - traefik.http.routers.it-tools.tls=true
-      - traefik.http.routers.it-tools.middlewares=it-tools-auth@file
-      - traefik.http.routers.it-tools.service=it-tools
-      
-      # Service definition
-      - traefik.http.services.it-tools.loadbalancer.server.port=80
-      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
-      - "com.docker.compose.service=it-tools"
-      - "description=IT-Tools - Developer Utilities Collection"
-
-  # =============================================================================
   # EXCALIDRAW - Whiteboard Collaboration
   # =============================================================================
   # Virtual whiteboard for sketching hand-drawn like diagrams.
@@ -1141,7 +1076,6 @@ services:
       - productivity-network
       - shared-network
     profiles:
-      - all
       - productivity
     ports:
       - "${EXCALIDRAW_PORT:-8092}:80"
@@ -1214,7 +1148,6 @@ services:
       - shared-network
     restart: unless-stopped
     profiles:
-      - all
       - productivity
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DOCMOST_DBUSER:-docmost} -d ${DOCMOST_DBNAME:-docmost}"]
@@ -1246,7 +1179,6 @@ services:
       - shared-network
     restart: unless-stopped
     profiles:
-      - all
       - productivity
 
   docmost:
@@ -1261,7 +1193,6 @@ services:
       - productivity-network
       - shared-network
     profiles:
-      - all
       - productivity
     ports:
       - "${DOCMOST_PORT:-8093}:3000"
@@ -1322,7 +1253,6 @@ services:
       - productivity-network
       - shared-network
     profiles:
-      - all
       - productivity
     ports:
       - "${FILEBROWSER_PORT:-8096}:80"
@@ -1338,13 +1268,13 @@ services:
         target: /config
       # Only expose the repo ./files directory in the UI.
       - type: bind
-        source: ${FILES_BASE_DIR:-./files}
+        source: ${FILES_BASE_DIR:-../files}
         target: /srv
         bind:
           create_host_path: true
       # Initialization script to set admin password (runs via s6 custom-init)
       - type: bind
-        source: ${CONFIG_BASE_DIR:-./config}/filebrowser/init-filebrowser.sh
+        source: ../config/filebrowser/init-filebrowser.sh
         target: /custom-cont-init.d/99-set-password.sh
         read_only: true
     restart: unless-stopped
@@ -1399,7 +1329,6 @@ services:
       - productivity-network
       - shared-network
     profiles:
-      - all
       - productivity
     ports:
       - "${HOARDER_PORT:-3030}:3000"
@@ -1469,6 +1398,8 @@ services:
     labels:
       - glance.parent=hoarder
       - glance.name=Browser
+    profiles:
+      - productivity
     restart: unless-stopped
     networks:
       - productivity-network
@@ -1490,6 +1421,8 @@ services:
     labels:
       - glance.parent=hoarder
       - glance.name=Search Engine
+    profiles:
+      - productivity
     restart: unless-stopped
     networks:
       - productivity-network
@@ -1517,7 +1450,6 @@ services:
       - productivity-network
       - shared-network
     profiles:
-      - all
       - productivity
     ports:
       - "${BYTESTASH_PORT:-8094}:5000"
@@ -1605,7 +1537,6 @@ services:
       - shared-network
     restart: unless-stopped
     profiles:
-      - all
       - productivity
     deploy:
       resources:
@@ -1614,7 +1545,7 @@ services:
 
   resourcespace:
     build:
-      context: ${CONFIG_BASE_DIR:-./config}/resourcespace
+      context: ../config/resourcespace
       dockerfile: Dockerfile
     container_name: resourcespace
     depends_on:
@@ -1628,7 +1559,7 @@ services:
         source: resourcespace-data
         target: /var/www/html/filestore
       - type: bind
-        source: ${FILES_BASE_DIR:-./files}/resourcespace
+        source: ${FILES_BASE_DIR:-../files}/resourcespace
         target: /var/www/html/upload
     networks:
       - productivity-network
@@ -1637,7 +1568,6 @@ services:
       - "${RESOURCESPACE_PORT:-8099}:80"
     restart: unless-stopped
     profiles:
-      - all
       - productivity
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost/ || exit 1"]

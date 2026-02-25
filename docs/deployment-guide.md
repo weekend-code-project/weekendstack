@@ -7,6 +7,87 @@
 - 8GB+ RAM recommended
 - 50GB+ disk space for services and data
 
+### Understanding Docker Image Pulling
+
+WeekendStack uses **63 unique Docker images** across all services. The setup script includes intelligent image pull optimization to handle this efficiently.
+
+#### Image Distribution
+- **27 images** from Docker Hub (rate limited: 100 pulls/6hr anonymous, 200/6hr authenticated)
+- **18 images** from GitHub Container Registry (no rate limits)
+- **18 images** from other registries (LinuxServer.io, Google, Quay, etc.)
+
+#### Optimization Features
+The setup script automatically:
+1. **Starts a registry cache** before pulling images to bypass Docker Hub rate limits
+2. **Pulls shared images first** (postgres, redis, alpine used multiple times)
+3. **Phases pulls strategically** - non-rate-limited registries in parallel, then Docker Hub via cache
+4. **Detects rate limits** and prompts for authentication when needed
+
+#### Check Images Before Setup
+Use the image checker tool to see what will be pulled:
+
+```bash
+# Check images for all services
+./tools/check_images.sh --profile all
+
+# Check specific profile with rate limit status
+./tools/check_images.sh --profile dev --check-limits
+
+# See which images are already cached locally
+./tools/check_images.sh --profile ai --show-cached
+
+# Get JSON output for automation
+./tools/check_images.sh --profile productivity --format json
+```
+
+#### Docker Hub Authentication (Recommended)
+Authenticating with Docker Hub doubles your pull limit to 200/6hr:
+
+```bash
+# Authenticate before setup
+docker login
+
+# Or let setup.sh prompt you contextually
+./setup.sh  # Will ask if needed based on your profile selection
+```
+
+#### Registry Cache
+The setup script uses a temporary pull-through cache that:
+- Eliminates rate limit issues during initial setup
+- Caches image layers for faster re-pulls
+- Stops automatically after setup (optional: keep running)
+
+You can manually manage the cache:
+```bash
+# Start cache service
+docker compose --profile setup-infrastructure up -d registry-cache
+
+# Check cache stats
+docker compose logs registry-cache
+
+# Stop cache
+docker compose stop registry-cache
+```
+
+#### Troubleshooting Image Pulls
+
+**Rate Limit Exceeded:**
+```bash
+# Option 1: Authenticate with Docker Hub (recommended)
+docker login
+
+# Option 2: Wait for rate limit reset (check status)
+./tools/check_images.sh --check-limits
+
+# Option 3: Run setup again (cache will have partial images)
+./setup.sh
+```
+
+**Pull Failures:**
+- Check `/tmp/weekendstack-pull-failures.log` for failed images
+- Failed images can be pulled manually: `docker pull <image-name>`
+- Re-run setup with `--skip-pull` to skip image pulling entirely
+
 ### Initial Setup
 ```bash
 # Clone the repository

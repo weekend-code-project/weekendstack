@@ -8,6 +8,10 @@
 # Note: These services are only available when using the 'all' profile,
 #       not as a standalone 'automation' profile option.
 #
+# IMPORTANT: Always run from project root directory
+#   ✓ Correct:  docker compose -f compose/docker-compose.automation.yml up
+#   ✗ Wrong:    cd compose && docker compose -f docker-compose.automation.yml up
+#
 # Usage:
 #   docker compose --profile all up -d
 #
@@ -42,10 +46,10 @@ services:
     networks:
       - automation-network
     profiles:
-      - all
+      - automation
     volumes:
       - type: bind
-        source: ${DATA_BASE_DIR:-./data}/homeassistant/config
+        source: ${DATA_BASE_DIR:-../data}/homeassistant/config
         target: /config
         bind:
           create_host_path: true
@@ -83,14 +87,14 @@ services:
       homeassistant-perms:
         condition: service_completed_successfully
     profiles:
-      - all
+      - automation
     ports:
       - "${HOMEASSISTANT_PORT:-8123}:8123"
     environment:
       TZ: ${TIMEZONE:-UTC}
     volumes:
       - type: bind
-        source: ${DATA_BASE_DIR:-./data}/homeassistant/config
+        source: ${DATA_BASE_DIR:-../data}/homeassistant/config
         target: /config
         bind:
           create_host_path: true
@@ -159,7 +163,7 @@ services:
       - automation-network
       - shared-network
     profiles:
-      - all
+      - automation
     ports:
       - "${NODERED_PORT:-1880}:1880"
     environment:

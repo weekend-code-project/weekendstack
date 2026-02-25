@@ -49,6 +49,9 @@ OPTIONS:
     --validate              Validate configuration without starting services
     --status                Show current deployment status
     --rollback              Restore previous .env from backup
+    --cloudflare-only       Run only the Cloudflare Tunnel setup wizard
+    --certs-only            Run only certificate generation and CA installation
+    --docker-only           Run only Docker registry authentication
     --start                 Start the stack after setup
     --stop                  Stop all services
     --restart               Restart all services
@@ -157,6 +160,27 @@ parse_args() {
                 restart_services
                 exit $?
                 ;;
+            --cloudflare-only)
+                # Load .env if it exists
+                if [[ -f "$SCRIPT_DIR/.env" ]]; then
+                    set -a; source "$SCRIPT_DIR/.env"; set +a
+                fi
+                setup_cloudflare_tunnel
+                exit $?
+                ;;
+            --certs-only)
+                # Load .env if it exists
+                if [[ -f "$SCRIPT_DIR/.env" ]]; then
+                    set -a; source "$SCRIPT_DIR/.env"; set +a
+                fi
+                setup_certificates
+                exit $?
+                ;;
+            --docker-only)
+                source "$SCRIPT_DIR/tools/setup/lib/docker-auth.sh"
+                docker_login_hub
+                exit $?
+                ;;
             *)
                 log_error "Unknown option: $1"
                 echo "Run '$0 --help' for usage"
@@ -168,6 +192,14 @@ parse_args() {
 
 # Check prerequisites
 check_prerequisites() {
+    clear
+    echo ""
+    echo -e "${CYAN}╔══════════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${CYAN}║                                                                  ║${NC}"
+    echo -e "${CYAN}║${NC}        ${BOLD}WeekendStack Interactive Setup Script v$VERSION${NC}         ${CYAN}║${NC}"
+    echo -e "${CYAN}║                                                                  ║${NC}"
+    echo -e "${CYAN}╚══════════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
     log_header "Prerequisites Check"
     
     local errors=0
@@ -243,43 +275,112 @@ check_prerequisites() {
     return 0
 }
 
-# Show welcome banner
-show_welcome() {
-    clear
-    echo ""
-    echo -e "${CYAN}╔══════════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║                                                                  ║${NC}"
-    echo -e "${CYAN}║${NC}        ${BOLD}WeekendStack Interactive Setup Script v$VERSION${NC}         ${CYAN}║${NC}"
-    echo -e "${CYAN}║                                                                  ║${NC}"
-    echo -e "${CYAN}╚══════════════════════════════════════════════════════════════════╝${NC}"
-    echo ""
-    echo "This script will help you set up your self-hosted infrastructure with:"
-    echo ""
-    echo "  • 65+ open-source services across 7 core profiles"
-    echo "  • Local HTTPS with automatic certificate generation"
-    echo "  • Optional Cloudflare Tunnel for external access"
-    echo "  • Secure credential generation"
-    echo "  • Profile-based deployment with incremental layering"
-    echo "  • Foundation-first approach (Core → Networking → Add more)"
-    echo ""
+# Interactive Coder template deployment
+deploy_coder_templates_interactive() {
+    local marker_file="$SCRIPT_DIR/config/coder/.template_deployment_complete"
+    local deploy_script="$SCRIPT_DIR/config/coder/scripts/deploy-all-templates.sh"
+    local template_info_script="$SCRIPT_DIR/config/coder/scripts/lib/get-template-info.sh"
+    local coder_api_script="$SCRIPT_DIR/config/coder/scripts/lib/coder-api.sh"
+
+    # Fall back to tools/coder/scripts if config copy is missing (e.g. after Level 2 uninstall)
+    if [[ ! -x "$deploy_script" && -x "$SCRIPT_DIR/tools/coder/scripts/deploy-all-templates.sh" ]]; then
+        local tools_scripts="$SCRIPT_DIR/tools/coder/scripts"
+        mkdir -p "$SCRIPT_DIR/config/coder/scripts/lib"
+        cp -r "$tools_scripts"/. "$SCRIPT_DIR/config/coder/scripts/"
+        chmod +x "$SCRIPT_DIR/config/coder/scripts"/*.sh "$SCRIPT_DIR/config/coder/scripts/lib"/*.sh 2>/dev/null || true
+    fi
     
-    if [[ "$SETUP_MODE" == "quick" ]]; then
-        echo -e "Running in ${BOLD}QUICK MODE${NC} - using defaults where possible"
-    else
-        echo -e "Running in ${BOLD}INTERACTIVE MODE${NC} - you can customize all settings"
+    # Check if deploy script exists
+    if [[ ! -x "$deploy_script" ]]; then
+        log_warn "Coder template deployment script not found or not executable: $deploy_script"
+        return 1
+    fi
+    
+    clear
+    log_header "Coder Template Deployment"
+    
+    # Check if user has configured authentication
+    if [[ -z "${CODER_SESSION_TOKEN:-}" ]]; then
+        echo ""
+        log_info "Coder templates require authentication to deploy."
+        echo ""
+        
+        if [[ -x "$coder_api_script" ]]; then
+            if ! "$coder_api_script" setup; then
+                log_warn "Coder authentication setup cancelled or failed"
+                log_info "You can complete this later by running: $coder_api_script setup"
+                log_info "Then deploy templates with: make coder-templates"
+                return 1
+            fi
+            # Reload .env to get the new token
+            if [[ -f "$SCRIPT_DIR/.env" ]]; then
+                set -a
+                source "$SCRIPT_DIR/.env"
+                set +a
+            fi
+        else
+            log_error "Coder API script not found: $coder_api_script"
+            return 1
+        fi
+    fi
+    
+    # Check if templates already deployed — verify against live Coder API, not just marker
+    local already_deployed=false
+    local deployment_info=""
+    if [[ -f "$marker_file" ]]; then
+        # Verify templates actually exist in the live Coder instance
+        local coder_url="${CODER_ACCESS_URL:-http://localhost:7080}"
+        local live_count=0
+        if [[ -n "${CODER_SESSION_TOKEN:-}" ]]; then
+            live_count=$(curl -sf "$coder_url/api/v2/templates" \
+                -H "Coder-Session-Token: $CODER_SESSION_TOKEN" 2>/dev/null \
+                | jq '[.[] | select(.deprecated == false)] | length' 2>/dev/null || echo 0)
+        else
+            live_count=$(curl -sf "$coder_url/api/v2/templates" 2>/dev/null \
+                | jq 'length' 2>/dev/null || echo 0)
+        fi
+
+        if [[ "${live_count:-0}" -gt 0 ]]; then
+            already_deployed=true
+            # Try to extract deployment info from JSON marker
+            if grep -q "deployment_date" "$marker_file" 2>/dev/null; then
+                local deploy_date=$(grep "deployment_date" "$marker_file" | cut -d'"' -f4)
+                local successful=$(grep '"successful":' "$marker_file" | grep -o '[0-9]*')
+                deployment_info="Last deployed: $deploy_date ($successful templates, $live_count active in Coder)"
+            else
+                deployment_info="Templates previously deployed ($live_count active in Coder)"
+            fi
+        else
+            log_info "Marker file found but no templates exist in Coder — will deploy"
+            rm -f "$marker_file"
+        fi
+    fi
+    
+    # Show template information
+    if [[ -x "$template_info_script" ]]; then
+        "$template_info_script" display
     fi
     
     echo ""
-    echo "Estimated time: 5-15 minutes"
-    echo "Requirements: 8GB+ RAM, 50GB+ disk space, Docker installed"
-    echo ""
     
-    if ! $DRY_RUN; then
-        if ! prompt_yes_no "Continue with setup?" "y"; then
-            log_info "Setup cancelled by user"
-            exit 0
+    # Prompt based on deployment status
+    if [[ "$already_deployed" == "true" ]]; then
+        log_info "$deployment_info"
+        echo ""
+        if prompt_yes_no "Install/update templates (deploy new or update existing)?" "n"; then
+            log_info "Installing/updating templates..."
+            "$deploy_script" --interactive --skip-confirm
+        else
+            log_info "Skipping template deployment"
+            log_info "You can deploy templates later with: make coder-templates"
         fi
-        clear
+    else
+        if prompt_yes_no "Deploy Coder templates now?" "y"; then
+            "$deploy_script" --interactive --skip-confirm
+        else
+            log_info "Skipping template deployment"
+            log_info "You can deploy templates later with: make coder-templates"
+        fi
     fi
 }
 
@@ -309,11 +410,13 @@ main_setup() {
         exit 1
     fi
     
-    # Clear screen and show profile selection
+    # Ask to continue after prerequisites
     if [[ "$SETUP_MODE" == "interactive" ]] && ! $DRY_RUN; then
         echo ""
-        echo "Press Enter to continue to profile selection..."
-        read -r
+        if ! prompt_yes_no "Prerequisites check complete. Continue with setup?" "y"; then
+            log_error "Setup cancelled by user"
+            exit 0
+        fi
         clear
     fi
     
@@ -326,23 +429,23 @@ main_setup() {
         selected_profiles=($(select_profiles_interactive))
     fi
     
+    # Check if user wants templates-only mode
+    if [[ "${selected_profiles[0]}" == "TEMPLATES_ONLY_MODE" ]]; then
+        clear
+        deploy_coder_templates_interactive
+        echo ""
+        log_success "Template management complete!"
+        log_info "To make changes to services, run ./setup.sh again"
+        exit 0
+    fi
+    
     export SELECTED_PROFILES=("${selected_profiles[@]}")
     
     # Clear screen after selection
     clear
     
     # 3. Docker registry authentication
-    show_setup_progress "Docker Authentication"
-    if ! $SKIP_AUTH; then
-        if [[ "$SETUP_MODE" == "quick" ]]; then
-            log_info "Skipping Docker authentication in quick mode (use --interactive for auth)"
-        else
-            setup_docker_auth || log_warn "Docker authentication failed or skipped"
-            clear
-        fi
-    else
-        log_info "Skipping Docker authentication (--skip-auth)"
-    fi
+    # Note: Contextual authentication happens later (step 10.5) after analyzing image requirements
     
     # 4. Generate environment configuration
     show_setup_progress "Environment Configuration"
@@ -407,11 +510,13 @@ main_setup() {
     fi
     
     # 7. Create Docker networks
-    show_setup_progress "Creating Docker Networks"
-    if ! create_docker_networks; then
-        log_error "Failed to create Docker networks"
-        exit 1
-    fi
+    # SKIPPED: Docker Compose creates networks automatically with proper labels
+    # Manual creation causes "network exists but was not created by compose" errors
+    # show_setup_progress "Creating Docker Networks"
+    # if ! create_docker_networks; then
+    #     log_error "Failed to create Docker networks"
+    #     exit 1
+    # fi
     
     # 8. Create Docker volumes
     show_setup_progress "Creating Docker Volumes"
@@ -420,28 +525,86 @@ main_setup() {
         exit 1
     fi
     
-    # 9. Certificate setup
-    show_setup_progress "Setting Up SSL Certificates"
-    if ! $SKIP_CERTS; then
-        setup_certificates || log_warn "Certificate setup incomplete (continuing anyway)"
-    else
-        log_info "Skipping certificate setup (--skip-certs)"
+    # 9. Cloudflare Tunnel setup (only if networking profile selected)
+    if [[ " ${selected_profiles[@]} " =~ " networking " ]] || [[ " ${selected_profiles[@]} " =~ " all " ]]; then
+        show_setup_progress "Cloudflare Tunnel Configuration"
+        if ! $SKIP_CLOUDFLARE && [[ "$SETUP_MODE" == "interactive" ]]; then
+            setup_cloudflare_tunnel || log_warn "Cloudflare Tunnel setup skipped"
+        else
+            log_info "Skipping Cloudflare Tunnel setup"
+        fi
+    fi
+
+    # 10. Certificate setup (only if networking profile selected)
+    # Generates self-signed CA + wildcard cert for local *.lab HTTPS access
+    # These certs are for LAN access only — Cloudflare handles TLS for remote access
+    if [[ " ${selected_profiles[@]} " =~ " networking " ]] || [[ " ${selected_profiles[@]} " =~ " all " ]]; then
+        show_setup_progress "Setting Up SSL Certificates"
+        if ! $SKIP_CERTS; then
+            setup_certificates || log_warn "Certificate setup incomplete (continuing anyway)"
+        else
+            log_info "Skipping certificate setup (--skip-certs)"
+        fi
     fi
     
-    # 10. Cloudflare Tunnel setup
-    show_setup_progress "Cloudflare Tunnel Configuration"
-    if ! $SKIP_CLOUDFLARE && [[ "$SETUP_MODE" == "interactive" ]]; then
-        setup_cloudflare_tunnel || log_warn "Cloudflare Tunnel setup skipped"
-    else
-        log_info "Skipping Cloudflare Tunnel setup"
+    # 10.5. Image Pull Planning
+    show_setup_progress "Analyzing Docker Images"
+    if ! $SKIP_PULL; then
+        # Source image analysis libraries
+        source "$SCRIPT_DIR/tools/setup/lib/image-analyzer.sh"
+        source "$SCRIPT_DIR/tools/setup/lib/image-puller.sh"
+        source "$SCRIPT_DIR/tools/setup/lib/docker-auth.sh"
+        
+        log_step "Analyzing required images for selected profiles..."
+        local image_analysis=$(analyze_compose_images "${selected_profiles[@]}")
+        
+        # Parse analysis
+        declare -A img_data
+        while IFS='=' read -r key value; do
+            img_data[$key]="$value"
+        done <<< "$image_analysis"
+        
+        local dockerhub_count="${img_data[DOCKERHUB_COUNT]:-0}"
+        
+        # Check rate limit status
+        local rate_limit_status=$(format_rate_limit_status)
+        
+        # Show the pull plan
+        show_pull_plan "$image_analysis" "$rate_limit_status"
+        
+        # Contextual authentication if needed and not skipped
+        if ! $SKIP_AUTH && [[ $dockerhub_count -gt 0 ]] && [[ "$SETUP_MODE" == "interactive" ]]; then
+            if prompt_hub_auth_contextual "$dockerhub_count"; then
+                docker_login_hub || log_warn "Authentication failed or skipped"
+            fi
+        fi
+        
+        clear || true  # Non-fatal clear in case stdout is not a terminal
     fi
     
-    # 11. Pull Docker images
+    # 11. Pull Docker images (optimized)
     show_setup_progress "Pulling Docker Images"
     if ! $SKIP_PULL; then
-        if ! pull_images "${selected_profiles[@]}"; then
+        if ! pull_images_optimized "${selected_profiles[@]}"; then
             log_error "Failed to pull Docker images"
-            exit 1
+            
+            if [[ "$SETUP_MODE" == "interactive" ]]; then
+                if ! prompt_yes_no "Some images failed. Continue anyway?" "n"; then
+                    exit 1
+                fi
+            else
+                exit 1
+            fi
+        fi
+        
+        # Ask about keeping cache
+        if is_cache_running && [[ "$SETUP_MODE" == "interactive" ]]; then
+            echo ""
+            if prompt_yes_no "Keep registry cache running for future pulls?" "n"; then
+                log_info "Registry cache will continue running"
+            else
+                stop_registry_cache
+            fi
         fi
     else
         log_info "Skipping image pull (--skip-pull)"
@@ -470,7 +633,37 @@ main_setup() {
     echo ""
     if prompt_yes_no "Start WeekendStack services now?" "y"; then
         clear
+        # Re-source .env to pick up any changes made by cloudflare wizard, cert setup, etc.
+        if [[ -f "$SCRIPT_DIR/.env" ]]; then
+            set -a
+            source "$SCRIPT_DIR/.env"
+            set +a
+        fi
+        
+        # Ensure cloudflare-tunnel is in custom profile if wizard configured it
+        ensure_cloudflare_in_custom_profile
+        
+        # Add external profile if Cloudflare tunnel is enabled AND token is configured
+        if grep -q "^CLOUDFLARE_TUNNEL_ENABLED=true" "$SCRIPT_DIR/.env" 2>/dev/null; then
+            local cf_token
+            cf_token=$(grep "^CLOUDFLARE_TUNNEL_TOKEN=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' ')
+            if [[ -n "$cf_token" ]]; then
+                if [[ ! " ${selected_profiles[*]} " =~ " external " ]]; then
+                    selected_profiles+=("external")
+                    log_info "Adding 'external' profile for Cloudflare Tunnel"
+                fi
+            else
+                log_warn "Cloudflare tunnel enabled but token is empty — skipping tunnel"
+                log_info "Run './setup.sh --cloudflare-only' to configure the tunnel"
+            fi
+        fi
         start_services_with_profiles "${selected_profiles[@]}"
+        
+        # Deploy Coder templates if dev profile was selected
+        if [[ " ${selected_profiles[*]} " =~ " dev " ]]; then
+            deploy_coder_templates_interactive
+        fi
+        
         display_summary_to_console
     else
         log_info "Services not started. Run './setup.sh --start' when ready."
@@ -479,8 +672,6 @@ main_setup() {
         echo "  docker compose up -d"
         echo ""
     fi
-    
-    log_success "Setup complete! See SETUP_SUMMARY.md for details."
 }
 
 # Pull Docker images
@@ -510,10 +701,85 @@ pull_images() {
     fi
 }
 
+# Ensure cloudflare-tunnel is in docker-compose.custom.yml when the tunnel
+# is enabled and has a token. The custom profile is generated during env setup
+# (before the cloudflare wizard), so this appends the service if missing.
+ensure_cloudflare_in_custom_profile() {
+    [[ -f "$SCRIPT_DIR/docker-compose.custom.yml" ]] || return 0
+    
+    local cf_enabled cf_token_val
+    cf_enabled=$(grep "^CLOUDFLARE_TUNNEL_ENABLED=true" "$SCRIPT_DIR/.env" 2>/dev/null || true)
+    cf_token_val=$(grep "^CLOUDFLARE_TUNNEL_TOKEN=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' ')
+    
+    if [[ -n "$cf_enabled" && -n "$cf_token_val" ]] && \
+       ! grep -q "cloudflare-tunnel:" "$SCRIPT_DIR/docker-compose.custom.yml"; then
+        cat >> "$SCRIPT_DIR/docker-compose.custom.yml" << 'CFEOF'
+  cloudflare-tunnel:
+    profiles:
+      - custom
+
+CFEOF
+        log_info "Added cloudflare-tunnel to custom profile"
+    fi
+}
+
+# Detect and remove Docker phantom directories at paths that must be files.
+# Docker silently creates a directory when a bind-mount source file is missing.
+# For files with a .example counterpart, copies the example after fixing the phantom.
+preflight_fix_mounts() {
+    local file_mounts=(
+        "$SCRIPT_DIR/config/glance/glance.yml"
+        "$SCRIPT_DIR/config/filebrowser/init-filebrowser.sh"
+    )
+    local fixed=0
+
+    for path in "${file_mounts[@]}"; do
+        if [[ -d "$path" ]]; then
+            log_warn "Found directory where a file is expected: $path"
+            rmdir "$path" 2>/dev/null || rm -rf "$path"
+            # Copy from .example if available, otherwise create an empty placeholder
+            local example="${path}.example"
+            if [[ -f "$example" ]]; then
+                cp "$example" "$path"
+                log_success "Fixed phantom directory -> copied from .example: $path"
+            else
+                touch "$path"
+                log_success "Fixed phantom directory -> placeholder file: $path"
+            fi
+            fixed=$((fixed + 1))
+        fi
+    done
+
+    # Traefik config.yml needs a valid static config, not just a touch placeholder.
+    if type _ensure_traefik_static_config &>/dev/null; then
+        _ensure_traefik_static_config "$SCRIPT_DIR/config/traefik/config.yml"
+    else
+        local traefik_cfg="$SCRIPT_DIR/config/traefik/config.yml"
+        if [[ -d "$traefik_cfg" ]]; then
+            rmdir "$traefik_cfg" 2>/dev/null || rm -rf "$traefik_cfg"
+            local traefik_example="${traefik_cfg}.example"
+            if [[ -f "$traefik_example" ]]; then
+                cp "$traefik_example" "$traefik_cfg"
+                log_success "Fixed phantom directory -> copied from .example: $traefik_cfg"
+            else
+                touch "$traefik_cfg"
+                log_success "Fixed phantom directory -> placeholder file: $traefik_cfg"
+            fi
+            fixed=$((fixed + 1))
+        fi
+    fi
+
+    if [[ $fixed -gt 0 ]]; then
+        log_info "Fixed $fixed mount path(s). Run --cloudflare-only or --certs-only to populate config."
+    fi
+}
+
 # Start services with profiles
 start_services_with_profiles() {
     local profiles=("$@")
-    
+
+    preflight_fix_mounts
+
     log_header "Starting Services"
     
     local profile_args=""
@@ -553,6 +819,7 @@ validate_configuration() {
     
     # Check compose files
     log_step "Validating docker-compose files..."
+    # Suppress warnings about unset variables from unselected profiles
     if docker compose config >/dev/null 2>&1; then
         log_success "Docker Compose configuration is valid"
     else
@@ -625,6 +892,16 @@ rollback_configuration() {
 start_services() {
     log_header "Starting Services"
     
+    # Re-source .env for latest config
+    if [[ -f "$SCRIPT_DIR/.env" ]]; then
+        set -a
+        source "$SCRIPT_DIR/.env"
+        set +a
+    fi
+    
+    # Ensure cloudflare-tunnel is in custom profile if enabled
+    ensure_cloudflare_in_custom_profile
+    
     if docker compose up -d; then
         log_success "Services started"
         docker compose ps
@@ -650,7 +927,18 @@ stop_services() {
 restart_services() {
     log_header "Restarting Services"
     
-    if docker compose restart; then
+    # Re-source .env for latest config
+    if [[ -f "$SCRIPT_DIR/.env" ]]; then
+        set -a
+        source "$SCRIPT_DIR/.env"
+        set +a
+    fi
+    
+    # Ensure cloudflare-tunnel is in custom profile if enabled
+    ensure_cloudflare_in_custom_profile
+    
+    # Use up -d instead of restart to also start any newly-enabled services
+    if docker compose up -d --force-recreate; then
         log_success "Services restarted"
         docker compose ps
     else
@@ -663,7 +951,6 @@ restart_services() {
 main() {
     parse_args "$@"
     
-    # Change to script directory
     cd "$SCRIPT_DIR"
     
     if $DRY_RUN; then
@@ -671,7 +958,6 @@ main() {
         SETUP_MODE="interactive"
     fi
     
-    show_welcome
     main_setup
 }
 

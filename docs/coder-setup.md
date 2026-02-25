@@ -112,11 +112,122 @@ docker-compose up -d
 2. Create admin account on first visit
 3. Log in to Coder dashboard
 
-### 5. Deploy Templates
+### 5. Template Deployment
+
+**Automatic (Recommended):**
+
+Templates are automatically deployed when you run `./setup.sh` and select the `dev` profile. The setup script will:
+- Wait for Coder to be healthy
+- Discover all templates in `config/coder/templates/`
+- Push each template using the versioned push script
+- Create a marker file to prevent duplicate deployments
+
+**Manual Deployment:**
+
+If you need to deploy templates manually or redeploy:
 
 ```bash
+# Deploy templates (respects marker file - won't redeploy if already done)
+make deploy-coder-templates
+
+# Force redeploy all templates (removes marker first)
+make redeploy-coder-templates
+
+# Or use the script directly
 cd config/coder/scripts
-./push-templates.sh
+./deploy-all-templates.sh
+
+# Force redeploy with script
+./deploy-all-templates.sh force
+```
+
+**Verification:**
+
+```bash
+# List deployed templates
+docker exec coder coder templates list
+
+# View template versions
+docker exec coder coder templates versions list <template-name>
+```
+
+## Automated Template Deployment
+
+### How It Works
+
+The automated template deployment system:
+
+1. **First-Time Detection**: Checks for marker file at `config/coder/.template_deployment_complete`
+2. **Health Check**: Waits up to 120 seconds for Coder to be healthy
+3. **Template Discovery**: Automatically finds all template directories in `config/coder/templates/`
+4. **Sequential Deployment**: Pushes each template using `push-template-versioned.sh`
+5. **Error Handling**: Continues on failures, logs all results
+6. **Marker Creation**: Creates marker file to prevent duplicate deployments
+
+### Deployment Triggers
+
+**Automatic:**
+- When running `./setup.sh` with `dev` profile selected
+- Only runs once (unless marker file is removed)
+
+**Manual:**
+- `make deploy-coder-templates` - respects marker file
+- `make redeploy-coder-templates` - forces redeployment
+- Delete marker file + run setup again
+- Run deployment script directly
+
+### Marker File System
+
+**Location:** `config/coder/.template_deployment_complete`
+
+**Purpose:**
+- Prevents duplicate deployments on subsequent setup runs
+- Tracks deployment timestamp and results
+- Can be removed to trigger redeployment
+
+**Reset Deployment State:**
+
+```bash
+# Remove marker to allow redeployment
+rm config/coder/.template_deployment_complete
+
+# Then run deployment
+make deploy-coder-templates
+```
+
+### Deployment Logs
+
+The deployment script provides colored output:
+- 🔵 **Info**: General progress messages
+- ✅ **Success**: Successful operations
+- ⚠️ **Warning**: Non-critical issues
+- ❌ **Error**: Failed operations
+
+**Example output:**
+
+```
+ℹ 🚀 Starting Coder template deployment...
+
+ℹ Waiting for Coder to be healthy (max 120s)...
+✓ Coder is healthy and ready
+
+ℹ Found 3 template(s) to deploy:
+  - modular-test
+  - docker-template
+  - node-template
+
+ℹ 📤 Deploying template: modular-test
+  [push script output...]
+✓ Successfully deployed: modular-test
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ℹ Deployment Summary
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✓ Successful: 3
+
+✓ Marker file created: config/coder/.template_deployment_complete
+ℹ Templates won't be auto-deployed on next setup.sh run
+✓ 🎉 All templates deployed successfully!
 ```
 
 ## Template Management
@@ -526,6 +637,144 @@ SSH_KEY_DIR=/home/yourusername/.ssh
 1. Check Coder is running: `docker ps | grep coder`
 2. Check logs: `docker logs coder`
 3. Verify CLI: `docker exec coder coder version`
+
+### Automated Template Deployment Issues
+
+#### Templates not deployed after setup
+
+**Symptoms:**
+- Setup script completes but no templates appear in Coder
+- `docker exec coder coder templates list` shows no templates
+
+**Possible Causes & Fixes:**
+
+1. **Coder container not healthy:**
+   ```bash
+   # Check container health
+   docker ps | grep coder
+   
+   # Check health endpoint
+   docker exec coder curl -f http://localhost:7080/healthz
+   
+   # View Coder logs
+   docker logs coder
+   ```
+
+2. **Template deployment script not executed:**
+   ```bash
+   # Check if marker file exists (shouldn't on first run)
+   ls -la config/coder/.template_deployment_complete
+   
+   # Manually run deployment
+   make deploy-coder-templates
+   ```
+
+3. **Push script not executable:**
+   ```bash
+   # Make scripts executable
+   chmod +x config/coder/scripts/*.sh
+   
+   # Retry deployment
+   make redeploy-coder-templates
+   ```
+
+#### Deployment fails with "Timeout waiting for Coder"
+
+**Cause:** Coder container taking longer than 120 seconds to become healthy
+
+**Fix:**
+1. Check database status:
+   ```bash
+   docker logs coder-database | tail -20
+   docker exec coder-database pg_isready -U coder
+   ```
+
+2. Check Coder startup logs:
+   ```bash
+   docker logs coder | tail -50
+   ```
+
+3. Manually wait and retry:
+   ```bash
+   # Wait for Coder to be ready
+   until docker exec coder curl -f -s http://localhost:7080/healthz >/dev/null 2>&1; do
+     echo "Waiting for Coder..."; sleep 5
+   done
+   
+   # Then deploy templates
+   make deploy-coder-templates
+   ```
+
+#### Some templates fail to deploy
+
+**Symptoms:**
+- Deployment summary shows failures
+- Marker file exists but lists failed templates
+
+**Fix:**
+
+1. Check deployment marker for details:
+   ```bash
+   cat config/coder/.template_deployment_complete
+   ```
+
+2. Review failed template manually:
+   ```bash
+   cd config/coder/scripts
+   ./push-template-local.sh <failed-template-name>
+   ```
+
+3. Check template validity:
+   ```bash
+   # View template files
+   ls -la config/coder/templates/<template-name>/
+   
+   # Check for main.tf
+   cat config/coder/templates/<template-name>/main.tf
+   ```
+
+4. Force redeploy all templates:
+   ```bash
+   make redeploy-coder-templates
+   ```
+
+#### Templates keep redeploying on every setup run
+
+**Symptoms:**
+- Templates deploy every time `setup.sh` is run
+- Marker file doesn't persist
+
+**Cause:** Marker file being deleted or not created
+
+**Fix:**
+
+1. Check marker file permissions:
+   ```bash
+   ls -la config/coder/.template_deployment_complete
+   ```
+
+2. Check script completion:
+   ```bash
+   # Review last deployment log
+   # Look for "Marker file created" message
+   ```
+
+3. Manually create marker to prevent redeployment:
+   ```bash
+   echo "Manual marker - $(date)" > config/coder/.template_deployment_complete
+   ```
+
+#### Want to add/remove templates from auto-deployment
+
+**Solution:** The deployment script automatically discovers all directories in `config/coder/templates/`
+
+**To exclude a template:**
+- Move it outside the templates directory
+- Or rename it with a prefix like `_disabled-template-name`
+
+**To add a new template:**
+- Create it in `config/coder/templates/`
+- Run `make redeploy-coder-templates` to deploy all templates including the new one
 
 ### Error: Permission denied writing to traefik-auth
 

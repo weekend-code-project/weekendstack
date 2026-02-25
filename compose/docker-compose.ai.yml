@@ -3,6 +3,11 @@
 # =============================================================================
 # This file contains AI-related services that can be enabled/disabled via .env file
 # Use AI_SERVICES variable to enable specific services: AI_SERVICES="chat,automation,search"
+#
+# IMPORTANT: Always run from project root directory
+#   ✓ Correct:  docker compose -f compose/docker-compose.ai.yml up
+#   ✗ Wrong:    cd compose && docker compose -f docker-compose.ai.yml up
+# =============================================================================
 
 services:
   # =============================================================================
@@ -20,7 +25,6 @@ services:
       - shared-network
     profiles:
       - gpu
-      - all
     ports:
       - "${OLLAMA_PORT:-11434}:11434"
     environment:
@@ -29,7 +33,7 @@ services:
     volumes:
       # Default: Local bind mount for AI models
       - type: bind
-        source: ${FILES_BASE_DIR:-./files}/ai-models/ollama
+        source: ${FILES_BASE_DIR:-../files}/ai-models/ollama
         target: /root/.ollama
         bind:
           create_host_path: true
@@ -112,7 +116,7 @@ services:
     volumes:
       # Default: Local bind mount for AI models
       - type: bind
-        source: ${FILES_BASE_DIR:-./files}/ai-models/ollama
+        source: ${FILES_BASE_DIR:-../files}/ai-models/ollama
         target: /root/.ollama
         bind:
           create_host_path: true
@@ -178,13 +182,12 @@ services:
       - ai-network
       - shared-network
     profiles:
-      - all
       - ai
     ports:
       - "${OPENWEBUI_PORT:-3000}:8080"
     volumes:
       - type: bind
-        source: ${DATA_BASE_DIR:-./data}/open-webui
+        source: ${DATA_BASE_DIR:-../data}/open-webui
         target: /app/backend/data
     environment:
       - OLLAMA_BASE_URL=${OLLAMA_HOST:-http://host.docker.internal:11434}
@@ -241,7 +244,6 @@ services:
       - ai-network
       - shared-network
     profiles:
-      - all
       - ai
     ports:
       - "${SEARXNG_PORT:-4000}:8080"
@@ -314,7 +316,6 @@ services:
       - shared-network
     profiles:
       - ai
-      - all
     ports:
       - "${LOCALAI_PORT:-8084}:8080"
     environment:
@@ -406,7 +407,6 @@ services:
       - shared-network
     profiles:
       - ai
-      - all
     ports:
       - "${ANYTHINGLLM_PORT:-3003}:3001"
     environment:
@@ -483,7 +483,6 @@ services:
       - shared-network
     profiles:
       - ai
-      - all
     ports:
       - "${WHISPER_PORT:-9002}:9000"
     environment:
@@ -549,6 +548,7 @@ services:
       - ai-network
       - shared-network
     profiles:
+      - ai
       - gpu
     ports:
       - "${WHISPERX_PORT:-9001}:9000"
@@ -608,7 +608,6 @@ services:
       - shared-network
     profiles:
       - ai
-      - all
     ports:
       - "${LIBRECHAT_PORT:-3080}:3080"
     environment:
@@ -684,7 +683,6 @@ services:
       - ai-network
     profiles:
       - ai
-      - all
     volumes:
       - type: volume
         source: librechat-data
@@ -701,7 +699,7 @@ services:
   # No data leaves your server
   # =============================================================================
   privategpt:
-    image: zylon-ai/private-gpt:latest
+    image: imartinez/privategpt:latest
     container_name: privategpt
     restart: unless-stopped
     networks:

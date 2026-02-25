@@ -6,6 +6,10 @@
 # - Kavita: eBook/manga/comic reader
 # - Navidrome: Music streaming server
 #
+# IMPORTANT: Always run from project root directory
+#   ✓ Correct:  docker compose -f compose/docker-compose.media.yml up
+#   ✗ Wrong:    cd compose && docker compose -f docker-compose.media.yml up
+#
 # Usage:
 #   docker compose --profile media up -d
 #
@@ -33,7 +37,6 @@ services:
       - media-network
       - shared-network
     profiles:
-      - all
       - media
     ports:
       - "${IMMICH_PORT:-2283}:2283"
@@ -100,7 +103,6 @@ services:
     networks:
       - media-network
     profiles:
-      - all
       - media
     volumes:
       - type: volume
@@ -150,7 +152,6 @@ services:
     networks:
       - media-network
     profiles:
-      - all
       - media
     volumes:
       - type: volume
@@ -173,7 +174,6 @@ services:
     networks:
       - media-network
     profiles:
-      - all
       - media
     environment:
       POSTGRES_USER: ${IMMICH_DB_USER:-immich}
@@ -204,17 +204,16 @@ services:
       - media-network
       - shared-network
     profiles:
-      - all
       - media
     ports:
-      - "${KAVITA_PORT:-5000}:5000"
+      - "${KAVITA_PORT:-5002}:5000"
     volumes:
       - type: volume
         source: kavita-data
         target: /kavita/config
       # Default: Local bind mount for eBook library  
       - type: bind
-        source: ${KAVITA_LIBRARY_PATH:-./files/kavita/library}
+        source: ${KAVITA_LIBRARY_PATH:-../files/kavita/library}
         target: /manga
         bind:
           create_host_path: true
@@ -275,7 +274,6 @@ services:
       - media-network
       - shared-network
     profiles:
-      - all
       - media
     ports:
       - "${NAVIDROME_PORT:-4533}:4533"
@@ -290,7 +288,7 @@ services:
         target: /data
       # Default: Local bind mount for music library
       - type: bind
-        source: ${NAVIDROME_MUSIC_PATH:-./files/navidrome/music}
+        source: ${NAVIDROME_MUSIC_PATH:-../files/navidrome/music}
         target: /music
         read_only: true
         bind:

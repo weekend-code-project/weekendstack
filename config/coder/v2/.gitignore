@@ -1,5 +1,0 @@
-# Build outputs
-dist/
-
-# Version tracking (local state)
-.versions.json

@@ -11,17 +11,17 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 BOLD='\033[1m'
 
-# Logging functions
+# Logging functions — ALL write to stderr so they don't corrupt $() captures
 log_info() {
-    echo -e "${BLUE}ℹ${NC} $*"
+    echo -e "${BLUE}ℹ${NC} $*" >&2
 }
 
 log_success() {
-    echo -e "${GREEN}✓${NC} $*"
+    echo -e "${GREEN}✓${NC} $*" >&2
 }
 
 log_warn() {
-    echo -e "${YELLOW}⚠${NC} $*"
+    echo -e "${YELLOW}⚠${NC} $*" >&2
 }
 
 log_error() {
@@ -29,13 +29,13 @@ log_error() {
 }
 
 log_header() {
-    echo ""
-    echo -e "${BOLD}${CYAN}=== $* ===${NC}"
-    echo ""
+    echo "" >&2
+    echo -e "${BOLD}${CYAN}=== $* ===${NC}" >&2
+    echo "" >&2
 }
 
 log_step() {
-    echo -e "${CYAN}→${NC} $*"
+    echo -e "${CYAN}→${NC} $*" >&2
 }
 
 # Progress indicator

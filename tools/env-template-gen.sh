@@ -1,13 +1,32 @@
 #!/bin/bash
-# Auto-generate .env file from .env.example with secure random values
+# Auto-generate .env file from template with secure random values
 # This script finds all <GENERATE> tags and replaces them with appropriate random values
+#
+# Usage:
+#   ./tools/env-template-gen.sh <template_file> [output_file]
+#
+# Examples:
+#   ./tools/env-template-gen.sh .env.tmp                 # Use .env.tmp -> .env
+#   ./tools/env-template-gen.sh custom.template .env.new # Custom template and output
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-ENV_EXAMPLE="${PROJECT_ROOT}/.env.example"
-ENV_FILE="${PROJECT_ROOT}/.env"
+
+# Require template file as first argument
+if [[ -z "$1" ]]; then
+    echo "Error: Template file required"
+    echo "Usage: $0 <template_file> [output_file]"
+    echo ""
+    echo "Examples:"
+    echo "  $0 .env.tmp                     # Generate .env from .env.tmp"
+    echo "  $0 custom.template .env.custom  # Custom template and output"
+    exit 1
+fi
+
+ENV_EXAMPLE="$1"
+ENV_FILE="${2:-${PROJECT_ROOT}/.env}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -19,14 +38,15 @@ log_success() { echo -e "${GREEN}✓${NC} $1"; }
 log_error() { echo -e "${RED}✗${NC} $1" >&2; }
 log_info() { echo -e "${YELLOW}→${NC} $1"; }
 
-# Check if .env.example exists
+# Check if template exists
 if [[ ! -f "$ENV_EXAMPLE" ]]; then
-    log_error ".env.example not found at $ENV_EXAMPLE"
+    echo "Error: Template file not found: $ENV_EXAMPLE"
     exit 1
 fi
 
-# Copy .env.example to .env
-log_info "Generating .env from template..."
+# Show which template we're using
+template_name=$(basename "$ENV_EXAMPLE")
+log_info "Generating .env from template: $template_name"
 cp "$ENV_EXAMPLE" "$ENV_FILE"
 
 # Function to generate random value based on comment
@@ -71,8 +91,23 @@ done < "$ENV_EXAMPLE"
 # Set setup metadata
 sed -i "s/^SETUP_DATE=.*/SETUP_DATE=$(date +%Y-%m-%d)/" "$ENV_FILE"
 
+# Strip inline comments from variable assignment lines
+# Docker Compose does not reliably handle inline comments in .env files
+# Pattern: VAR=value  # comment  ->  VAR=value
+# Preserves full-line comments (lines starting with #) and values containing #
+sed -i -E '/^[A-Za-z_][A-Za-z0-9_]*=/ {
+    /^[A-Za-z_][A-Za-z0-9_]*=[^#]*#/ {
+        s/^([A-Za-z_][A-Za-z0-9_]*=[^[:space:]#]*)[[:space:]]+#.*$/\1/
+    }
+}' "$ENV_FILE"
+
+# Count generated secrets
+secret_count=$(grep -c "^[A-Z0-9_]*=.*#.*<GENERATE>" "$ENV_EXAMPLE" || true)
 log_success ".env file generated successfully"
-log_info "All secrets and keys have been auto-generated"
+log_info "Template: $template_name"
+log_info "Generated: $secret_count secrets and keys"
+log_info "Output: $ENV_FILE"
+echo ""
 log_info "Review and customize settings in .env before deploying"
 
 exit 0

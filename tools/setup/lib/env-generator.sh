@@ -10,6 +10,10 @@ update_env_var() {
     local var_value="$2"
     local env_file="$3"
     
+    # Strip any newlines or carriage returns from value to prevent line injection  
+    var_value="${var_value//$'\n'/}"
+    var_value="${var_value//$'\r'/}"
+    
     # Use awk to safely replace the line - avoids all escaping issues
     awk -v var="$var_name" -v val="$var_value" '
         $0 ~ "^" var "=" { print var "=" val; next }
@@ -60,19 +64,12 @@ update_env_profiles_only() {
     update_env_var "SETUP_DATE" "$timestamp" "$env_file"
     update_env_var "SELECTED_PROFILES" "$profiles_string" "$env_file"
     
-    log_success "Profiles updated successfully"
-    echo ""
-    log_info "All other settings preserved from existing .env"
-    log_info "To reconfigure all settings, run: ./setup.sh --reconfigure"
-    echo ""
-    echo "Press Enter to continue..."
-    read -r
+    log_success "Profile update complete"
     
     return 0
 }
 
 generate_env_interactive() {
-    local env_example="${SCRIPT_DIR}/.env.example"
     local env_file="${SCRIPT_DIR}/.env"
     local selected_profiles=("$@")
     
@@ -92,25 +89,6 @@ generate_env_interactive() {
         clear
     fi
     
-    clear
-    log_header "WeekendStack Configuration Wizard"
-    
-    echo "This wizard will guide you through configuring your WeekendStack deployment."
-    echo "We'll collect all necessary information, then generate your .env file at the end."
-    echo ""
-    echo -e "${BOLD}Total Steps: 5${NC}"
-    echo "  1. System Settings (hostname, IP, timezone)"
-    echo "  2. Domain Configuration (local and external access)"  
-    echo "  3. Admin Credentials (default username/password)"
-    echo "  4. File Storage Paths (where to store data)"
-    echo "  5. Review & Generate (create .env file)"
-    echo ""
-    
-    if ! prompt_yes_no "Ready to begin?" "y"; then
-        log_error "Setup cancelled by user"
-        return 1
-    fi
-    
     # Backup existing .env if it exists
     if [[ -f "$env_file" ]]; then
         clear
@@ -124,7 +102,7 @@ generate_env_interactive() {
     # STEP 1: System Settings
     # ========================================================================
     clear
-    show_progress 1 5 "System Settings"
+    show_progress 1 $total_steps "System Settings"
     
     echo "This section configures basic system identification and network settings."
     echo ""
@@ -156,104 +134,138 @@ generate_env_interactive() {
     local detected_tz=$(timedatectl show --property=Timezone --value 2>/dev/null || echo "America/New_York")
     local timezone=$(prompt_input "Timezone" "$detected_tz")
     
-    # PUID/PGID
-    echo ""
-    echo "File permissions: Docker containers need to run with specific user/group IDs"
-    echo "to properly access files on the host. Using your current user is recommended."
-    echo ""
+    # PUID/PGID - use current user by default
     local current_uid=$(id -u)
     local current_gid=$(id -g)
-    log_info "Current user: UID=$current_uid GID=$current_gid"
-    echo ""
-    
-    local puid pgid
-    if prompt_yes_no "Use current user's UID/GID for file permissions?" "y"; then
-        puid=$current_uid
-        pgid=$current_gid
-    else
-        puid=$(prompt_input "PUID" "1000")
-        pgid=$(prompt_input "PGID" "1000")
-    fi
+    local puid=$current_uid
+    local pgid=$current_gid
     
     log_success "System settings configured"
-    echo ""
-    echo "Press Enter to continue to domain configuration..."
-    read -r
     
-    # ========================================================================
-    # STEP 2: Domain Configuration  
-    # ========================================================================
-    clear
-    show_progress 2 5 "Domain Configuration"
+    # Check if networking profile is selected
+    local has_networking=false
+    local has_dev=false
+    for profile in "$@"; do
+        if [[ "$profile" == "networking" ]] || [[ "$profile" == "all" ]]; then
+            has_networking=true
+        fi
+        if [[ "$profile" == "dev" ]] || [[ "$profile" == "all" ]]; then
+            has_dev=true
+        fi
+    done
     
-    echo "WeekendStack services are accessed via domain names."
-    echo ""
-    echo "You'll configure:"
-    echo "  1. Local domain for LAN access (always required)"
-    echo "  2. External domain for internet access (optional, requires Cloudflare Tunnel)"
-    echo ""
-    
-    # Local domain
-    echo -e "${BOLD}Local Network Access:${NC}"
-    echo ""
-    echo "Choose a domain suffix for accessing services on your local network."
-    echo "This requires either Pi-hole DNS or manual /etc/hosts entries."
-    echo ""
-    echo "Examples:"
-    echo "  • 'lab'   → Services accessible at https://service.lab"
-    echo "  • 'home'  → Services accessible at https://service.home"
-    echo "  • 'local' → Services accessible at https://service.local"
-    echo ""
-    
-    local lab_domain=$(prompt_input "Local domain suffix (without leading dot)" "lab")
-    
-    echo ""
-    log_success "Local services will be accessible at: https://service.$lab_domain"
-    log_info "Examples: https://coder.$lab_domain, https://paperless.$lab_domain"
-    echo ""
-    
-    # External domain (Cloudflare Tunnel)
-    echo -e "${BOLD}External Internet Access (Optional):${NC}"
-    echo ""
-    echo "If you want to access services from anywhere on the internet, you can"
-    echo "set up Cloudflare Tunnel. This requires a domain name you control."
-    echo ""
-    
-    local base_domain="localhost"
-    
-    if prompt_yes_no "Enable external access via Cloudflare Tunnel?" "n"; then
-        echo ""
-        echo "Enter your domain name (e.g., mystack.example.com or example.com):"
-        echo ""
-        
-        while true; do
-            base_domain=$(prompt_input "External domain" "")
-            
-            if [[ -z "$base_domain" ]]; then
-                log_warn "Skipping external access (no domain provided)"
-                base_domain="localhost"
-                break
-            elif validate_domain "$base_domain"; then
-                log_success "External services will be accessible at: https://service.$base_domain"
-                break
-            else
-                log_error "Invalid domain format (e.g., example.com or sub.example.com)"
-            fi
-        done
-    else
-        log_info "External access disabled - services will only be available on local network"
+    # Calculate total steps based on selected profiles
+    local total_steps=3  # Base: System Settings + Admin Credentials + File Storage
+    if $has_networking; then
+        ((total_steps++))  # Add Domain Configuration
+    fi
+    if $has_dev; then
+        ((total_steps++))  # Add Git Service Selection
     fi
     
-    log_success "Domain configuration complete"
-    echo ""
-    echo "Press Enter to continue to admin credentials..."
-    read -r
+    local lab_domain="lab"
+    local base_domain="localhost"
     
     # ========================================================================
-    # STEP 3: Admin Credentials
+    # STEP 2: Domain Configuration (only if networking profile selected)
+    # ========================================================================
+    if $has_networking; then
+        clear
+        show_progress 2 $total_steps "Domain & Certificate Configuration"
+        
+        echo "You selected the networking profile which includes Traefik reverse proxy."
+        echo ""
+        echo "Configure your local domain suffix for accessing services:"
+        echo ""
+        echo "Examples:"
+        echo "  • 'lab'   → Services accessible at https://service.lab"
+        echo "  • 'home'  → Services accessible at https://service.home"
+        echo "  • 'local' → Services accessible at https://service.local"
+        echo ""
+        
+        lab_domain=$(prompt_input "Local domain suffix (without leading dot)" "lab")
+        
+        echo ""
+        log_success "Services will be accessible at: https://service.$lab_domain"
+        echo ""
+        echo -e "${YELLOW}Note:${NC} Configure Pi-hole as your DNS server to resolve .$lab_domain,"
+        echo "or manually add entries to /etc/hosts on each device."
+        
+        log_success "Domain configuration complete"
+    fi
+    
+    # ========================================================================
+    # STEP 2.5/3: Git Service Selection (only if dev profile selected)
+    # ========================================================================
+    local git_service="none"
+    
+    if $has_dev; then
+        clear
+        if $has_networking; then
+            show_progress 3 $total_steps "Git Service Selection"
+        else
+            show_progress 2 $total_steps "Git Service Selection"
+        fi
+        
+        echo "You selected the development profile which includes git hosting."
+        echo ""
+        echo "Choose which git service to use:"
+        echo ""
+        echo "  1) None          - Skip git service (IDE only)"
+        echo "  2) Gitea         - Lightweight, recommended (default)"
+        if $has_networking; then
+            echo "  3) GitLab        - Full CI/CD platform (requires HTTPS/Traefik)"
+        fi
+        echo ""
+        
+        local git_choice
+        if $has_networking; then
+            git_choice=$(prompt_input "Select git service [1-3]" "2")
+        else
+            git_choice=$(prompt_input "Select git service [1-2]" "2")
+        fi
+        
+        case "$git_choice" in
+            1)
+                git_service="none"
+                log_info "Git service disabled"
+                ;;
+            2)
+                git_service="gitea"
+                log_success "Gitea selected (lightweight git hosting)"
+                ;;
+            3)
+                if $has_networking; then
+                    git_service="gitlab"
+                    log_success "GitLab selected (full CI/CD platform)"
+                    log_warn "Note: GitLab requires HTTPS via Traefik. Ensure networking profile is enabled."
+                else
+                    log_error "GitLab requires the networking profile (Traefik). Please select Gitea or None."
+                    git_service="gitea"
+                    log_success "Defaulting to Gitea"
+                fi
+                ;;
+            *)
+                log_warn "Invalid selection. Defaulting to Gitea."
+                git_service="gitea"
+                ;;
+        esac
+        
+        log_success "Git service configuration complete"
+    fi
+    
+    # ========================================================================
+    # STEP 3/4: Admin Credentials (always shown)
     # ========================================================================
     clear
-    show_progress 3 5 "Default Admin Credentials"
+    local admin_step=2
+    if $has_networking; then
+        ((admin_step++))
+    fi
+    if $has_dev; then
+        ((admin_step++))
+    fi
+    show_progress $admin_step $total_steps "Default Admin Credentials"
     
     echo "Many services (NocoDB, Paperless, Postiz, etc.) support auto-provisioning"
     echo "with default credentials. These will be used during initial setup."
@@ -283,13 +295,7 @@ generate_env_interactive() {
         done
         
         echo ""
-        echo "Password options:"
-        echo "  • Enter custom password"
-        echo "  • Auto-generate secure random password (recommended)"
-        echo ""
-        if prompt_yes_no "Set custom admin password?" "n"; then
-            admin_password=$(prompt_password "Admin password")
-        fi
+        admin_password=$(prompt_password "Admin password (or leave empty for auto-generated)")
     fi
     
     if [[ -z "$admin_password" ]]; then
@@ -297,36 +303,34 @@ generate_env_interactive() {
     fi
     
     log_success "Admin credentials configured"
-    echo ""
-    echo "Press Enter to continue to file storage configuration..."
-    read -r
     
     # ========================================================================
-    # STEP 4: File Storage Paths
+    # STEP 4/5: File Storage Paths
     # ========================================================================
     clear
-    show_progress 4 5 "File Storage Paths"
+    local storage_step=$((admin_step + 1))
+    show_progress $storage_step $total_steps "File Storage Paths"
     
-    echo "WeekendStack uses three base directories for data storage:"
+    echo "WeekendStack uses base directories for data storage:"
     echo ""
     echo "  1. FILES_BASE_DIR  - User content (documents, media, photos)"
     echo "  2. DATA_BASE_DIR   - Application databases and state"
-    echo "  3. CONFIG_BASE_DIR - Service configuration files"
     echo ""
-    echo "Default: Relative paths (./files, ./data, ./config)"
+    echo "Config files stay in ./config (part of repository)"
+    echo ""
+    echo "Default: Relative paths (./files, ./data)"
     echo "Advanced: Can use absolute paths or NFS mounts (e.g., /mnt/storage)"
     echo ""
     
     local files_dir="./files"
     local data_dir="./data"
-    local config_dir="./config"
+    local config_dir="./config"  # Always use repo config dir
     local workspace_dir="/mnt/workspace"
     local ssh_key_dir="\${CONFIG_BASE_DIR}/ssh"
     
     if prompt_yes_no "Customize storage paths?" "n"; then
         files_dir=$(prompt_input "User files directory" "./files")
         data_dir=$(prompt_input "Application data directory" "./data")
-        config_dir=$(prompt_input "Configuration directory" "./config")
         
         echo ""
         echo "Coder workspace directory (must be absolute path):"
@@ -336,22 +340,15 @@ generate_env_interactive() {
             log_error "Workspace directory must be an absolute path (start with /)"
             workspace_dir=$(prompt_input "Workspace directory" "/mnt/workspace")
         done
-        
-        if prompt_yes_no "Customize SSH key directory?" "n"; then
-            ssh_key_dir=$(prompt_input "SSH key directory" "\${CONFIG_BASE_DIR}/ssh")
-        fi
     fi
     
     log_success "Storage paths configured"
-    echo ""
-    echo "Press Enter to review and generate your .env file..."
-    read -r
     
     # ========================================================================
     # STEP 5: Review & Generate
     # ========================================================================
     clear
-    show_progress 5 5 "Review & Generate Configuration"
+    show_progress $total_steps $total_steps "Review & Generate Configuration"
     
     echo "Configuration summary:"
     echo ""
@@ -396,15 +393,42 @@ generate_env_interactive() {
     # ========================================================================
     # Generate .env file
     # ========================================================================
-    log_step "Generating .env file with secure random secrets..."
+    log_step "Assembling modular env template for selected profiles..."
     
-    # Step 1: Generate base file from template
-    if ! "${SCRIPT_DIR}/tools/env-template-gen.sh" >/dev/null 2>&1; then
-        log_error "Failed to generate .env from template"
+    # Generate .env directly from modular templates
+    local env_templates_dir="${SCRIPT_DIR}/tools/env/templates"
+    if [[ -d "$env_templates_dir" ]]; then
+        # Use modular templates - assemble directly to .env
+        local profiles_csv=$(IFS=, ; echo "${selected_profiles[*]}")
+        log_info "Generating .env from modular templates for profiles: $profiles_csv"
+        
+        # Assemble templates to temporary file
+        local temp_template="${SCRIPT_DIR}/.env.tmp"
+        if ! "${SCRIPT_DIR}/tools/env/scripts/assemble-env.sh" \
+            --profiles "$profiles_csv" \
+            --output "$temp_template" >/dev/null 2>&1; then
+            log_error "Failed to assemble modular env template"
+            rm -f "$temp_template"
+            return 1
+        fi
+        
+        # Generate .env from assembled template with secrets
+        if ! "${SCRIPT_DIR}/tools/env-template-gen.sh" "$temp_template" "$env_file" >/dev/null 2>&1; then
+            log_error "Failed to generate .env from template"
+            rm -f "$temp_template"
+            return 1
+        fi
+        
+        # Clean up temp file
+        rm -f "$temp_template"
+    else
+        # Modular templates are required
+        log_error "Modular templates not found at: $env_templates_dir"
+        log_error "Please ensure tools/env/templates/ directory exists"
         return 1
     fi
     
-    # Step 2: Apply all collected configuration using safe update function
+    # Step 3: Apply all collected configuration using safe update function
     log_step "Applying configuration values..."
     
     update_env_var "COMPUTER_NAME" "$computer_name" "$env_file"
@@ -414,6 +438,12 @@ generate_env_interactive() {
     update_env_var "PGID" "$pgid" "$env_file"
     update_env_var "LAB_DOMAIN" "$lab_domain" "$env_file"
     update_env_var "BASE_DOMAIN" "$base_domain" "$env_file"
+    
+    # Set Cloudflare API token if provided
+    if [[ -n "${CLOUDFLARE_API_TOKEN:-}" ]]; then
+        update_env_var "CLOUDFLARE_API_TOKEN" "$CLOUDFLARE_API_TOKEN" "$env_file"
+    fi
+    
     update_env_var "DEFAULT_ADMIN_USER" "$admin_user" "$env_file"
     update_env_var "DEFAULT_ADMIN_EMAIL" "$admin_email" "$env_file"
     
@@ -422,39 +452,61 @@ generate_env_interactive() {
         update_env_var "DEFAULT_ADMIN_PASSWORD" "$admin_password" "$env_file"
     fi
     
+    # Set storage paths
     update_env_var "FILES_BASE_DIR" "$files_dir" "$env_file"
     update_env_var "DATA_BASE_DIR" "$data_dir" "$env_file"
-    update_env_var "CONFIG_BASE_DIR" "$config_dir" "$env_file"
+    # Note: CONFIG_BASE_DIR not set in .env - compose files use ../config defaults
+    # to ensure correct path resolution regardless of compose file location
     update_env_var "WORKSPACE_DIR" "$workspace_dir" "$env_file"
     update_env_var "SSH_KEY_DIR" "$ssh_key_dir" "$env_file"
     
-    # Profile configuration
-    local profiles_string="${selected_profiles[*]}"
-    profiles_string="${profiles_string// /,}"
-    update_env_var "COMPOSE_PROFILES" "$profiles_string" "$env_file"
+    # Set git service selection (for dev profile)
+    if $has_dev; then
+        update_env_var "GIT_SERVICE" "$git_service" "$env_file"
+    fi
+    
+    # Set registry cache configuration
+    # The registry cache is used during setup to optimize Docker image pulls
+    # and bypass Docker Hub rate limits. It starts automatically during setup.
+    update_env_var "REGISTRY_DATA_DIR" "${data_dir}/registry-cache" "$env_file"
+    update_env_var "REGISTRY_PORT" "5000" "$env_file"
+    update_env_var "REGISTRY_MEMORY_LIMIT" "256m" "$env_file"
     
     # Add setup metadata
     add_setup_metadata "$env_file" "${selected_profiles[@]}"
     
+    # Step 4: Generate custom docker-compose profile
+    log_step "Generating custom docker-compose profile..."
+    local profiles_csv=$(IFS=, ; echo "${selected_profiles[*]}")
+    
+    # Add selected git service to profiles if dev was selected
+    if $has_dev && [[ "$git_service" != "none" ]]; then
+        profiles_csv="${profiles_csv},${git_service}"
+    fi
+    
+    if "${SCRIPT_DIR}/tools/env/scripts/generate-custom-profile.sh" \
+        --profiles "$profiles_csv" >/dev/null 2>&1; then
+        log_success "Custom profile generated"
+    else
+        log_warn "Custom profile generation failed (will fall back to manual --profile flags)"
+    fi
+    
     log_success ".env file created successfully!"
     echo ""
-    log_info "Your configuration has been saved to: $env_file"
+    log_info "Final configuration saved to: .env"
+    log_info "(Assembled from modular templates based on selected profiles)"
     
     # Show generated admin password if it was auto-generated
     if [[ -z "$admin_password" ]]; then
-        local generated_password=$(grep "^DEFAULT_ADMIN_PASSWORD=" "$env_file" | cut -d'=' -f2)
+        local generated_password=$(grep "^DEFAULT_ADMIN_PASSWORD=" "$env_file" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
         echo ""
-        log_warn "IMPORTANT - Save this default admin password:"
+        log_warn "IMPORTANT - Save this auto-generated admin password:"
         echo ""
         echo -e "${BOLD}  Username: $admin_user${NC}"
         echo -e "${BOLD}  Password: $generated_password${NC}"
         echo ""
         log_warn "Change this password after your first login to each service!"
     fi
-    
-    echo ""
-    echo "Press Enter to continue with setup..."
-    read -r
 }
 
 add_setup_metadata() {
@@ -475,13 +527,13 @@ add_setup_metadata() {
 # Setup Metadata (Generated by setup.sh)
 # =============================================================================
 SETUP_COMPLETED=true
-SETUP_DATE=$timestamp
-SELECTED_PROFILES=$profiles_string
+SETUP_DATE="$timestamp"
+SELECTED_PROFILES="$profiles_string"
 EOF
     else
         update_env_var "SETUP_COMPLETED" "true" "$env_file"
-        update_env_var "SETUP_DATE" "$timestamp" "$env_file"
-        update_env_var "SELECTED_PROFILES" "$profiles_string" "$env_file"
+        update_env_var "SETUP_DATE" "\"$timestamp\"" "$env_file"
+        update_env_var "SELECTED_PROFILES" "\"$profiles_string\"" "$env_file"
     fi
 }
 
@@ -496,10 +548,34 @@ generate_env_quick() {
         backup_file "$env_file"
     fi
     
-    # Generate from template
-    log_step "Generating .env with defaults..."
-    if ! "${SCRIPT_DIR}/tools/env-template-gen.sh" >/dev/null 2>&1; then
-        log_error "Failed to generate .env from template"
+    # Assemble modular template if available
+    log_step "Assembling modular env template..."
+    local env_templates_dir="${SCRIPT_DIR}/tools/env/templates"
+    if [[ -d "$env_templates_dir" ]]; then
+        # Use modular templates - assemble to temporary file
+        local profiles_csv=$(IFS=, ; echo "${selected_profiles[*]}")
+        log_info "Creating template for profiles: $profiles_csv"
+        
+        local temp_template="${SCRIPT_DIR}/.env.tmp"
+        if ! "${SCRIPT_DIR}/tools/env/scripts/assemble-env.sh" \
+            --profiles "$profiles_csv" \
+            --output "$temp_template" >/dev/null 2>&1; then
+            log_error "Failed to assemble modular env template"
+            return 1
+        fi
+        
+        # Generate from temporary template
+        log_step "Generating .env with defaults..."
+        if ! "${SCRIPT_DIR}/tools/env-template-gen.sh" "$temp_template" "$env_file" >/dev/null 2>&1; then
+            log_error "Failed to generate .env from template"
+            rm -f "$temp_template"
+            return 1
+        fi
+        rm -f "$temp_template"
+    else
+        # Modular templates are required
+        log_error "Modular templates not found at: $env_templates_dir"
+        log_error "Please ensure tools/env/templates/ directory exists"
         return 1
     fi
     
@@ -519,10 +595,20 @@ generate_env_quick() {
     # Set profiles
     local profiles_string="${selected_profiles[*]}"
     profiles_string="${profiles_string// /,}"
-    update_env_var "COMPOSE_PROFILES" "$profiles_string" "$env_file"
     
     # Add metadata
     add_setup_metadata "$env_file" "${selected_profiles[@]}"
+    
+    # Generate custom docker-compose profile
+    log_step "Generating custom docker-compose profile..."
+    if "${SCRIPT_DIR}/tools/env/scripts/generate-custom-profile.sh" \
+        --profiles "$profiles_string" >/dev/null 2>&1; then
+        log_success "Custom profile generated"
+    else
+        log_warn "Custom profile generation failed (will fall back to manual --profile flags)"
+        # Fallback to original profile list if custom generation fails
+        update_env_var "COMPOSE_PROFILES" "$profiles_string" "$env_file"
+    fi
     
     log_success "Quick environment setup complete"
     log_info "Computer: $hostname"
