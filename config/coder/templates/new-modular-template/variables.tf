@@ -15,11 +15,6 @@ variable "host_ip" {
   description = "Host IP address for port mappings"
   default     = "127.0.0.1"
 }
-variable "traefik_auth_dir" {
-  type        = string
-  description = "Host directory path for Traefik auth files (mounted to /traefik-auth in container)"
-  default     = "/home/ubuntu/weekendstack/config/traefik/auth"
-}
 
 variable "github_external_auth" {
   type        = bool

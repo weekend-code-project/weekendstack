@@ -84,8 +84,8 @@ The legacy v1 system tried to modularize *everything* (agent, container, metadat
 
 | # | Legacy Module | v2 Target | Complexity | Why Needed |
 |---|---|---|---|---|
-| 1 | `github-cli-module` | `modules/feature/github-cli/` | Low | `gh` CLI installation |
-| 2 | `gitea-cli-module` | `modules/feature/gitea-cli/` | Low | `tea` CLI installation |
+| 1 | `github-cli-module` + `gitea-cli-module` | `modules/feature/git-platform-cli/` | Low | Unified CLI installer with dropdown: `gh` (GitHub), `glab` (GitLab/self-hosted), `tea` (Gitea). No URL detection — user selects platform explicitly |
+| 2 | *(fix)* Traefik auth | `modules/feature/traefik-routing/` | Low | Switch from `usersfile` label to inline `bcrypt()` — Traefik reads its own FS, not the workspace container |
 | 3 | `node-version-module` | `modules/feature/node-version/` | Medium | NVM/Volta/fnm/n + Node.js version management |
 | 4 | `node-tooling-module` | `modules/feature/node-tooling/` | Medium | Global npm packages (TypeScript, ESLint, etc.) |
 | 5 | `node-modules-persistence-module` | `modules/feature/node-modules-persist/` | High | Bind-mount persistent node_modules across restarts |
@@ -170,17 +170,38 @@ All core modules for Git identity, repo cloning, and SSH server access are migra
 #### ✅ `init-shell` (merged into template startup script)
 - First-run home directory initialization is inline in the template's `coder_script.startup`
 
-### Round 2: CLI Tools — TODO
+### Round 2: CLI Tools & Auth Fix — TODO
 
-#### Migration 1: `github-cli`
-**Legacy:** `github-cli-module` — outputs an install script
-**v2 approach:** `coder_script` resource that installs `gh`
-**Inputs:** `agent_id`
+#### Migration 1: `git-platform-cli` (replaces github-cli + gitea-cli)
+**Legacy:** `github-cli-module` + `gitea-cli-module` — each output an install script string
+**v2 approach:** Single `coder_script` resource with a platform selector. No URL detection — self-hosted Gitea and GitLab are indistinguishable by URL pattern alone.
 
-#### Migration 2: `gitea-cli`
-**Legacy:** `gitea-cli-module` — outputs an install script
-**v2 approach:** `coder_script` resource that installs `tea`
-**Inputs:** `agent_id`
+**Inputs:**
+- `agent_id` — required
+- `git_cli` — string enum: `"none"` | `"github"` | `"gitlab"` | `"gitea"`, default `"none"`
+- `gitlab_host` — string, default `""` (only used when `git_cli = "gitlab"` and self-hosted)
+
+**Behavior by value:**
+- `"none"` — no coder_script created (`count = 0`)
+- `"github"` — installs `gh` via official GitHub apt repo (keyring + source list + apt install)
+- `"gitlab"` — installs `glab` via `packages.gitlab.com/gitlab-org/cli`. If `gitlab_host != ""`, appends `export GITLAB_HOST=<host>` to `.bashrc`
+- `"gitea"` — downloads `tea` v0.9.2 binary from `dl.gitea.com`. Works with any self-hosted host at login time
+
+**Wire into template:** Add `git_cli` and `gitlab_host` Coder parameters. Module is count-gated: `count = data.coder_parameter.git_cli.value != "none" ? 1 : 0`
+
+#### Migration 2: Traefik auth fix (root cause: `usersfile` path is unreachable by Traefik)
+**Root cause:** The current module emits `basicauth.usersfile=/traefik-auth/htpasswd-{name}`. Traefik resolves this against its **own** container filesystem, not the workspace container. The file is never found, so auth silently fails open.
+
+**Fix in `traefik-routing/main.tf`:**
+- Remove `coder_script.setup_auth` resource entirely
+- Replace `usersfile` label with `basicauth.users` using Terraform's built-in `bcrypt()` at provision time
+- Format: `traefik.http.middlewares.X.basicauth.users={owner}:{bcrypt_hash}` — dollar signs must be doubled (`$$`) for Docker label escaping
+- Remove `htpasswd_file` output
+- Auth username stays as `var.workspace_owner` (confirmed)
+
+**Fix in `new-modular-template`:**
+- Remove `traefik_auth_dir` bind-mount from `docker_container` block
+- Remove `traefik_auth_dir` variable from `variables.tf`
 
 ### Round 3: Node.js — TODO
 
@@ -254,15 +275,28 @@ All core modules for Git identity, repo cloning, and SSH server access are migra
 | 2026-02-25 | Add clone retry logic (3 attempts with backoff) | `coder gitssh` has a startup timing issue — not ready on first attempt, succeeds on retry |
 | 2026-02-25 | Remove SSH key generation/mounting from all modules | Coder's native `$GIT_SSH_COMMAND` handles auth. No per-workspace or shared host keys needed |
 | 2026-02-25 | Use `flock` for apt serialization across parallel scripts | Prevents dpkg lock contention when ssh-server and traefik-routing both install packages |
+| 2026-02-25 | Merge github-cli + gitea-cli into single `git-platform-cli` with dropdown | Self-hosted Gitea and GitLab URLs are indistinguishable by pattern — `git@git.example.com:…` could be either. User knows their platform at workspace creation time |
+| 2026-02-25 | Add GitLab (`glab`) support alongside GitHub and Gitea | `glab` handles both `gitlab.com` and self-hosted via `GITLAB_HOST` env var |
+| 2026-02-25 | Fix Traefik auth: switch from `usersfile` to inline `bcrypt()` label | Traefik resolves `usersfile` against its own container FS — the workspace container path is never visible to it. `bcrypt()` at provision time eliminates the runtime htpasswd script entirely |
+| 2026-02-25 | `git-platform-cli` count-gated on `git_cli != "none"` | No CLI overhead when repo_url is empty or platform is unneeded |
+| 2026-02-25 | Remove dead `gitea_host_pattern` variable from `git-config` | Variable was declared but never referenced in the script body. Platform detection belongs in `git-platform-cli`, not the clone module |
 
 ---
 
 ## Next Steps
 
-**Start with Migration 1: `github-cli`**
+**Migration 1: `git-platform-cli`** (in progress)
 
-1. Create `config/coder/modules/feature/github-cli/main.tf`
-2. Wire into `new-modular-template/main.tf` (optional, behind a parameter)
-3. `push-template.sh --dry-run new-modular-template` to validate
-4. Push and test
-5. Confirm working → move to Migration 2: `gitea-cli`
+1. Create `config/coder/modules/feature/git-platform-cli/main.tf` with `git_cli` enum + `gitlab_host` variable
+2. Remove dead `gitea_host_pattern` variable from `git-config/main.tf`
+3. Wire into `new-modular-template/main.tf` — add `git_cli` and `gitlab_host` Coder parameters
+4. `push-template.sh --dry-run new-modular-template` to validate
+5. Push and test all four values (none / github / gitlab / gitea)
+
+**Migration 2: Traefik auth fix** (in progress)
+
+1. Update `traefik-routing/main.tf`: remove `coder_script.setup_auth`, replace `usersfile` label with `basicauth.users` using `bcrypt()`
+2. Remove `auth_mount_path` / `htpasswd_file` locals and `htpasswd_file` output
+3. Update `new-modular-template/main.tf`: remove `traefik_auth_dir` bind-mount from docker_container
+4. Update `new-modular-template/variables.tf`: remove `traefik_auth_dir` variable
+5. Push and verify — browse with password set (should prompt) and without (should be open)
