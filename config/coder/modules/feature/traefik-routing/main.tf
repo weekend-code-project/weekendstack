@@ -147,7 +147,7 @@ resource "coder_app" "external_preview" {
   agent_id     = var.agent_id
   slug         = "external-preview"
   display_name = "External Preview"
-  icon         = "/icon/globe.svg"
+  icon         = "/icon/desktop.svg"
   url          = local.workspace_url
   external     = true
   order        = 11

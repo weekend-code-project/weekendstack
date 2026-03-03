@@ -371,7 +371,7 @@ resource "coder_app" "local_preview" {
 resource "coder_script" "startup_command" {
   agent_id           = coder_agent.main.id
   display_name       = "Startup Command"
-  icon               = "/icon/play.svg"
+  icon               = "/icon/desktop.svg"
   run_on_start       = true
   start_blocks_login = false
 
