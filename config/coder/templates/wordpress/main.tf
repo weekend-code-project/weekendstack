@@ -1,10 +1,10 @@
 # =============================================================================
 # WORDPRESS TEMPLATE
 # =============================================================================
-# A WordPress development workspace with MySQL, phpMyAdmin, and Apache.
+# A WordPress development workspace with MariaDB, phpMyAdmin, and Apache.
 #
 # Features:
-#   - MySQL 8.0 sidecar container with persistent data
+#   - MariaDB 10.11 sidecar container with persistent data
 #   - WordPress auto-install with configurable PHP version
 #   - phpMyAdmin for database management
 #   - Apache web server on the preview port
@@ -96,6 +96,33 @@ data "coder_parameter" "workspace_password" {
   order        = 201
 }
 
+data "coder_parameter" "git_cli" {
+  name         = "git_cli"
+  display_name = "Git Platform CLI"
+  description  = "Install a CLI for your Git platform"
+  type         = "string"
+  default      = "none"
+  mutable      = true
+  order        = 401
+
+  option {
+    name  = "None"
+    value = "none"
+  }
+  option {
+    name  = "GitHub (gh)"
+    value = "github"
+  }
+  option {
+    name  = "GitLab (glab)"
+    value = "gitlab"
+  }
+  option {
+    name  = "Gitea (tea)"
+    value = "gitea"
+  }
+}
+
 data "coder_parameter" "enable_ssh" {
   name         = "enable_ssh"
   display_name = "Enable SSH"
@@ -128,6 +155,7 @@ locals {
 
   mysql_container = "mysql-${local.workspace_name}"
   pma_container   = "pma-${local.workspace_name}"
+  git_cli         = data.coder_parameter.git_cli.value
 }
 
 # =============================================================================
@@ -159,7 +187,7 @@ resource "docker_image" "workspace" {
 }
 
 resource "docker_image" "mysql" {
-  name         = "mysql:8.0"
+  name         = "mariadb:10.11"
   keep_locally = true
 }
 
@@ -208,7 +236,7 @@ resource "docker_container" "mysql" {
   }
 
   healthcheck {
-    test         = ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${random_password.db_password.result}"]
+    test         = ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
     interval     = "5s"
     timeout      = "3s"
     retries      = 30
@@ -415,6 +443,19 @@ module "ssh_server" {
   workspace_name = local.workspace_name
   password       = local.ssh_password
   host_ip        = var.host_ip
+}
+
+# =============================================================================
+# GIT PLATFORM CLI
+# =============================================================================
+
+module "git_platform_cli" {
+  count  = local.git_cli != "none" ? 1 : 0
+  source = "./modules/feature/git-platform-cli"
+
+  agent_id    = coder_agent.main.id
+  git_cli     = local.git_cli
+  gitlab_host = ""
 }
 
 # =============================================================================
