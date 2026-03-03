@@ -669,6 +669,32 @@ MAINJS
 
       cd "$WORKSPACE_DIR"
 
+      # Ensure vite.config exists with allowedHosts: true (Vite 6+ blocks proxy domains)
+      if [ ! -f "$WORKSPACE_DIR/vite.config.js" ] && [ ! -f "$WORKSPACE_DIR/vite.config.ts" ] && [ ! -f "$WORKSPACE_DIR/vite.config.mjs" ] && [ ! -f "$WORKSPACE_DIR/vite.config.mts" ]; then
+        echo "[VITE] Creating vite.config.js with allowedHosts: true"
+        cat > "$WORKSPACE_DIR/vite.config.js" << 'VITECONFIG'
+import { defineConfig } from 'vite'
+
+export default defineConfig({
+  server: {
+    allowedHosts: true,
+  },
+})
+VITECONFIG
+      else
+        # Patch existing config if it doesn't already have allowedHosts
+        for VITE_CFG in vite.config.js vite.config.ts vite.config.mjs vite.config.mts; do
+          if [ -f "$WORKSPACE_DIR/$VITE_CFG" ] && ! grep -q 'allowedHosts' "$WORKSPACE_DIR/$VITE_CFG"; then
+            echo "[VITE] Patching $VITE_CFG with allowedHosts: true"
+            sed -i 's/server\s*:\s*{/server: { allowedHosts: true,/' "$WORKSPACE_DIR/$VITE_CFG"
+            # If no server block exists, add one before the closing of defineConfig
+            if ! grep -q 'allowedHosts' "$WORKSPACE_DIR/$VITE_CFG"; then
+              sed -i '/defineConfig({/a\  server: { allowedHosts: true },' "$WORKSPACE_DIR/$VITE_CFG"
+            fi
+          fi
+        done
+      fi
+
       # Determine run command
       VITE_CMD="npx vite --host 0.0.0.0 --port $PREVIEW_PORT"
       if [ -f "$WORKSPACE_DIR/node_modules/.bin/vite" ]; then
