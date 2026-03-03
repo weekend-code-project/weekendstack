@@ -159,12 +159,13 @@ services:
       CODER_TEMPLATE_PATHS: "/templates"
       CODER_PROVISIONER_TAGS: "base_domain=${BASE_DOMAIN:-localhost}"
       # GitHub External Auth - enables Git operations with user's GitHub identity
+      # To enable, add these to docker-compose.custom.yml under coder service environment:
+      #   CODER_EXTERNAL_AUTH_0_TYPE: github
+      #   CODER_EXTERNAL_AUTH_0_ID: github
+      #   CODER_EXTERNAL_AUTH_0_CLIENT_ID: <your-client-id>
+      #   CODER_EXTERNAL_AUTH_0_CLIENT_SECRET: <your-client-secret>
       # Create OAuth App at: https://github.com/settings/developers
       # Callback URL: {CODER_ACCESS_URL}/external-auth/github/callback
-      CODER_EXTERNAL_AUTH_0_TYPE: github
-      CODER_EXTERNAL_AUTH_0_ID: github
-      CODER_EXTERNAL_AUTH_0_CLIENT_ID: ${GITHUB_OAUTH_CLIENT_ID:-}
-      CODER_EXTERNAL_AUTH_0_CLIENT_SECRET: ${GITHUB_OAUTH_CLIENT_SECRET:-}
       COMPUTER_NAME: ${COMPUTER_NAME:-workstation}
       BASE_DOMAIN: ${BASE_DOMAIN:-localhost}
       DATA_BASE_DIR: ${DATA_BASE_DIR:-/home/ubuntu/weekendstack/data}

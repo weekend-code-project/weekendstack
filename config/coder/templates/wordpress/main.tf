@@ -76,14 +76,44 @@ data "coder_parameter" "php_version" {
   }
 }
 
-data "coder_parameter" "external_preview" {
-  name         = "external_preview"
-  display_name = "External Preview"
-  description  = "Enable external preview via Traefik"
+data "coder_parameter" "db_password" {
+  name         = "db_password"
+  display_name = "Database Password"
+  description  = "MySQL/MariaDB password. Leave blank to auto-generate. Persists across restarts."
+  type         = "string"
+  default      = ""
+  mutable      = true
+  order        = 100
+}
+
+data "coder_parameter" "wp_auto_install" {
+  name         = "wp_auto_install"
+  display_name = "Auto-Install WordPress"
+  description  = "Automatically create the WordPress admin user on startup. Disable to use the web installer."
   type         = "bool"
   default      = "true"
   mutable      = true
-  order        = 200
+  order        = 101
+}
+
+data "coder_parameter" "wp_admin_user" {
+  name         = "wp_admin_user"
+  display_name = "WP Admin Username"
+  description  = "WordPress admin username. Leave blank for 'admin'."
+  type         = "string"
+  default      = ""
+  mutable      = true
+  order        = 102
+}
+
+data "coder_parameter" "wp_admin_password" {
+  name         = "wp_admin_password"
+  display_name = "WP Admin Password"
+  description  = "WordPress admin password. Leave blank to auto-generate."
+  type         = "string"
+  default      = ""
+  mutable      = true
+  order        = 103
 }
 
 data "coder_parameter" "workspace_password" {
@@ -147,15 +177,19 @@ locals {
 
   php_version              = data.coder_parameter.php_version.value
   preview_port             = "80"  # Apache listens on 80
-  external_preview_enabled = data.coder_parameter.external_preview.value
+  external_preview_enabled = "true"
   workspace_password       = data.coder_parameter.workspace_password.value
   ssh_enabled              = data.coder_parameter.enable_ssh.value
   ssh_password             = local.workspace_password != "" ? local.workspace_password : random_password.ssh_fallback.result
   ssh_port                 = try(module.ssh_server[0].ssh_port, 0)
 
-  mysql_container = "mysql-${local.workspace_name}"
-  pma_container   = "pma-${local.workspace_name}"
-  git_cli         = data.coder_parameter.git_cli.value
+  mysql_container   = "mysql-${local.workspace_name}"
+  pma_container     = "pma-${local.workspace_name}"
+  git_cli           = data.coder_parameter.git_cli.value
+  wp_admin_user     = data.coder_parameter.wp_admin_user.value != "" ? data.coder_parameter.wp_admin_user.value : "admin"
+  wp_admin_password = data.coder_parameter.wp_admin_password.value != "" ? data.coder_parameter.wp_admin_password.value : random_password.wp_admin_fallback.result
+  wp_auto_install   = data.coder_parameter.wp_auto_install.value
+  db_password       = data.coder_parameter.db_password.value != "" ? data.coder_parameter.db_password.value : random_password.db_password.result
 }
 
 # =============================================================================
@@ -163,6 +197,11 @@ locals {
 # =============================================================================
 
 resource "random_password" "ssh_fallback" {
+  length  = 16
+  special = false
+}
+
+resource "random_password" "wp_admin_fallback" {
   length  = 16
   special = false
 }
@@ -219,10 +258,10 @@ resource "docker_container" "mysql" {
   hostname = local.mysql_container
 
   env = [
-    "MYSQL_ROOT_PASSWORD=${random_password.db_password.result}",
+    "MYSQL_ROOT_PASSWORD=${local.db_password}",
     "MYSQL_DATABASE=wordpress",
     "MYSQL_USER=wordpress",
-    "MYSQL_PASSWORD=${random_password.db_password.result}",
+    "MYSQL_PASSWORD=${local.db_password}",
   ]
 
   networks_advanced {
@@ -264,7 +303,7 @@ resource "docker_container" "phpmyadmin" {
   env = [
     "PMA_HOST=${local.mysql_container}",
     "PMA_USER=root",
-    "PMA_PASSWORD=${random_password.db_password.result}",
+    "PMA_PASSWORD=${local.db_password}",
     "UPLOAD_LIMIT=50M",
   ]
 
@@ -475,10 +514,13 @@ resource "coder_script" "wordpress_install" {
 
     WORDPRESS_DIR="${local.wordpress_dir}"
     MYSQL_HOST="${local.mysql_container}"
-    DB_PASSWORD="${random_password.db_password.result}"
+    DB_PASSWORD="${local.db_password}"
     PHP_VERSION="${local.php_version}"
     BASE_DOMAIN="${var.base_domain}"
     WORKSPACE_NAME="${local.workspace_name}"
+    WP_ADMIN_USER="${local.wp_admin_user}"
+    WP_ADMIN_PASSWORD="${local.wp_admin_password}"
+    WP_AUTO_INSTALL="${local.wp_auto_install}"
 
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "[WORDPRESS] Installing PHP $PHP_VERSION + Apache + WordPress..."
@@ -543,7 +585,23 @@ resource "coder_script" "wordpress_install" {
       sudo -u www-data sed -i "s/username_here/wordpress/" "$WORDPRESS_DIR/wp-config.php"
       sudo -u www-data sed -i "s/password_here/$DB_PASSWORD/" "$WORDPRESS_DIR/wp-config.php"
       sudo -u www-data sed -i "s/localhost/$MYSQL_HOST/" "$WORDPRESS_DIR/wp-config.php"
-      echo "[WORDPRESS] wp-config.php configured"
+
+      # Add reverse proxy HTTPS detection before "That's all" line
+      # Traefik terminates SSL and forwards HTTP — WordPress needs to trust X-Forwarded-Proto
+      sudo -u www-data tee -a /tmp/wp-proxy-fix.php >/dev/null <<'PHPFIX'
+
+/* Reverse proxy HTTPS detection (Traefik terminates SSL) */
+if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+    $_SERVER['HTTPS'] = 'on';
+}
+define('FORCE_SSL_ADMIN', false);
+PHPFIX
+      # Insert before "That's all, stop editing!" line
+      sudo -u www-data sed -i "/That's all, stop editing/r /tmp/wp-proxy-fix.php" "$WORDPRESS_DIR/wp-config.php"
+      # Move the block before the line (sed /r appends after)
+      rm -f /tmp/wp-proxy-fix.php
+
+      echo "[WORDPRESS] wp-config.php configured (with reverse proxy support)"
     fi
 
     # ── Configure Apache VirtualHost ──
@@ -594,15 +652,50 @@ VHOST
 
     if pgrep apache2 >/dev/null 2>&1; then
       echo "[WORDPRESS] Apache is running"
-      echo "[WORDPRESS] WordPress: https://$WORKSPACE_NAME.$BASE_DOMAIN"
-      echo "[WORDPRESS] phpMyAdmin: https://$WORKSPACE_NAME-pma.$BASE_DOMAIN"
     else
       echo "[WORDPRESS] WARNING: Apache failed to start"
     fi
 
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "[WORDPRESS] Done"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    # ── Auto-install WordPress via WP-CLI ──
+    if [ "$WP_AUTO_INSTALL" = "true" ]; then
+      if ! command -v wp >/dev/null 2>&1; then
+        echo "[WORDPRESS] Installing WP-CLI..."
+        curl -so /tmp/wp-cli.phar https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+        chmod +x /tmp/wp-cli.phar
+        sudo mv /tmp/wp-cli.phar /usr/local/bin/wp
+        echo "[WORDPRESS] WP-CLI installed"
+      fi
+
+      # Check if WordPress is already installed
+      if sudo -u www-data wp core is-installed --path="$WORDPRESS_DIR" 2>/dev/null; then
+        echo "[WORDPRESS] WordPress already installed, skipping setup"
+      else
+        echo "[WORDPRESS] Running WordPress auto-install..."
+        sudo -u www-data wp core install \
+          --path="$WORDPRESS_DIR" \
+          --url="https://$WORKSPACE_NAME.$BASE_DOMAIN" \
+          --title="WordPress Dev" \
+          --admin_user="$WP_ADMIN_USER" \
+          --admin_password="$WP_ADMIN_PASSWORD" \
+          --admin_email="admin@$BASE_DOMAIN" \
+          --skip-email
+        echo "[WORDPRESS] WordPress installed successfully"
+      fi
+
+      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      echo "[WORDPRESS] CREDENTIALS"
+      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      echo "  WP Admin:    $WP_ADMIN_USER"
+      echo "  WP Pass:     $WP_ADMIN_PASSWORD"
+      echo "  DB Pass:     $DB_PASSWORD"
+      echo "  Site:        https://$WORKSPACE_NAME.$BASE_DOMAIN"
+      echo "  Admin:       https://$WORKSPACE_NAME.$BASE_DOMAIN/wp-admin/"
+      echo "  phpMyAdmin:  https://$WORKSPACE_NAME-pma.$BASE_DOMAIN"
+      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    else
+      echo "[WORDPRESS] Auto-install disabled — use external preview to run the web installer"
+      echo "[WORDPRESS] DB Pass: $DB_PASSWORD"
+    fi
   SCRIPT
 }
 
@@ -610,21 +703,14 @@ VHOST
 # PREVIEW LINKS
 # =============================================================================
 
-resource "coder_app" "wordpress_preview" {
+resource "coder_app" "wp_admin" {
   agent_id     = coder_agent.main.id
-  slug         = "wordpress"
-  display_name = "WordPress Site"
-  icon         = "/icon/database.svg"
-  url          = "http://localhost:80"
-  subdomain    = false
-  share        = "owner"
+  slug         = "wp-admin"
+  display_name = "WP Admin"
+  icon         = "/icon/widgets.svg"
+  url          = "https://${local.workspace_name}.${var.base_domain}/wp-admin/"
+  external     = true
   order        = 10
-
-  healthcheck {
-    url       = "http://localhost:80"
-    interval  = 5
-    threshold = 5
-  }
 }
 
 resource "coder_app" "phpmyadmin_preview" {
