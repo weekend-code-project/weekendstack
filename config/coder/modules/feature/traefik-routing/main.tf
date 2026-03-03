@@ -92,13 +92,10 @@ locals {
   auth_middleware = "${local.router_name}-auth"
 
   # bcrypt hash of the password computed at provision time.
-  # Dollar signs in the hash must be doubled ($$) so Docker doesn't treat them
-  # as variable references when setting container labels.
-  # bcrypt() returns an empty string when password is empty, so we guard with a condition.
-  auth_users_label = var.workspace_password != "" ? replace(
-    "${var.workspace_owner}:${bcrypt(var.workspace_password)}",
-    "$", "$$"
-  ) : ""
+  # Labels are set via the Terraform Docker provider (Docker API), NOT Docker Compose,
+  # so dollar signs must NOT be doubled — they are stored as-is in container labels.
+  # bcrypt() returns a new hash each apply, but the password validation still works.
+  auth_users_label = var.workspace_password != "" ? "${var.workspace_owner}:${bcrypt(var.workspace_password)}" : ""
   
   # ==========================================================================
   # Traefik Labels (only when external preview is enabled)
