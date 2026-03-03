@@ -425,10 +425,19 @@ push_to_coder() {
     # These are critical: Coder stores variable values in its database,
     # and they persist across template versions. Without --variable flags,
     # old values from previous pushes are inherited.
+    #
+    # Only pass --variable for variables the template actually defines,
+    # otherwise Coder will reject the push with "unknown variable".
     local var_flags=""
-    var_flags+=" --variable base_domain=$BASE_DOMAIN"
-    var_flags+=" --variable host_ip=$HOST_IP"
-    var_flags+=" --variable traefik_auth_dir=$TRAEFIK_AUTH_DIR"
+    local template_vars
+    template_vars=$(grep -h 'variable "' "$temp_dir"/*.tf 2>/dev/null | sed -E 's/.*variable "([^"]+)".*/\1/' | sort -u || true)
+
+    _has_var() { echo "$template_vars" | grep -qx "$1"; }
+
+    _has_var base_domain       && var_flags+=" --variable base_domain=$BASE_DOMAIN"
+    _has_var host_ip           && var_flags+=" --variable host_ip=$HOST_IP"
+    _has_var traefik_auth_dir  && var_flags+=" --variable traefik_auth_dir=$TRAEFIK_AUTH_DIR"
+    _has_var gitlab_host       && var_flags+=" --variable gitlab_host=${GITLAB_HOST:-}"
 
     # Auto-detect GitHub External Auth: enabled if GITHUB_OAUTH_CLIENT_ID is set
     local github_auth="false"
@@ -438,7 +447,7 @@ push_to_coder() {
     else
         log_info "GitHub External Auth: disabled (set GITHUB_OAUTH_CLIENT_ID in .env)"
     fi
-    var_flags+=" --variable github_external_auth=$github_auth"
+    _has_var github_external_auth && var_flags+=" --variable github_external_auth=$github_auth"
 
     if docker exec $push_env_vars coder coder templates push "$TEMPLATE_NAME" \
         --directory "/tmp/${TEMPLATE_NAME}-push" \
