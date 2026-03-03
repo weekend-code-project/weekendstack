@@ -157,6 +157,16 @@ data "coder_parameter" "persist_node_modules" {
   order        = 13
 }
 
+data "coder_parameter" "node_modules_paths" {
+  name         = "node_modules_paths"
+  display_name = "node_modules Paths"
+  description  = "Comma-separated list of node_modules directories relative to workspace root (e.g. 'node_modules,frontend/node_modules')"
+  type         = "string"
+  default      = "node_modules"
+  mutable      = false
+  order        = 14
+}
+
 data "coder_parameter" "preview_port" {
   name         = "preview_port"
   display_name = "Preview Port"
@@ -203,7 +213,7 @@ data "coder_parameter" "repo_url" {
   description  = "Git repo to clone (SSH or HTTPS). If set, skips Vite scaffolding."
   type         = "string"
   default      = ""
-  mutable      = true
+  mutable      = false
   order        = 400
 }
 
@@ -249,6 +259,7 @@ locals {
   vite_framework   = data.coder_parameter.vite_framework.value
   package_manager  = data.coder_parameter.package_manager.value
   persist_nm       = data.coder_parameter.persist_node_modules.value
+  nm_paths         = data.coder_parameter.node_modules_paths.value
 
   preview_port             = data.coder_parameter.preview_port.value
   external_preview_enabled = data.coder_parameter.external_preview.value
@@ -437,7 +448,7 @@ module "node_modules_persist" {
   workspace_name     = local.workspace_name
   owner_name         = local.owner_name
   workspace_folder   = local.workspace_folder
-  node_modules_paths = "node_modules"
+  node_modules_paths = local.nm_paths
   enabled            = local.persist_nm
 }
 

@@ -121,12 +121,32 @@ data "coder_parameter" "persist_node_modules" {
   order        = 12
 }
 
+data "coder_parameter" "node_modules_paths" {
+  name         = "node_modules_paths"
+  display_name = "node_modules Paths"
+  description  = "Comma-separated list of node_modules directories relative to workspace root (e.g. 'node_modules,frontend/node_modules')"
+  type         = "string"
+  default      = "node_modules"
+  mutable      = false
+  order        = 13
+}
+
+data "coder_parameter" "auto_generate_html" {
+  name         = "auto_generate_html"
+  display_name = "Generate Default HTML"
+  description  = "Generate a default index.html if none exists"
+  type         = "bool"
+  default      = "true"
+  mutable      = true
+  order        = 99
+}
+
 data "coder_parameter" "startup_command" {
   name         = "startup_command"
   display_name = "Startup Command"
   description  = "Command to run after workspace is ready (e.g., 'npm run dev -- --host 0.0.0.0 --port 8080')"
   type         = "string"
-  default      = ""
+  default      = "npx http-server . -p 8080 -c-1"
   mutable      = true
   order        = 100
 }
@@ -177,7 +197,7 @@ data "coder_parameter" "repo_url" {
   description  = "Git repository to clone (SSH or HTTPS). Leave empty to skip."
   type         = "string"
   default      = ""
-  mutable      = true
+  mutable      = false
   order        = 400
 }
 
@@ -222,8 +242,10 @@ locals {
   node_version     = data.coder_parameter.node_version.value
   package_manager  = data.coder_parameter.package_manager.value
   persist_nm       = data.coder_parameter.persist_node_modules.value
+  nm_paths         = data.coder_parameter.node_modules_paths.value
 
   startup_command          = data.coder_parameter.startup_command.value
+  auto_generate_html       = data.coder_parameter.auto_generate_html.value
   preview_port             = data.coder_parameter.preview_port.value
   external_preview_enabled = data.coder_parameter.external_preview.value
   workspace_password       = data.coder_parameter.workspace_password.value
@@ -411,7 +433,7 @@ module "node_modules_persist" {
   workspace_name     = local.workspace_name
   owner_name         = local.owner_name
   workspace_folder   = local.workspace_folder
-  node_modules_paths = "node_modules"
+  node_modules_paths = local.nm_paths
   enabled            = local.persist_nm
 }
 
@@ -515,6 +537,7 @@ resource "coder_script" "startup_command" {
     LOG_FILE="/tmp/startup-server.log"
     PID_FILE="/tmp/startup-server.pid"
     PREVIEW_PORT="${local.preview_port}"
+    AUTO_HTML="${local.auto_generate_html}"
     WORKSPACE_NAME="${local.workspace_name}"
 
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -545,6 +568,40 @@ resource "coder_script" "startup_command" {
 
     cd "$WORKSPACE_DIR" 2>/dev/null || { mkdir -p "$WORKSPACE_DIR"; cd "$WORKSPACE_DIR"; }
 
+    # Auto-generate default index.html when no files exist
+    if [ "$AUTO_HTML" = "true" ] && [ ! -f "$WORKSPACE_DIR/index.html" ]; then
+      echo "[STARTUP-CMD] Generating default index.html..."
+      cat > "$WORKSPACE_DIR/index.html" << 'HTMLEOF'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Node.js Workspace</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; background: linear-gradient(135deg, #1a1a2e, #16213e); color: #fff; margin: 0; }
+        .container { background: rgba(255,255,255,0.1); padding: 40px; border-radius: 16px; text-align: center; backdrop-filter: blur(10px); }
+        h1 { font-size: 2em; margin-bottom: 10px; }
+        .badge { background: #68d391; color: #000; padding: 8px 16px; border-radius: 20px; display: inline-block; margin: 15px 0; font-weight: 600; }
+        .info { text-align: left; margin-top: 20px; }
+        .info div { padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        code { background: rgba(255,255,255,0.15); padding: 2px 6px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Node.js Workspace</h1>
+        <div class="badge">Ready</div>
+        <div class="info">
+            <div>Edit <code>index.html</code> or create a project to get started</div>
+            <div>Server: <code>http-server on port 8080</code></div>
+        </div>
+    </div>
+</body>
+</html>
+HTMLEOF
+    fi
+
     # Auto npm install if package.json exists and node_modules is empty/missing
     if [ -f "$WORKSPACE_DIR/package.json" ]; then
       if [ ! -d "$WORKSPACE_DIR/node_modules" ] || [ -z "$(ls -A "$WORKSPACE_DIR/node_modules" 2>/dev/null | head -1)" ]; then
@@ -566,7 +623,8 @@ resource "coder_script" "startup_command" {
 
     if [ -z "$STARTUP_CMD" ]; then
       echo "[STARTUP-CMD] No startup command configured"
-      exit 0
+      echo "[STARTUP-CMD] Falling back to http-server on port $PREVIEW_PORT"
+      STARTUP_CMD="npx http-server . -p $PREVIEW_PORT -c-1"
     fi
 
     echo "[STARTUP-CMD] Command: $STARTUP_CMD"

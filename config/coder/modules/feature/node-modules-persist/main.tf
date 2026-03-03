@@ -112,6 +112,12 @@ resource "coder_script" "node_modules_persist" {
     PERSIST_ROOT="${local.persist_folder}/node_modules"
     WORKSPACE_DIR="${var.workspace_folder}"
 
+    # Fix ownership of the persist mount point (Docker creates it as root)
+    if [ -d "${local.persist_folder}" ] && [ "$(stat -c '%U' '${local.persist_folder}')" != "$(whoami)" ]; then
+      echo "[NODE-MODULES] Fixing ownership of ${local.persist_folder}..."
+      sudo chown -R $(id -u):$(id -g) "${local.persist_folder}"
+    fi
+
     # Wait for Node.js to be available
     MAX_WAIT=120
     WAITED=0

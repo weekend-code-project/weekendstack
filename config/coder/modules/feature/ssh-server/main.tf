@@ -113,7 +113,9 @@ resource "coder_script" "ssh_setup" {
 
     # ── 2. Persistent host keys (survive restarts via home volume) ──
     HOSTKEYS_DIR="$HOME/.persist/ssh/hostkeys"
-    mkdir -p "$HOSTKEYS_DIR"
+    # Use sudo as fallback — .persist may be root-owned when mounted as a Docker volume
+    mkdir -p "$HOSTKEYS_DIR" 2>/dev/null || sudo mkdir -p "$HOSTKEYS_DIR"
+    sudo chown -R $(id -u):$(id -g) "$HOME/.persist/ssh" 2>/dev/null || true
     chmod 700 "$HOME/.persist/ssh"
 
     if [ ! -f "$HOSTKEYS_DIR/ssh_host_ed25519_key" ]; then
