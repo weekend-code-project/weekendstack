@@ -622,11 +622,24 @@ PKGJSON
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vite Workspace</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; background: linear-gradient(135deg, #1a1a2e, #16213e); color: #fff; margin: 0; }
+        .container { background: rgba(255,255,255,0.1); padding: 40px; border-radius: 16px; text-align: center; backdrop-filter: blur(10px); }
+        h1 { font-size: 2em; margin-bottom: 10px; }
+        .badge { background: #68d391; color: #000; padding: 8px 16px; border-radius: 20px; display: inline-block; margin: 15px 0; font-weight: 600; }
+        .info { text-align: left; margin-top: 20px; }
+        .info div { padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        code { background: rgba(255,255,255,0.15); padding: 2px 6px; border-radius: 4px; }
+    </style>
 </head>
 <body>
-    <div id="app">
+    <div class="container">
         <h1>Vite Workspace</h1>
-        <p>Edit <code>src/main.js</code> to get started.</p>
+        <div class="badge">Ready</div>
+        <div class="info">
+            <div>Edit <code>src/main.js</code> to get started</div>
+            <div>Server: <code>vite dev on port 8080</code></div>
+        </div>
     </div>
     <script type="module" src="/src/main.js"></script>
 </body>
@@ -634,7 +647,6 @@ PKGJSON
 INDEXHTML
 
         cat > "$WORKSPACE_DIR/src/main.js" << 'MAINJS'
-document.querySelector('#app').innerHTML += '<p>Hot reload is working!</p>';
 console.log('Vite dev server running');
 MAINJS
       fi
