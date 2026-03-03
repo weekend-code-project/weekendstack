@@ -129,6 +129,34 @@ data "coder_parameter" "repo_url" {
   order        = 400
 }
 
+data "coder_parameter" "git_cli" {
+  name         = "git_cli"
+  display_name = "Git Platform CLI"
+  description  = "Install a CLI for your Git platform. Enables creating issues, PRs/MRs, and other platform actions from the workspace terminal."
+  type         = "string"
+  default      = "none"
+  mutable      = true
+  order        = 401
+
+  option {
+    name  = "None"
+    value = "none"
+  }
+  option {
+    name  = "GitHub (gh)"
+    value = "github"
+  }
+  option {
+    name  = "GitLab (glab)"
+    value = "gitlab"
+  }
+  option {
+    name  = "Gitea (tea)"
+    value = "gitea"
+  }
+}
+
+
 # =============================================================================
 # LOCALS
 # =============================================================================
@@ -175,6 +203,10 @@ locals {
   ssh_enabled  = data.coder_parameter.enable_ssh.value
   ssh_password = local.workspace_password != "" ? local.workspace_password : random_password.ssh_fallback.result
   ssh_port     = try(module.ssh_server[0].ssh_port, 0)
+
+  # Git platform CLI
+  git_cli     = data.coder_parameter.git_cli.value
+  gitlab_host = var.gitlab_host  # Set from GITLAB_HOST in .env at push time
 }
 
 # =============================================================================
@@ -403,6 +435,23 @@ module "git_config" {
   workspace_folder    = local.workspace_folder
   repo_url            = data.coder_parameter.repo_url.value
   github_access_token = try(data.coder_external_auth.github[0].access_token, "")
+}
+
+# =============================================================================
+# GIT PLATFORM CLI
+# =============================================================================
+# Installs the CLI for the selected Git platform (gh / glab / tea).
+# Only runs when a platform is selected (git_cli != "none").
+# Enables creating issues, PRs/MRs, and repo management from the terminal.
+# =============================================================================
+
+module "git_platform_cli" {
+  count  = local.git_cli != "none" ? 1 : 0
+  source = "./modules/feature/git-platform-cli"
+
+  agent_id    = coder_agent.main.id
+  git_cli     = local.git_cli
+  gitlab_host = local.gitlab_host
 }
 
 # =============================================================================
@@ -705,16 +754,6 @@ resource "docker_container" "workspace" {
   volumes {
     volume_name    = docker_volume.home.name
     container_path = "/home/coder"
-  }
-  
-  # Traefik auth directory (shared with Traefik for basic auth)
-  # Host path (traefik_auth_dir) maps to /traefik-auth inside container
-  # Traefik also mounts the same host path to /traefik-auth
-  mounts {
-    type      = "bind"
-    source    = var.traefik_auth_dir
-    target    = "/traefik-auth"
-    read_only = false
   }
 
   # Basic environment

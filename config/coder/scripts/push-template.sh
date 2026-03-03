@@ -134,6 +134,7 @@ load_env() {
     BASE_DOMAIN="${BASE_DOMAIN:-localhost}"
     HOST_IP="${HOST_IP:-127.0.0.1}"
     TRAEFIK_AUTH_DIR="${TRAEFIK_AUTH_DIR:-$WORKSPACE_ROOT/config/traefik/auth}"
+    GITLAB_HOST="${GITLAB_HOST:-}"  # Empty = use gitlab.com; set to hostname for self-hosted
 }
 
 # =============================================================================
@@ -257,6 +258,11 @@ substitute_variables() {
         if grep -q 'variable "traefik_auth_dir"' "$file"; then
             sed -i "/variable \"traefik_auth_dir\"/,/^}/ s|default[[:space:]]*=[[:space:]]*\"[^\"]*\"|default     = \"$TRAEFIK_AUTH_DIR\"|" "$file"
             log_info "  Updated traefik_auth_dir in $(basename "$file")"
+        fi
+
+        if grep -q 'variable "gitlab_host"' "$file"; then
+            sed -i "/variable \"gitlab_host\"/,/^}/ s|default[[:space:]]*=[[:space:]]*\"[^\"]*\"|default     = \"$GITLAB_HOST\"|" "$file"
+            log_info "  Updated gitlab_host in $(basename "$file")"
         fi
     done
 }
@@ -419,10 +425,19 @@ push_to_coder() {
     # These are critical: Coder stores variable values in its database,
     # and they persist across template versions. Without --variable flags,
     # old values from previous pushes are inherited.
+    #
+    # Only pass --variable for variables the template actually defines,
+    # otherwise Coder will reject the push with "unknown variable".
     local var_flags=""
-    var_flags+=" --variable base_domain=$BASE_DOMAIN"
-    var_flags+=" --variable host_ip=$HOST_IP"
-    var_flags+=" --variable traefik_auth_dir=$TRAEFIK_AUTH_DIR"
+    local template_vars
+    template_vars=$(grep -h 'variable "' "$temp_dir"/*.tf 2>/dev/null | sed -E 's/.*variable "([^"]+)".*/\1/' | sort -u || true)
+
+    _has_var() { echo "$template_vars" | grep -qx "$1"; }
+
+    _has_var base_domain       && var_flags+=" --variable base_domain=$BASE_DOMAIN"
+    _has_var host_ip           && var_flags+=" --variable host_ip=$HOST_IP"
+    _has_var traefik_auth_dir  && var_flags+=" --variable traefik_auth_dir=$TRAEFIK_AUTH_DIR"
+    _has_var gitlab_host       && var_flags+=" --variable gitlab_host=${GITLAB_HOST:-}"
 
     # Auto-detect GitHub External Auth: enabled if GITHUB_OAUTH_CLIENT_ID is set
     local github_auth="false"
@@ -432,7 +447,7 @@ push_to_coder() {
     else
         log_info "GitHub External Auth: disabled (set GITHUB_OAUTH_CLIENT_ID in .env)"
     fi
-    var_flags+=" --variable github_external_auth=$github_auth"
+    _has_var github_external_auth && var_flags+=" --variable github_external_auth=$github_auth"
 
     if docker exec $push_env_vars coder coder templates push "$TEMPLATE_NAME" \
         --directory "/tmp/${TEMPLATE_NAME}-push" \

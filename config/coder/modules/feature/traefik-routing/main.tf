@@ -4,7 +4,11 @@
 # Provides external preview access via Traefik reverse proxy with:
 #   - Docker labels for Traefik routing
 #   - External preview button through tunnel
-#   - Basic auth password protection (via usersFile - generated at runtime)
+#   - Basic auth password protection (bcrypt hash computed at provision time)
+#
+# Auth is set via inline `basicauth.users` label using Terraform's bcrypt().
+# This avoids the usersFile approach which requires a shared host bind-mount
+# that Traefik can't see (it reads its own container FS, not the workspace's).
 #
 # When enabled, creates a subdomain route: {workspace}.{domain}
 # =============================================================================
@@ -73,17 +77,11 @@ variable "workspace_password" {
   sensitive   = true
 }
 
-# Note: traefik_auth_dir is no longer needed as a variable.
-# Both Traefik and workspace containers mount the host auth directory to /traefik-auth
-
 # =============================================================================
 # Locals
 # =============================================================================
 
 locals {
-  # Fixed container mount point (same path Traefik uses)
-  auth_mount_path = "/traefik-auth"
-  
   # Workspace subdomain URL
   workspace_url = "https://${lower(var.workspace_name)}.${var.base_domain}"
   
@@ -92,9 +90,15 @@ locals {
   
   # Auth middleware name
   auth_middleware = "${local.router_name}-auth"
-  
-  # Path to htpasswd file (inside Traefik's volume)
-  htpasswd_file = "${local.auth_mount_path}/htpasswd-${local.router_name}"
+
+  # bcrypt hash of the password computed at provision time.
+  # Dollar signs in the hash must be doubled ($$) so Docker doesn't treat them
+  # as variable references when setting container labels.
+  # bcrypt() returns an empty string when password is empty, so we guard with a condition.
+  auth_users_label = var.workspace_password != "" ? replace(
+    "${var.workspace_owner}:${bcrypt(var.workspace_password)}",
+    "$", "$$"
+  ) : ""
   
   # ==========================================================================
   # Traefik Labels (only when external preview is enabled)
@@ -126,66 +130,14 @@ locals {
       # Service configuration
       "traefik.http.services.${local.router_name}.loadbalancer.server.port" = var.preview_port
     },
-    # Auth middleware labels (when password is set) - uses usersFile approach
+    # Auth middleware labels (when password is set).
+    # Uses inline bcrypt hash — no shared volume or runtime htpasswd script needed.
     var.workspace_password != "" ? {
-      "traefik.http.routers.${local.router_name}.middlewares"                 = local.auth_middleware
-      "traefik.http.middlewares.${local.auth_middleware}.basicauth.usersfile" = local.htpasswd_file
-      "traefik.http.middlewares.${local.auth_middleware}.basicauth.realm"     = "${var.workspace_owner}-workspace"
+      "traefik.http.routers.${local.router_name}.middlewares"               = local.auth_middleware
+      "traefik.http.middlewares.${local.auth_middleware}.basicauth.users"   = local.auth_users_label
+      "traefik.http.middlewares.${local.auth_middleware}.basicauth.realm"   = "${var.workspace_owner}-workspace"
     } : {}
   ) : {}
-}
-
-# =============================================================================
-# Auth Setup Script (generates htpasswd file at runtime)
-# =============================================================================
-
-resource "coder_script" "setup_auth" {
-  count = var.external_preview_enabled && var.workspace_password != "" ? 1 : 0
-  
-  agent_id     = var.agent_id
-  display_name = "Setup Auth"
-  icon         = "/icon/key.svg"
-  run_on_start = true
-  
-  script = <<-EOT
-    #!/bin/bash
-    set -e
-    
-    echo "[AUTH] Setting up basic auth for external preview..."
-    
-    # Install htpasswd if not available
-    if ! command -v htpasswd >/dev/null 2>&1; then
-      echo "[AUTH] Installing apache2-utils for htpasswd..."
-      # Use flock to serialize apt operations across concurrent startup scripts
-      (
-        flock -w 300 9 || { echo "[AUTH] WARNING: Could not acquire apt lock"; exit 1; }
-        sudo apt-get update -qq && sudo apt-get install -y -qq apache2-utils
-      ) 9>/tmp/coder-apt.lock
-    fi
-    
-    # Ensure auth directory exists and is writable
-    # Uses fixed mount point /traefik-auth (same as Traefik sees)
-    AUTH_DIR="${local.auth_mount_path}"
-    if [ -d "$AUTH_DIR" ]; then
-      echo "[AUTH] Auth directory exists: $AUTH_DIR"
-    else
-      echo "[AUTH] Creating auth directory: $AUTH_DIR"
-      sudo mkdir -p "$AUTH_DIR"
-    fi
-    
-    # Generate htpasswd file with bcrypt hash
-    HTPASSWD_FILE="${local.htpasswd_file}"
-    echo "[AUTH] Generating htpasswd file: $HTPASSWD_FILE"
-    
-    # Create the htpasswd entry (bcrypt hash)
-    htpasswd -nbB "${var.workspace_owner}" "${var.workspace_password}" | sudo tee "$HTPASSWD_FILE" > /dev/null
-    
-    # Set permissions so Traefik can read it
-    sudo chmod 644 "$HTPASSWD_FILE"
-    
-    echo "[AUTH] Basic auth configured for user: ${var.workspace_owner}"
-    echo "[AUTH] Auth file: $HTPASSWD_FILE"
-  EOT
 }
 
 # =============================================================================
@@ -221,9 +173,4 @@ output "workspace_url" {
 output "auth_enabled" {
   description = "Whether basic auth is enabled"
   value       = var.external_preview_enabled && var.workspace_password != ""
-}
-
-output "htpasswd_file" {
-  description = "Path to the htpasswd file for Traefik"
-  value       = var.workspace_password != "" ? local.htpasswd_file : ""
 }

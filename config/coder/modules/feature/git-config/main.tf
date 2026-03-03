@@ -60,12 +60,6 @@ variable "github_access_token" {
   sensitive   = true
 }
 
-variable "gitea_host_pattern" {
-  description = "Regex pattern to detect self-hosted Gitea instances (for SSH port 2222)"
-  type        = string
-  default     = "gitea|git\\.weekendcodeproject\\.dev"
-}
-
 # =============================================================================
 # Git Config + Clone Script
 # =============================================================================
