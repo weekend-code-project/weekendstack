@@ -14,6 +14,7 @@ CLEANUP_SUMMARY.md
 
 # Coder runtime state — must never be committed so fresh installs always deploy
 config/coder/.template_deployment_complete
+config/coder/.versions.json
 
 # Generated config files — setup.sh populates these from .example templates.
 # The .example files ARE tracked; these runtime copies are not.
