@@ -306,8 +306,6 @@ resource "docker_container" "phpmyadmin" {
 
   env = [
     "PMA_HOST=${local.mysql_container}",
-    "PMA_USER=root",
-    "PMA_PASSWORD=${local.db_password}",
     "UPLOAD_LIMIT=50M",
   ]
 
@@ -335,6 +333,18 @@ resource "docker_container" "phpmyadmin" {
   labels {
     label = "traefik.http.routers.${local.workspace_name}-pma.tls"
     value = "true"
+  }
+  labels {
+    label = "traefik.http.routers.${local.workspace_name}-pma.middlewares"
+    value = "${local.workspace_name}-pma-auth"
+  }
+  labels {
+    label = "traefik.http.middlewares.${local.workspace_name}-pma-auth.basicauth.users"
+    value = "${local.owner_name}:${bcrypt(local.ssh_password)}"
+  }
+  labels {
+    label = "traefik.http.middlewares.${local.workspace_name}-pma-auth.basicauth.realm"
+    value = "${local.workspace_name}-phpmyadmin"
   }
   labels {
     label = "traefik.http.services.${local.workspace_name}-pma.loadbalancer.server.port"
