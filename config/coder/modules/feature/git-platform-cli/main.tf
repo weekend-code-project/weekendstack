@@ -79,7 +79,8 @@ resource "coder_script" "git_platform_cli" {
     echo "====================================================================="
 
     # Serialize apt operations with other parallel startup scripts
-    APT_LOCK="/var/lock/apt-install.lock"
+    # Must match the lock file used by wordpress install script and ssh-server module
+    APT_LOCK="/tmp/coder-apt.lock"
 
     case "$GIT_CLI" in
 
