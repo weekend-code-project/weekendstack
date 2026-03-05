@@ -64,6 +64,17 @@ cf_get_account_id() {
     local account_id=$(echo "$response" | jq -r '.result[0].id // empty')
     
     if [[ -z "$account_id" ]]; then
+        # Fallback: extract account ID from zone info (works when token has
+        # zone-level permissions but not account-list permissions)
+        log_info "Trying to get account ID from zone info..."
+        local zone_response
+        zone_response=$(cf_api_call GET "/zones?per_page=1")
+        if [[ $? -eq 0 ]]; then
+            account_id=$(echo "$zone_response" | jq -r '.result[0].account.id // empty')
+        fi
+    fi
+
+    if [[ -z "$account_id" ]]; then
         log_error "No account found for this API token"
         return 1
     fi

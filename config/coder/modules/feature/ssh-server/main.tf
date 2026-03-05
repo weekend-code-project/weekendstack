@@ -163,7 +163,7 @@ SSHD_CFG
     done
 
     # Gitea / self-hosted Git (typically on port 2222)
-    for gitea_host in git.weekendcodeproject.dev gitea; do
+    for gitea_host in gitea; do
       if ! grep -q "$gitea_host" "$HOME/.ssh/known_hosts" 2>/dev/null; then
         timeout 3 ssh-keyscan -H -p 2222 "$gitea_host" >> "$HOME/.ssh/known_hosts" 2>/dev/null || true
       fi

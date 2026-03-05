@@ -11,7 +11,8 @@
         "pihole",
         "pihole-dnsmasq-init",
         "cert-generator",
-        "error-pages"
+        "error-pages",
+        "cloudflare-tunnel"
     ],
     "ai": [
         "ollama",

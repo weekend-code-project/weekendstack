@@ -613,7 +613,8 @@ ALIASES
     echo "  User:          ${local.db_user}"
     echo "  Password:      ${local.db_password}"
     %{endif}
-    echo "  Admin Panel:   ${local.admin_url}"
+    echo "  Admin Panel:   (use Database Admin button in Coder)"
+    echo "  External:      ${local.admin_url} (if tunnel enabled)"
     echo "  Admin Login:   admin / ${local.db_password}"
     echo "  CLI:           dbconnect"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -853,7 +854,7 @@ resource "coder_script" "kottster" {
 
     if kill -0 "$(cat $PID_FILE)" 2>/dev/null; then
       echo "[KOTTSTER] Running on port $PORT (PID: $(cat $PID_FILE))"
-      echo "[KOTTSTER] Admin URL: ${local.admin_url}"
+      echo "[KOTTSTER] Access via Database Admin button in Coder"
 
       # ── Auto-initialize Kottster app ──
       # Wait for the API server (port 5481) to be ready
@@ -898,8 +899,8 @@ resource "coder_app" "kottster" {
   slug         = "kottster"
   display_name = "Database Admin"
   icon         = "/icon/database.svg"
-  url          = local.admin_url
-  external     = true
+  url          = "http://localhost:${local.kottster_port}"
+  share        = "owner"
   order        = 10
 }
 

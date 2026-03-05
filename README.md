@@ -628,6 +628,25 @@ docker compose logs traefik
 curl -I http://localhost:80 -H "Host: service.yourdomain.com"
 ```
 
+### Cloudflare Tunnel Issues
+
+```bash
+# Check tunnel status
+docker compose logs cloudflare-tunnel
+
+# Verify tunnel token is set
+grep CLOUDFLARE_TUNNEL_TOKEN .env
+
+# If tunnel connects but drops frequently, check protocol
+# The compose file should use --protocol http2 (especially in VMs)
+grep 'protocol' compose/docker-compose.networking.yml
+```
+
+**Common issues:**
+- **Tunnel exits immediately**: Token is empty or set to "disabled" — run `./setup.sh --cloudflare-only` to configure
+- **QUIC protocol errors in VMs**: The default QUIC protocol requires large UDP buffers that most VMs don't have. The compose file uses `--protocol http2` to avoid this. See [VM/Docker Deployment](#-vmdocker-deployment) below.
+- **Tunnel not starting**: Ensure cloudflare-tunnel is in your custom profile — run `./setup.sh --start` or re-run `./setup.sh` to regenerate
+
 ---
 
 ## 📊 Resource Requirements
@@ -657,7 +676,76 @@ curl -I http://localhost:80 -H "Host: service.yourdomain.com"
 
 ---
 
-## 🔄 Backup Strategy
+## �️ VM/Docker Deployment
+
+If you're running WeekendStack inside a virtual machine (KVM/QEMU, Proxmox, VMware, Hyper-V, etc.), there are a few additional considerations.
+
+### UDP Buffer Sizes (Cloudflare Tunnel / QUIC)
+
+Cloudflare's `cloudflared` daemon defaults to QUIC protocol, which requires large UDP receive buffers (`net.core.rmem_max` ≥ 7MB). Most VMs ship with the Linux default of ~208KB, causing QUIC connections to fail silently.
+
+**WeekendStack works around this** by forcing `--protocol http2` in the compose file, so no sysctl changes are needed. However, if you want to use the faster QUIC protocol:
+
+```bash
+# Check current UDP buffer size
+sysctl net.core.rmem_max
+
+# Temporarily increase (resets on reboot)
+sudo sysctl -w net.core.rmem_max=7340032
+sudo sysctl -w net.core.rmem_default=7340032
+
+# Persist across reboots
+echo 'net.core.rmem_max=7340032' | sudo tee -a /etc/sysctl.d/99-udp-buffers.conf
+echo 'net.core.rmem_default=7340032' | sudo tee -a /etc/sysctl.d/99-udp-buffers.conf
+sudo sysctl --system
+```
+
+Then remove `--protocol http2` from `compose/docker-compose.networking.yml` to let cloudflared use QUIC.
+
+### Swap Configuration
+
+VMs often have no swap configured. If you're running many services (especially AI workloads), consider adding swap:
+
+```bash
+# Check current swap
+free -h
+
+# Add 4GB swap file
+sudo fallocate -l 4G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+
+# Persist across reboots
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+```
+
+### Docker Storage Driver
+
+Ensure Docker is using the `overlay2` storage driver (default on modern installs):
+
+```bash
+docker info | grep "Storage Driver"
+# Expected: Storage Driver: overlay2
+```
+
+If running on ZFS or Btrfs-backed VM storage, Docker should auto-detect the correct driver. If you see `vfs`, performance will be poor — switch to `overlay2`.
+
+### Resource Allocation
+
+For VM deployments, allocate resources based on the profiles you plan to run:
+
+| Profiles | Min CPU | Min RAM | Notes |
+|----------|---------|---------|-------|
+| core + networking | 2 | 4GB | Dashboard, Vaultwarden, Traefik |
+| + dev | 4 | 8GB | Adds Coder + database |
+| + productivity | 4 | 12GB | Adds Paperless, n8n, NocoDB |
+| + ai | 8 | 24GB+ | Adds Ollama, Open WebUI, LLMs |
+| all profiles | 8+ | 32GB+ | Full stack |
+
+---
+
+## �🔄 Backup Strategy
 
 ### Duplicati (Built-in)
 Access at http://HOST_IP:8200 to configure automated backups of:

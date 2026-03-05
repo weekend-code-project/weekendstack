@@ -595,6 +595,13 @@ if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROT
     $_SERVER['HTTPS'] = 'on';
 }
 define('FORCE_SSL_ADMIN', false);
+
+/* Dynamic URL: adapt to the access method (Coder proxy, .lab, or tunnel) */
+if (isset($_SERVER['HTTP_HOST']) && !defined('WP_CLI')) {
+    $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+    define('WP_HOME', $scheme . '://' . $_SERVER['HTTP_HOST']);
+    define('WP_SITEURL', $scheme . '://' . $_SERVER['HTTP_HOST']);
+}
 PHPFIX
       # Insert before "That's all, stop editing!" line
       sudo -u www-data sed -i "/That's all, stop editing/r /tmp/wp-proxy-fix.php" "$WORDPRESS_DIR/wp-config.php"
@@ -673,7 +680,7 @@ VHOST
         echo "[WORDPRESS] Running WordPress auto-install..."
         sudo -u www-data wp core install \
           --path="$WORDPRESS_DIR" \
-          --url="https://$WORKSPACE_NAME.$BASE_DOMAIN" \
+          --url="http://localhost" \
           --title="WordPress Dev" \
           --admin_user="$WP_ADMIN_USER" \
           --admin_password="$WP_ADMIN_PASSWORD" \
@@ -688,9 +695,10 @@ VHOST
       echo "  WP Admin:    $WP_ADMIN_USER"
       echo "  WP Pass:     $WP_ADMIN_PASSWORD"
       echo "  DB Pass:     $DB_PASSWORD"
-      echo "  Site:        https://$WORKSPACE_NAME.$BASE_DOMAIN"
-      echo "  Admin:       https://$WORKSPACE_NAME.$BASE_DOMAIN/wp-admin/"
-      echo "  phpMyAdmin:  https://$WORKSPACE_NAME-pma.$BASE_DOMAIN"
+      echo "  Site:        (use preview buttons in Coder)"
+      echo "  Admin:       (use WP Admin button in Coder)"
+      echo "  phpMyAdmin:  (use phpMyAdmin button in Coder)"
+      echo "  External:    https://$WORKSPACE_NAME.$BASE_DOMAIN (if tunnel enabled)"
       echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     else
       echo "[WORDPRESS] Auto-install disabled — use external preview to run the web installer"
@@ -708,8 +716,8 @@ resource "coder_app" "wp_admin" {
   slug         = "wp-admin"
   display_name = "WP Admin"
   icon         = "/icon/widgets.svg"
-  url          = "https://${local.workspace_name}.${var.base_domain}/wp-admin/"
-  external     = true
+  url          = "http://localhost:80/wp-admin/"
+  share        = "owner"
   order        = 10
 }
 
@@ -718,8 +726,8 @@ resource "coder_app" "phpmyadmin_preview" {
   slug         = "phpmyadmin"
   display_name = "phpMyAdmin"
   icon         = "/icon/database.svg"
-  url          = "https://${local.workspace_name}-pma.${var.base_domain}"
-  external     = true
+  url          = "http://${local.pma_container}:80"
+  share        = "owner"
   order        = 11
 }
 
@@ -801,9 +809,16 @@ output "container_name" {
 }
 
 output "wordpress_url" {
-  value = "https://${local.workspace_name}.${var.base_domain}"
+  description = "WordPress access via Coder proxy"
+  value       = "Use WP Admin button in Coder dashboard"
+}
+
+output "wordpress_external_url" {
+  description = "WordPress external URL (via tunnel)"
+  value       = "https://${local.workspace_name}.${var.base_domain}"
 }
 
 output "phpmyadmin_url" {
-  value = "https://${local.workspace_name}-pma.${var.base_domain}"
+  description = "phpMyAdmin external URL (via tunnel)"
+  value       = "https://${local.workspace_name}-pma.${var.base_domain}"
 }

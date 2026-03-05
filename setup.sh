@@ -533,6 +533,9 @@ main_setup() {
         else
             log_info "Skipping Cloudflare Tunnel setup"
         fi
+        # Immediately update custom profile after wizard so the tunnel service
+        # is included even if the user skips starting services
+        ensure_cloudflare_in_custom_profile
     fi
 
     # 10. Certificate setup (only if networking profile selected)

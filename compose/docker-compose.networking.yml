@@ -366,7 +366,7 @@ services:
       - shared-network
     profiles:
       - external
-    command: tunnel run --token ${CLOUDFLARE_TUNNEL_TOKEN:-disabled}
+    command: tunnel --protocol http2 run --token ${CLOUDFLARE_TUNNEL_TOKEN:-disabled}
     # NOTE: No healthcheck — cloudflared uses a scratch/distroless image with
     # no shell, so CMD-SHELL healthchecks always fail. The tunnel's own
     # reconnect logic handles availability.
