@@ -169,7 +169,9 @@ services:
       COMPUTER_NAME: ${COMPUTER_NAME:-workstation}
       BASE_DOMAIN: ${BASE_DOMAIN:-localhost}
       DATA_BASE_DIR: ${DATA_BASE_DIR:-/home/ubuntu/weekendstack/data}
+      CODER_WILDCARD_ACCESS_URL: ${CODER_WILDCARD_ACCESS_URL:-}
       TF_VAR_base_domain: ${BASE_DOMAIN:-localhost}
+      TF_VAR_host_ip: ${HOST_IP:-127.0.0.1}
       TF_VAR_workspace_dir: ${WORKSPACE_DIR:-/mnt/workspace/wcp-coder/files/coder/workspace}
       TF_VAR_traefik_auth_dir: ${TRAEFIK_AUTH_DIR:-/home/ubuntu/weekendstack/config/traefik/auth}
     ports:

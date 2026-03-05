@@ -590,13 +590,16 @@ resource "coder_script" "wordpress_install" {
       # Traefik terminates SSL and forwards HTTP — WordPress needs to trust X-Forwarded-Proto
       sudo -u www-data tee -a /tmp/wp-proxy-fix.php >/dev/null <<'PHPFIX'
 
-/* Reverse proxy HTTPS detection (Traefik terminates SSL) */
+/* Use the real hostname from the reverse proxy (Coder/Traefik) */
+if (isset($_SERVER['HTTP_X_FORWARDED_HOST'])) {
+    $_SERVER['HTTP_HOST'] = $_SERVER['HTTP_X_FORWARDED_HOST'];
+}
 if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
     $_SERVER['HTTPS'] = 'on';
 }
 define('FORCE_SSL_ADMIN', false);
 
-/* Dynamic URL: adapt to the access method (Coder proxy, .lab, or tunnel) */
+/* Dynamic URL: adapt to the access method (Coder subdomain proxy, .lab, or tunnel) */
 if (isset($_SERVER['HTTP_HOST']) && !defined('WP_CLI')) {
     $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
     define('WP_HOME', $scheme . '://' . $_SERVER['HTTP_HOST']);
@@ -711,12 +714,13 @@ VHOST
 # PREVIEW LINKS
 # =============================================================================
 
-resource "coder_app" "wp_admin" {
+resource "coder_app" "wordpress" {
   agent_id     = coder_agent.main.id
-  slug         = "wp-admin"
-  display_name = "WP Admin"
+  slug         = "wordpress"
+  display_name = "WordPress"
   icon         = "/icon/widgets.svg"
-  url          = "http://localhost:80/wp-admin/"
+  url          = "http://localhost:80"
+  subdomain    = true
   share        = "owner"
   order        = 10
 }
@@ -727,6 +731,7 @@ resource "coder_app" "phpmyadmin_preview" {
   display_name = "phpMyAdmin"
   icon         = "/icon/database.svg"
   url          = "http://${local.pma_container}:80"
+  subdomain    = true
   share        = "owner"
   order        = 11
 }
