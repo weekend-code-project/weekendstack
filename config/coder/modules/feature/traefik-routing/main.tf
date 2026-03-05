@@ -77,13 +77,28 @@ variable "workspace_password" {
   sensitive   = true
 }
 
+variable "host_ip" {
+  description = "Host IP address (used for local preview URL when tunnel is disabled)"
+  type        = string
+  default     = "127.0.0.1"
+}
+
+variable "access_url" {
+  description = "Coder access URL (used to detect tunnel vs local access)"
+  type        = string
+  default     = "http://localhost:7080"
+}
+
 # =============================================================================
 # Locals
 # =============================================================================
 
 locals {
-  # Workspace subdomain URL
-  workspace_url = "https://${lower(var.workspace_name)}.${var.base_domain}"
+  # Detect tunnel by checking if access_url uses HTTPS (tunnel terminates SSL)
+  tunnel_enabled = startswith(var.access_url, "https://")
+
+  # Workspace subdomain URL - tunnel uses HTTPS domain, local uses HTTP IP
+  workspace_url = local.tunnel_enabled ? "https://${lower(var.workspace_name)}.${var.base_domain}" : "http://${lower(var.workspace_name)}.${var.host_ip}.nip.io"
   
   # Router name (lowercase, safe for Traefik)
   router_name = lower(var.workspace_name)

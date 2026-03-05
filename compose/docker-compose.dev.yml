@@ -236,26 +236,27 @@ services:
       - traefik.http.routers.coder-lab.service=coder
       - traefik.http.routers.coder-lab.priority=100
       
-      # Workspace wildcard - External domain (*.coder.weekendcodeproject.dev)
+      # Workspace wildcard - External domain (Coder app URLs contain --)
+      # Traefik v3 HostRegexp: matches hostnames with -- (Coder app pattern)
       - traefik.http.routers.coder-workspace-external.entrypoints=websecure
-      - traefik.http.routers.coder-workspace-external.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.${CODER_HOSTNAME}.${BASE_DOMAIN}`)
+      - traefik.http.routers.coder-workspace-external.rule=HostRegexp(`^.+--.*\.${BASE_DOMAIN}$$`)
       - traefik.http.routers.coder-workspace-external.tls=true
       - traefik.http.routers.coder-workspace-external.service=coder
-      - traefik.http.routers.coder-workspace-external.priority=50
+      - traefik.http.routers.coder-workspace-external.priority=90
       
-      # Workspace wildcard - Local .lab domain HTTP (*.coder.lab)
+      # Workspace wildcard - Local .lab domain HTTP
       - traefik.http.routers.coder-workspace-lab-http.entrypoints=web
-      - traefik.http.routers.coder-workspace-lab-http.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.${CODER_HOSTNAME}.${LAB_DOMAIN}`)
+      - traefik.http.routers.coder-workspace-lab-http.rule=HostRegexp(`^.+--.*\.${LAB_DOMAIN}$$`)
       - traefik.http.routers.coder-workspace-lab-http.middlewares=redirect-to-https@file
       - traefik.http.routers.coder-workspace-lab-http.service=coder
-      - traefik.http.routers.coder-workspace-lab-http.priority=50
+      - traefik.http.routers.coder-workspace-lab-http.priority=90
       
-      # Workspace wildcard - Local .lab domain HTTPS (*.coder.lab)
+      # Workspace wildcard - Local .lab domain HTTPS
       - traefik.http.routers.coder-workspace-lab.entrypoints=websecure
-      - traefik.http.routers.coder-workspace-lab.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.${CODER_HOSTNAME}.${LAB_DOMAIN}`)
+      - traefik.http.routers.coder-workspace-lab.rule=HostRegexp(`^.+--.*\.${LAB_DOMAIN}$$`)
       - traefik.http.routers.coder-workspace-lab.tls=true
       - traefik.http.routers.coder-workspace-lab.service=coder
-      - traefik.http.routers.coder-workspace-lab.priority=50
+      - traefik.http.routers.coder-workspace-lab.priority=90
       
       # Service definition
       - traefik.http.services.coder.loadbalancer.server.port=7080

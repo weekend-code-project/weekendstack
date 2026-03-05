@@ -323,6 +323,8 @@ module "traefik_routing" {
   workspace_owner_id       = data.coder_workspace_owner.me.id
   workspace_id             = data.coder_workspace.me.id
   base_domain              = var.base_domain
+  host_ip                  = var.host_ip
+  access_url               = data.coder_workspace.me.access_url
   preview_port             = local.preview_port
   external_preview_enabled = local.external_preview_enabled
   workspace_password       = local.workspace_password

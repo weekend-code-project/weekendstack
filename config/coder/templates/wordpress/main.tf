@@ -464,6 +464,8 @@ module "traefik_routing" {
   workspace_owner_id       = data.coder_workspace_owner.me.id
   workspace_id             = data.coder_workspace.me.id
   base_domain              = var.base_domain
+  host_ip                  = var.host_ip
+  access_url               = data.coder_workspace.me.access_url
   preview_port             = local.preview_port
   external_preview_enabled = local.external_preview_enabled
   workspace_password       = local.workspace_password
@@ -713,18 +715,29 @@ VHOST
 # PREVIEW LINKS
 # =============================================================================
 
+resource "coder_app" "wp_admin" {
+  agent_id     = coder_agent.main.id
+  slug         = "wp-admin"
+  display_name = "Admin"
+  icon         = "/icon/widgets.svg"
+  url          = "http://localhost:80/wp-admin/"
+  subdomain    = true
+  share        = "owner"
+  order        = 2
+}
+
 resource "coder_app" "wordpress" {
   agent_id     = coder_agent.main.id
   slug         = "wordpress"
-  display_name = "WordPress"
-  icon         = "/icon/widgets.svg"
+  display_name = "Preview"
+  icon         = "/icon/desktop.svg"
   url          = "http://localhost:80"
   subdomain    = true
   share        = "owner"
-  order        = 10
+  order        = 3
 }
 
-resource "coder_app" "phpmyadmin_preview" {
+resource "coder_app" "phpmyadmin" {
   agent_id     = coder_agent.main.id
   slug         = "phpmyadmin"
   display_name = "phpMyAdmin"
@@ -732,7 +745,7 @@ resource "coder_app" "phpmyadmin_preview" {
   url          = "http://${local.pma_container}:80"
   subdomain    = true
   share        = "owner"
-  order        = 11
+  order        = 20
 }
 
 # =============================================================================
