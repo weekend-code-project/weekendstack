@@ -89,6 +89,12 @@ variable "access_url" {
   default     = "http://localhost:7080"
 }
 
+variable "create_preview_app" {
+  description = "Whether to create the external preview app button (disable if template creates its own)"
+  type        = bool
+  default     = true
+}
+
 # =============================================================================
 # Locals
 # =============================================================================
@@ -157,7 +163,7 @@ locals {
 # =============================================================================
 
 resource "coder_app" "external_preview" {
-  count = var.external_preview_enabled ? 1 : 0
+  count = var.external_preview_enabled && var.create_preview_app ? 1 : 0
   
   agent_id     = var.agent_id
   slug         = "external-preview"

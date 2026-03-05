@@ -179,6 +179,10 @@ locals {
   preview_port             = "80"  # Apache listens on 80
   external_preview_enabled = "true"
   workspace_password       = data.coder_parameter.workspace_password.value
+
+  # Tunnel detection for external app URLs
+  tunnel_enabled = startswith(data.coder_workspace.me.access_url, "https://")
+  pma_url        = local.tunnel_enabled ? "https://${local.workspace_name}-pma.${var.base_domain}" : "http://${local.workspace_name}-pma.${var.host_ip}.nip.io"
   ssh_enabled              = data.coder_parameter.enable_ssh.value
   ssh_password             = local.workspace_password != "" ? local.workspace_password : random_password.ssh_fallback.result
   ssh_port                 = try(module.ssh_server[0].ssh_port, 0)
@@ -469,6 +473,7 @@ module "traefik_routing" {
   preview_port             = local.preview_port
   external_preview_enabled = local.external_preview_enabled
   workspace_password       = local.workspace_password
+  create_preview_app       = false
 }
 
 # =============================================================================
@@ -720,9 +725,8 @@ resource "coder_app" "wp_admin" {
   slug         = "wp-admin"
   display_name = "Admin"
   icon         = "/icon/widgets.svg"
-  url          = "http://localhost:80/wp-admin/"
-  subdomain    = true
-  share        = "owner"
+  url          = "${module.traefik_routing.workspace_url}/wp-admin"
+  external     = true
   order        = 2
 }
 
@@ -731,9 +735,8 @@ resource "coder_app" "wordpress" {
   slug         = "wordpress"
   display_name = "Preview"
   icon         = "/icon/desktop.svg"
-  url          = "http://localhost:80"
-  subdomain    = true
-  share        = "owner"
+  url          = module.traefik_routing.workspace_url
+  external     = true
   order        = 3
 }
 
@@ -742,9 +745,8 @@ resource "coder_app" "phpmyadmin" {
   slug         = "phpmyadmin"
   display_name = "phpMyAdmin"
   icon         = "/icon/database.svg"
-  url          = "http://${local.pma_container}:80"
-  subdomain    = true
-  share        = "owner"
+  url          = local.pma_url
+  external     = true
   order        = 20
 }
 
