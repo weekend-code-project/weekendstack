@@ -588,7 +588,7 @@ resource "coder_script" "wordpress_install" {
 
       # Add reverse proxy HTTPS detection before "That's all" line
       # Traefik terminates SSL and forwards HTTP — WordPress needs to trust X-Forwarded-Proto
-      sudo -u www-data tee -a /tmp/wp-proxy-fix.php >/dev/null <<'PHPFIX'
+      sudo tee /tmp/wp-proxy-fix.php >/dev/null <<'PHPFIX'
 
 /* Use the real hostname from the reverse proxy (Coder/Traefik) */
 if (isset($_SERVER['HTTP_X_FORWARDED_HOST'])) {
@@ -608,8 +608,7 @@ if (isset($_SERVER['HTTP_HOST']) && !defined('WP_CLI')) {
 PHPFIX
       # Insert before "That's all, stop editing!" line
       sudo -u www-data sed -i "/That's all, stop editing/r /tmp/wp-proxy-fix.php" "$WORDPRESS_DIR/wp-config.php"
-      # Move the block before the line (sed /r appends after)
-      rm -f /tmp/wp-proxy-fix.php
+      sudo rm -f /tmp/wp-proxy-fix.php
 
       echo "[WORDPRESS] wp-config.php configured (with reverse proxy support)"
     fi
