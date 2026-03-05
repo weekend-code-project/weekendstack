@@ -79,10 +79,10 @@ data "coder_parameter" "php_version" {
 data "coder_parameter" "db_password" {
   name         = "db_password"
   display_name = "Database Password"
-  description  = "MySQL/MariaDB password. Leave blank to auto-generate. Persists across restarts."
+  description  = "MySQL/MariaDB password. Leave blank to auto-generate."
   type         = "string"
   default      = ""
-  mutable      = true
+  mutable      = false
   order        = 100
 }
 
@@ -102,7 +102,7 @@ data "coder_parameter" "wp_admin_user" {
   description  = "WordPress admin username. Leave blank for 'admin'."
   type         = "string"
   default      = ""
-  mutable      = true
+  mutable      = false
   order        = 102
 }
 
@@ -112,7 +112,7 @@ data "coder_parameter" "wp_admin_password" {
   description  = "WordPress admin password. Leave blank to auto-generate."
   type         = "string"
   default      = ""
-  mutable      = true
+  mutable      = false
   order        = 103
 }
 
