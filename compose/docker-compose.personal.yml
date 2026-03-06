@@ -169,7 +169,6 @@ services:
     networks:
       - personal-network
     profiles:
-      - personal
       - wger
     expose:
       - "8000"
@@ -202,7 +201,6 @@ services:
       - personal-network
       - shared-network
     profiles:
-      - personal
       - wger
     ports:
       - "${WGER_PORT:-8089}:80"
@@ -258,8 +256,75 @@ services:
       - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
   # ====================================================================
+  # VAULTWARDEN - Password Manager
+  # ====================================================================
+  # Bitwarden-compatible password manager
+  # Local: http://vaultwarden.lab or http://vault.lab
+  # External: https://vaultwarden.domain.com or https://vault.domain.com
+  # ====================================================================
+  vaultwarden:
+    image: vaultwarden/server:latest
+    container_name: vaultwarden
+    networks:
+      - personal-network
+      - shared-network
+    profiles:
+      - personal
+      - vaultwarden
+    ports:
+      - "${VAULTWARDEN_PORT:-8222}:80"
+    environment:
+      DOMAIN: "https://vaultwarden.${BASE_DOMAIN}"
+      SIGNUPS_ALLOWED: ${VAULTWARDEN_SIGNUPS_ALLOWED:-true}
+      ADMIN_TOKEN: ${VAULTWARDEN_ADMIN_TOKEN:-}
+      WEBSOCKET_ENABLED: "true"
+    volumes:
+      - type: volume
+        source: vaultwarden-data
+        target: /data
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: ${VAULTWARDEN_MEMORY_LIMIT:-256m}
+    labels:
+      # Glance Configuration
+      - glance.id=vaultwarden
+      - glance.group=Personal
+      - glance.name=Vaultwarden
+      - glance.icon=si:vaultwarden
+      - glance.url=/go/vaultwarden
+      - glance.description=Password Manager
+
+      # Traefik Configuration
+      - traefik.enable=true
+
+      # External domain (HTTPS via Cloudflare)
+      - traefik.http.routers.vaultwarden-external.entrypoints=websecure
+      - traefik.http.routers.vaultwarden-external.rule=Host(`vaultwarden.${BASE_DOMAIN}`) || Host(`vault.${BASE_DOMAIN}`)
+      - traefik.http.routers.vaultwarden-external.tls=true
+      - traefik.http.routers.vaultwarden-external.service=vaultwarden
+
+      # Local .lab domain (HTTP)
+      - traefik.http.routers.vaultwarden-lab-http.entrypoints=web
+      - traefik.http.routers.vaultwarden-lab-http.rule=Host(`vaultwarden.${LAB_DOMAIN}`) || Host(`vault.${LAB_DOMAIN}`)
+      - traefik.http.routers.vaultwarden-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.vaultwarden-lab-http.service=vaultwarden
+
+      # Local .lab domain (HTTPS)
+      - traefik.http.routers.vaultwarden-lab.entrypoints=websecure
+      - traefik.http.routers.vaultwarden-lab.rule=Host(`vaultwarden.${LAB_DOMAIN}`) || Host(`vault.${LAB_DOMAIN}`)
+      - traefik.http.routers.vaultwarden-lab.tls=true
+      - traefik.http.routers.vaultwarden-lab.service=vaultwarden
+
+      # Service definition
+      - traefik.http.services.vaultwarden.loadbalancer.server.port=80
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
+
+  # ====================================================================
 volumes:
   mealie-data:
   firefly-upload:
   wger-static:
   wger-media:
+  vaultwarden-data:

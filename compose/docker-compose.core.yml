@@ -155,7 +155,7 @@ services:
     labels:
       # Glance Configuration
       - glance.id=dozzle
-      - glance.group=Core
+      - glance.group=Monitoring
       - glance.name=Dozzle
       - glance.icon=si:logstash
       - glance.url=/go/dozzle

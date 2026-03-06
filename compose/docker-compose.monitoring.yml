@@ -446,6 +446,44 @@ services:
           memory: 512m
 
   # =============================================================================
+  # GUACAMOLE DB INIT - Applies schema on first start
+  # =============================================================================
+  guacamole-db-init:
+    image: postgres:15-alpine
+    container_name: guacamole-db-init
+    labels:
+      - glance.parent=guacamole
+      - glance.name=DB Init
+      - glance.hide=true
+    networks:
+      - shared-network
+    profiles:
+      - monitoring
+    depends_on:
+      guacamole-db:
+        condition: service_healthy
+    volumes:
+      - type: bind
+        source: ${GUACAMOLE_CONFIG_DIR:-../config/guacamole}/initdb.sql
+        target: /initdb.sql
+        read_only: true
+    environment:
+      PGPASSWORD: ${GUACAMOLE_DBPASS:-guacamole_password_2024}
+      GUACAMOLE_DBUSER: ${GUACAMOLE_DBUSER:-guacamole}
+      GUACAMOLE_DBNAME: ${GUACAMOLE_DBNAME:-guacamole}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        if psql -h guacamole-db -U "$$GUACAMOLE_DBUSER" -d "$$GUACAMOLE_DBNAME" -c '\dt' 2>&1 | grep -q guacamole_user; then
+          echo 'Schema already exists, skipping init'
+        else
+          echo 'Initializing Guacamole schema...'
+          psql -h guacamole-db -U "$$GUACAMOLE_DBUSER" -d "$$GUACAMOLE_DBNAME" -f /initdb.sql
+          echo 'Schema initialized'
+        fi
+    restart: "no"
+
+  # =============================================================================
   # GUACAMOLE DAEMON (Protocol handler)
   # =============================================================================
   guacd:
@@ -474,6 +512,8 @@ services:
     depends_on:
       guacamole-db:
         condition: service_healthy
+      guacamole-db-init:
+        condition: service_completed_successfully
       guacd:
         condition: service_started
     restart: unless-stopped
