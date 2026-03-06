@@ -482,19 +482,19 @@ generate_env_interactive() {
     echo ""
     echo "Config files stay in ./config (part of repository)"
     echo ""
-    echo "Default: Relative paths (./files, ./data)"
+    echo "Default: Absolute paths under project directory"
     echo "Advanced: Can use absolute paths or NFS mounts (e.g., /mnt/storage)"
     echo ""
     
-    local files_dir="./files"
-    local data_dir="./data"
-    local config_dir="./config"  # Always use repo config dir
+    local files_dir="${SCRIPT_DIR}/files"
+    local data_dir="${SCRIPT_DIR}/data"
+    local config_dir="${SCRIPT_DIR}/config"  # Always use repo config dir
     local workspace_dir="/mnt/workspace"
     local ssh_key_dir="\${CONFIG_BASE_DIR}/ssh"
     
     if prompt_yes_no "Customize storage paths?" "n"; then
-        files_dir=$(prompt_input "User files directory" "./files")
-        data_dir=$(prompt_input "Application data directory" "./data")
+        files_dir=$(prompt_input "User files directory" "${SCRIPT_DIR}/files")
+        data_dir=$(prompt_input "Application data directory" "${SCRIPT_DIR}/data")
         
         echo ""
         echo "Coder workspace directory (must be absolute path):"
@@ -542,7 +542,7 @@ generate_env_interactive() {
     echo -e "${BOLD}Storage:${NC}"
     echo "  Files:            $files_dir"
     echo "  Data:             $data_dir"
-    echo "  Config:           $config_dir"
+    echo "  Config:           ${SCRIPT_DIR}/config"
     echo "  Workspace:        $workspace_dir"
     echo ""
     echo -e "${BOLD}Profiles:${NC}"

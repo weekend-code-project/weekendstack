@@ -824,7 +824,7 @@ services:
         source: ${FILES_BASE_DIR:-../files}/postiz/uploads
         target: /app/public/uploads
       - type: bind
-        source: ./config/postiz/nginx.conf
+        source: ../config/postiz/nginx.conf
         target: /etc/nginx/nginx.conf
         read_only: true
     networks:

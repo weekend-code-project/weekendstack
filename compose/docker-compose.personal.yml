@@ -218,7 +218,7 @@ services:
         target: /home/wger/media
         read_only: true
       - type: bind
-        source: ./config/wger/nginx.conf
+        source: ../config/wger/nginx.conf
         target: /etc/nginx/conf.d/default.conf
         read_only: true
     restart: unless-stopped

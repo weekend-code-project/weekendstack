@@ -254,7 +254,7 @@ services:
       - SEARXNG_SECRET=${SEARXNG_SECRET:-searxng-secret-key-change-me-2024}
     volumes:
       - type: bind
-        source: ./config/searxng
+        source: ../config/searxng
         target: /etc/searxng
         bind:
           create_host_path: true
@@ -548,7 +548,6 @@ services:
       - ai-network
       - shared-network
     profiles:
-      - ai
       - gpu
     ports:
       - "${WHISPERX_PORT:-9001}:9000"

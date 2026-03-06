@@ -867,6 +867,23 @@ preflight_fix_mounts() {
     if [[ $fixed -gt 0 ]]; then
         log_info "Fixed $fixed mount path(s). Run --cloudflare-only or --certs-only to populate config."
     fi
+
+    # Pre-create data directories that need specific user ownership.
+    # Docker Compose creates missing bind-mount dirs as root; these services
+    # run as non-root users and would fail with EACCES otherwise.
+    local data_base="${DATA_BASE_DIR:-$SCRIPT_DIR/data}"
+    # Evaluate variable references (DATA_BASE_DIR may itself contain vars)
+    data_base=$(eval echo "$data_base")
+    local -A dir_owners=(
+        ["$data_base/n8n"]="1000:1000"   # n8n runs as node (uid 1000)
+    )
+    for dir in "${!dir_owners[@]}"; do
+        if [[ ! -d "$dir" ]]; then
+            mkdir -p "$dir" 2>/dev/null || sudo mkdir -p "$dir"
+            sudo chown "${dir_owners[$dir]}" "$dir" 2>/dev/null || true
+            log_info "Created data directory with correct ownership: $dir"
+        fi
+    done
 }
 
 # Expand abstract "all" profile into concrete Docker Compose profile names and

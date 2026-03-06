@@ -57,6 +57,8 @@ generate_value() {
         openssl rand -hex 64
     elif [[ "$comment" =~ "openssl rand -hex 32" ]]; then
         openssl rand -hex 32
+    elif [[ "$comment" =~ "openssl rand -hex 16" ]]; then
+        openssl rand -hex 16
     elif [[ "$comment" =~ "openssl rand -base64 32" ]]; then
         openssl rand -base64 32
     elif [[ "$comment" =~ "openssl rand -base64 24" ]]; then
