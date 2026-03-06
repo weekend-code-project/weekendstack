@@ -50,6 +50,7 @@ config/traefik/auth/*
 !config/traefik/auth/dynamic-lab-catchall.yaml
 !config/traefik/auth/tls.yml
 !config/traefik/auth/middlewares.yml
+!config/traefik/auth/service-middlewares.yml
 
 traefik-auth/
 

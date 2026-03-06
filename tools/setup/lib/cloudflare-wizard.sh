@@ -88,6 +88,40 @@ show_cloudflare_intro() {
 setup_cloudflare_tunnel() {
     show_cloudflare_intro
 
+    # ── Fast-path: API token + tunnel ID are set but connector token is missing ──
+    # No need for the full wizard — just fetch the token from the API.
+    local _env_file="${SCRIPT_DIR}/.env"
+    local _api_token _tunnel_id _existing_token
+    _api_token=$(grep "^CLOUDFLARE_API_TOKEN="  "$_env_file" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+    _tunnel_id=$(grep "^CLOUDFLARE_TUNNEL_ID="  "$_env_file" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+    _existing_token=$(grep "^CLOUDFLARE_TUNNEL_TOKEN=" "$_env_file" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+
+    if [[ -n "$_api_token" && -n "$_tunnel_id" && -z "$_existing_token" ]]; then
+        log_step "API token and tunnel ID found — fetching connector token automatically..."
+        local _account_id
+        _account_id=$(grep "^CLOUDFLARE_ACCOUNT_ID=" "$_env_file" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+        if [[ -z "$_account_id" ]]; then
+            _account_id=$(curl -s "https://api.cloudflare.com/client/v4/accounts" \
+                -H "Authorization: Bearer $_api_token" | jq -r '.result[0].id // empty' 2>/dev/null)
+        fi
+        if [[ -n "$_account_id" ]]; then
+            local _connector_token
+            _connector_token=$(curl -s \
+                "https://api.cloudflare.com/client/v4/accounts/$_account_id/cfd_tunnel/$_tunnel_id/token" \
+                -H "Authorization: Bearer $_api_token" | jq -r '.result // empty' 2>/dev/null)
+            if [[ -n "$_connector_token" ]]; then
+                sed -i "s|^CLOUDFLARE_TUNNEL_TOKEN=.*|CLOUDFLARE_TUNNEL_TOKEN=$_connector_token|" "$_env_file"
+                log_success "Connector token fetched and saved automatically"
+                export CLOUDFLARE_TUNNEL_ENABLED=true
+                return 0
+            else
+                log_warn "Could not fetch connector token — continuing with full wizard"
+            fi
+        else
+            log_warn "Could not resolve account ID — continuing with full wizard"
+        fi
+    fi
+
     if check_cloudflare_config; then
         log_info "Cloudflare Tunnel configuration already exists"
         if ! prompt_yes_no "Reconfigure Cloudflare Tunnel?" "n"; then

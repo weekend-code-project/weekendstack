@@ -1,0 +1,30 @@
+http:
+  middlewares:
+    # ── Basic Auth: AI Services (Whisper, LocalAI, Ollama) ───────────────────
+    ai-services-auth:
+      basicAuth:
+        usersFile: /config/traefik/auth/htpasswd-test1
+
+    # ── Basic Auth: Internal Tools (IT-Tools, Excalidraw, Glance ext, Guacamole)
+    it-tools-auth:
+      basicAuth:
+        usersFile: /config/traefik/auth/htpasswd-test1
+
+    # ── Basic Auth: SearXNG ──────────────────────────────────────────────────
+    searxng-auth:
+      basicAuth:
+        usersFile: /config/traefik/auth/htpasswd-test1
+
+    # ── Redirect: Guacamole requires /guacamole/ path ────────────────────────
+    guacamole-redirect:
+      redirectRegex:
+        regex: "^(https?://[^/]+)/?$"
+        replacement: "${1}/guacamole/"
+        permanent: false
+
+    # ── Redirect: Glance external — redirect root to /external ───────────────
+    glance-external-redirect:
+      redirectRegex:
+        regex: "^(https?://[^/]+)/$"
+        replacement: "${1}/external"
+        permanent: false
