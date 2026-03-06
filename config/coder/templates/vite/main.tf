@@ -167,24 +167,14 @@ data "coder_parameter" "startup_command" {
   order        = 14
 }
 
-data "coder_parameter" "external_preview" {
-  name         = "external_preview"
-  display_name = "External Preview"
-  description  = "Enable external preview via Traefik"
-  type         = "bool"
-  default      = "true"
-  mutable      = true
-  order        = 200
-}
-
 data "coder_parameter" "workspace_password" {
   name         = "workspace_password"
   display_name = "Workspace Password"
-  description  = "Password for SSH and external preview. Empty = auto-generated for SSH."
+  description  = "Password for SSH and external preview. Leave empty for auto-generated SSH password."
   type         = "string"
   default      = ""
   mutable      = true
-  order        = 201
+  order        = 200
 }
 
 data "coder_parameter" "enable_ssh" {
@@ -253,7 +243,7 @@ locals {
   startup_command  = data.coder_parameter.startup_command.value
 
   preview_port             = 8080
-  external_preview_enabled = data.coder_parameter.external_preview.value
+  external_preview_enabled = true
   workspace_password       = data.coder_parameter.workspace_password.value
   ssh_enabled              = data.coder_parameter.enable_ssh.value
   ssh_password             = local.workspace_password != "" ? local.workspace_password : random_password.ssh_fallback.result

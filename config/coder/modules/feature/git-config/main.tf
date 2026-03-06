@@ -231,10 +231,13 @@ CRED_HELPER
       if echo "$HTTPS_URL" | grep -qE 'https://(github\.com|gitlab\.com|bitbucket\.org)/'; then
         echo "[GIT] Trying HTTPS fallback: $HTTPS_URL"
         rm -rf "$MIRROR_DIR"
-        if git clone "$HTTPS_URL" "$MIRROR_DIR" 2>&1; then
+        # Unset Coder's credential interceptors so anonymous HTTPS works for public repos
+        if GIT_ASKPASS="" GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="" \
+           git clone "$HTTPS_URL" "$MIRROR_DIR" 2>&1; then
           CLONE_SUCCESS=true
         else
-          echo "[GIT] HTTPS fallback also failed (repo may be private — add SSH key to GitHub/GitLab)"
+          echo "[GIT] HTTPS fallback also failed (repo is private — add SSH key to GitHub/GitLab)"
+          echo "[GIT] SSH key to add: check Coder Profile → SSH Keys"
         fi
       fi
     fi
