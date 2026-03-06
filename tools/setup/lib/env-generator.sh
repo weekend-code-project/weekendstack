@@ -348,15 +348,18 @@ generate_env_interactive() {
         echo "  2) Firefly III - Personal finance and budget tracking"
         echo "  3) Wger        - Workout and fitness tracker"
         echo ""
-        echo "Enter numbers space-separated (e.g. '1 3'), or press Enter to install all:"
+        echo "Enter numbers space-separated (e.g. '1 3'), press Enter to install all, or '0' for none:"
         echo ""
         
         local personal_input
-        read -p "Personal services [Enter=all]: " -r personal_input </dev/tty
+        read -p "Personal services [Enter=all, 0=none]: " -r personal_input </dev/tty
         
         if [[ -z "$personal_input" ]]; then
             personal_services=("mealie" "firefly" "wger")
             log_info "Installing all personal services"
+        elif [[ "$personal_input" == "0" ]]; then
+            personal_services=()
+            log_info "No personal services selected"
         else
             for n in $personal_input; do
                 case "$n" in
@@ -391,15 +394,18 @@ generate_env_interactive() {
         echo "  1) Home Assistant  - Smart home automation platform"
         echo "  2) Node-RED        - Flow-based automation and IoT"
         echo ""
-        echo "Enter numbers space-separated (e.g. '1 2'), or press Enter to install all:"
+        echo "Enter numbers space-separated (e.g. '1 2'), press Enter to install all, or '0' for none:"
         echo ""
         
         local automation_input
-        read -p "Automation services [Enter=all]: " -r automation_input </dev/tty
+        read -p "Automation services [Enter=all, 0=none]: " -r automation_input </dev/tty
         
         if [[ -z "$automation_input" ]]; then
             automation_services=("homeassistant" "nodered")
             log_info "Installing all automation services"
+        elif [[ "$automation_input" == "0" ]]; then
+            automation_services=()
+            log_info "No automation services selected"
         else
             for n in $automation_input; do
                 case "$n" in
