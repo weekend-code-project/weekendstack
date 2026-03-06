@@ -111,24 +111,14 @@ data "coder_parameter" "package_manager" {
   }
 }
 
-data "coder_parameter" "persist_node_modules" {
-  name         = "persist_node_modules"
-  display_name = "Persist node_modules"
-  description  = "Store node_modules in a separate volume to keep workspace lean. Useful when home is on a small drive."
-  type         = "bool"
-  default      = "false"
-  mutable      = false
-  order        = 12
-}
-
 data "coder_parameter" "node_modules_paths" {
   name         = "node_modules_paths"
-  display_name = "node_modules Paths"
-  description  = "Comma-separated list of node_modules directories relative to workspace root (e.g. 'node_modules,frontend/node_modules')"
+  display_name = "Persist node_modules"
+  description  = "Comma-separated node_modules paths to store in a separate volume (e.g. 'node_modules' or 'node_modules,frontend/node_modules'). Leave empty to disable persistence."
   type         = "string"
-  default      = "node_modules"
+  default      = ""
   mutable      = false
-  order        = 13
+  order        = 12
 }
 
 data "coder_parameter" "auto_generate_html" {
@@ -241,8 +231,8 @@ locals {
 
   node_version     = data.coder_parameter.node_version.value
   package_manager  = data.coder_parameter.package_manager.value
-  persist_nm       = data.coder_parameter.persist_node_modules.value
   nm_paths         = data.coder_parameter.node_modules_paths.value
+  persist_nm       = length(trimspace(data.coder_parameter.node_modules_paths.value)) > 0
 
   startup_command          = data.coder_parameter.startup_command.value
   auto_generate_html       = data.coder_parameter.auto_generate_html.value
@@ -566,6 +556,23 @@ resource "coder_script" "startup_command" {
 
     if command -v node >/dev/null 2>&1; then
       echo "[STARTUP-CMD] Node: $(node -v), npm: $(npm -v 2>/dev/null || echo 'n/a')"
+    fi
+
+    # ── Wait for git clone to finish if a repo URL was configured ──
+    REPO_URL="${data.coder_parameter.repo_url.value}"
+    if [ -n "$REPO_URL" ]; then
+      echo "[STARTUP-CMD] Waiting for repository clone to complete..."
+      MAX_CLONE_WAIT=300
+      CLONE_WAITED=0
+      while [ ! -f /tmp/git-clone.done ] && [ $CLONE_WAITED -lt $MAX_CLONE_WAIT ]; do
+        sleep 3
+        CLONE_WAITED=$((CLONE_WAITED + 3))
+      done
+      if [ -f /tmp/git-clone.done ]; then
+        echo "[STARTUP-CMD] Repository clone finished"
+      else
+        echo "[STARTUP-CMD] WARNING: Timed out waiting for git clone after $${MAX_CLONE_WAIT}s"
+      fi
     fi
 
     cd "$WORKSPACE_DIR" 2>/dev/null || { mkdir -p "$WORKSPACE_DIR"; cd "$WORKSPACE_DIR"; }

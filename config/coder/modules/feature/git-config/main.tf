@@ -131,11 +131,34 @@ CRED_HELPER
 
     if [ -z "$REPO_URL" ]; then
       echo "[GIT] No repository URL configured (skipping clone)"
+      touch /tmp/git-clone.done
       echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
       echo "[GIT] Done"
       echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
       exit 0
     fi
+
+    # ── Pre-clone: ensure ~/.ssh/known_hosts exists for all common providers ──
+    # This prevents "Host key verification failed" on the first clone attempt,
+    # which would otherwise race against the ssh-server module.
+    mkdir -p "$HOME/.ssh"
+    chmod 700 "$HOME/.ssh"
+    touch "$HOME/.ssh/known_hosts"
+    chmod 644 "$HOME/.ssh/known_hosts"
+    echo "[GIT] Scanning host keys for common Git providers..."
+    for _gh in github.com gitlab.com bitbucket.org; do
+      if ! grep -q "$_gh" "$HOME/.ssh/known_hosts" 2>/dev/null; then
+        ssh-keyscan -H "$_gh" >> "$HOME/.ssh/known_hosts" 2>/dev/null || true
+      fi
+    done
+    # Also scan the specific SSH domain in the repo URL (e.g. self-hosted Gitea)
+    _ssh_domain=$(echo "$REPO_URL" | sed -n 's/git@\([^:]*\):.*/\1/p')
+    if [ -n "$_ssh_domain" ] && ! grep -q "$_ssh_domain" "$HOME/.ssh/known_hosts" 2>/dev/null; then
+      echo "[GIT] Scanning host key for $_ssh_domain..."
+      ssh-keyscan -H "$_ssh_domain" >> "$HOME/.ssh/known_hosts" 2>/dev/null || \
+        echo "[GIT] WARNING: Could not scan host key for $_ssh_domain"
+    fi
+    unset _gh _ssh_domain
 
     if [ -d "$WORKSPACE_DIR/.git" ]; then
       echo "[GIT] Repository already cloned at $WORKSPACE_DIR"
@@ -151,6 +174,7 @@ CRED_HELPER
         echo "[GIT] Pull skipped (may have local changes or diverged)"
       fi
 
+      touch /tmp/git-clone.done
       echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
       echo "[GIT] Done"
       echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -163,7 +187,6 @@ CRED_HELPER
     # Coder handles SSH auth natively via $GIT_SSH_COMMAND (injected by coder agent).
     # The user's Coder SSH key must be added to their Git provider.
     if echo "$REPO_URL" | grep -q "^git@"; then
-      SSH_DOMAIN=$(echo "$REPO_URL" | sed -n 's/git@\([^:]*\):.*/\1/p')
       echo "[GIT] Using Coder's native SSH key for Git authentication"
 
     # ── HTTPS URL handling ──
@@ -239,6 +262,9 @@ CRED_HELPER
       fi
       rm -rf "$MIRROR_DIR"
     fi
+
+    # Signal to other startup scripts that git clone is done (success or failure)
+    touch /tmp/git-clone.done
 
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "[GIT] Done"
