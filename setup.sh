@@ -869,28 +869,72 @@ preflight_fix_mounts() {
     fi
 }
 
+# Expand abstract "all" profile into concrete Docker Compose profile names and
+# resolve any cross-profile dependencies (e.g. external requires networking).
+# Usage: expanded=($(expand_profiles "${arr[@]}"))
+expand_profiles() {
+    local -a input=("$@")
+    declare -A seen
+    local -a result=()
+
+    # Base profiles that "all" maps to (no gpu/external — those are opt-in)
+    local ALL_CONCRETE=(core networking monitoring productivity dev ai media personal automation)
+
+    for p in "${input[@]}"; do
+        if [[ "$p" == "all" ]]; then
+            for cp in "${ALL_CONCRETE[@]}"; do
+                [[ -z "${seen[$cp]:-}" ]] && { seen[$cp]=1; result+=("$cp"); }
+            done
+        else
+            [[ -z "${seen[$p]:-}" ]] && { seen[$p]=1; result+=("$p"); }
+        fi
+    done
+
+    # cloudflare-tunnel (external profile) depends_on traefik (networking profile)
+    if [[ -n "${seen[external]:-}" && -z "${seen[networking]:-}" ]]; then
+        result+=("networking")
+        seen[networking]=1
+    fi
+
+    echo "${result[@]}"
+}
+
 # Start services with profiles
 start_services_with_profiles() {
-    local profiles=("$@")
+    local -a profiles=("$@")
 
     preflight_fix_mounts
 
+    # Re-read COMPOSE_PROFILES from .env — the interactive wizard may have added
+    # sub-profile choices (gitea, open-webui, librechat, mealie, homeassistant…)
+    # that were not in the original in-memory selected_profiles array.
+    if [[ -f "$SCRIPT_DIR/.env" ]]; then
+        local env_compose_profiles
+        env_compose_profiles=$(grep "^COMPOSE_PROFILES=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2- | tr -d '"')
+        if [[ -n "$env_compose_profiles" ]]; then
+            IFS=',' read -ra profiles <<< "$env_compose_profiles"
+        fi
+    fi
+
+    # Expand "all" → concrete profiles and resolve cross-profile dependencies
+    profiles=($(expand_profiles "${profiles[@]}"))
+
     log_header "Starting Services"
-    
+
     local profile_args=""
     for profile in "${profiles[@]}"; do
         profile_args="$profile_args --profile $profile"
     done
-    
+
     log_step "Starting services for profiles: ${profiles[*]}"
-    
+
     if docker compose $profile_args up -d; then
         log_success "Services started successfully"
-        
+
         echo ""
         log_info "Waiting for services to become healthy..."
         sleep 5
-        
+
         # Show running services
         echo ""
         docker compose ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"

@@ -182,7 +182,7 @@ services:
       - ai-network
       - shared-network
     profiles:
-      - ai
+      - open-webui
     ports:
       - "${OPENWEBUI_PORT:-3000}:8080"
     volumes:
@@ -406,7 +406,7 @@ services:
       - ai-network
       - shared-network
     profiles:
-      - ai
+      - anythingllm
     ports:
       - "${ANYTHINGLLM_PORT:-3003}:3001"
     environment:
@@ -607,7 +607,7 @@ services:
       - ai-network
       - shared-network
     profiles:
-      - ai
+      - librechat
     ports:
       - "${LIBRECHAT_PORT:-3080}:3080"
     environment:
@@ -682,7 +682,7 @@ services:
     networks:
       - ai-network
     profiles:
-      - ai
+      - librechat
     volumes:
       - type: volume
         source: librechat-data

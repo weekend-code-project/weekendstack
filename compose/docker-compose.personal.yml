@@ -36,6 +36,7 @@ services:
       - shared-network
     profiles:
       - personal
+      - mealie
     ports:
       - "${MEALIE_PORT:-9925}:9000"
     environment:
@@ -100,6 +101,7 @@ services:
       - shared-network
     profiles:
       - personal
+      - firefly
     ports:
       - "${FIREFLY_PORT:-8086}:8080"
     environment:
@@ -168,6 +170,7 @@ services:
       - personal-network
     profiles:
       - personal
+      - wger
     expose:
       - "8000"
     environment:
@@ -200,6 +203,7 @@ services:
       - shared-network
     profiles:
       - personal
+      - wger
     ports:
       - "${WGER_PORT:-8089}:80"
     depends_on:

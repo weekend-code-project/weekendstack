@@ -47,6 +47,7 @@ services:
       - automation-network
     profiles:
       - automation
+      - homeassistant
     volumes:
       - type: bind
         source: ${DATA_BASE_DIR:-../data}/homeassistant/config
@@ -88,6 +89,7 @@ services:
         condition: service_completed_successfully
     profiles:
       - automation
+      - homeassistant
     ports:
       - "${HOMEASSISTANT_PORT:-8123}:8123"
     environment:
@@ -164,6 +166,7 @@ services:
       - shared-network
     profiles:
       - automation
+      - nodered
     ports:
       - "${NODERED_PORT:-1880}:1880"
     environment:

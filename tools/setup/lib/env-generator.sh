@@ -145,12 +145,24 @@ generate_env_interactive() {
     # Check if networking profile is selected
     local has_networking=false
     local has_dev=false
+    local has_ai=false
+    local has_personal=false
+    local has_automation=false
     for profile in "$@"; do
         if [[ "$profile" == "networking" ]] || [[ "$profile" == "all" ]]; then
             has_networking=true
         fi
         if [[ "$profile" == "dev" ]] || [[ "$profile" == "all" ]]; then
             has_dev=true
+        fi
+        if [[ "$profile" == "ai" ]] || [[ "$profile" == "all" ]]; then
+            has_ai=true
+        fi
+        if [[ "$profile" == "personal" ]] || [[ "$profile" == "all" ]]; then
+            has_personal=true
+        fi
+        if [[ "$profile" == "automation" ]] || [[ "$profile" == "all" ]]; then
+            has_automation=true
         fi
     done
     
@@ -162,16 +174,27 @@ generate_env_interactive() {
     if $has_dev; then
         ((total_steps++))  # Add Git Service Selection
     fi
+    if $has_ai; then
+        ((total_steps++))  # Add AI Frontend Selection
+    fi
+    if $has_personal; then
+        ((total_steps++))  # Add Personal Services Selection
+    fi
+    if $has_automation; then
+        ((total_steps++))  # Add Automation Services Selection
+    fi
     
     local lab_domain="lab"
     local base_domain="localhost"
+    local _step=1  # running step counter
     
     # ========================================================================
-    # STEP 2: Domain Configuration (only if networking profile selected)
+    # STEP: Domain Configuration (only if networking profile selected)
     # ========================================================================
     if $has_networking; then
+        _step=$((_step + 1))
         clear
-        show_progress 2 $total_steps "Domain & Certificate Configuration"
+        show_progress $_step $total_steps "Domain & Certificate Configuration"
         
         echo "You selected the networking profile which includes Traefik reverse proxy."
         echo ""
@@ -195,26 +218,23 @@ generate_env_interactive() {
     fi
     
     # ========================================================================
-    # STEP 2.5/3: Git Service Selection (only if dev profile selected)
+    # STEP: Git Service Selection (only if dev profile selected)
     # ========================================================================
     local git_service="none"
     
     if $has_dev; then
+        _step=$((_step + 1))
         clear
-        if $has_networking; then
-            show_progress 3 $total_steps "Git Service Selection"
-        else
-            show_progress 2 $total_steps "Git Service Selection"
-        fi
+        show_progress $_step $total_steps "Git Service Selection"
         
         echo "You selected the development profile which includes git hosting."
         echo ""
-        echo "Choose which git service to use:"
+        echo "Choose which git service to install:"
         echo ""
-        echo "  1) None          - Skip git service (IDE only)"
-        echo "  2) Gitea         - Lightweight, recommended (default)"
+        echo "  1) None          - Skip git service (Coder IDE only)"
+        echo "  2) Gitea         - Lightweight, fast, recommended (default)"
         if $has_networking; then
-            echo "  3) GitLab        - Full CI/CD platform (requires HTTPS/Traefik)"
+            echo "  3) GitLab        - Full CI/CD platform (requires Traefik)"
         fi
         echo ""
         
@@ -240,7 +260,7 @@ generate_env_interactive() {
                     log_success "GitLab selected (full CI/CD platform)"
                     log_warn "Note: GitLab requires HTTPS via Traefik. Ensure networking profile is enabled."
                 else
-                    log_error "GitLab requires the networking profile (Traefik). Please select Gitea or None."
+                    log_error "GitLab requires the networking profile (Traefik). Defaulting to Gitea."
                     git_service="gitea"
                     log_success "Defaulting to Gitea"
                 fi
@@ -255,17 +275,155 @@ generate_env_interactive() {
     fi
     
     # ========================================================================
-    # STEP 3/4: Admin Credentials (always shown)
+    # STEP: AI Chat Frontend Selection (only if ai profile selected)
     # ========================================================================
+    local -a ai_frontends=()
+    local use_gpu=false
+    
+    if $has_ai; then
+        _step=$((_step + 1))
+        clear
+        show_progress $_step $total_steps "AI Services Configuration"
+        
+        # GPU detection
+        if [[ "${GPU_AVAILABLE:-false}" == "true" ]]; then
+            log_success "NVIDIA GPU detected — Ollama will use GPU acceleration"
+            use_gpu=true
+        else
+            log_info "No GPU detected — Ollama will run on CPU"
+        fi
+        echo ""
+        
+        echo "You selected AI services. Ollama (LLM backend) and SearXNG (search) are"
+        echo "always installed. Choose which chat frontend(s) to add:"
+        echo ""
+        echo "  1) Open WebUI     - Clean, polished interface for local models (recommended)"
+        echo "  2) LibreChat      - Multi-provider (OpenAI, Anthropic, Ollama, and more)"
+        echo "  3) AnythingLLM    - Document Q&A with RAG and vector DB"
+        echo ""
+        echo "Enter numbers space-separated (e.g. '1 2'), press Enter for all, or '0' for none:"
+        echo ""
+        
+        local ai_frontend_input
+        read -p "AI frontend selection [Enter=all]: " -r ai_frontend_input </dev/tty
+        
+        if [[ -z "$ai_frontend_input" ]]; then
+            ai_frontends=("open-webui" "librechat" "anythingllm")
+            log_info "Installing all AI frontends: Open WebUI, LibreChat, AnythingLLM"
+        elif [[ "$ai_frontend_input" == "0" ]]; then
+            ai_frontends=()
+            log_info "No chat frontend selected — Ollama API only"
+        else
+            for n in $ai_frontend_input; do
+                case "$n" in
+                    1) ai_frontends+=("open-webui") ;;
+                    2) ai_frontends+=("librechat") ;;
+                    3) ai_frontends+=("anythingllm") ;;
+                    *) log_warn "Unknown AI frontend option: $n (skipped)" ;;
+                esac
+            done
+            if [[ ${#ai_frontends[@]} -gt 0 ]]; then
+                log_success "Selected AI frontends: ${ai_frontends[*]}"
+            else
+                log_info "No valid frontend selected — Ollama API only"
+            fi
+        fi
+        
+        log_success "AI service configuration complete"
+    fi
+    
+    # ========================================================================
+    # STEP: Personal Services Selection (only if personal profile selected)
+    # ========================================================================
+    local -a personal_services=()
+    
+    if $has_personal; then
+        _step=$((_step + 1))
+        clear
+        show_progress $_step $total_steps "Personal Services Selection"
+        
+        echo "You selected personal services. Choose which ones to install:"
+        echo ""
+        echo "  1) Mealie      - Recipe manager and meal planner"
+        echo "  2) Firefly III - Personal finance and budget tracking"
+        echo "  3) Wger        - Workout and fitness tracker"
+        echo ""
+        echo "Enter numbers space-separated (e.g. '1 3'), or press Enter to install all:"
+        echo ""
+        
+        local personal_input
+        read -p "Personal services [Enter=all]: " -r personal_input </dev/tty
+        
+        if [[ -z "$personal_input" ]]; then
+            personal_services=("mealie" "firefly" "wger")
+            log_info "Installing all personal services"
+        else
+            for n in $personal_input; do
+                case "$n" in
+                    1) personal_services+=("mealie") ;;
+                    2) personal_services+=("firefly") ;;
+                    3) personal_services+=("wger") ;;
+                    *) log_warn "Unknown personal service option: $n (skipped)" ;;
+                esac
+            done
+            if [[ ${#personal_services[@]} -gt 0 ]]; then
+                log_success "Selected personal services: ${personal_services[*]}"
+            else
+                log_info "No personal services selected"
+            fi
+        fi
+        
+        log_success "Personal services configuration complete"
+    fi
+    
+    # ========================================================================
+    # STEP: Automation Services Selection (only if automation profile selected)
+    # ========================================================================
+    local -a automation_services=()
+    
+    if $has_automation; then
+        _step=$((_step + 1))
+        clear
+        show_progress $_step $total_steps "Home Automation Services Selection"
+        
+        echo "You selected home automation services. Choose which ones to install:"
+        echo ""
+        echo "  1) Home Assistant  - Smart home automation platform"
+        echo "  2) Node-RED        - Flow-based automation and IoT"
+        echo ""
+        echo "Enter numbers space-separated (e.g. '1 2'), or press Enter to install all:"
+        echo ""
+        
+        local automation_input
+        read -p "Automation services [Enter=all]: " -r automation_input </dev/tty
+        
+        if [[ -z "$automation_input" ]]; then
+            automation_services=("homeassistant" "nodered")
+            log_info "Installing all automation services"
+        else
+            for n in $automation_input; do
+                case "$n" in
+                    1) automation_services+=("homeassistant") ;;
+                    2) automation_services+=("nodered") ;;
+                    *) log_warn "Unknown automation service option: $n (skipped)" ;;
+                esac
+            done
+            if [[ ${#automation_services[@]} -gt 0 ]]; then
+                log_success "Selected automation services: ${automation_services[*]}"
+            else
+                log_info "No automation services selected"
+            fi
+        fi
+        
+        log_success "Automation services configuration complete"
+    fi
+    
+    # ========================================================================
+    # STEP: Admin Credentials (always shown)
+    # ========================================================================
+    _step=$((_step + 1))
     clear
-    local admin_step=2
-    if $has_networking; then
-        ((admin_step++))
-    fi
-    if $has_dev; then
-        ((admin_step++))
-    fi
-    show_progress $admin_step $total_steps "Default Admin Credentials"
+    show_progress $_step $total_steps "Default Admin Credentials"
     
     echo "Many services (NocoDB, Paperless, Postiz, etc.) support auto-provisioning"
     echo "with default credentials. These will be used during initial setup."
@@ -305,11 +463,11 @@ generate_env_interactive() {
     log_success "Admin credentials configured"
     
     # ========================================================================
-    # STEP 4/5: File Storage Paths
+    # STEP: File Storage Paths
     # ========================================================================
+    _step=$((_step + 1))
     clear
-    local storage_step=$((admin_step + 1))
-    show_progress $storage_step $total_steps "File Storage Paths"
+    show_progress $_step $total_steps "File Storage Paths"
     
     echo "WeekendStack uses base directories for data storage:"
     echo ""
@@ -382,7 +540,26 @@ generate_env_interactive() {
     echo "  Workspace:        $workspace_dir"
     echo ""
     echo -e "${BOLD}Profiles:${NC}"
-    echo "  Selected:         ${selected_profiles[*]}"
+    echo "  Base:             ${selected_profiles[*]}"
+    if $has_dev && [[ "$git_service" != "none" ]]; then
+        echo "  Git:              $git_service"
+    fi
+    if $has_ai; then
+        if [[ ${#ai_frontends[@]} -gt 0 ]]; then
+            echo "  AI frontends:     ${ai_frontends[*]}"
+        else
+            echo "  AI frontends:     none (Ollama API only)"
+        fi
+        if $use_gpu; then
+            echo "  GPU:              enabled (nvidia)"
+        fi
+    fi
+    if $has_personal && [[ ${#personal_services[@]} -gt 0 ]]; then
+        echo "  Personal:         ${personal_services[*]}"
+    fi
+    if $has_automation && [[ ${#automation_services[@]} -gt 0 ]]; then
+        echo "  Automation:       ${automation_services[*]}"
+    fi
     echo ""
     
     if ! prompt_yes_no "Generate .env file with these settings?" "y"; then
@@ -475,15 +652,46 @@ generate_env_interactive() {
     # Add setup metadata
     add_setup_metadata "$env_file" "${selected_profiles[@]}"
     
-    # Step 4: Generate custom docker-compose profile
-    log_step "Generating custom docker-compose profile..."
+    # Step 4: Build final profile list (base + sub-profiles) and write to .env
+    log_step "Generating compose profile list..."
     local profiles_csv=$(IFS=, ; echo "${selected_profiles[*]}")
     
-    # Add selected git service to profiles if dev was selected
+    # Append sub-profile choices (git service, AI frontends, personal, automation)
     if $has_dev && [[ "$git_service" != "none" ]]; then
         profiles_csv="${profiles_csv},${git_service}"
     fi
+    if $has_ai && [[ ${#ai_frontends[@]} -gt 0 ]]; then
+        for fe in "${ai_frontends[@]}"; do
+            profiles_csv="${profiles_csv},${fe}"
+        done
+    fi
+    if $has_ai && $use_gpu; then
+        profiles_csv="${profiles_csv},gpu"
+    fi
+    if $has_personal && [[ ${#personal_services[@]} -gt 0 ]]; then
+        for svc in "${personal_services[@]}"; do
+            profiles_csv="${profiles_csv},${svc}"
+        done
+    fi
+    if $has_automation && [[ ${#automation_services[@]} -gt 0 ]]; then
+        for svc in "${automation_services[@]}"; do
+            profiles_csv="${profiles_csv},${svc}"
+        done
+    fi
     
+    # Write the full expanded profile list to COMPOSE_PROFILES in .env so that
+    # start_services_with_profiles can read it back (avoiding the in-memory
+    # selected_profiles array which only has the base profiles).
+    if grep -q "^COMPOSE_PROFILES=" "$env_file"; then
+        update_env_var "COMPOSE_PROFILES" "$profiles_csv" "$env_file"
+    else
+        echo "" >> "$env_file"
+        echo "COMPOSE_PROFILES=$profiles_csv" >> "$env_file"
+    fi
+    update_env_var "SELECTED_PROFILES" "$profiles_csv" "$env_file"
+    
+    # Step 5: Generate custom docker-compose profile
+    log_step "Generating custom docker-compose profile..."
     if "${SCRIPT_DIR}/tools/env/scripts/generate-custom-profile.sh" \
         --profiles "$profiles_csv" >/dev/null 2>&1; then
         log_success "Custom profile generated"
