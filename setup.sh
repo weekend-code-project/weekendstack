@@ -348,9 +348,15 @@ setup_coder_github_ssh_key() {
     key_file=$(mktemp /tmp/coder-ssh-key.XXXXXX.pub)
     echo "$ssh_key" > "$key_file"
 
+    # Build a unique title: "Coder @ hostname (YYYY-MM-DD)"
+    local hostname_short install_date key_title
+    hostname_short=$(hostname -s 2>/dev/null || echo "server")
+    install_date=$(date +%Y-%m-%d)
+    key_title="Coder @ ${hostname_short} (${install_date})"
+
     echo ""
-    log_info "Adding Coder SSH key to GitHub..."
-    if gh ssh-key add "$key_file" --title "Coder WeekendStack" --type authentication 2>&1; then
+    log_info "Adding Coder SSH key to GitHub as: \"$key_title\""
+    if gh ssh-key add "$key_file" --title "$key_title" --type authentication 2>&1; then
         log_success "SSH key added to GitHub! Workspace git clones will now work automatically."
     else
         log_warn "Key may already exist on GitHub, or upload failed."
