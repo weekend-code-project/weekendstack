@@ -60,6 +60,12 @@ variable "github_access_token" {
   sensitive   = true
 }
 
+variable "coder_access_url" {
+  description = "Coder server access URL (used to display SSH key settings link in error messages)"
+  type        = string
+  default     = ""
+}
+
 # =============================================================================
 # Git Config + Clone Script
 # =============================================================================
@@ -75,9 +81,30 @@ resource "coder_script" "git_config" {
     #!/bin/bash
     set -e
 
+    CODER_URL="${var.coder_access_url}"
+    SSH_KEY_URL="$${CODER_URL:+$${CODER_URL}/settings/ssh-keys}"
+
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "[GIT] Configuring Git identity and repository..."
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+    # Print the current Coder SSH public key so it's easy to copy from startup logs
+    # The key is per-user (shared across ALL workspaces on this Coder server)
+    _CODER_SSH_KEY=$(echo "$GIT_SSH_COMMAND" | grep -oP '(?<=--agent-url )\S+' || true)
+    if [ -n "$_CODER_SSH_KEY" ]; then
+      : # agent URL found, key printed below
+    fi
+    # Attempt to read the key from coder gitssh --public-key if supported
+    _PUB_KEY=$(eval "$GIT_SSH_COMMAND" --public-key 2>/dev/null || true)
+    if [ -z "$_PUB_KEY" ]; then
+      # Fall back: extract via ssh-add -L from coder's agent if available
+      _PUB_KEY=$(SSH_AUTH_SOCK="" ssh-add -L 2>/dev/null | head -1 || true)
+    fi
+    if [ -n "$_PUB_KEY" ]; then
+      echo "[GIT] Coder SSH public key (add this to GitHub/GitLab once):"
+      echo "  $_PUB_KEY"
+      [ -n "$SSH_KEY_URL" ] && echo "  Add at: $SSH_KEY_URL"
+    fi
 
     # ── 1. Git global config ──
     git config --global user.name "${var.owner_name}" 2>/dev/null
@@ -225,8 +252,21 @@ CRED_HELPER
 
     # ── HTTPS fallback after SSH retries fail ──
     if [ "$CLONE_SUCCESS" = "false" ] && echo "$REPO_URL" | grep -q "^git@"; then
-      echo "[GIT] SSH clone failed. Ensure your Coder SSH key is added to your Git provider"
-      echo "[GIT] Find it at: Coder Profile → SSH Keys"
+      echo ""
+      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      echo "[GIT] SSH AUTHENTICATION FAILED"
+      echo "[GIT] Your Coder SSH key is not authorized on your Git provider."
+      echo "[GIT] This key is shared by ALL workspaces on this Coder server."
+      echo "[GIT] Add it ONCE and every future workspace will clone automatically."
+      _PUB_KEY2=$(eval "$GIT_SSH_COMMAND" --public-key 2>/dev/null || true)
+      if [ -n "$_PUB_KEY2" ]; then
+        echo ""
+        echo "[GIT] Key to add:"
+        echo "  $_PUB_KEY2"
+      fi
+      [ -n "$SSH_KEY_URL" ] && echo "" && echo "[GIT] Add SSH key at: $SSH_KEY_URL"
+      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      echo ""
       HTTPS_URL=$(echo "$REPO_URL" | sed 's|git@\([^:]*\):\(.*\)|https://\1/\2|')
       if echo "$HTTPS_URL" | grep -qE 'https://(github\.com|gitlab\.com|bitbucket\.org)/'; then
         echo "[GIT] Trying HTTPS fallback: $HTTPS_URL"
@@ -236,8 +276,7 @@ CRED_HELPER
            git clone "$HTTPS_URL" "$MIRROR_DIR" 2>&1; then
           CLONE_SUCCESS=true
         else
-          echo "[GIT] HTTPS fallback also failed (repo is private — add SSH key to GitHub/GitLab)"
-          echo "[GIT] SSH key to add: check Coder Profile → SSH Keys"
+          echo "[GIT] HTTPS fallback also failed (repo is private — SSH key required)"
         fi
       fi
     fi

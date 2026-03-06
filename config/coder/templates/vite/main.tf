@@ -480,6 +480,7 @@ module "git_config" {
   workspace_folder    = local.workspace_folder
   repo_url            = local.repo_url
   github_access_token = try(data.coder_external_auth.github[0].access_token, "")
+  coder_access_url    = data.coder_workspace.me.access_url
 }
 
 # =============================================================================

@@ -443,6 +443,7 @@ module "git_config" {
   workspace_folder    = local.workspace_folder
   repo_url            = data.coder_parameter.repo_url.value
   github_access_token = try(data.coder_external_auth.github[0].access_token, "")
+  coder_access_url    = data.coder_workspace.me.access_url
 }
 
 # =============================================================================
