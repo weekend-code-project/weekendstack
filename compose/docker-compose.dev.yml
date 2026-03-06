@@ -158,28 +158,20 @@ services:
       DOCKER_HOST: "tcp://socat:2375"
       CODER_TEMPLATE_PATHS: "/templates"
       CODER_PROVISIONER_TAGS: "base_domain=${BASE_DOMAIN:-localhost}"
-      # ── GitHub OAuth (login + git access) ──────────────────────────────────
-      # Set GITHUB_OAUTH_CLIENT_ID + GITHUB_OAUTH_CLIENT_SECRET in .env.
-      # Create ONE GitHub OAuth App at https://github.com/settings/developers
-      # Callback URL: ${CODER_ACCESS_URL}/api/v2/users/oauth2/github/callback
-      # Because the same Client ID is used for both login and External Auth,
-      # logging in with GitHub automatically authorises private-repo git clones.
-      # All vars below are no-ops when CLIENT_ID is empty.
-      #
-      # GitHub login provider (shows "Sign in with GitHub" on Coder login page)
-      CODER_OAUTH2_GITHUB_CLIENT_ID: ${GITHUB_OAUTH_CLIENT_ID:-}
-      CODER_OAUTH2_GITHUB_CLIENT_SECRET: ${GITHUB_OAUTH_CLIENT_SECRET:-}
-      CODER_OAUTH2_GITHUB_ALLOW_SIGNUPS: ${GITHUB_OAUTH_CLIENT_ID:+true}
-      CODER_OAUTH2_GITHUB_ALLOW_EVERYONE: ${GITHUB_OAUTH_CLIENT_ID:+true}
-      # GitHub External Auth (same app — Coder shares the login token automatically)
-      CODER_EXTERNAL_AUTH_0_TYPE: ${GITHUB_OAUTH_CLIENT_ID:+github}
-      CODER_EXTERNAL_AUTH_0_ID: ${GITHUB_OAUTH_CLIENT_ID:+github}
-      CODER_EXTERNAL_AUTH_0_CLIENT_ID: ${GITHUB_OAUTH_CLIENT_ID:-}
-      CODER_EXTERNAL_AUTH_0_CLIENT_SECRET: ${GITHUB_OAUTH_CLIENT_SECRET:-}
-      CODER_EXTERNAL_AUTH_0_SCOPES: ${GITHUB_OAUTH_CLIENT_ID:+repo,read:org}
-      CODER_EXTERNAL_AUTH_0_DISPLAY_NAME: ${GITHUB_OAUTH_CLIENT_ID:+GitHub}
-      # Tell templates that External Auth is available
-      TF_VAR_github_external_auth: ${GITHUB_OAUTH_CLIENT_ID:+true}
+      # ── GitHub External Auth (git clone in workspaces) ──────────────────────
+      # Coder's built-in GitHub login cannot be reused for External Auth.
+      # A separate OAuth App is required. To enable:
+      #   1. https://github.com/settings/developers → New OAuth App
+      #      Callback: ${CODER_ACCESS_URL}/api/v2/users/oauth2/github/callback
+      #   2. Set GITHUB_OAUTH_CLIENT_ID + GITHUB_OAUTH_CLIENT_SECRET in .env
+      #   3. Add to docker-compose.custom.yml under coder → environment:
+      #        CODER_EXTERNAL_AUTH_0_TYPE: github
+      #        CODER_EXTERNAL_AUTH_0_ID: github
+      #        CODER_EXTERNAL_AUTH_0_CLIENT_ID: ${GITHUB_OAUTH_CLIENT_ID}
+      #        CODER_EXTERNAL_AUTH_0_CLIENT_SECRET: ${GITHUB_OAUTH_CLIENT_SECRET}
+      #        CODER_EXTERNAL_AUTH_0_SCOPES: "repo,read:org"
+      #        TF_VAR_github_external_auth: "true"
+      #   4. docker compose up -d coder
       COMPUTER_NAME: ${COMPUTER_NAME:-workstation}
       BASE_DOMAIN: ${BASE_DOMAIN:-localhost}
       DATA_BASE_DIR: ${DATA_BASE_DIR:-/home/ubuntu/weekendstack/data}
