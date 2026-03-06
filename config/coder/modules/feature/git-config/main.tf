@@ -208,21 +208,23 @@ CRED_HELPER
       exit 0
     fi
 
+    # ── Convert GitHub SSH URL to HTTPS when OAuth token is available ──
+    # If logged in via GitHub OAuth, use HTTPS + token for reliable private-repo cloning.
+    # This avoids SSH key setup entirely for GitHub repos.
+    if [ -n "$GITHUB_TOKEN" ] && echo "$REPO_URL" | grep -q "^git@github.com:"; then
+      REPO_URL=$(echo "$REPO_URL" | sed 's|git@github.com:\(.*\)|https://github.com/\1|')
+      echo "[GIT] GitHub OAuth active — cloning via HTTPS: $REPO_URL"
+    fi
+
     echo "[GIT] Cloning: $REPO_URL"
 
-    # ── SSH URL handling ──
-    # Coder handles SSH auth natively via $GIT_SSH_COMMAND (injected by coder agent).
-    # The user's Coder SSH key must be added to their Git provider.
+    # ── URL type reporting ──
     if echo "$REPO_URL" | grep -q "^git@"; then
       echo "[GIT] Using Coder's native SSH key for Git authentication"
-
-    # ── HTTPS URL handling ──
-    elif echo "$REPO_URL" | grep -qE "^https://"; then
-      if [ -n "$GITHUB_TOKEN" ] && echo "$REPO_URL" | grep -q "github.com"; then
-        echo "[GIT] Using GitHub OAuth token for HTTPS clone"
-      else
-        echo "[GIT] Using HTTPS clone (credentials may be needed for private repos)"
-      fi
+    elif echo "$REPO_URL" | grep -q "github.com" && [ -n "$GITHUB_TOKEN" ]; then
+      echo "[GIT] Using GitHub OAuth token for HTTPS clone"
+    else
+      echo "[GIT] Using HTTPS clone (credentials may be needed for private repos)"
     fi
 
     # ── Clone with retry ──

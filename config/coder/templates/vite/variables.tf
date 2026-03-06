@@ -23,5 +23,5 @@ variable "gitlab_host" {
 variable "github_external_auth" {
   type        = bool
   description = "Whether GitHub External Auth is configured on the Coder server"
-  default     = false
+  default     = true
 }
