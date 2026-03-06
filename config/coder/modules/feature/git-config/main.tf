@@ -223,6 +223,22 @@ CRED_HELPER
       fi
     done
 
+    # ── HTTPS fallback after SSH retries fail ──
+    if [ "$CLONE_SUCCESS" = "false" ] && echo "$REPO_URL" | grep -q "^git@"; then
+      echo "[GIT] SSH clone failed. Ensure your Coder SSH key is added to your Git provider"
+      echo "[GIT] Find it at: Coder Profile → SSH Keys"
+      HTTPS_URL=$(echo "$REPO_URL" | sed 's|git@\([^:]*\):\(.*\)|https://\1/\2|')
+      if echo "$HTTPS_URL" | grep -qE 'https://(github\.com|gitlab\.com|bitbucket\.org)/'; then
+        echo "[GIT] Trying HTTPS fallback: $HTTPS_URL"
+        rm -rf "$MIRROR_DIR"
+        if git clone "$HTTPS_URL" "$MIRROR_DIR" 2>&1; then
+          CLONE_SUCCESS=true
+        else
+          echo "[GIT] HTTPS fallback also failed (repo may be private — add SSH key to GitHub/GitLab)"
+        fi
+      fi
+    fi
+
     if [ "$CLONE_SUCCESS" = "true" ]; then
       # Move cloned content to workspace
       mkdir -p "$WORKSPACE_DIR"
@@ -254,12 +270,8 @@ CRED_HELPER
       BRANCH_COUNT=$(git branch -r 2>/dev/null | grep -v '\->' | wc -l)
       echo "[GIT] Cloned successfully (branch: $BRANCH, $BRANCH_COUNT remote branches)"
     else
-      echo "[GIT] ERROR: Clone failed after $MAX_ATTEMPTS attempts"
+      echo "[GIT] ERROR: Repository could not be cloned"
       echo "[GIT] Repository: $REPO_URL"
-      if echo "$REPO_URL" | grep -q "^git@"; then
-        echo "[GIT] Ensure your Coder SSH key is added to your Git provider"
-        echo "[GIT] Find it at: Coder Profile → SSH Keys"
-      fi
       rm -rf "$MIRROR_DIR"
     fi
 

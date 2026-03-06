@@ -121,16 +121,6 @@ data "coder_parameter" "node_modules_paths" {
   order        = 12
 }
 
-data "coder_parameter" "auto_generate_html" {
-  name         = "auto_generate_html"
-  display_name = "Generate Default HTML"
-  description  = "Generate a default index.html if none exists"
-  type         = "bool"
-  default      = "true"
-  mutable      = true
-  order        = 99
-}
-
 data "coder_parameter" "startup_command" {
   name         = "startup_command"
   display_name = "Startup Command"
@@ -139,16 +129,6 @@ data "coder_parameter" "startup_command" {
   default      = "npx http-server . -p 8080 -c-1"
   mutable      = true
   order        = 100
-}
-
-data "coder_parameter" "preview_port" {
-  name         = "preview_port"
-  display_name = "Preview Port"
-  description  = "Port for the dev server"
-  type         = "number"
-  default      = "8080"
-  mutable      = true
-  order        = 101
 }
 
 data "coder_parameter" "external_preview" {
@@ -235,8 +215,7 @@ locals {
   persist_nm       = length(trimspace(data.coder_parameter.node_modules_paths.value)) > 0
 
   startup_command          = data.coder_parameter.startup_command.value
-  auto_generate_html       = data.coder_parameter.auto_generate_html.value
-  preview_port             = data.coder_parameter.preview_port.value
+  preview_port             = 8080
   external_preview_enabled = data.coder_parameter.external_preview.value
   workspace_password       = data.coder_parameter.workspace_password.value
   ssh_enabled              = data.coder_parameter.enable_ssh.value
@@ -528,8 +507,6 @@ resource "coder_script" "startup_command" {
     WORKSPACE_DIR="${local.workspace_folder}"
     LOG_FILE="/tmp/startup-server.log"
     PID_FILE="/tmp/startup-server.pid"
-    PREVIEW_PORT="${local.preview_port}"
-    AUTO_HTML="${local.auto_generate_html}"
     WORKSPACE_NAME="${local.workspace_name}"
 
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -577,8 +554,8 @@ resource "coder_script" "startup_command" {
 
     cd "$WORKSPACE_DIR" 2>/dev/null || { mkdir -p "$WORKSPACE_DIR"; cd "$WORKSPACE_DIR"; }
 
-    # Auto-generate default index.html when no files exist
-    if [ "$AUTO_HTML" = "true" ] && [ ! -f "$WORKSPACE_DIR/index.html" ]; then
+    # Auto-generate default index.html if none exists and no package.json (bare workspace)
+    if [ ! -f "$WORKSPACE_DIR/index.html" ] && [ ! -f "$WORKSPACE_DIR/package.json" ]; then
       echo "[STARTUP-CMD] Generating default index.html..."
       cat > "$WORKSPACE_DIR/index.html" << 'HTMLEOF'
 <!DOCTYPE html>
@@ -631,9 +608,8 @@ HTMLEOF
     fi
 
     if [ -z "$STARTUP_CMD" ]; then
-      echo "[STARTUP-CMD] No startup command configured"
-      echo "[STARTUP-CMD] Falling back to http-server on port $PREVIEW_PORT"
-      STARTUP_CMD="npx http-server . -p $PREVIEW_PORT -c-1"
+      echo "[STARTUP-CMD] No startup command configured, using http-server"
+      STARTUP_CMD="npx http-server . -p 8080 -c-1"
     fi
 
     echo "[STARTUP-CMD] Command: $STARTUP_CMD"

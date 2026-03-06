@@ -86,7 +86,7 @@ data "coder_parameter" "vite_framework" {
   display_name = "Vite Framework"
   description  = "Framework to scaffold when creating a new Vite project. Ignored when cloning a repo."
   type         = "string"
-  default      = "react"
+  default      = "vanilla"
   mutable      = false
   order        = 11
 
@@ -157,14 +157,14 @@ data "coder_parameter" "node_modules_paths" {
   order        = 13
 }
 
-data "coder_parameter" "preview_port" {
-  name         = "preview_port"
-  display_name = "Preview Port"
-  description  = "Port for the Vite dev server"
-  type         = "number"
-  default      = "8080"
+data "coder_parameter" "startup_command" {
+  name         = "startup_command"
+  display_name = "Startup Command"
+  description  = "Command to start the dev server. Runs after dependencies are installed."
+  type         = "string"
+  default      = "npm run dev -- --host 0.0.0.0 --port 8080"
   mutable      = true
-  order        = 100
+  order        = 14
 }
 
 data "coder_parameter" "external_preview" {
@@ -250,8 +250,9 @@ locals {
   package_manager  = data.coder_parameter.package_manager.value
   nm_paths         = data.coder_parameter.node_modules_paths.value
   persist_nm       = length(trimspace(data.coder_parameter.node_modules_paths.value)) > 0
+  startup_command  = data.coder_parameter.startup_command.value
 
-  preview_port             = data.coder_parameter.preview_port.value
+  preview_port             = 8080
   external_preview_enabled = data.coder_parameter.external_preview.value
   workspace_password       = data.coder_parameter.workspace_password.value
   ssh_enabled              = data.coder_parameter.enable_ssh.value
@@ -541,7 +542,7 @@ resource "coder_script" "vite_startup" {
 
     WORKSPACE_DIR="${local.workspace_folder}"
     VITE_FRAMEWORK="${local.vite_framework}"
-    PREVIEW_PORT="${local.preview_port}"
+    STARTUP_CMD="${local.startup_command}"
     REPO_URL="${local.repo_url}"
     LOG_FILE="/tmp/vite-dev.log"
     PID_FILE="/tmp/vite-dev.pid"
@@ -678,7 +679,7 @@ MAINJS
 
     # ── Start Vite dev server ──
     if [ -f "$WORKSPACE_DIR/package.json" ]; then
-      echo "[VITE] Starting dev server on port $PREVIEW_PORT..."
+      echo "[VITE] Starting dev server..."
 
       # Kill previous server
       if [ -f "$PID_FILE" ]; then
@@ -715,20 +716,15 @@ VITECONFIG
         done
       fi
 
-      # Determine run command
-      VITE_CMD="npx vite --host 0.0.0.0 --port $PREVIEW_PORT"
-      if [ -f "$WORKSPACE_DIR/node_modules/.bin/vite" ]; then
-        VITE_CMD="./node_modules/.bin/vite --host 0.0.0.0 --port $PREVIEW_PORT"
-      fi
-
-      nohup bash -c "cd '$WORKSPACE_DIR' && $VITE_CMD" > "$LOG_FILE" 2>&1 &
+      echo "[VITE] Command: $STARTUP_CMD"
+      nohup bash -c "cd '$WORKSPACE_DIR' && $STARTUP_CMD" > "$LOG_FILE" 2>&1 &
       SERVER_PID=$!
       echo $SERVER_PID > "$PID_FILE"
       sleep 3
 
       if kill -0 $SERVER_PID 2>/dev/null; then
         echo "[VITE] Dev server started (PID: $SERVER_PID)"
-        echo "[VITE] Local: http://localhost:$PREVIEW_PORT"
+        echo "[VITE] Local: http://localhost:8080"
       else
         echo "[VITE] Dev server failed to start. Log:"
         tail -10 "$LOG_FILE" 2>/dev/null || true
