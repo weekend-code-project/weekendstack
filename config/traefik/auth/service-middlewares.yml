@@ -3,17 +3,17 @@ http:
     # ── Basic Auth: AI Services (Whisper, LocalAI, Ollama) ───────────────────
     ai-services-auth:
       basicAuth:
-        usersFile: /config/traefik/auth/htpasswd-test1
+        usersFile: /config/traefik/auth/htpasswd-admin
 
     # ── Basic Auth: Internal Tools (IT-Tools, Excalidraw, Glance ext, Guacamole)
     it-tools-auth:
       basicAuth:
-        usersFile: /config/traefik/auth/htpasswd-test1
+        usersFile: /config/traefik/auth/htpasswd-admin
 
     # ── Basic Auth: SearXNG ──────────────────────────────────────────────────
     searxng-auth:
       basicAuth:
-        usersFile: /config/traefik/auth/htpasswd-test1
+        usersFile: /config/traefik/auth/htpasswd-admin
 
     # ── Redirect: Guacamole requires /guacamole/ path ────────────────────────
     guacamole-redirect:

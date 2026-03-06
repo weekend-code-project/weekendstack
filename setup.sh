@@ -884,6 +884,41 @@ preflight_fix_mounts() {
             log_info "Created data directory with correct ownership: $dir"
         fi
     done
+
+    # Generate Traefik basic-auth htpasswd files from DEFAULT_ADMIN_USER/PASSWORD.
+    # These gate external-facing services (AI tools, IT-Tools, SearXNG, Guacamole,
+    # Glance external) when accessed through the Cloudflare tunnel.
+    local auth_dir="$SCRIPT_DIR/config/traefik/auth"
+    mkdir -p "$auth_dir"
+    local admin_user admin_pass
+    admin_user=$(grep "^DEFAULT_ADMIN_USER=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+    admin_pass=$(grep "^DEFAULT_ADMIN_PASSWORD=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+    admin_user=${admin_user:-admin}
+    admin_pass=${admin_pass:-changeme}
+
+    # Check if any htpasswd file already has the right user; regenerate if not.
+    local needs_regen=false
+    local htpasswd_file="$auth_dir/htpasswd-admin"
+    if [[ ! -f "$htpasswd_file" ]] || ! grep -q "^${admin_user}:" "$htpasswd_file" 2>/dev/null; then
+        needs_regen=true
+    fi
+
+    if $needs_regen; then
+        if command -v htpasswd >/dev/null 2>&1; then
+            htpasswd -nbB "$admin_user" "$admin_pass" > "$htpasswd_file"
+        elif docker info >/dev/null 2>&1; then
+            docker run --rm httpd:2-alpine htpasswd -nbB "$admin_user" "$admin_pass" \
+                > "$htpasswd_file" 2>/dev/null
+        fi
+        if [[ -f "$htpasswd_file" ]]; then
+            chmod 600 "$htpasswd_file"
+            log_info "Generated Traefik basic auth: $htpasswd_file (user: $admin_user)"
+            # Keep legacy test files in sync so existing middleware configs still work
+            for f in "$auth_dir"/htpasswd-test{1,2,3,4}; do
+                cp "$htpasswd_file" "$f" 2>/dev/null || true
+            done
+        fi
+    fi
 }
 
 # Expand abstract "all" profile into concrete Docker Compose profile names and
