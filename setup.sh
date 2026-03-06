@@ -275,6 +275,91 @@ check_prerequisites() {
     return 0
 }
 
+# Add Coder's SSH public key to GitHub so workspace git clones work
+setup_coder_github_ssh_key() {
+    # Load env so we have CODER_SESSION_TOKEN and CODER_ACCESS_URL
+    local env_file="$SCRIPT_DIR/.env"
+    if [[ ! -f "$env_file" ]]; then return 0; fi
+    local token access_url
+    token=$(grep "^CODER_SESSION_TOKEN=" "$env_file" | cut -d'=' -f2 | tr -d ' ')
+    access_url=$(grep "^CODER_ACCESS_URL=" "$env_file" | cut -d'=' -f2 | tr -d ' ')
+    if [[ -z "$token" || -z "$access_url" ]]; then return 0; fi
+
+    # Fetch the Coder SSH public key for this user
+    local ssh_key
+    ssh_key=$(curl -sf -H "Coder-Session-Token: $token" \
+        "${access_url}/api/v2/users/me/gitsshkey" 2>/dev/null \
+        | python3 -c "import json,sys; print(json.load(sys.stdin).get('public_key',''))" 2>/dev/null || true)
+    if [[ -z "$ssh_key" ]]; then return 0; fi
+
+    clear
+    echo ""
+    echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${BOLD}${CYAN}  GitHub SSH Key Setup${NC}"
+    echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    echo -e "  Coder workspaces use this SSH key to clone private GitHub repos:"
+    echo ""
+    echo -e "  ${BOLD}$ssh_key${NC}"
+    echo ""
+    echo -e "  This key is shared by ALL workspaces on this Coder server."
+    echo -e "  Add it to GitHub once and every workspace clone will work automatically."
+    echo ""
+
+    if ! prompt_yes_no "Add this key to GitHub now (uses the GitHub CLI)?" "y"; then
+        echo ""
+        echo -e "  You can add it manually at: ${CYAN}https://github.com/settings/ssh/new${NC}"
+        echo ""
+        return 0
+    fi
+
+    # Install gh CLI if missing
+    if ! command -v gh &>/dev/null; then
+        log_info "Installing GitHub CLI..."
+        (
+            type -p curl >/dev/null || sudo apt-get install -y curl
+            curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+                | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+            sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+                | sudo tee /etc/apt/sources.list.d/github-cli.list >/dev/null
+            sudo apt-get update -qq && sudo apt-get install -y gh
+        ) >/dev/null 2>&1
+        if ! command -v gh &>/dev/null; then
+            log_warn "Could not install gh CLI. Add the key manually at: https://github.com/settings/ssh/new"
+            return 0
+        fi
+        log_success "GitHub CLI installed"
+    fi
+
+    # Authenticate with GitHub (device flow — opens browser)
+    echo ""
+    log_info "Authenticating with GitHub..."
+    echo -e "  ${YELLOW}A browser window will open (or copy the code shown below).${NC}"
+    echo -e "  ${YELLOW}Log in as the GitHub user who owns your private repos.${NC}"
+    echo ""
+    if ! gh auth login --git-protocol ssh --web 2>&1; then
+        log_warn "GitHub auth failed. Add the key manually at: https://github.com/settings/ssh/new"
+        return 0
+    fi
+
+    # Write key to a temp file and upload
+    local key_file
+    key_file=$(mktemp /tmp/coder-ssh-key.XXXXXX.pub)
+    echo "$ssh_key" > "$key_file"
+
+    echo ""
+    log_info "Adding Coder SSH key to GitHub..."
+    if gh ssh-key add "$key_file" --title "Coder WeekendStack" --type authentication 2>&1; then
+        log_success "SSH key added to GitHub! Workspace git clones will now work automatically."
+    else
+        log_warn "Key may already exist on GitHub, or upload failed."
+        echo -e "  You can verify at: ${CYAN}https://github.com/settings/keys${NC}"
+    fi
+    rm -f "$key_file"
+    echo ""
+}
+
 # Interactive Coder template deployment
 deploy_coder_templates_interactive() {
     local marker_file="$SCRIPT_DIR/config/coder/.template_deployment_complete"
@@ -665,6 +750,7 @@ main_setup() {
         # Deploy Coder templates if dev profile was selected
         if [[ " ${selected_profiles[*]} " =~ " dev " ]]; then
             deploy_coder_templates_interactive
+            setup_coder_github_ssh_key
         fi
         
         display_summary_to_console
