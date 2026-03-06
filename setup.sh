@@ -753,8 +753,8 @@ main_setup() {
         fi
         start_services_with_profiles "${selected_profiles[@]}"
         
-        # Deploy Coder templates if dev profile was selected
-        if [[ " ${selected_profiles[*]} " =~ " dev " ]]; then
+        # Deploy Coder templates if dev profile was selected (or 'all')
+        if [[ " ${selected_profiles[*]} " =~ " dev " ]] || [[ " ${selected_profiles[*]} " =~ " all " ]]; then
             deploy_coder_templates_interactive
             setup_coder_github_ssh_key
         fi
