@@ -27,7 +27,7 @@ _assert_fail() {
 assert_env_var() {
     local env_file="$1" var="$2" expected="$3"
     local actual
-    actual=$(grep "^${var}=" "$env_file" 2>/dev/null | cut -d'=' -f2- | sed 's/#.*//' | tr -d ' "')
+    actual=$(grep "^${var}=" "$env_file" 2>/dev/null | cut -d'=' -f2- | sed 's/#.*//' | tr -d ' "' || true)
     if [[ "$actual" == "$expected" ]]; then
         _assert_pass "$var = '$expected'"
     else
@@ -39,7 +39,7 @@ assert_env_var() {
 assert_env_var_nonempty() {
     local env_file="$1" var="$2"
     local actual
-    actual=$(grep "^${var}=" "$env_file" 2>/dev/null | cut -d'=' -f2- | sed 's/#.*//' | tr -d ' "')
+    actual=$(grep "^${var}=" "$env_file" 2>/dev/null | cut -d'=' -f2- | sed 's/#.*//' | tr -d ' "' || true)
     if [[ -n "$actual" ]]; then
         _assert_pass "$var is non-empty"
     else
@@ -104,7 +104,7 @@ assert_dir_absent() {
 assert_url_responds() {
     local url="$1" expected_code="$2" timeout="${3:-15}"
     local actual_code
-    actual_code=$(curl -sk --max-time "$timeout" -o /dev/null -w "%{http_code}" "$url" 2>/dev/null)
+    actual_code=$(curl -sk --max-time "$timeout" -o /dev/null -w "%{http_code}" "$url" 2>/dev/null || echo "000")
     if [[ "$actual_code" == "$expected_code" ]]; then
         _assert_pass "GET $url → HTTP $expected_code"
     else
@@ -117,7 +117,7 @@ assert_url_responds() {
 assert_url_nonempty() {
     local url="$1" timeout="${2:-15}"
     local body
-    body=$(curl -sk --max-time "$timeout" "$url" 2>/dev/null)
+    body=$(curl -sk --max-time "$timeout" "$url" 2>/dev/null || true)
     if [[ -n "$body" ]]; then
         _assert_pass "GET $url returned non-empty body"
     else
