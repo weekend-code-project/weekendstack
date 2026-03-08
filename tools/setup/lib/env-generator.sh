@@ -649,6 +649,12 @@ generate_env_interactive() {
     # Set git service selection (for dev profile)
     if $has_dev; then
         update_env_var "GIT_SERVICE" "$git_service" "$env_file"
+        # Set CODER_ACCESS_URL to the external domain if available, else local IP
+        if [[ "$base_domain" != "localhost" ]]; then
+            update_env_var "CODER_ACCESS_URL" "https://coder.${base_domain}" "$env_file"
+        else
+            update_env_var "CODER_ACCESS_URL" "http://${host_ip}:7080" "$env_file"
+        fi
     fi
     
     # Set registry cache configuration
