@@ -310,3 +310,39 @@ services: ## List all available services
 ports: ## Show exposed ports
 	@echo "Exposed ports:"
 	@docker ps --format "table {{.Names}}\t{{.Ports}}" | grep -v "^NAMES"
+
+
+# =============================================================================
+# Test Harness
+# =============================================================================
+
+HARNESS_DIR := tools/test/harness
+SCENARIO ?=
+
+test-harness: ## Run all test harness scenarios (requires ~/.weekendstack/test-secrets)
+	@chmod +x $(HARNESS_DIR)/run-harness.sh
+	@$(HARNESS_DIR)/run-harness.sh
+
+test-harness-scenario: ## Run a single scenario: make test-harness-scenario SCENARIO=01
+	@if [ -z "$(SCENARIO)" ]; then \
+		echo "Usage: make test-harness-scenario SCENARIO=<number>"; \
+		echo "Example: make test-harness-scenario SCENARIO=01"; \
+		exit 1; \
+	fi
+	@chmod +x $(HARNESS_DIR)/run-harness.sh
+	@$(HARNESS_DIR)/run-harness.sh --scenario $(SCENARIO)
+
+test-harness-list: ## List all available test scenarios
+	@chmod +x $(HARNESS_DIR)/run-harness.sh
+	@$(HARNESS_DIR)/run-harness.sh --list
+
+test-harness-dry-run: ## Dry-run: show scenarios without executing them
+	@chmod +x $(HARNESS_DIR)/run-harness.sh
+	@$(HARNESS_DIR)/run-harness.sh --dry-run
+
+test-secrets-setup: ## Create the secrets file template at ~/.weekendstack/test-secrets
+	@bash -c 'source $(HARNESS_DIR)/lib/secrets.sh && create_secrets_template'
+	@echo ""
+	@echo "Edit ~/.weekendstack/test-secrets and fill in:"
+	@echo "  CF_API_TOKEN   - Cloudflare API token"
+	@echo "  CF_ZONE_DOMAIN - Your Cloudflare-managed domain"

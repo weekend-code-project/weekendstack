@@ -1,0 +1,144 @@
+#!/usr/bin/expect -f
+# harness/expect/setup-cf-interactive.exp
+# Drives setup.sh in interactive mode for Scenario 01 (Cloudflare only).
+# Environment variables required (set before running):
+#   HARNESS_BASE_DOMAIN   - external domain (e.g. test-1234.weekendcodeproject.dev)
+#   HARNESS_CF_API_TOKEN  - Cloudflare API token
+#   HARNESS_HOST_IP       - host IP (auto-detected if empty)
+#   STACK_DIR             - path to weekendstack (default /home/ubuntu/weekendstack)
+
+set timeout 300
+set stack_dir [expr {[info exists env(STACK_DIR)] ? $env(STACK_DIR) : "/home/ubuntu/weekendstack"}]
+set base_domain $env(HARNESS_BASE_DOMAIN)
+set cf_token    $env(HARNESS_CF_API_TOKEN)
+set host_ip     [expr {[info exists env(HARNESS_HOST_IP)] ? $env(HARNESS_HOST_IP) : ""}]
+
+# ── Start setup in interactive mode (non-quick so we exercise all prompts) ─────
+spawn bash -c "cd $stack_dir && ./setup.sh --interactive --skip-pull --skip-certs --force-reconfigure 2>&1"
+
+# ── Prerequisites check ────────────────────────────────────────────────────────
+expect {
+    "Continue with setup?" { send "y\r" }
+    timeout { puts "TIMEOUT waiting for prerequisites"; exit 1 }
+}
+
+# ── Profile selection ──────────────────────────────────────────────────────────
+# Wait for profile listing, choose "networking" only (1 3 for core+networking)
+expect {
+    "Selection:" { send "1 3\r" }
+    timeout { puts "TIMEOUT waiting for profile selection"; exit 1 }
+}
+
+# Layer mode (add / replace existing)
+expect {
+    "Choose mode" { send "replace\r" }
+    "Computer/host name" { }
+    timeout { puts "TIMEOUT waiting for layer mode or hostname"; exit 1 }
+}
+
+# ── System Settings ─────────────────────────────────────────────────────────────
+expect {
+    "Computer/host name" { send "\r" }
+    timeout { puts "TIMEOUT waiting for hostname prompt"; exit 1 }
+}
+
+expect {
+    "Host IP address" {
+        if {$host_ip ne ""} {
+            send "$host_ip\r"
+        } else {
+            send "\r"
+        }
+    }
+    timeout { puts "TIMEOUT waiting for host IP"; exit 1 }
+}
+
+expect {
+    "Timezone" { send "\r" }
+    timeout { puts "TIMEOUT waiting for timezone"; exit 1 }
+}
+
+# ── Domain Configuration ────────────────────────────────────────────────────────
+expect {
+    "External domain" { send "$base_domain\r" }
+    timeout { puts "TIMEOUT waiting for external domain prompt"; exit 1 }
+}
+
+# Local domain — skip (cloudflare-only scenario)
+expect {
+    "Local DNS suffix" { send "\r" }
+    timeout { puts "TIMEOUT waiting for local DNS suffix"; exit 1 }
+}
+
+# ── Admin Credentials ───────────────────────────────────────────────────────────
+expect {
+    "Set custom admin credentials" { send "n\r" }
+    timeout { puts "TIMEOUT waiting for admin credentials prompt"; exit 1 }
+}
+
+# ── File Storage ────────────────────────────────────────────────────────────────
+expect {
+    "Customize storage paths" { send "n\r" }
+    timeout { puts "TIMEOUT waiting for storage paths prompt"; exit 1 }
+}
+
+# ── Review & Generate ────────────────────────────────────────────────────────────
+expect {
+    "Generate .env file" { send "y\r" }
+    timeout { puts "TIMEOUT waiting for generate .env prompt"; exit 1 }
+}
+
+# ── Wait for env generation to complete ─────────────────────────────────────────
+expect {
+    "Cloudflare Tunnel Setup" { }
+    "Configuration Step" { }
+    timeout { puts "TIMEOUT waiting for Cloudflare wizard or next step"; exit 1 }
+}
+
+# ── Cloudflare Tunnel wizard ─────────────────────────────────────────────────────
+# The wizard asks for domain (pre-populated), tunnel name, and API token.
+
+# Domain prompt — accept the pre-populated base_domain
+expect {
+    "Domain name" { send "\r" }
+    timeout { puts "TIMEOUT waiting for domain prompt in CF wizard"; exit 1 }
+}
+
+# Tunnel name
+expect {
+    "Tunnel name" { send "weekendstack-harness-[clock seconds]\r" }
+    timeout { puts "TIMEOUT waiting for tunnel name prompt"; exit 1 }
+}
+
+# API Token
+expect {
+    "Cloudflare API token" { send "$cf_token\r" }
+    "existing API token"   { send "n\r" ; exp_continue }
+    timeout { puts "TIMEOUT waiting for API token prompt"; exit 1 }
+}
+
+# Existing tunnels — pick first (reuse) or create new
+expect {
+    "Select tunnel" { send "1\r" }
+    "Created tunnel" { }
+    "Using existing tunnel" { }
+    timeout { puts "TIMEOUT waiting for tunnel selection or creation"; exit 1 }
+}
+
+# Cleanup old tunnels prompt
+expect {
+    "Delete unused tunnels" { send "n\r" }
+    "setup complete"        { }
+    "Cloudflare Tunnel Setup Complete" { }
+    timeout { puts "TIMEOUT waiting for old tunnel cleanup or completion"; exit 1 }
+}
+
+# ── Start services prompt ─────────────────────────────────────────────────────
+expect {
+    "Start WeekendStack services" { send "n\r" }
+    timeout { puts "TIMEOUT waiting for start services prompt"; exit 1 }
+}
+
+# ── Done ──────────────────────────────────────────────────────────────────────
+expect eof
+puts "\n[EXPECT] setup-cf-interactive.exp completed"

@@ -1,0 +1,88 @@
+#!/usr/bin/expect -f
+# harness/expect/setup-pihole-interactive.exp
+# Drives setup.sh for Scenario 02 (Pi-Hole / local domain only, no Cloudflare).
+# Environment variables:
+#   HARNESS_LAB_DOMAIN  - local DNS suffix (default: testlab)
+#   HARNESS_HOST_IP     - host IP
+#   STACK_DIR           - path to weekendstack
+
+set timeout 300
+set stack_dir  [expr {[info exists env(STACK_DIR)] ? $env(STACK_DIR) : "/home/ubuntu/weekendstack"}]
+set lab_domain [expr {[info exists env(HARNESS_LAB_DOMAIN)] ? $env(HARNESS_LAB_DOMAIN) : "testlab"}]
+set host_ip    [expr {[info exists env(HARNESS_HOST_IP)] ? $env(HARNESS_HOST_IP) : ""}]
+
+spawn bash -c "cd $stack_dir && ./setup.sh --interactive --skip-pull --skip-cloudflare --force-reconfigure 2>&1"
+
+# Prerequisites
+expect {
+    "Continue with setup?" { send "y\r" }
+    timeout { puts "TIMEOUT at prerequisites"; exit 1 }
+}
+
+# Profile selection — core + networking (to get Pi-Hole)
+expect {
+    "Selection:" { send "1 3\r" }
+    timeout { puts "TIMEOUT at profile selection"; exit 1 }
+}
+
+expect {
+    "Choose mode"        { send "replace\r" ; exp_continue }
+    "Computer/host name" { }
+    timeout { puts "TIMEOUT at layer mode"; exit 1 }
+}
+
+# System Settings
+expect {
+    "Computer/host name" { send "\r" }
+    timeout { puts "TIMEOUT at hostname"; exit 1 }
+}
+
+expect {
+    "Host IP address" {
+        if {$host_ip ne ""} { send "$host_ip\r" } else { send "\r" }
+    }
+    timeout { puts "TIMEOUT at host IP"; exit 1 }
+}
+
+expect {
+    "Timezone" { send "\r" }
+    timeout { puts "TIMEOUT at timezone"; exit 1 }
+}
+
+# Domain Configuration — skip external (Enter), set local domain
+expect {
+    "External domain" { send "\r" }
+    timeout { puts "TIMEOUT at external domain prompt"; exit 1 }
+}
+
+expect {
+    "Local DNS suffix" { send "$lab_domain\r" }
+    timeout { puts "TIMEOUT at local DNS suffix"; exit 1 }
+}
+
+# Admin Credentials
+expect {
+    "Set custom admin credentials" { send "n\r" }
+    timeout { puts "TIMEOUT at admin credentials"; exit 1 }
+}
+
+# File Storage
+expect {
+    "Customize storage paths" { send "n\r" }
+    timeout { puts "TIMEOUT at storage paths"; exit 1 }
+}
+
+# Generate .env
+expect {
+    "Generate .env file" { send "y\r" }
+    timeout { puts "TIMEOUT at generate .env"; exit 1 }
+}
+
+# Start services
+expect {
+    "Start WeekendStack services" { send "n\r" }
+    timeout { puts "TIMEOUT at start services"; exit 1 }
+}
+
+expect eof
+puts "\n[EXPECT] setup-pihole-interactive.exp completed"

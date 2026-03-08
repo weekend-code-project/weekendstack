@@ -184,8 +184,9 @@ generate_env_interactive() {
         ((total_steps++))  # Add Automation Services Selection
     fi
     
-    local lab_domain="lab"
+    local lab_domain=""
     local base_domain="localhost"
+    local domain_mode="ip"
     local _step=1  # running step counter
     
     # ========================================================================
@@ -194,25 +195,70 @@ generate_env_interactive() {
     if $has_networking; then
         _step=$((_step + 1))
         clear
-        show_progress $_step $total_steps "Domain & Certificate Configuration"
+        show_progress $_step $total_steps "Domain Configuration"
         
-        echo "You selected the networking profile which includes Traefik reverse proxy."
+        echo "WeekendStack supports two optional domain modes. Configure one, both, or"
+        echo "neither — if you skip both, services are accessible by IP address only."
         echo ""
-        echo "Configure your local domain suffix for accessing services:"
+        echo -e "${BOLD}Option 1 — External access via Cloudflare Tunnel${NC}"
+        echo "  Requires a domain managed in your Cloudflare account."
+        echo "  Example: weekendcodeproject.dev → services available at https://service.weekendcodeproject.dev"
         echo ""
-        echo "Examples:"
-        echo "  • 'lab'   → Services accessible at https://service.lab"
-        echo "  • 'home'  → Services accessible at https://service.home"
-        echo "  • 'local' → Services accessible at https://service.local"
-        echo ""
+        read -p "  External domain (press Enter to skip): " -r base_domain_input </dev/tty
+        base_domain_input="${base_domain_input// /}"  # strip spaces
         
-        lab_domain=$(prompt_input "Local domain suffix (without leading dot)" "lab")
+        if [[ -n "$base_domain_input" ]]; then
+            base_domain="$base_domain_input"
+            log_success "External domain set: $base_domain"
+        else
+            base_domain="localhost"
+            log_info "No external domain — Cloudflare Tunnel will not be configured"
+        fi
         
         echo ""
-        log_success "Services will be accessible at: https://service.$lab_domain"
+        echo -e "${BOLD}Option 2 — Local domain via Pi-Hole DNS${NC}"
+        echo "  A short suffix for LAN-only HTTPS access using self-signed certificates."
+        echo "  Example: lab → services available at https://service.lab (on your network)"
+        echo "  Skip this if you don't plan to configure Pi-Hole or custom DNS."
         echo ""
-        echo -e "${YELLOW}Note:${NC} Configure Pi-hole as your DNS server to resolve .$lab_domain,"
-        echo "or manually add entries to /etc/hosts on each device."
+        read -p "  Local DNS suffix (press Enter to skip, default 'lab'): " -r lab_domain_input </dev/tty
+        lab_domain_input="${lab_domain_input// /}"
+        
+        if [[ -n "$lab_domain_input" ]]; then
+            lab_domain="$lab_domain_input"
+            log_success "Local domain set: .$lab_domain"
+        elif [[ -z "$lab_domain_input" ]]; then
+            # Offer the default on a plain Enter
+            lab_domain="lab"
+            log_info "Using default local domain: .lab"
+        fi
+        
+        # Compute DOMAIN_MODE
+        local has_ext=false has_local=false
+        [[ "$base_domain" != "localhost" ]] && has_ext=true
+        [[ -n "$lab_domain" ]] && has_local=true
+        
+        if $has_ext && $has_local; then
+            domain_mode="both"
+        elif $has_ext; then
+            domain_mode="cloudflare"
+        elif $has_local; then
+            domain_mode="pihole"
+        else
+            domain_mode="ip"
+            lab_domain=""   # ensure no stale value
+        fi
+        
+        echo ""
+        case "$domain_mode" in
+            both)      log_success "Domain mode: both (Cloudflare + Pi-Hole)" ;;
+            cloudflare) log_success "Domain mode: Cloudflare Tunnel only" ;;
+            pihole)    log_success "Domain mode: Pi-Hole local DNS only" ;;
+            ip)
+                log_info "Domain mode: IP only — services accessible via ${host_ip}"
+                log_info "No Cloudflare Tunnel or Pi-Hole DNS will be configured."
+                ;;
+        esac
         
         log_success "Domain configuration complete"
     fi
@@ -526,11 +572,16 @@ generate_env_interactive() {
     echo "  User Permissions: UID=$puid GID=$pgid"
     echo ""
     echo -e "${BOLD}Domains:${NC}"
-    echo "  Local Domain:     .$lab_domain"
-    if [[ "$base_domain" != "localhost" ]]; then
-        echo "  External Domain:  $base_domain (Cloudflare Tunnel enabled)"
+    echo "  Mode:             $domain_mode"
+    if [[ -n "$lab_domain" ]]; then
+        echo "  Local Domain:     .$lab_domain"
     else
-        echo "  External Access:  Disabled (local network only)"
+        echo "  Local Domain:     none (Pi-Hole DNS not configured)"
+    fi
+    if [[ "$base_domain" != "localhost" ]]; then
+        echo "  External Domain:  $base_domain (Cloudflare Tunnel)"
+    else
+        echo "  External Access:  disabled (IP only)"
     fi
     echo ""
     echo -e "${BOLD}Admin Credentials:${NC}"
@@ -622,8 +673,9 @@ generate_env_interactive() {
     update_env_var "TZ" "$timezone" "$env_file"
     update_env_var "PUID" "$puid" "$env_file"
     update_env_var "PGID" "$pgid" "$env_file"
-    update_env_var "LAB_DOMAIN" "$lab_domain" "$env_file"
+    update_env_var "LAB_DOMAIN" "${lab_domain:-lab}" "$env_file"
     update_env_var "BASE_DOMAIN" "$base_domain" "$env_file"
+    update_env_var "DOMAIN_MODE" "$domain_mode" "$env_file"
     
     # Set Cloudflare API token if provided
     if [[ -n "${CLOUDFLARE_API_TOKEN:-}" ]]; then

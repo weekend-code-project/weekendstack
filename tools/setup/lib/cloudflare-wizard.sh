@@ -659,8 +659,20 @@ EOF
     
     if [[ -n "$account_id" ]]; then
         local tunnel_token
-        tunnel_token=$(cf_get_tunnel_token "$account_id" "$tunnel_id")
-        if [[ $? -eq 0 && -n "$tunnel_token" ]]; then
+        local max_token_attempts=3
+        local attempt=1
+        while [[ $attempt -le $max_token_attempts ]]; do
+            log_step "Fetching tunnel connector token (attempt $attempt/$max_token_attempts)..."
+            tunnel_token=$(cf_get_tunnel_token "$account_id" "$tunnel_id" 2>/dev/null)
+            if [[ $? -eq 0 && -n "$tunnel_token" ]]; then
+                break
+            fi
+            log_warn "Token fetch attempt $attempt failed — retrying in 3s..."
+            sleep 3
+            attempt=$((attempt + 1))
+        done
+
+        if [[ -n "$tunnel_token" ]]; then
             if grep -q "^CLOUDFLARE_TUNNEL_TOKEN=" "$env_file"; then
                 sed -i "s|^CLOUDFLARE_TUNNEL_TOKEN=.*|CLOUDFLARE_TUNNEL_TOKEN=$tunnel_token|" "$env_file"
             else
@@ -668,7 +680,13 @@ EOF
             fi
             log_success "Saved tunnel token to .env"
         else
-            log_warn "Could not retrieve tunnel token"
+            log_error "Could not retrieve tunnel connector token after $max_token_attempts attempts"
+            log_warn "Tunnel is created but the connector token is missing."
+            log_warn "The cloudflare-tunnel container will not start until a token is available."
+            log_info "To fix this later, run: ./setup.sh --cloudflare-only"
+            # Explicitly mark tunnel as disabled so setup.sh gives a clear message
+            sed -i "s|^CLOUDFLARE_TUNNEL_ENABLED=.*|CLOUDFLARE_TUNNEL_ENABLED=false|" "$env_file" 2>/dev/null || true
+            return 1
         fi
     fi
 }

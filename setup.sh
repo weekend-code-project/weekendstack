@@ -366,6 +366,32 @@ setup_coder_github_ssh_key() {
     echo ""
 }
 
+# Wait for the Coder HTTP API to respond before attempting template deployment.
+# Polls /api/v2/buildinfo up to max_wait seconds (default: 180).
+# Returns 0 when Coder is ready, 1 on timeout.
+wait_for_coder() {
+    local coder_url="${CODER_ACCESS_URL:-http://localhost:7080}"
+    local max_wait="${1:-180}"
+    local elapsed=0
+    local interval=5
+
+    log_step "Waiting for Coder to become ready (up to ${max_wait}s)..."
+    while [[ $elapsed -lt $max_wait ]]; do
+        if curl -sf --max-time 3 "${coder_url}/api/v2/buildinfo" >/dev/null 2>&1; then
+            log_success "Coder is ready (${elapsed}s elapsed)"
+            return 0
+        fi
+        sleep "$interval"
+        elapsed=$((elapsed + interval))
+        log_info "  Coder not yet ready — ${elapsed}s / ${max_wait}s elapsed..."
+    done
+
+    log_warn "Coder did not become ready within ${max_wait}s"
+    log_warn "Template deployment will be skipped."
+    log_info "Deploy templates later with: make coder-templates"
+    return 1
+}
+
 # Interactive Coder template deployment
 deploy_coder_templates_interactive() {
     local marker_file="$SCRIPT_DIR/config/coder/.template_deployment_complete"
@@ -384,6 +410,11 @@ deploy_coder_templates_interactive() {
     # Check if deploy script exists
     if [[ ! -x "$deploy_script" ]]; then
         log_warn "Coder template deployment script not found or not executable: $deploy_script"
+        return 1
+    fi
+
+    # Wait for Coder API to be available before doing anything else
+    if ! wait_for_coder 180; then
         return 1
     fi
     
@@ -616,28 +647,42 @@ main_setup() {
         exit 1
     fi
     
-    # 9. Cloudflare Tunnel setup (only if networking profile selected)
+    # 9. Cloudflare Tunnel setup (only if networking profile selected AND BASE_DOMAIN configured)
     if [[ " ${selected_profiles[@]} " =~ " networking " ]] || [[ " ${selected_profiles[@]} " =~ " all " ]]; then
         show_setup_progress "Cloudflare Tunnel Configuration"
-        if ! $SKIP_CLOUDFLARE && [[ "$SETUP_MODE" == "interactive" ]]; then
+        # Only run wizard when the user configured an external domain (DOMAIN_MODE=cloudflare|both)
+        local _domain_mode
+        _domain_mode=$(grep "^DOMAIN_MODE=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
+        local _base_domain
+        _base_domain=$(grep "^BASE_DOMAIN=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
+        if ! $SKIP_CLOUDFLARE && [[ "$SETUP_MODE" == "interactive" ]] && \
+           [[ "$_domain_mode" =~ ^(cloudflare|both)$ ]] && \
+           [[ -n "$_base_domain" && "$_base_domain" != "localhost" ]]; then
             setup_cloudflare_tunnel || log_warn "Cloudflare Tunnel setup skipped"
+        elif [[ "$_domain_mode" == "ip" || "$_domain_mode" == "pihole" || "$_base_domain" == "localhost" || -z "$_base_domain" ]]; then
+            log_info "No external domain configured — skipping Cloudflare Tunnel setup"
         else
-            log_info "Skipping Cloudflare Tunnel setup"
+            log_info "Skipping Cloudflare Tunnel setup (--skip-cloudflare or quick mode)"
         fi
         # Immediately update custom profile after wizard so the tunnel service
         # is included even if the user skips starting services
         ensure_cloudflare_in_custom_profile
     fi
 
-    # 10. Certificate setup (only if networking profile selected)
+    # 10. Certificate setup (only if networking profile selected AND local domain configured)
     # Generates self-signed CA + wildcard cert for local *.lab HTTPS access
     # These certs are for LAN access only — Cloudflare handles TLS for remote access
     if [[ " ${selected_profiles[@]} " =~ " networking " ]] || [[ " ${selected_profiles[@]} " =~ " all " ]]; then
         show_setup_progress "Setting Up SSL Certificates"
-        if ! $SKIP_CERTS; then
+        local _dm
+        _dm=$(grep "^DOMAIN_MODE=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
+        if ! $SKIP_CERTS && [[ "$_dm" =~ ^(pihole|both)$ ]]; then
             setup_certificates || log_warn "Certificate setup incomplete (continuing anyway)"
-        else
+        elif $SKIP_CERTS; then
             log_info "Skipping certificate setup (--skip-certs)"
+        else
+            log_info "No local domain configured — skipping self-signed certificate generation"
+            log_info "(Certs are only needed for Pi-Hole / .lab domain access)"
         fi
     fi
     
@@ -747,8 +792,10 @@ main_setup() {
                     log_info "Adding 'external' profile for Cloudflare Tunnel"
                 fi
             else
-                log_warn "Cloudflare tunnel enabled but token is empty — skipping tunnel"
-                log_info "Run './setup.sh --cloudflare-only' to configure the tunnel"
+                log_warn "Cloudflare tunnel enabled but connector token is missing."
+                log_warn "  The cloudflare-tunnel container will NOT start."
+                log_info "  Fix: run './setup.sh --cloudflare-only' to re-fetch the connector token."
+                log_info "  Then start services again with: docker compose --profile external up -d cloudflare-tunnel"
             fi
         fi
         start_services_with_profiles "${selected_profiles[@]}"

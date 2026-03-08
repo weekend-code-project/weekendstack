@@ -1,0 +1,38 @@
+#!/usr/bin/expect -f
+# harness/expect/uninstall.exp
+# Drives uninstall.sh at a specified level.
+# Environment variables:
+#   HARNESS_UNINSTALL_LEVEL  - 1, 2, or 3 (default: 2)
+#   STACK_DIR                - path to weekendstack
+
+set timeout 120
+set stack_dir [expr {[info exists env(STACK_DIR)] ? $env(STACK_DIR) : "/home/ubuntu/weekendstack"}]
+set level     [expr {[info exists env(HARNESS_UNINSTALL_LEVEL)] ? $env(HARNESS_UNINSTALL_LEVEL) : "2"}]
+
+spawn bash -c "cd $stack_dir && ./uninstall.sh 2>&1"
+
+# Confirm we want to uninstall
+expect {
+    "Are you sure" { send "y\r" }
+    "confirm"      { send "y\r" }
+    "Level"        { }
+    timeout        { puts "TIMEOUT waiting for uninstall confirmation"; exit 1 }
+}
+
+# Level selection
+expect {
+    "Select level" { send "$level\r" }
+    "level \[1-3\]" { send "$level\r" }
+    timeout        { puts "TIMEOUT waiting for level selection"; exit 1 }
+}
+
+# Any additional confirmations (Level 3 may ask about removing images)
+expect {
+    "Remove Docker images" { send "y\r" ; exp_continue }
+    "Confirm deletion"     { send "y\r" ; exp_continue }
+    "complete"             { }
+    timeout                { puts "TIMEOUT waiting for uninstall completion"; exit 1 }
+}
+
+expect eof
+puts "\n[EXPECT] uninstall.exp completed (level $level)"
