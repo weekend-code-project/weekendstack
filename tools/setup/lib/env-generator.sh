@@ -297,11 +297,12 @@ generate_env_interactive() {
         echo "You selected AI services. Ollama (LLM backend) and SearXNG (search) are"
         echo "always installed. Choose which chat frontend(s) to add:"
         echo ""
-        echo "  1) Open WebUI     - Clean, polished interface for local models (recommended)"
-        echo "  2) LibreChat      - Multi-provider (OpenAI, Anthropic, Ollama, and more)"
-        echo "  3) AnythingLLM    - Document Q&A with RAG and vector DB"
+        echo "  1) None           - Skip chat frontends (Ollama API only)"
+        echo "  2) Open WebUI     - Clean, polished interface for local models (recommended)"
+        echo "  3) LibreChat      - Multi-provider (OpenAI, Anthropic, Ollama, and more)"
+        echo "  4) AnythingLLM    - Document Q&A with RAG and vector DB"
         echo ""
-        echo "Enter numbers space-separated (e.g. '1 2'), press Enter for all, or '0' for none:"
+        echo "Enter numbers space-separated (e.g. '2 3'), press Enter for all, or '1' for none:"
         echo ""
         
         local ai_frontend_input
@@ -310,15 +311,15 @@ generate_env_interactive() {
         if [[ -z "$ai_frontend_input" ]]; then
             ai_frontends=("open-webui" "librechat" "anythingllm")
             log_info "Installing all AI frontends: Open WebUI, LibreChat, AnythingLLM"
-        elif [[ "$ai_frontend_input" == "0" ]]; then
+        elif [[ "$ai_frontend_input" == "1" ]]; then
             ai_frontends=()
             log_info "No chat frontend selected — Ollama API only"
         else
             for n in $ai_frontend_input; do
                 case "$n" in
-                    1) ai_frontends+=("open-webui") ;;
-                    2) ai_frontends+=("librechat") ;;
-                    3) ai_frontends+=("anythingllm") ;;
+                    2) ai_frontends+=("open-webui") ;;
+                    3) ai_frontends+=("librechat") ;;
+                    4) ai_frontends+=("anythingllm") ;;
                     *) log_warn "Unknown AI frontend option: $n (skipped)" ;;
                 esac
             done
@@ -344,28 +345,29 @@ generate_env_interactive() {
         
         echo "You selected personal services. Choose which ones to install:"
         echo ""
-        echo "  1) Mealie      - Recipe manager and meal planner"
-        echo "  2) Firefly III - Personal finance and budget tracking"
-        echo "  3) Wger        - Workout and fitness tracker"
+        echo "  1) None        - Skip personal services"
+        echo "  2) Mealie      - Recipe manager and meal planner"
+        echo "  3) Firefly III - Personal finance and budget tracking"
+        echo "  4) Wger        - Workout and fitness tracker"
         echo ""
-        echo "Enter numbers space-separated (e.g. '1 3'), press Enter to install all, or '0' for none:"
+        echo "Enter numbers space-separated (e.g. '2 4'), press Enter to install all, or '1' for none:"
         echo ""
         
         local personal_input
-        read -p "Personal services [Enter=all, 0=none]: " -r personal_input </dev/tty
+        read -p "Personal services [Enter=all, 1=none]: " -r personal_input </dev/tty
         
         if [[ -z "$personal_input" ]]; then
             personal_services=("mealie" "firefly" "wger")
             log_info "Installing all personal services"
-        elif [[ "$personal_input" == "0" ]]; then
+        elif [[ "$personal_input" == "1" ]]; then
             personal_services=()
             log_info "No personal services selected"
         else
             for n in $personal_input; do
                 case "$n" in
-                    1) personal_services+=("mealie") ;;
-                    2) personal_services+=("firefly") ;;
-                    3) personal_services+=("wger") ;;
+                    2) personal_services+=("mealie") ;;
+                    3) personal_services+=("firefly") ;;
+                    4) personal_services+=("wger") ;;
                     *) log_warn "Unknown personal service option: $n (skipped)" ;;
                 esac
             done
@@ -391,26 +393,27 @@ generate_env_interactive() {
         
         echo "You selected home automation services. Choose which ones to install:"
         echo ""
-        echo "  1) Home Assistant  - Smart home automation platform"
-        echo "  2) Node-RED        - Flow-based automation and IoT"
+        echo "  1) None            - Skip automation services"
+        echo "  2) Home Assistant  - Smart home automation platform"
+        echo "  3) Node-RED        - Flow-based automation and IoT"
         echo ""
-        echo "Enter numbers space-separated (e.g. '1 2'), press Enter to install all, or '0' for none:"
+        echo "Enter numbers space-separated (e.g. '2 3'), press Enter to install all, or '1' for none:"
         echo ""
         
         local automation_input
-        read -p "Automation services [Enter=all, 0=none]: " -r automation_input </dev/tty
+        read -p "Automation services [Enter=all, 1=none]: " -r automation_input </dev/tty
         
         if [[ -z "$automation_input" ]]; then
             automation_services=("homeassistant" "nodered")
             log_info "Installing all automation services"
-        elif [[ "$automation_input" == "0" ]]; then
+        elif [[ "$automation_input" == "1" ]]; then
             automation_services=()
             log_info "No automation services selected"
         else
             for n in $automation_input; do
                 case "$n" in
-                    1) automation_services+=("homeassistant") ;;
-                    2) automation_services+=("nodered") ;;
+                    2) automation_services+=("homeassistant") ;;
+                    3) automation_services+=("nodered") ;;
                     *) log_warn "Unknown automation service option: $n (skipped)" ;;
                 esac
             done

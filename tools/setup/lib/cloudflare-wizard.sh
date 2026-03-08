@@ -132,23 +132,22 @@ setup_cloudflare_tunnel() {
     echo ""
     echo "Choose setup method:"
     echo ""
-    echo "  1. API - Fully automated via Cloudflare API (recommended)"
+    echo "  1) None - Skip and configure manually later"
+    echo "  2) API  - Fully automated via Cloudflare API (recommended)"
     echo "     Creates the tunnel, credentials, and DNS records automatically."
-    echo ""
-    echo "  2. None - Skip and configure manually later"
     echo ""
 
     local method
-    read -p "Select method [1-2] (default: 1): " -r method </dev/tty
-    method=${method:-1}
+    read -p "? Select method [1-2] [2]: " -r method </dev/tty
+    method=${method:-2}
 
     case $method in
-        1) setup_tunnel_with_api ;;
-        2)
+        1)
             log_info "Skipping Cloudflare Tunnel setup"
             log_info "You can configure it later by running: ./setup.sh --cloudflare-only"
             return 0
             ;;
+        2) setup_tunnel_with_api ;;
         *)
             log_error "Invalid selection"
             return 1
