@@ -1,0 +1,96 @@
+#!/usr/bin/expect -f
+# harness/expect/setup-dev-gitea.exp
+# Drives setup.sh for: core + dev profiles, Gitea git service, IP-only access.
+# Used by scenario 08-dev-gitea.sh
+#
+# Environment variables:
+#   STACK_DIR       - path to weekendstack (default /home/ubuntu/weekendstack)
+#   HARNESS_HOST_IP - host IP (auto-detected if empty)
+
+set timeout 360
+set stack_dir [expr {[info exists env(STACK_DIR)] ? $env(STACK_DIR) : "/home/ubuntu/weekendstack"}]
+set host_ip   [expr {[info exists env(HARNESS_HOST_IP)] ? $env(HARNESS_HOST_IP) : ""}]
+
+spawn bash -c "cd $stack_dir && ./setup.sh --interactive --skip-pull --skip-cloudflare --skip-certs --reconfigure 2>&1"
+
+# ── Prerequisites ──────────────────────────────────────────────────────────────
+expect {
+    "Continue with setup?" { send "y\r" }
+    timeout { puts "\[EXPECT ERROR\] Timed out at prerequisites"; exit 1 }
+}
+
+# ── Layer mode + Profile selection ────────────────────────────────────────────
+# Two cases:
+#   A) No existing .env profiles → goes straight to "Selection: "
+#   B) Existing profiles → shows "Choose mode" first, then "Selection: "
+# PROFILE_ORDER: 1=networking 2=monitoring 3=productivity 4=dev 5=ai 6=media 7=all
+# Core is always included. We want dev only → "4".
+expect {
+    "Choose mode" {
+        send "2\r"
+        expect {
+            "Selection: " { send "4\r" }
+            timeout { puts "\[EXPECT ERROR\] Timed out at profile selection (after layer mode)"; exit 1 }
+        }
+    }
+    "Selection: " { send "4\r" }
+    timeout { puts "\[EXPECT ERROR\] Timed out at layer mode / profile selection"; exit 1 }
+}
+
+# ── Backup existing .env — always say yes ─────────────────────────────────────
+expect {
+    "Create backup before generating" { send "y\r" }
+    "Computer/host name"             { }
+    timeout { puts "\[EXPECT ERROR\] Timed out at backup / hostname"; exit 1 }
+}
+
+# ── System Settings ────────────────────────────────────────────────────────────
+expect {
+    "Computer/host name" { send "\r" }
+    timeout { puts "\[EXPECT ERROR\] Timed out at hostname"; exit 1 }
+}
+
+expect {
+    "Host IP address" {
+        if {$host_ip ne ""} { send "$host_ip\r" } else { send "\r" }
+    }
+    timeout { puts "\[EXPECT ERROR\] Timed out at host IP"; exit 1 }
+}
+
+expect {
+    "Timezone" { send "\r" }
+    timeout { puts "\[EXPECT ERROR\] Timed out at timezone"; exit 1 }
+}
+
+# ── Git Service — option 2 = Gitea ────────────────────────────────────────────
+expect {
+    "Select git service" { send "2\r" }
+    timeout { puts "\[EXPECT ERROR\] Timed out at git service selection"; exit 1 }
+}
+
+# ── Admin Credentials ──────────────────────────────────────────────────────────
+expect {
+    "Set custom admin credentials" { send "n\r" }
+    timeout { puts "\[EXPECT ERROR\] Timed out at admin credentials"; exit 1 }
+}
+
+# ── File Storage ───────────────────────────────────────────────────────────────
+expect {
+    "Customize storage paths" { send "n\r" }
+    timeout { puts "\[EXPECT ERROR\] Timed out at storage paths"; exit 1 }
+}
+
+# ── Generate .env ──────────────────────────────────────────────────────────────
+expect {
+    "Generate .env file" { send "y\r" }
+    timeout { puts "\[EXPECT ERROR\] Timed out at generate .env"; exit 1 }
+}
+
+# ── Start services ─────────────────────────────────────────────────────────────
+expect {
+    "Start WeekendStack services" { send "n\r" }
+    timeout { puts "\[EXPECT ERROR\] Timed out at start services"; exit 1 }
+}
+
+expect eof
+puts "\n\[EXPECT\] setup-dev-gitea.exp completed successfully"

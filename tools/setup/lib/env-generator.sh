@@ -636,7 +636,13 @@ generate_env_interactive() {
     local env_templates_dir="${SCRIPT_DIR}/tools/env/templates"
     if [[ -d "$env_templates_dir" ]]; then
         # Use modular templates - assemble directly to .env
+        # Build the full profile list including sub-profiles (git service, etc.)
+        # so that sub-profile env templates (e.g. gitea.env.example) are included
+        # and their secrets get auto-generated at template time.
         local profiles_csv=$(IFS=, ; echo "${selected_profiles[*]}")
+        if $has_dev && [[ "$git_service" != "none" ]]; then
+            profiles_csv="${profiles_csv},${git_service}"
+        fi
         log_info "Generating .env from modular templates for profiles: $profiles_csv"
         
         # Assemble templates to temporary file
