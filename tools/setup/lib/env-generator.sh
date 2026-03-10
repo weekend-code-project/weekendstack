@@ -190,57 +190,63 @@ generate_env_interactive() {
         clear
         show_progress $_step $total_steps "Domain Configuration"
         
-        echo "WeekendStack supports two optional domain modes. Configure one, both, or"
-        echo "neither — if you skip both, services are accessible by IP address only."
+        # --- Cloudflare Tunnel ---
+        echo -e "${BOLD}Cloudflare Tunnel (external access)${NC}"
+        echo "  Exposes services publicly via a domain in your Cloudflare account."
+        echo "  Example: weekendcodeproject.dev → https://service.weekendcodeproject.dev"
         echo ""
-        echo -e "${BOLD}Option 1 — External access via Cloudflare Tunnel${NC}"
-        echo "  Requires a domain managed in your Cloudflare account."
-        echo "  Example: weekendcodeproject.dev → services available at https://service.weekendcodeproject.dev"
+        read -p "  Set up Cloudflare Tunnel? [y/N]: " -r _cf_yn </dev/tty
         echo ""
-        read -p "  External domain (press Enter to skip): " -r base_domain_input </dev/tty
-        base_domain_input="${base_domain_input// /}"  # strip spaces
         
-        if [[ -n "$base_domain_input" ]]; then
-            base_domain="$base_domain_input"
-            log_success "External domain set: $base_domain"
+        if [[ "$_cf_yn" =~ ^[Yy]$ ]]; then
+            read -p "  External domain (e.g. weekendcodeproject.dev): " -r base_domain_input </dev/tty
+            base_domain_input="${base_domain_input// /}"
+            
+            if [[ -n "$base_domain_input" ]]; then
+                base_domain="$base_domain_input"
+                log_success "External domain set: $base_domain"
 
-            # Collect Cloudflare API token inline so tunnel setup is fully automated
-            echo ""
-            echo "Cloudflare Tunnel requires an API token to create the tunnel and DNS records."
-            echo "  Permissions needed: Account:Cloudflare Tunnel:Edit + Zone:DNS:Edit"
-            echo "  Create at: https://dash.cloudflare.com/profile/api-tokens"
-            echo ""
-            local _cf_token_existing=""
-            if [[ -f "${SCRIPT_DIR}/.env" ]]; then
-                _cf_token_existing=$(grep "^CLOUDFLARE_API_TOKEN=" "${SCRIPT_DIR}/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
-            fi
-            if [[ -n "$_cf_token_existing" ]]; then
-                log_info "Existing Cloudflare API token found — press Enter to keep it"
-                read -p "  Cloudflare API token [keep existing]: " -r _cf_token_input </dev/tty
-                if [[ -z "$_cf_token_input" ]]; then
-                    CLOUDFLARE_API_TOKEN="$_cf_token_existing"
-                    log_info "Keeping existing Cloudflare API token"
-                else
-                    CLOUDFLARE_API_TOKEN="$_cf_token_input"
-                    log_success "Cloudflare API token set"
+                # Collect Cloudflare API token inline so tunnel setup is fully automated
+                echo ""
+                echo "  Cloudflare API token is needed to create the tunnel and DNS records."
+                echo "  Permissions: Account:Cloudflare Tunnel:Edit + Zone:DNS:Edit"
+                echo "  Create at:   https://dash.cloudflare.com/profile/api-tokens"
+                echo ""
+                local _cf_token_existing=""
+                if [[ -f "${SCRIPT_DIR}/.env" ]]; then
+                    _cf_token_existing=$(grep "^CLOUDFLARE_API_TOKEN=" "${SCRIPT_DIR}/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
                 fi
+                if [[ -n "$_cf_token_existing" ]]; then
+                    log_info "Existing Cloudflare API token found — press Enter to keep it"
+                    read -p "  Cloudflare API token [keep existing]: " -r _cf_token_input </dev/tty
+                    if [[ -z "$_cf_token_input" ]]; then
+                        CLOUDFLARE_API_TOKEN="$_cf_token_existing"
+                        log_info "Keeping existing Cloudflare API token"
+                    else
+                        CLOUDFLARE_API_TOKEN="$_cf_token_input"
+                        log_success "Cloudflare API token set"
+                    fi
+                else
+                    read -p "  Cloudflare API token (press Enter to configure later): " -r _cf_token_input </dev/tty
+                    if [[ -n "$_cf_token_input" ]]; then
+                        CLOUDFLARE_API_TOKEN="$_cf_token_input"
+                        log_success "Cloudflare API token set"
+                    else
+                        log_info "API token skipped — run './setup.sh --cloudflare-only' to configure the tunnel later"
+                    fi
+                fi
+                export CLOUDFLARE_API_TOKEN
             else
-                read -p "  Cloudflare API token (press Enter to skip and configure later): " -r _cf_token_input </dev/tty
-                if [[ -n "$_cf_token_input" ]]; then
-                    CLOUDFLARE_API_TOKEN="$_cf_token_input"
-                    log_success "Cloudflare API token set"
-                else
-                    log_info "API token skipped — run './setup.sh --cloudflare-only' to configure the tunnel later"
-                fi
+                base_domain="localhost"
+                log_info "No domain entered — Cloudflare Tunnel will not be configured"
             fi
-            export CLOUDFLARE_API_TOKEN
         else
             base_domain="localhost"
-            log_info "No external domain — Cloudflare Tunnel will not be configured"
+            log_info "Skipping Cloudflare Tunnel — services accessible by IP address"
         fi
         
         echo ""
-        echo -e "${BOLD}Option 2 — Local domain via Pi-Hole DNS${NC}"
+        echo -e "${BOLD}Local domain (Pi-Hole LAN access)${NC}"
         echo "  A short suffix for LAN-only HTTPS access using self-signed certificates."
         echo "  Example: lab → services available at https://service.lab (on your network)"
         echo "  Skip this if you don't plan to configure Pi-Hole or custom DNS."
