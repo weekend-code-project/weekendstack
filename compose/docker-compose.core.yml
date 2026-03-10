@@ -176,6 +176,12 @@ services:
       - traefik.http.routers.dozzle-lab.tls=true
       - traefik.http.routers.dozzle-lab.service=dozzle
       
+      # External domain (Cloudflare Tunnel)
+      - traefik.http.routers.dozzle-external.entrypoints=websecure
+      - traefik.http.routers.dozzle-external.rule=Host(`dozzle.${BASE_DOMAIN}`)
+      - traefik.http.routers.dozzle-external.tls=true
+      - traefik.http.routers.dozzle-external.service=dozzle
+      
       # Service definition
       - traefik.http.services.dozzle.loadbalancer.server.port=8080
       - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
@@ -236,6 +242,12 @@ services:
       - traefik.http.routers.speedtest-lab.rule=Host(`speedtest.${LAB_DOMAIN}`)
       - traefik.http.routers.speedtest-lab.tls=true
       - traefik.http.routers.speedtest-lab.service=speedtest
+      
+      # External domain (Cloudflare Tunnel)
+      - traefik.http.routers.speedtest-external.entrypoints=websecure
+      - traefik.http.routers.speedtest-external.rule=Host(`speedtest.${BASE_DOMAIN}`)
+      - traefik.http.routers.speedtest-external.tls=true
+      - traefik.http.routers.speedtest-external.service=speedtest
       
       # Service definition
       - traefik.http.services.speedtest.loadbalancer.server.port=80

@@ -87,6 +87,12 @@ services:
       - traefik.http.routers.wud-lab.tls=true
       - traefik.http.routers.wud-lab.service=wud
 
+      # External domain (Cloudflare Tunnel)
+      - traefik.http.routers.wud-external.entrypoints=websecure
+      - traefik.http.routers.wud-external.rule=Host(`wud.${BASE_DOMAIN}`)
+      - traefik.http.routers.wud-external.tls=true
+      - traefik.http.routers.wud-external.service=wud
+
       # Service definition
       - traefik.http.services.wud.loadbalancer.server.port=3000
       - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
@@ -141,6 +147,12 @@ services:
       - traefik.http.routers.uptime-kuma-lab.rule=Host(`uptime-kuma.${LAB_DOMAIN}`)
       - traefik.http.routers.uptime-kuma-lab.tls=true
       - traefik.http.routers.uptime-kuma-lab.service=uptime-kuma
+
+      # External domain (Cloudflare Tunnel)
+      - traefik.http.routers.uptime-kuma-external.entrypoints=websecure
+      - traefik.http.routers.uptime-kuma-external.rule=Host(`uptime-kuma.${BASE_DOMAIN}`)
+      - traefik.http.routers.uptime-kuma-external.tls=true
+      - traefik.http.routers.uptime-kuma-external.service=uptime-kuma
 
       # Service definition
       - traefik.http.services.uptime-kuma.loadbalancer.server.port=3001
@@ -197,6 +209,12 @@ services:
       - traefik.http.routers.portainer-lab.rule=Host(`portainer.${LAB_DOMAIN}`)
       - traefik.http.routers.portainer-lab.tls=true
       - traefik.http.routers.portainer-lab.service=portainer
+
+      # External domain (Cloudflare Tunnel)
+      - traefik.http.routers.portainer-external.entrypoints=websecure
+      - traefik.http.routers.portainer-external.rule=Host(`portainer.${BASE_DOMAIN}`)
+      - traefik.http.routers.portainer-external.tls=true
+      - traefik.http.routers.portainer-external.service=portainer
 
       # Service definition
       - traefik.http.services.portainer.loadbalancer.server.port=9000
