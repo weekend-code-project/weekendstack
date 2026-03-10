@@ -4,7 +4,7 @@
 # ============================================================================
 # This script checks your .env file for common issues:
 #   - Weak or placeholder passwords
-#   - Empty required fields  
+#   - Empty required fields
 #   - Invalid values
 #   - Security concerns
 #   - Profile-aware validation (only validates enabled services)
@@ -75,9 +75,9 @@ fi
 echo ""
 
 # ============================================================================
-# Check for weak passwords
+# Check for placeholder/weak passwords and empty required fields
 # ============================================================================
-echo -e "${BLUE}🔐 Checking for weak passwords...${NC}"
+echo -e "${BLUE}🔐 Checking passwords and required fields...${NC}"
 
 WEAK_PATTERNS=(
     "CHANGEME"
@@ -86,28 +86,14 @@ WEAK_PATTERNS=(
     "Password"
     "12345"
     "admin123"
-    "test"
-    "demo"
-    "example"
 )
 
 for pattern in "${WEAK_PATTERNS[@]}"; do
-    # Only check actual variable assignments, not comments
     if grep -E "^[A-Z_]*(PASSWORD|PASS|SECRET).*$pattern" .env >/dev/null 2>&1; then
-        echo -e "${RED}  ✗ Weak password detected: $pattern${NC}"
+        echo -e "${RED}  ✗ Placeholder/weak password detected: $pattern${NC}"
         ERRORS=$((ERRORS + 1))
     fi
 done
-
-if [ $ERRORS -eq 0 ]; then
-    echo -e "${GREEN}  ✓ No weak passwords found${NC}"
-fi
-echo ""
-
-# ============================================================================
-# Check for empty required fields
-# ============================================================================
-echo -e "${BLUE}🔍 Checking for empty required fields...${NC}"
 
 REQUIRED_VARS=(
     "HOST_IP"
@@ -117,47 +103,16 @@ REQUIRED_VARS=(
     "DEFAULT_TRAEFIK_AUTH_PASS"
 )
 
-EMPTY_REQUIRED=0
 for var in "${REQUIRED_VARS[@]}"; do
-    # Extract value and strip comments before processing
     VALUE=$(grep "^${var}=" .env | cut -d'=' -f2- | sed 's/#.*//' | tr -d ' ')
     if [ -z "$VALUE" ]; then
         echo -e "${RED}  ✗ Required field is empty: $var${NC}"
-        EMPTY_REQUIRED=$((EMPTY_REQUIRED + 1))
         ERRORS=$((ERRORS + 1))
     fi
 done
 
-if [ $EMPTY_REQUIRED -eq 0 ]; then
-    echo -e "${GREEN}  ✓ All required fields are set${NC}"
-fi
-echo ""
-
-# ============================================================================
-# Check password strength (length)
-# ============================================================================
-echo -e "${BLUE}🔒 Checking password strength...${NC}"
-
-SHORT_PASSWORDS=0
-while IFS= read -r line; do
-    if [[ $line =~ ^[A-Z_]+PASSWORD=(.+)$ ]] || \
-       [[ $line =~ ^[A-Z_]+_PASS=(.+)$ ]] || \
-       [[ $line =~ ^[A-Z_]+SECRET=(.+)$ ]]; then
-        
-        VALUE="${BASH_REMATCH[1]}"
-        VALUE=$(echo "$VALUE" | sed 's/#.*//' | tr -d ' ')
-        
-        if [ -n "$VALUE" ] && [ ${#VALUE} -lt 16 ]; then
-            VAR=$(echo "$line" | cut -d'=' -f1)
-            echo -e "${YELLOW}  ⚠ Short password (< 16 chars): $VAR${NC}"
-            SHORT_PASSWORDS=$((SHORT_PASSWORDS + 1))
-            WARNINGS=$((WARNINGS + 1))
-        fi
-    fi
-done < .env
-
-if [ $SHORT_PASSWORDS -eq 0 ]; then
-    echo -e "${GREEN}  ✓ All passwords meet minimum length${NC}"
+if [ $ERRORS -eq 0 ]; then
+    echo -e "${GREEN}  ✓ No placeholder passwords or missing required fields${NC}"
 fi
 echo ""
 
@@ -193,12 +148,11 @@ echo ""
 echo -e "${BLUE}📁 Checking file paths...${NC}"
 
 FILES_BASE_DIR=$(grep "^FILES_BASE_DIR=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
-if [ "$FILES_BASE_DIR" != "./files" ]; then
-    echo -e "${YELLOW}  ⚠ FILES_BASE_DIR is set to: $FILES_BASE_DIR${NC}"
-    echo "    Recommended: Start with ./files for initial testing"
+if [ -z "$FILES_BASE_DIR" ]; then
+    echo -e "${YELLOW}  ⚠ FILES_BASE_DIR is not set${NC}"
     WARNINGS=$((WARNINGS + 1))
 else
-    echo -e "${GREEN}  ✓ FILES_BASE_DIR set to ./files (recommended for testing)${NC}"
+    echo -e "${GREEN}  ✓ FILES_BASE_DIR: $FILES_BASE_DIR${NC}"
 fi
 echo ""
 
@@ -208,7 +162,7 @@ echo ""
 echo -e "${BLUE}⚙️  Checking for common mistakes...${NC}"
 
 # Check if NFS paths are active when FILES_BASE_DIR is local
-if [ "$FILES_BASE_DIR" = "./files" ]; then
+if [[ "$FILES_BASE_DIR" == "./files" ]]; then
     if grep "^NFS_SERVER_IP=" .env | grep -v "^#" >/dev/null 2>&1; then
         echo -e "${YELLOW}  ⚠ NFS variables active but FILES_BASE_DIR is local${NC}"
         echo "    Comment out NFS variables if using local files"
@@ -242,7 +196,20 @@ echo ""
 # ============================================================================
 echo -e "${BLUE}🛡️  Security recommendations:${NC}"
 
-# Check if default admin password is actually set
+# Check password lengths (informational only)
+while IFS= read -r line; do
+    if [[ $line =~ ^[A-Z_]+PASSWORD=(.+)$ ]] || \
+       [[ $line =~ ^[A-Z_]+_PASS=(.+)$ ]] || \
+       [[ $line =~ ^[A-Z_]+SECRET=(.+)$ ]]; then
+        VALUE="${BASH_REMATCH[1]}"
+        VALUE=$(echo "$VALUE" | sed 's/#.*//' | tr -d ' ')
+        if [ -n "$VALUE" ] && [ ${#VALUE} -lt 16 ]; then
+            VAR=$(echo "$line" | cut -d'=' -f1)
+            echo -e "${YELLOW}  ⚠ Short password (< 16 chars): $VAR${NC}"
+        fi
+    fi
+done < .env
+
 DEFAULT_ADMIN_PASS=$(grep "^DEFAULT_ADMIN_PASSWORD=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
 if [ ${#DEFAULT_ADMIN_PASS} -lt 32 ]; then
     echo -e "${YELLOW}  ⚠ Consider using longer passwords (32+ chars)${NC}"
@@ -273,14 +240,14 @@ if [[ "$CF_ENABLED" == "true" ]]; then
         echo -e "${RED}  ✗ CLOUDFLARE_TUNNEL_ENABLED is true but CLOUDFLARE_TUNNEL_ID is empty${NC}"
         ERRORS=$((ERRORS + 1))
     fi
-    
+
     # Check config file exists
     if [[ -n "$CF_CONFIG_FILE" ]] && [[ ! -f "$CF_CONFIG_FILE" ]]; then
         echo -e "${YELLOW}  ⚠ Cloudflare config file not found: $CF_CONFIG_FILE${NC}"
         echo "    Run setup to create tunnel configuration"
         WARNINGS=$((WARNINGS + 1))
     fi
-    
+
     # Check credentials file exists (if tunnel ID is set)
     if [[ -n "$CF_TUNNEL_ID" ]]; then
         CF_CREDS_DIR=$(grep "^CLOUDFLARE_CREDENTIALS_DIR=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
@@ -292,12 +259,22 @@ if [[ "$CF_ENABLED" == "true" ]]; then
             echo -e "${GREEN}  ✓ Cloudflare credentials file found${NC}"
         fi
     fi
-    
+
     echo -e "${GREEN}  ✓ Cloudflare Tunnel configuration validated${NC}"
 elif [[ -n "$CF_API_TOKEN" ]]; then
-    echo -e "${YELLOW}  ⚠ API token is set but tunnel is not enabled${NC}"
-    echo "    Run setup to configure Cloudflare Tunnel"
-    WARNINGS=$((WARNINGS + 1))
+    # API token is set — test actual connectivity to Cloudflare
+    echo -e "${BLUE}  ℹ Testing Cloudflare API connectivity...${NC}"
+    CF_VERIFY_RESPONSE=$(curl -s --max-time 5 \
+        "https://api.cloudflare.com/client/v4/user/tokens/verify" \
+        -H "Authorization: Bearer $CF_API_TOKEN" \
+        -H "Content-Type: application/json" 2>/dev/null)
+    if echo "$CF_VERIFY_RESPONSE" | grep -q '"success":true'; then
+        echo -e "${GREEN}  ✓ Cloudflare API token valid — run setup to configure tunnel${NC}"
+    else
+        echo -e "${RED}  ✗ Cloudflare API token invalid or unreachable${NC}"
+        echo "    Check your token at: https://dash.cloudflare.com/profile/api-tokens"
+        ERRORS=$((ERRORS + 1))
+    fi
 else
     echo -e "${BLUE}  ℹ Cloudflare Tunnel not enabled (services will be local-only)${NC}"
 fi

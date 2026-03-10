@@ -977,7 +977,7 @@ expand_profiles() {
     local -a result=()
 
     # Base profiles that "all" maps to (no gpu/external — those are opt-in)
-    local ALL_CONCRETE=(core networking monitoring productivity dev ai media automation)
+    local ALL_CONCRETE=(core networking monitoring productivity dev ai media)
 
     for p in "${input[@]}"; do
         if [[ "$p" == "all" ]]; then

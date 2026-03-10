@@ -17,7 +17,6 @@
 #   - dev-tools: Docker registry cache
 #   - ai: AI services (chat, search, image generation)
 #   - productivity: NocoDB, Paperless-ngx, N8N
-#   - automation: Home Assistant
 #   - monitoring: Uptime Kuma
 # =============================================================================
 
@@ -32,7 +31,6 @@ include:
   - compose/docker-compose.dev.yml
   - compose/docker-compose.productivity.yml
   - compose/docker-compose.networking.yml
-  - compose/docker-compose.automation.yml
   - compose/docker-compose.media.yml
   - compose/docker-compose.monitoring.yml
   - path: docker-compose.custom.yml

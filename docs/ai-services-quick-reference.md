@@ -6,13 +6,10 @@ Quick commands and endpoints for integrating SearXNG, Ollama, and N8N.
 
 ```bash
 # Start all AI services
-docker compose --profile ai --profile automation up -d
+docker compose --profile ai up -d
 
 # Start only search services
 docker compose up -d searxng
-
-# Start only automation
-docker compose --profile automation up -d
 
 # Check service status
 docker compose ps
@@ -84,7 +81,6 @@ curl -X POST http://localhost:5678/webhook/content-monitor \
 # Core AI Services
 AI_CHAT_PROFILE=ai
 AI_SEARCH_PROFILE=ai
-AUTOMATION_N8N_PROFILE=automation
 
 # SearXNG Configuration
 SEARXNG_PORT=4000

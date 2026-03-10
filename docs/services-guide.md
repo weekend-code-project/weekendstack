@@ -27,7 +27,6 @@ docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 | **Development** | Coder, Gitea | `dev` |
 | **AI** | Open WebUI, SearXNG | `ai` |
 | **Productivity** | n8n, Paperless, NocoDB, Activepieces, Hoarder, File Browser, Focalboard, Trilium, Vikunja, Vaultwarden | `productivity` |
-| **Automation** | Home Assistant, Node-RED | `automation` |
 | **Media** | Immich, Kavita, Navidrome | `media` |
 | **Monitoring** | WUD, Uptime Kuma, Portainer | `monitoring` |
 | **Networking** | Pi-Hole | `networking` |
@@ -543,41 +542,6 @@ VAULTWARDEN_SIGNUPS_ALLOWED=true
 
 ---
 
-## Automation Services
-
-### Home Assistant - Smart Home
-**Port:** 8123 | **Domain:** `home.${BASE_DOMAIN}`
-
-Smart home automation platform.
-
-**Access:**
-- URL: `http://192.168.2.50:8123`
-- Initial Setup: Create account on first access
-
-**Configuration:** `files/homeassistant/`
-
-**Setup:**
-- [docs/homeassistant-setup.md](homeassistant-setup.md)
-
-### Node-RED - Flow Programming
-**Port:** 1880 | **Domain:** `nodered.${BASE_DOMAIN}`
-
-Visual programming for IoT and automation.
-
-**Access:**
-- URL: `http://192.168.2.50:1880`
-- Auth: None by default (can enable in settings)
-
-**Key Variables:**
-```env
-NODERED_PORT=1880
-```
-
-**Setup:**
-- [docs/nodered-setup.md](nodered-setup.md)
-
----
-
 ## Media Services
 
 ### Immich - Photo Management
@@ -752,7 +716,6 @@ PIHOLE_WEBPASSWORD=pihole-admin-change-me
 |------|---------|-------|
 | 80 | Traefik HTTP | |
 | 443 | Traefik HTTPS | |
-| 1880 | Node-RED | |
 | 2222 | Gitea SSH | |
 | 2283 | Immich | |
 | 3000 | Open WebUI | |

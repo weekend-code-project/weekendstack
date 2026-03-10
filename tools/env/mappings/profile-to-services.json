@@ -1,94 +1,89 @@
 {
-    "core": [
-        "link-router",
-        "glance",
-        "vaultwarden",
-        "dozzle",
-        "speedtest-tracker"
-    ],
-    "networking": [
-        "traefik",
-        "pihole",
-        "pihole-dnsmasq-init",
-        "cert-generator",
-        "error-pages",
-        "cloudflare-tunnel"
-    ],
-    "ai": [
-        "ollama",
-        "open-webui",
-        "searxng",
-        "anythingllm",
-        "librechat",
-        "localai",
-        "whisper",
-        "whisperx",
-        "privategpt"
-    ],
-    "dev": [
-        "coder",
-        "coder-database",
-        "coder-init",
-        "registry-cache",
-        "socat",
-        "it-tools"
-    ],
-    "gitea": [
-        "gitea",
-        "gitea-db"
-    ],
-    "gitlab": [
-        "gitlab"
-    ],
-    "productivity": [
-        "nocodb",
-        "nocodb-db",
-        "n8n",
-        "paperless-ngx",
-        "paperless-db",
-        "paperless-redis",
-        "activepieces",
-        "postiz",
-        "docmost",
-        "focalboard",
-        "trilium",
-        "vikunja",
-        "excalidraw",
-        "filebrowser",
-        "hoarder",
-        "hoarder-chrome",
-        "hoarder-meilisearch",
-        "bytestash",
-        "resourcespace"
-    ],
-    "personal": [
-        "mealie",
-        "firefly",
-        "wger"
-    ],
-    "media": [
-        "immich-server",
-        "immich-machine-learning",
-        "immich-redis",
-        "immich-db",
-        "kavita",
-        "navidrome"
-    ],
-    "monitoring": [
-        "cockpit",
-        "wud",
-        "uptime-kuma",
-        "netdata",
-        "portainer",
-        "netbox",
-        "duplicati",
-        "guacamole",
-        "guacamole-db",
-        "guacd"
-    ],
-    "automation": [
-        "homeassistant",
-        "homeassistant-perms",
-        "nodered"
-    ]
+  "core": [
+    "link-router",
+    "glance",
+    "vaultwarden",
+    "dozzle",
+    "speedtest-tracker"
+  ],
+  "networking": [
+    "traefik",
+    "pihole",
+    "pihole-dnsmasq-init",
+    "cert-generator",
+    "error-pages",
+    "cloudflare-tunnel"
+  ],
+  "ai": [
+    "ollama",
+    "open-webui",
+    "searxng",
+    "anythingllm",
+    "librechat",
+    "localai",
+    "whisper",
+    "whisperx",
+    "privategpt"
+  ],
+  "dev": [
+    "coder",
+    "coder-database",
+    "coder-init",
+    "registry-cache",
+    "socat",
+    "it-tools"
+  ],
+  "gitea": [
+    "gitea",
+    "gitea-db"
+  ],
+  "gitlab": [
+    "gitlab"
+  ],
+  "productivity": [
+    "nocodb",
+    "nocodb-db",
+    "n8n",
+    "paperless-ngx",
+    "paperless-db",
+    "paperless-redis",
+    "activepieces",
+    "postiz",
+    "docmost",
+    "focalboard",
+    "trilium",
+    "vikunja",
+    "excalidraw",
+    "filebrowser",
+    "hoarder",
+    "hoarder-chrome",
+    "hoarder-meilisearch",
+    "bytestash",
+    "resourcespace"
+  ],
+  "personal": [
+    "mealie",
+    "firefly",
+    "wger"
+  ],
+  "media": [
+    "immich-server",
+    "immich-machine-learning",
+    "immich-redis",
+    "immich-db",
+    "kavita",
+    "navidrome"
+  ],
+  "monitoring": [
+    "cockpit",
+    "wud",
+    "uptime-kuma",
+    "netdata",
+    "portainer",
+    "netbox",
+    "duplicati",
+    "guacamole",
+    "guacamole-db",
+    "guacd"
+  ]
 }

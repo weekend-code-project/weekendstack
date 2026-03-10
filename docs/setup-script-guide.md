@@ -200,7 +200,6 @@ Use arrow keys and space bar to select profiles:
 - `dev` - Development tools (Coder, Gitea)
 - `productivity` - Business apps (Paperless, N8N, NocoDB)
 - `monitoring` - Monitoring tools (Portainer, Uptime Kuma, WUD)
-- `automation` - Home automation (Home Assistant)
 
 **Resource check:** After selection, the script shows estimated requirements and validates available resources.
 
@@ -598,7 +597,6 @@ Documentation:
 | **personal** | 7 | 6GB | 20GB | Finance, recipes, photos |
 | **media** | 2 | 2GB | 10GB | eBooks, music |
 | **monitoring** | 9 | 4GB | 10GB | Container management |
-| **automation** | 3 | 2GB | 5GB | Home automation |
 
 ### Recommended Profile Combinations
 

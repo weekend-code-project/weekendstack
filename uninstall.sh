@@ -385,7 +385,6 @@ remove_networks() {
         "productivity-network"
         "media-network"
         "ai-network"
-        "automation-network"
         "monitoring-network"
         "weekendstack_default"
     )

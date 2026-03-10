@@ -146,9 +146,8 @@ generate_env_interactive() {
     local has_networking=false
     local has_dev=false
     local has_ai=false
-    local has_automation=false
     for profile in "$@"; do
-        if [[ "$profile" == "networking" ]] || [[ "$profile" == "all" ]]; then
+        if [[  "$profile" == "networking" ]] || [[ "$profile" == "all" ]]; then
             has_networking=true
         fi
         if [[ "$profile" == "dev" ]] || [[ "$profile" == "all" ]]; then
@@ -156,9 +155,6 @@ generate_env_interactive() {
         fi
         if [[ "$profile" == "ai" ]] || [[ "$profile" == "all" ]]; then
             has_ai=true
-        fi
-        if [[ "$profile" == "automation" ]] || [[ "$profile" == "all" ]]; then
-            has_automation=true
         fi
     done
     
@@ -172,9 +168,6 @@ generate_env_interactive() {
     fi
     if $has_ai; then
         ((total_steps++))  # Add AI Frontend Selection
-    fi
-    if $has_automation; then
-        ((total_steps++))  # Add Automation Services Selection
     fi
     
     local lab_domain=""
@@ -388,52 +381,6 @@ generate_env_interactive() {
     fi
     
     # ========================================================================
-    # STEP: Automation Services Selection (only if automation profile selected)
-    # ========================================================================
-    local -a automation_services=()
-    
-    if $has_automation; then
-        _step=$((_step + 1))
-        clear
-        show_progress $_step $total_steps "Home Automation Services Selection"
-        
-        echo "You selected home automation services. Choose which ones to install:"
-        echo ""
-        echo "  1) None            - Skip automation services"
-        echo "  2) Home Assistant  - Smart home automation platform"
-        echo "  3) Node-RED        - Flow-based automation and IoT"
-        echo ""
-        echo "Enter numbers space-separated (e.g. '2 3'), press Enter to install all, or '1' for none:"
-        echo ""
-        
-        local automation_input
-        read -p "Automation services [Enter=all, 1=none]: " -r automation_input </dev/tty
-        
-        if [[ -z "$automation_input" ]]; then
-            automation_services=("homeassistant" "nodered")
-            log_info "Installing all automation services"
-        elif [[ "$automation_input" == "1" ]]; then
-            automation_services=()
-            log_info "No automation services selected"
-        else
-            for n in $automation_input; do
-                case "$n" in
-                    2) automation_services+=("homeassistant") ;;
-                    3) automation_services+=("nodered") ;;
-                    *) log_warn "Unknown automation service option: $n (skipped)" ;;
-                esac
-            done
-            if [[ ${#automation_services[@]} -gt 0 ]]; then
-                log_success "Selected automation services: ${automation_services[*]}"
-            else
-                log_info "No automation services selected"
-            fi
-        fi
-        
-        log_success "Automation services configuration complete"
-    fi
-    
-    # ========================================================================
     # STEP: Admin Credentials (always shown)
     # ========================================================================
     _step=$((_step + 1))
@@ -579,9 +526,6 @@ generate_env_interactive() {
             echo "  GPU:              enabled (nvidia)"
         fi
     fi
-    if $has_automation && [[ ${#automation_services[@]} -gt 0 ]]; then
-        echo "  Automation:       ${automation_services[*]}"
-    fi
     echo ""
     
     if ! prompt_yes_no "Generate .env file with these settings?" "y"; then
@@ -691,7 +635,7 @@ generate_env_interactive() {
     log_step "Generating compose profile list..."
     local profiles_csv=$(IFS=, ; echo "${selected_profiles[*]}")
     
-    # Append sub-profile choices (git service, AI frontends, automation)
+    # Append sub-profile choices (git service, AI frontends)
     if $has_dev && [[ "$git_service" != "none" ]]; then
         profiles_csv="${profiles_csv},${git_service}"
     fi
@@ -702,11 +646,6 @@ generate_env_interactive() {
     fi
     if $has_ai && $use_gpu; then
         profiles_csv="${profiles_csv},gpu"
-    fi
-    if $has_automation && [[ ${#automation_services[@]} -gt 0 ]]; then
-        for svc in "${automation_services[@]}"; do
-            profiles_csv="${profiles_csv},${svc}"
-        done
     fi
     
     # Write the full expanded profile list to COMPOSE_PROFILES in .env so that

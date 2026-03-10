@@ -70,7 +70,6 @@ Edit `.env` and set:
 # Enable AI Services
 AI_CHAT_PROFILE=ai
 AI_SEARCH_PROFILE=ai
-AUTOMATION_N8N_PROFILE=automation
 
 # Ensure Ollama connection
 OLLAMA_HOST=http://host.docker.internal:11434
@@ -80,7 +79,7 @@ OLLAMA_HOST=http://host.docker.internal:11434
 
 ```bash
 # Start the complete AI stack
-docker compose --profile ai --profile automation up -d
+docker compose --profile ai up -d
 
 # Verify all services are running
 docker compose ps

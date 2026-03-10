@@ -24,10 +24,9 @@ tools/env/templates/
 ├── global/         # System, paths, defaults (always included)
 ├── core/           # Essential services
 ├── ai/             # AI/LLM services
-├── productivity/   # Document management, automation
+├── productivity/   # Document management, workflow
 ├── dev/            # Development tools
 ├── media/          # Photos, music, books
-├── automation/     # Home Assistant, Node-RED
 ├── monitoring/     # Uptime, performance monitoring
 ├── networking/     # Traefik, Pi-hole, tunnels
 └── personal/       # Finance, recipes, fitness
@@ -263,7 +262,6 @@ weekendstack/
     │       ├── productivity/
     │       ├── dev/
     │       ├── media/
-    │       ├── automation/
     │       ├── monitoring/
     │       ├── networking/
     │       └── personal/

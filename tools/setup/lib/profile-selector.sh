@@ -6,7 +6,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 # Profile definitions (from profile-matrix.md)
 declare -A PROFILES=(
-    ["all"]="All services (everything including automation)"
+    ["all"]="All services"
     ["core"]="Foundation (Glance, Link Router, Dozzle, Speedtest, Certs)"
     ["networking"]="Network infrastructure (Traefik, Pi-hole, Cloudflare)"
     ["monitoring"]="Container management and uptime monitoring (Portainer, Uptime Kuma, WUD)"
@@ -250,7 +250,7 @@ select_profiles_quick() {
     echo "  1) Foundation    - Core + Networking (recommended starter)"
     echo "  2) Developer     - Foundation + Dev + AI services"
     echo "  3) Productivity  - Foundation + Productivity + Media"
-    echo "  4) Complete      - All services (includes automation)"
+    echo "  4) Complete      - All services"
     echo "  5) Custom        - Choose specific profiles"
     echo ""
     
@@ -320,13 +320,6 @@ get_services_for_profiles() {
                 services+=("kavita" "navidrome")
                 ;;
             monitoring)
-                services+=("wud" "uptime-kuma" "portainer")
-                ;;
-            automation)
-                services+=("homeassistant" "nodered")
-                ;;
-        esac
-    done
     
     # Remove duplicates
     local unique_services=($(echo "${services[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' '))
@@ -369,10 +362,6 @@ estimate_resources() {
             monitoring)
                 estimated_memory=$((estimated_memory + 4))
                 estimated_disk=$((estimated_disk + 10))
-                ;;
-            automation)
-                estimated_memory=$((estimated_memory + 2))
-                estimated_disk=$((estimated_disk + 5))
                 ;;
         esac
     done
