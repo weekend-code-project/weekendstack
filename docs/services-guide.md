@@ -29,7 +29,7 @@ docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 | **Productivity** | n8n, Paperless, NocoDB, Activepieces, Hoarder, File Browser, Focalboard, Trilium, Vikunja, Vaultwarden | `productivity` |
 | **Automation** | Home Assistant, Node-RED | `automation` |
 | **Media** | Immich, Kavita, Navidrome | `media` |
-| **Monitoring** | Cockpit, Dozzle, Watchtower, Uptime Kuma, Netdata, Duplicati, Portainer | `monitoring` |
+| **Monitoring** | WUD, Uptime Kuma, Portainer | `monitoring` |
 | **Networking** | Pi-Hole | `networking` |
 
 ---
@@ -674,91 +674,51 @@ See [docs/unraid-share-example.md](unraid-share-example.md) for step-by-step gui
 
 ## Monitoring Services
 
-### Cockpit - Server Administration
-**Port:** 9090
+All monitoring services have their own login systems and are safe for Cloudflare tunnel exposure.
 
-Web-based server administration interface.
+### WUD - What's Up Docker
+**Port:** 3002 | **Domain:** `wud.${LAB_DOMAIN}`
+
+Container update manager — shows available image updates without auto-applying them.
 
 **Access:**
-- URL: `http://192.168.2.50:9090`
-- Auth: System user credentials (Linux users)
-- **Note:** Local network only (not exposed externally)
+- URL: `http://192.168.2.50:3002`
+- Auth: Built-in basic auth (configure `WUD_AUTH_USER` / `WUD_AUTH_HASH` in `.env`)
 
 **Key Variables:**
 ```env
-COCKPIT_PORT=9090
-```
-
-### Dozzle - Docker Logs
-**Port:** 9999 | **Domain:** `dozzle.${BASE_DOMAIN}` (local only recommended)
-
-Real-time Docker log viewer.
-
-**Access:**
-- URL: `http://192.168.2.50:9999`
-- Auth: None (read-only)
-
-**Key Variables:**
-```env
-DOZZLE_PORT=9999
+WUD_PORT=3002
+WUD_AUTH_USER=admin
+WUD_AUTH_HASH=
 ```
 
 ### Uptime Kuma - Service Monitoring
-**Port:** 3001 | **Domain:** `uptime.${BASE_DOMAIN}`
+**Port:** 3001 | **Domain:** `uptime-kuma.${LAB_DOMAIN}`
 
-Self-hosted uptime monitoring.
-
-### Netdata - System Monitoring
-**Port:** 19999 | **Domain:** `netdata.${BASE_DOMAIN}`
-
-Real-time system performance monitoring.
+Self-hosted uptime monitoring tool. Create your admin account on first access.
 
 **Access:**
-- URL: `http://192.168.2.50:19999`
-- Auth: None by default
-- **Note:** Local network only (not exposed externally)
+- URL: `http://192.168.2.50:3001`
+- Auth: Admin account created on first run
 
 **Key Variables:**
 ```env
-NETDATA_PORT=19999
-```
-
-**Setup:**
-- [docs/monitoring-setup.md](monitoring-setup.md)
-
-### Duplicati - Backups
-**Port:** 8200 | **Domain:** `duplicati.${BASE_DOMAIN}`
-
-Encrypted cloud backup solution.
-
-**Access:**
-- URL: `http://192.168.2.50:8200`
-- Auth: Set password on first access (optional)
-
-**Key Variables:**
-```env
-DUPLICATI_PORT=8200
-DUPLICATI_ENCRYPTION_KEY=duplicati-encryption-key-change-me
+UPTIME_KUMA_PORT=3001
 ```
 
 ### Portainer - Container Management
-**Port:** 9000 (HTTP), 9443 (HTTPS) | **Domain:** `portainer.${BASE_DOMAIN}`
+**Port:** 9000 (HTTP), 9443 (HTTPS) | **Domain:** `portainer.${LAB_DOMAIN}`
 
-Docker container management UI.
+Docker container management UI. Create your admin account on first access.
 
 **Access:**
 - URL: `http://192.168.2.50:9000` or `https://192.168.2.50:9443`
-- Initial Setup: Create admin account on first access
+- Auth: Admin account created on first run
 
 **Key Variables:**
 ```env
 PORTAINER_PORT=9443
 ```
-
-### Watchtower - Auto Updates
-**Runs in Background**
-
-Automatically updates containers when new images are available.
 
 ---
 
@@ -812,9 +772,6 @@ PIHOLE_WEBPASSWORD=pihole-admin-change-me
 | 8090 | NocoDB | |
 | 8097 | Focalboard | |
 | 8123 | Home Assistant | |
-| 8200 | Duplicati | |
 | 8222 | Vaultwarden | HTTPS only |
-| 9090 | Cockpit | Routed locally via `cockpit.lab` |
 | 9000 | Portainer | |
 | 9999 | Dozzle | |
-| 19999 | Netdata | |

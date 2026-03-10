@@ -9,7 +9,7 @@ declare -A PROFILES=(
     ["all"]="All services (everything including automation)"
     ["core"]="Foundation (Glance, Link Router, Dozzle, Speedtest, Certs)"
     ["networking"]="Network infrastructure (Traefik, Pi-hole, Cloudflare)"
-    ["monitoring"]="Full monitoring suite (Portainer, Uptime Kuma, Netdata)"
+    ["monitoring"]="Container management and uptime monitoring (Portainer, Uptime Kuma, WUD)"
     ["productivity"]="Business apps (Vaultwarden, Paperless, NocoDB, N8N)"
     ["dev"]="Development tools (Coder, Gitea)"
     ["ai"]="AI & LLM services (Ollama, Open WebUI, LocalAI)"
@@ -320,7 +320,7 @@ get_services_for_profiles() {
                 services+=("kavita" "navidrome")
                 ;;
             monitoring)
-                services+=("cockpit" "dozzle" "wud" "speedtest-tracker" "uptime-kuma" "netdata" "portainer" "komodo" "duplicati")
+                services+=("wud" "uptime-kuma" "portainer")
                 ;;
             automation)
                 services+=("homeassistant" "nodered")
