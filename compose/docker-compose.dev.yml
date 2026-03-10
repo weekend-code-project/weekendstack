@@ -465,11 +465,12 @@ services:
       - traefik.http.routers.it-tools-lab-http.middlewares=redirect-to-https@file
       - traefik.http.routers.it-tools-lab-http.service=it-tools
       
-      # HTTPS router for .lab domain - No auth for local network
+      # HTTPS router for .lab domain - auth required
       - traefik.http.routers.it-tools-lab.entrypoints=websecure
       - traefik.http.routers.it-tools-lab.rule=Host(`it-tools.${LAB_DOMAIN}`)
       - traefik.http.routers.it-tools-lab.tls=true
       - traefik.http.routers.it-tools-lab.service=it-tools
+      - traefik.http.routers.it-tools-lab.middlewares=it-tools-auth@file
       
       # HTTPS router for external domain
       - traefik.http.routers.it-tools.entrypoints=websecure

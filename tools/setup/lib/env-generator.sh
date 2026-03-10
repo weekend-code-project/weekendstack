@@ -353,6 +353,7 @@ generate_env_interactive() {
         echo "  2) Open WebUI     - Clean, polished interface for local models (recommended)"
         echo "  3) LibreChat      - Multi-provider (OpenAI, Anthropic, Ollama, and more)"
         echo "  4) AnythingLLM    - Document Q&A with RAG and vector DB"
+        echo "  5) LocalAI        - OpenAI-compatible API server for local models"
         echo ""
         echo "Enter numbers space-separated (e.g. '2 3'), press Enter for all, or '1' for none:"
         echo ""
@@ -361,8 +362,8 @@ generate_env_interactive() {
         read -p "AI frontend selection [Enter=all]: " -r ai_frontend_input </dev/tty
         
         if [[ -z "$ai_frontend_input" ]]; then
-            ai_frontends=("open-webui" "librechat" "anythingllm")
-            log_info "Installing all AI frontends: Open WebUI, LibreChat, AnythingLLM"
+            ai_frontends=("open-webui" "librechat" "anythingllm" "localai")
+            log_info "Installing all AI frontends: Open WebUI, LibreChat, AnythingLLM, LocalAI"
         elif [[ "$ai_frontend_input" == "1" ]]; then
             ai_frontends=()
             log_info "No chat frontend selected — Ollama API only"
@@ -372,6 +373,7 @@ generate_env_interactive() {
                     2) ai_frontends+=("open-webui") ;;
                     3) ai_frontends+=("librechat") ;;
                     4) ai_frontends+=("anythingllm") ;;
+                    5) ai_frontends+=("localai") ;;
                     *) log_warn "Unknown AI frontend option: $n (skipped)" ;;
                 esac
             done
@@ -624,6 +626,12 @@ generate_env_interactive() {
         else
             update_env_var "CODER_ACCESS_URL" "http://${host_ip}:7080" "$env_file"
         fi
+    fi
+
+    # Set Docmost APP_URL to the external HTTPS URL when Cloudflare is configured
+    # (Docmost uses APP_URL for CORS/collab-token validation; must match browser URL)
+    if [[ "$base_domain" != "localhost" ]]; then
+        update_env_var "DOCMOST_APP_URL" "https://docmost.${base_domain}" "$env_file"
     fi
     
     # Set registry cache configuration

@@ -308,7 +308,7 @@ get_services_for_profiles() {
                 services+=("traefik" "pihole" "cert-generator" "pihole-dnsmasq-init" "error-pages")
                 ;;
             ai)
-                services+=("ollama" "open-webui" "searxng" "anythingllm" "librechat" "localai" "stable-diffusion" "diffrhythm")
+                services+=("ollama" "open-webui" "searxng" "anythingllm" "librechat" "localai" "stable-diffusion" "diffrhythm")  # note: localai is an opt-in sub-profile now
                 ;;
             dev)
                 services+=("coder" "gitea" "guacamole" "registry")

@@ -176,11 +176,12 @@ services:
       - traefik.http.routers.dozzle-lab.tls=true
       - traefik.http.routers.dozzle-lab.service=dozzle
       
-      # External domain (Cloudflare Tunnel)
+      # External domain (Cloudflare Tunnel) — auth required (shows all container logs)
       - traefik.http.routers.dozzle-external.entrypoints=websecure
       - traefik.http.routers.dozzle-external.rule=Host(`dozzle.${BASE_DOMAIN}`)
       - traefik.http.routers.dozzle-external.tls=true
       - traefik.http.routers.dozzle-external.service=dozzle
+      - traefik.http.routers.dozzle-external.middlewares=it-tools-auth@file
       
       # Service definition
       - traefik.http.services.dozzle.loadbalancer.server.port=8080
@@ -212,6 +213,9 @@ services:
       APP_KEY: base64:02KsGT9QvDav6HUStRvjqDjUqFKa96RDS7SibKfZ1VI=
       APP_URL: http://${HOST_IP}:${SPEEDTEST_PORT:-8765}
       SPEEDTEST_SCHEDULE: ${SPEEDTEST_SCHEDULE:-0 * * * *}
+      # Admin credentials — only applied on first run (DB init)
+      APP_ADMIN_EMAIL: ${DEFAULT_ADMIN_EMAIL:-admin@example.com}
+      APP_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-password}
     volumes:
       - speedtest-data:/config
     restart: unless-stopped

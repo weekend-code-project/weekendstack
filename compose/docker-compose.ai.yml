@@ -315,7 +315,7 @@ services:
       - ai-network
       - shared-network
     profiles:
-      - ai
+      - localai
     ports:
       - "${LOCALAI_PORT:-8084}:8080"
     environment:
