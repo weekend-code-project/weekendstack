@@ -24,7 +24,6 @@ declare -A PROFILE_COMPOSE_MAP=(
     ["media"]="compose/docker-compose.media.yml"
     ["monitoring"]="compose/docker-compose.monitoring.yml"
     ["networking"]="compose/docker-compose.networking.yml"
-    ["personal"]="compose/docker-compose.personal.yml"
     ["productivity"]="compose/docker-compose.productivity.yml"
 )
 
@@ -115,7 +114,6 @@ get_images_for_profiles() {
             "compose/docker-compose.media.yml"
             "compose/docker-compose.monitoring.yml"
             "compose/docker-compose.networking.yml"
-            "compose/docker-compose.personal.yml"
             "compose/docker-compose.productivity.yml"
         )
     else

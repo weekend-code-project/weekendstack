@@ -387,7 +387,6 @@ remove_networks() {
         "ai-network"
         "automation-network"
         "monitoring-network"
-        "personal-network"
         "weekendstack_default"
     )
     local removed=0

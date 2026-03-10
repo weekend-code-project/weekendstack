@@ -85,7 +85,7 @@ profile-media: ## Start media services
 	$(COMPOSE_CMD) $(COMPOSE_FILES) --profile media up -d
 
 profile-all: ## Start all services including optional ones
-	$(COMPOSE_CMD) $(COMPOSE_FILES) --profile all --profile personal --profile gpu up -d
+	$(COMPOSE_CMD) $(COMPOSE_FILES) --profile all --profile gpu up -d
 
 # =============================================================================
 # Coder Template Management

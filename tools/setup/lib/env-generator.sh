@@ -146,7 +146,6 @@ generate_env_interactive() {
     local has_networking=false
     local has_dev=false
     local has_ai=false
-    local has_personal=false
     local has_automation=false
     for profile in "$@"; do
         if [[ "$profile" == "networking" ]] || [[ "$profile" == "all" ]]; then
@@ -157,9 +156,6 @@ generate_env_interactive() {
         fi
         if [[ "$profile" == "ai" ]] || [[ "$profile" == "all" ]]; then
             has_ai=true
-        fi
-        if [[ "$profile" == "personal" ]] || [[ "$profile" == "all" ]]; then
-            has_personal=true
         fi
         if [[ "$profile" == "automation" ]] || [[ "$profile" == "all" ]]; then
             has_automation=true
@@ -176,9 +172,6 @@ generate_env_interactive() {
     fi
     if $has_ai; then
         ((total_steps++))  # Add AI Frontend Selection
-    fi
-    if $has_personal; then
-        ((total_steps++))  # Add Personal Services Selection
     fi
     if $has_automation; then
         ((total_steps++))  # Add Automation Services Selection
@@ -210,6 +203,37 @@ generate_env_interactive() {
         if [[ -n "$base_domain_input" ]]; then
             base_domain="$base_domain_input"
             log_success "External domain set: $base_domain"
+
+            # Collect Cloudflare API token inline so tunnel setup is fully automated
+            echo ""
+            echo "Cloudflare Tunnel requires an API token to create the tunnel and DNS records."
+            echo "  Permissions needed: Account:Cloudflare Tunnel:Edit + Zone:DNS:Edit"
+            echo "  Create at: https://dash.cloudflare.com/profile/api-tokens"
+            echo ""
+            local _cf_token_existing=""
+            if [[ -f "${SCRIPT_DIR}/.env" ]]; then
+                _cf_token_existing=$(grep "^CLOUDFLARE_API_TOKEN=" "${SCRIPT_DIR}/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+            fi
+            if [[ -n "$_cf_token_existing" ]]; then
+                log_info "Existing Cloudflare API token found — press Enter to keep it"
+                read -p "  Cloudflare API token [keep existing]: " -r _cf_token_input </dev/tty
+                if [[ -z "$_cf_token_input" ]]; then
+                    CLOUDFLARE_API_TOKEN="$_cf_token_existing"
+                    log_info "Keeping existing Cloudflare API token"
+                else
+                    CLOUDFLARE_API_TOKEN="$_cf_token_input"
+                    log_success "Cloudflare API token set"
+                fi
+            else
+                read -p "  Cloudflare API token (press Enter to skip and configure later): " -r _cf_token_input </dev/tty
+                if [[ -n "$_cf_token_input" ]]; then
+                    CLOUDFLARE_API_TOKEN="$_cf_token_input"
+                    log_success "Cloudflare API token set"
+                else
+                    log_info "API token skipped — run './setup.sh --cloudflare-only' to configure the tunnel later"
+                fi
+            fi
+            export CLOUDFLARE_API_TOKEN
         else
             base_domain="localhost"
             log_info "No external domain — Cloudflare Tunnel will not be configured"
@@ -277,43 +301,21 @@ generate_env_interactive() {
         echo ""
         echo "Choose which git service to install:"
         echo ""
-        echo "  1) None          - Skip git service (Coder IDE only)"
-        echo "  2) Gitea         - Lightweight, fast, recommended (default)"
-        if $has_networking; then
-            echo "  3) GitLab        - Full CI/CD platform (requires Traefik)"
-        fi
+        echo "  1) None   - Skip git service (Coder IDE only)"
+        echo "  2) Gitea  - Lightweight, fast self-hosted git (default)"
         echo ""
         
         local git_choice
-        if $has_networking; then
-            git_choice=$(prompt_input "Select git service [1-3]" "2")
-        else
-            git_choice=$(prompt_input "Select git service [1-2]" "2")
-        fi
+        git_choice=$(prompt_input "Select git service [1-2]" "2")
         
         case "$git_choice" in
             1)
                 git_service="none"
                 log_info "Git service disabled"
                 ;;
-            2)
+            2|*)
                 git_service="gitea"
                 log_success "Gitea selected (lightweight git hosting)"
-                ;;
-            3)
-                if $has_networking; then
-                    git_service="gitlab"
-                    log_success "GitLab selected (full CI/CD platform)"
-                    log_warn "Note: GitLab requires HTTPS via Traefik. Ensure networking profile is enabled."
-                else
-                    log_error "GitLab requires the networking profile (Traefik). Defaulting to Gitea."
-                    git_service="gitea"
-                    log_success "Defaulting to Gitea"
-                fi
-                ;;
-            *)
-                log_warn "Invalid selection. Defaulting to Gitea."
-                git_service="gitea"
                 ;;
         esac
         
@@ -377,54 +379,6 @@ generate_env_interactive() {
         fi
         
         log_success "AI service configuration complete"
-    fi
-    
-    # ========================================================================
-    # STEP: Personal Services Selection (only if personal profile selected)
-    # ========================================================================
-    local -a personal_services=()
-    
-    if $has_personal; then
-        _step=$((_step + 1))
-        clear
-        show_progress $_step $total_steps "Personal Services Selection"
-        
-        echo "You selected personal services. Choose which ones to install:"
-        echo ""
-        echo "  1) None        - Skip personal services"
-        echo "  2) Mealie      - Recipe manager and meal planner"
-        echo "  3) Firefly III - Personal finance and budget tracking"
-        echo "  4) Wger        - Workout and fitness tracker"
-        echo ""
-        echo "Enter numbers space-separated (e.g. '2 4'), press Enter to install all, or '1' for none:"
-        echo ""
-        
-        local personal_input
-        read -p "Personal services [Enter=all, 1=none]: " -r personal_input </dev/tty
-        
-        if [[ -z "$personal_input" ]]; then
-            personal_services=("mealie" "firefly" "wger")
-            log_info "Installing all personal services"
-        elif [[ "$personal_input" == "1" ]]; then
-            personal_services=()
-            log_info "No personal services selected"
-        else
-            for n in $personal_input; do
-                case "$n" in
-                    2) personal_services+=("mealie") ;;
-                    3) personal_services+=("firefly") ;;
-                    4) personal_services+=("wger") ;;
-                    *) log_warn "Unknown personal service option: $n (skipped)" ;;
-                esac
-            done
-            if [[ ${#personal_services[@]} -gt 0 ]]; then
-                log_success "Selected personal services: ${personal_services[*]}"
-            else
-                log_info "No personal services selected"
-            fi
-        fi
-        
-        log_success "Personal services configuration complete"
     fi
     
     # ========================================================================
@@ -580,6 +534,11 @@ generate_env_interactive() {
     fi
     if [[ "$base_domain" != "localhost" ]]; then
         echo "  External Domain:  $base_domain (Cloudflare Tunnel)"
+        if [[ -n "${CLOUDFLARE_API_TOKEN:-}" ]]; then
+            echo "  Cloudflare Token: set (tunnel will be created automatically)"
+        else
+            echo "  Cloudflare Token: not set (configure later with --cloudflare-only)"
+        fi
     else
         echo "  External Access:  disabled (IP only)"
     fi
@@ -613,9 +572,6 @@ generate_env_interactive() {
         if $use_gpu; then
             echo "  GPU:              enabled (nvidia)"
         fi
-    fi
-    if $has_personal && [[ ${#personal_services[@]} -gt 0 ]]; then
-        echo "  Personal:         ${personal_services[*]}"
     fi
     if $has_automation && [[ ${#automation_services[@]} -gt 0 ]]; then
         echo "  Automation:       ${automation_services[*]}"
@@ -729,7 +685,7 @@ generate_env_interactive() {
     log_step "Generating compose profile list..."
     local profiles_csv=$(IFS=, ; echo "${selected_profiles[*]}")
     
-    # Append sub-profile choices (git service, AI frontends, personal, automation)
+    # Append sub-profile choices (git service, AI frontends, automation)
     if $has_dev && [[ "$git_service" != "none" ]]; then
         profiles_csv="${profiles_csv},${git_service}"
     fi
@@ -740,11 +696,6 @@ generate_env_interactive() {
     fi
     if $has_ai && $use_gpu; then
         profiles_csv="${profiles_csv},gpu"
-    fi
-    if $has_personal && [[ ${#personal_services[@]} -gt 0 ]]; then
-        for svc in "${personal_services[@]}"; do
-            profiles_csv="${profiles_csv},${svc}"
-        done
     fi
     if $has_automation && [[ ${#automation_services[@]} -gt 0 ]]; then
         for svc in "${automation_services[@]}"; do

@@ -6,12 +6,12 @@ source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 # Profile definitions (from profile-matrix.md)
 declare -A PROFILES=(
-    ["all"]="All services (everything including personal & automation)"
+    ["all"]="All services (everything including automation)"
     ["core"]="Foundation (Glance, Link Router, Dozzle, Speedtest, Certs)"
     ["networking"]="Network infrastructure (Traefik, Pi-hole, Cloudflare)"
     ["monitoring"]="Full monitoring suite (Portainer, Uptime Kuma, Netdata)"
     ["productivity"]="Business apps (Vaultwarden, Paperless, NocoDB, N8N)"
-    ["dev"]="Development tools (Coder, Gitea, GitLab)"
+    ["dev"]="Development tools (Coder, Gitea)"
     ["ai"]="AI & LLM services (Ollama, Open WebUI, LocalAI)"
     ["media"]="Media management (Kavita, Navidrome, Immich)"
 )
@@ -250,7 +250,7 @@ select_profiles_quick() {
     echo "  1) Foundation    - Core + Networking (recommended starter)"
     echo "  2) Developer     - Foundation + Dev + AI services"
     echo "  3) Productivity  - Foundation + Productivity + Media"
-    echo "  4) Complete      - All services (includes personal & automation)"
+    echo "  4) Complete      - All services (includes automation)"
     echo "  5) Custom        - Choose specific profiles"
     echo ""
     
@@ -311,13 +311,10 @@ get_services_for_profiles() {
                 services+=("ollama" "open-webui" "searxng" "anythingllm" "librechat" "localai" "stable-diffusion" "diffrhythm")
                 ;;
             dev)
-                services+=("coder" "gitea" "gitlab" "guacamole" "registry")
+                services+=("coder" "gitea" "guacamole" "registry")
                 ;;
             productivity)
                 services+=("nocodb" "n8n" "paperless-ngx" "activepieces" "postiz" "docmost" "focalboard" "trilium" "vikunja" "it-tools" "excalidraw" "filebrowser" "hoarder" "bytestash" "resourcespace")
-                ;;
-            personal)
-                services+=("mealie" "firefly" "wger" "immich-server")
                 ;;
             media)
                 services+=("kavita" "navidrome")
@@ -366,14 +363,6 @@ estimate_resources() {
                 estimated_disk=$((estimated_disk + 20))
                 ;;
             productivity)
-                estimated_memory=$((estimated_memory + 12))
-                estimated_disk=$((estimated_disk + 20))
-                ;;
-            personal)
-                estimated_memory=$((estimated_memory + 6))
-                estimated_disk=$((estimated_disk + 20))
-                ;;
-            media)
                 estimated_memory=$((estimated_memory + 2))
                 estimated_disk=$((estimated_disk + 10))
                 ;;

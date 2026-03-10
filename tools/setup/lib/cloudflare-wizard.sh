@@ -129,30 +129,41 @@ setup_cloudflare_tunnel() {
         fi
     fi
 
+    # If an API token is already set (collected during domain config), go straight to API setup
+    local _api_token_check
+    _api_token_check=$(grep "^CLOUDFLARE_API_TOKEN=" "${SCRIPT_DIR}/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+    if [[ -n "${CLOUDFLARE_API_TOKEN:-}" ]] || [[ -n "$_api_token_check" ]]; then
+        log_info "Cloudflare API token detected — starting automated tunnel setup..."
+        setup_tunnel_with_api
+        return $?
+    fi
+
+    # No token — offer to skip or enter token now
     echo ""
-    echo "Choose setup method:"
+    echo "No Cloudflare API token found."
+    echo "  • Enter a token now to set up the tunnel automatically, or"
+    echo "  • Skip and run './setup.sh --cloudflare-only' later."
     echo ""
-    echo "  1) None - Skip and configure manually later"
-    echo "  2) API  - Fully automated via Cloudflare API (recommended)"
-    echo "     Creates the tunnel, credentials, and DNS records automatically."
+    echo "  Token permissions needed: Account:Cloudflare Tunnel:Edit + Zone:DNS:Edit"
+    echo "  Create at: https://dash.cloudflare.com/profile/api-tokens"
     echo ""
 
     local method
-    read -p "? Select method [1-2] [2]: " -r method </dev/tty
-    method=${method:-2}
+    read -p "? Enter API token now, or skip? [token/skip] [skip]: " -r method </dev/tty
+    method=${method:-skip}
 
-    case $method in
-        1)
-            log_info "Skipping Cloudflare Tunnel setup"
-            log_info "You can configure it later by running: ./setup.sh --cloudflare-only"
-            return 0
-            ;;
-        2) setup_tunnel_with_api ;;
-        *)
-            log_error "Invalid selection"
-            return 1
-            ;;
-    esac
+    if [[ "$method" == "skip" || "$method" == "s" ]]; then
+        log_info "Skipping Cloudflare Tunnel setup"
+        log_info "You can configure it later by running: ./setup.sh --cloudflare-only"
+        return 0
+    else
+        # Treat any non-skip input as the token itself
+        if [[ "$method" != "token" && "$method" != "t" ]]; then
+            export CLOUDFLARE_API_TOKEN="$method"
+        fi
+        setup_tunnel_with_api
+        return $?
+    fi
 }
 
 setup_tunnel_with_cli() {
@@ -253,28 +264,34 @@ setup_tunnel_with_api() {
     
     local stack_dir="${SCRIPT_DIR}"
 
-    # 1. Domain name
+    # 1. Domain name — use what's already in .env if set, only prompt if missing
     local current_domain
     current_domain=$(grep "^BASE_DOMAIN=" "$stack_dir/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
     local domain
-    echo "Enter the domain name you want to use for external access."
-    echo "This domain must be added to your Cloudflare account."
-    echo ""
     if [[ -n "$current_domain" && "$current_domain" != "localhost" ]]; then
-        domain=$(prompt_input "Domain name" "$current_domain")
+        domain="$current_domain"
+        log_info "Using domain: $domain"
     else
+        echo "Enter the domain name you want to use for external access."
+        echo "This domain must be added to your Cloudflare account."
+        echo ""
         domain=$(prompt_input "Domain name (e.g., example.com)" "")
+        if [[ -z "$domain" ]]; then
+            log_error "Domain name is required for Cloudflare Tunnel"
+            return 1
+        fi
+        sed -i "s|^BASE_DOMAIN=.*|BASE_DOMAIN=$domain|" "$stack_dir/.env"
     fi
-    if [[ -z "$domain" ]]; then
-        log_error "Domain name is required for Cloudflare Tunnel"
-        return 1
-    fi
-    sed -i "s|^BASE_DOMAIN=.*|BASE_DOMAIN=$domain|" "$stack_dir/.env"
     export CLOUDFLARE_DOMAIN="$domain"
 
-    # 2. Tunnel name
-    local tunnel_name
-    tunnel_name=$(prompt_input "Tunnel name" "weekendstack-tunnel")
+    # 2. Tunnel name — use existing or default without prompting
+    local tunnel_name="weekendstack-tunnel"
+    local existing_tunnel_name
+    existing_tunnel_name=$(grep "^CLOUDFLARE_TUNNEL_NAME=" "$stack_dir/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+    if [[ -n "$existing_tunnel_name" ]]; then
+        tunnel_name="$existing_tunnel_name"
+    fi
+    log_info "Tunnel name: $tunnel_name"
 
     echo ""
     log_step "API Token Configuration"

@@ -977,7 +977,7 @@ expand_profiles() {
     local -a result=()
 
     # Base profiles that "all" maps to (no gpu/external — those are opt-in)
-    local ALL_CONCRETE=(core networking monitoring productivity dev ai media personal automation)
+    local ALL_CONCRETE=(core networking monitoring productivity dev ai media automation)
 
     for p in "${input[@]}"; do
         if [[ "$p" == "all" ]]; then
@@ -1005,7 +1005,7 @@ start_services_with_profiles() {
     preflight_fix_mounts
 
     # Re-read COMPOSE_PROFILES from .env — the interactive wizard may have added
-    # sub-profile choices (gitea, open-webui, librechat, mealie, homeassistant…)
+    # sub-profile choices (gitea, open-webui, librechat, homeassistant…)
     # that were not in the original in-memory selected_profiles array.
     if [[ -f "$SCRIPT_DIR/.env" ]]; then
         local env_compose_profiles

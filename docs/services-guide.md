@@ -24,12 +24,11 @@ docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 | Category | Services | Profile |
 |----------|----------|---------|
 | **Core** | Glance, Traefik, Cloudflare Tunnel, Error Pages | `core` |
-| **Development** | Coder, Gitea, GitLab | `dev` |
+| **Development** | Coder, Gitea | `dev` |
 | **AI** | Open WebUI, SearXNG | `ai` |
 | **Productivity** | n8n, Paperless, NocoDB, Activepieces, Hoarder, File Browser, Focalboard, Trilium, Vikunja, Vaultwarden | `productivity` |
 | **Automation** | Home Assistant, Node-RED | `automation` |
 | **Media** | Immich, Kavita, Navidrome | `media` |
-| **Personal** | Mealie, Firefly III, wger | `personal` |
 | **Monitoring** | Cockpit, Dozzle, Watchtower, Uptime Kuma, Netdata, Duplicati, Portainer | `monitoring` |
 | **Networking** | Pi-Hole | `networking` |
 
@@ -282,32 +281,6 @@ GITEA_SECRET_KEY=gitea-secret-key-change-me
 GITEA_DBUSER=gitea
 GITEA_DBPASS=gitea_db_password_change_me
 ```
-
-### GitLab CE - Full DevOps Platform
-**Port:** 8929 (Web), 2224 (SSH) | **Domain:** `gitlab.${BASE_DOMAIN}`
-
-Complete DevOps platform with CI/CD, container registry, and more.
-
-> ⚠️ **Note:** Requires HTTPS. Only accessible via Cloudflare tunnel.
-
-**Access:**
-- URL: `http://192.168.2.50:8929` (requires HTTPS in production)
-- Username: `root`
-- Password: Get from container:
-  ```bash
-  docker exec gitlab cat /etc/gitlab/initial_root_password
-  ```
-- SSH: Port 2224
-
-**Key Variables:**
-```env
-GITLAB_HTTP_PORT=8929
-GITLAB_SSH_PORT=2224
-GITLAB_MEMORY_LIMIT=4g
-```
-
-**Setup:**
-- [docs/gitlab-setup.md](gitlab-setup.md)
 
 ---
 
@@ -699,64 +672,6 @@ See [docs/unraid-share-example.md](unraid-share-example.md) for step-by-step gui
 
 ---
 
-## Personal Services
-
-### Mealie - Meal Planning
-**Port:** 9925 | **Domain:** `mealie.${BASE_DOMAIN}`
-
-Recipe manager and meal planner.
-
-**Access:**
-- URL: `http://192.168.2.50:9925`
-- Initial Setup: Create account on first access
-
-**Key Variables:**
-```env
-MEALIE_PORT=9925
-```
-
-**Setup:**
-- [docs/mealie-setup.md](mealie-setup.md)
-
-### Firefly III - Personal Finance
-**Port:** 8086 | **Domain:** `firefly.${BASE_DOMAIN}`
-
-Personal finance manager.
-
-**Access:**
-- URL: `http://192.168.2.50:8086`
-- Initial Setup: Create account on first access
-
-**Key Variables:**
-```env
-FIREFLY_PORT=8086
-# Must be exactly 32 characters
-FIREFLY_APP_KEY=SomeRandomStringOf32CharsExactly
-```
-
-**Setup:**
-- [docs/firefly-setup.md](firefly-setup.md)
-
-### wger - Workout Tracker
-**Port:** 8089 | **Domain:** `wger.${BASE_DOMAIN}`
-
-Workout and fitness tracker with exercise database.
-
-**Access:**
-- URL: `http://192.168.2.50:8089`
-- Initial Setup: Create account on first access
-
-**Key Variables:**
-```env
-WGER_PORT=8089
-WGER_SECRET_KEY=wger-secret-key-change-me
-```
-
-**Setup:**
-- [docs/wger-setup.md](wger-setup.md)
-
----
-
 ## Monitoring Services
 
 ### Cockpit - Server Administration
@@ -879,7 +794,6 @@ PIHOLE_WEBPASSWORD=pihole-admin-change-me
 | 443 | Traefik HTTPS | |
 | 1880 | Node-RED | |
 | 2222 | Gitea SSH | |
-| 2224 | GitLab SSH | |
 | 2283 | Immich | |
 | 3000 | Open WebUI | |
 | 3001 | Uptime Kuma | |
@@ -893,18 +807,14 @@ PIHOLE_WEBPASSWORD=pihole-admin-change-me
 | 7080 | Coder | |
 | 8082 | Paperless | |
 | 8085 | Trilium | |
-| 8086 | Firefly III | |
 | 8087 | Activepieces | |
 | 8088 | Pi-Hole Web | |
-| 8089 | wger | |
 | 8090 | NocoDB | |
 | 8097 | Focalboard | |
 | 8123 | Home Assistant | |
 | 8200 | Duplicati | |
 | 8222 | Vaultwarden | HTTPS only |
-| 8929 | GitLab | HTTPS only |
 | 9090 | Cockpit | Routed locally via `cockpit.lab` |
 | 9000 | Portainer | |
-| 9925 | Mealie | |
 | 9999 | Dozzle | |
 | 19999 | Netdata | |
