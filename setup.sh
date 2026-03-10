@@ -791,6 +791,14 @@ main_setup() {
                     selected_profiles+=("external")
                     log_info "Adding 'external' profile for Cloudflare Tunnel"
                 fi
+                # Persist to .env so start_services_with_profiles (which re-reads .env) picks it up
+                local _sp_profiles
+                _sp_profiles=$(grep "^COMPOSE_PROFILES=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2)
+                if [[ -n "$_sp_profiles" && "$_sp_profiles" != *"external"* ]]; then
+                    sed -i "s|^COMPOSE_PROFILES=.*|COMPOSE_PROFILES=${_sp_profiles},external|" "$SCRIPT_DIR/.env"
+                elif [[ -z "$_sp_profiles" ]]; then
+                    echo "COMPOSE_PROFILES=external" >> "$SCRIPT_DIR/.env"
+                fi
             else
                 log_warn "Cloudflare tunnel enabled but connector token is missing."
                 log_warn "  The cloudflare-tunnel container will NOT start."

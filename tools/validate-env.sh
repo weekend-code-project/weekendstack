@@ -263,12 +263,24 @@ if [[ "$CF_ENABLED" == "true" ]]; then
     echo -e "${GREEN}  ✓ Cloudflare Tunnel configuration validated${NC}"
 elif [[ -n "$CF_API_TOKEN" ]]; then
     # API token is set — test actual connectivity to Cloudflare
+    # Account-scoped tokens fail the user endpoint; fall back to accounts endpoint.
     echo -e "${BLUE}  ℹ Testing Cloudflare API connectivity...${NC}"
+    _cf_token_ok=false
     CF_VERIFY_RESPONSE=$(curl -s --max-time 5 \
         "https://api.cloudflare.com/client/v4/user/tokens/verify" \
-        -H "Authorization: Bearer $CF_API_TOKEN" \
-        -H "Content-Type: application/json" 2>/dev/null)
+        -H "Authorization: Bearer $CF_API_TOKEN" 2>/dev/null)
     if echo "$CF_VERIFY_RESPONSE" | grep -q '"success":true'; then
+        _cf_token_ok=true
+    else
+        # Try accounts endpoint (account-scoped tokens only validate here)
+        CF_ACCT_RESPONSE=$(curl -s --max-time 5 \
+            "https://api.cloudflare.com/client/v4/accounts" \
+            -H "Authorization: Bearer $CF_API_TOKEN" 2>/dev/null)
+        if echo "$CF_ACCT_RESPONSE" | grep -q '"success":true'; then
+            _cf_token_ok=true
+        fi
+    fi
+    if $_cf_token_ok; then
         echo -e "${GREEN}  ✓ Cloudflare API token valid — run setup to configure tunnel${NC}"
     else
         echo -e "${RED}  ✗ Cloudflare API token invalid or unreachable${NC}"

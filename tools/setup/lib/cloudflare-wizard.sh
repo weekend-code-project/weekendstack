@@ -112,7 +112,25 @@ setup_cloudflare_tunnel() {
             if [[ -n "$_connector_token" ]]; then
                 sed -i "s|^CLOUDFLARE_TUNNEL_TOKEN=.*|CLOUDFLARE_TUNNEL_TOKEN=$_connector_token|" "$_env_file"
                 log_success "Connector token fetched and saved automatically"
+                # Persist enabled state to .env (not just in-memory export)
+                sed -i "s|^CLOUDFLARE_TUNNEL_ENABLED=.*|CLOUDFLARE_TUNNEL_ENABLED=true|" "$_env_file"
                 export CLOUDFLARE_TUNNEL_ENABLED=true
+                # Add 'external' to COMPOSE_PROFILES so the tunnel container starts
+                local _fp_profiles
+                _fp_profiles=$(grep "^COMPOSE_PROFILES=" "$_env_file" 2>/dev/null | cut -d'=' -f2)
+                if [[ -n "$_fp_profiles" && "$_fp_profiles" != *"external"* ]]; then
+                    sed -i "s|^COMPOSE_PROFILES=.*|COMPOSE_PROFILES=${_fp_profiles},external|" "$_env_file"
+                elif [[ -z "$_fp_profiles" ]]; then
+                    echo "COMPOSE_PROFILES=external" >> "$_env_file"
+                fi
+                # Ensure DOMAIN_MODE is set appropriately
+                local _fp_mode
+                _fp_mode=$(grep "^DOMAIN_MODE=" "$_env_file" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
+                if [[ -z "$_fp_mode" ]]; then
+                    echo "DOMAIN_MODE=cloudflare" >> "$_env_file"
+                elif [[ "$_fp_mode" != "cloudflare" && "$_fp_mode" != "both" ]]; then
+                    sed -i "s|^DOMAIN_MODE=.*|DOMAIN_MODE=cloudflare|" "$_env_file"
+                fi
                 return 0
             else
                 log_warn "Could not fetch connector token — continuing with full wizard"
@@ -696,6 +714,26 @@ EOF
                 echo "CLOUDFLARE_TUNNEL_TOKEN=$tunnel_token" >> "$env_file"
             fi
             log_success "Saved tunnel token to .env"
+            # Add 'external' to COMPOSE_PROFILES so the tunnel container starts
+            local _cur_profiles
+            _cur_profiles=$(grep "^COMPOSE_PROFILES=" "$env_file" 2>/dev/null | cut -d'=' -f2)
+            if [[ -n "$_cur_profiles" && "$_cur_profiles" != *"external"* ]]; then
+                sed -i "s|^COMPOSE_PROFILES=.*|COMPOSE_PROFILES=${_cur_profiles},external|" "$env_file"
+                log_info "Added 'external' profile to COMPOSE_PROFILES"
+            elif [[ -z "$_cur_profiles" ]]; then
+                echo "COMPOSE_PROFILES=external" >> "$env_file"
+                log_info "Added 'external' profile to COMPOSE_PROFILES"
+            fi
+            # Ensure DOMAIN_MODE is set to cloudflare (or left as 'both' if already both)
+            local _cur_mode
+            _cur_mode=$(grep "^DOMAIN_MODE=" "$env_file" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
+            if [[ -z "$_cur_mode" ]]; then
+                echo "DOMAIN_MODE=cloudflare" >> "$env_file"
+                log_info "Set DOMAIN_MODE=cloudflare"
+            elif [[ "$_cur_mode" != "cloudflare" && "$_cur_mode" != "both" ]]; then
+                sed -i "s|^DOMAIN_MODE=.*|DOMAIN_MODE=cloudflare|" "$env_file"
+                log_info "Set DOMAIN_MODE=cloudflare"
+            fi
         else
             log_error "Could not retrieve tunnel connector token after $max_token_attempts attempts"
             log_warn "Tunnel is created but the connector token is missing."
