@@ -49,11 +49,9 @@ services:
       - WUD_TRIGGER_DOCKERHUB_ENABLE=false
       - WUD_WATCHER_LOCAL_CRON=0 0 * * *
       - WUD_WATCHER_LOCAL_WATCHBYDEFAULT=true
-      # Built-in basic auth (OPTIONAL - Leave WUD_AUTH_HASH empty for no auth on initial setup)
-      # To enable auth later: docker run --rm httpd:2-alpine htpasswd -nbm USER PASS
-      # Copy hash part (after colon) to WUD_AUTH_HASH in .env
-      - WUD_AUTH_BASIC_MYAUTH_USER=${WUD_AUTH_USER:-admin}
-      - WUD_AUTH_BASIC_MYAUTH_HASH=${WUD_AUTH_HASH:-}
+      # Built-in basic auth disabled by default.
+      # To enable: generate hash with `docker run --rm httpd:2-alpine htpasswd -nbm admin PASS | cut -d: -f2`
+      # Then add WUD_AUTH_BASIC_MYAUTH_USER and WUD_AUTH_BASIC_MYAUTH_HASH env vars here (or in .env)
       - TZ=${TZ:-America/New_York}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
