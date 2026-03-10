@@ -15,10 +15,15 @@ update_env_var() {
     var_value="${var_value//$'\r'/}"
     
     # Use awk to safely replace the line - avoids all escaping issues
-    awk -v var="$var_name" -v val="$var_value" '
-        $0 ~ "^" var "=" { print var "=" val; next }
-        { print }
-    ' "$env_file" > "${env_file}.tmp" && mv "${env_file}.tmp" "$env_file"
+    # If the key does not exist in the file, append it.
+    if grep -q "^${var_name}=" "$env_file" 2>/dev/null; then
+        awk -v var="$var_name" -v val="$var_value" '
+            $0 ~ "^" var "=" { print var "=" val; next }
+            { print }
+        ' "$env_file" > "${env_file}.tmp" && mv "${env_file}.tmp" "$env_file"
+    else
+        echo "${var_name}=${var_value}" >> "$env_file"
+    fi
 }
 
 # Progress tracking
