@@ -66,6 +66,8 @@ services:
       WUD_URL: ${WUD_URL:-}
       WUD_AUTH_USER: ${WUD_AUTH_USER:-admin}
       WUD_AUTH_PASSWORD: ${WUD_AUTH_PASSWORD:-admin}
+      KAVITA_PORT: ${KAVITA_PORT:-5002}
+      KAVITA_API_KEY: ${KAVITA_API_KEY:-}
     volumes:
       - type: bind
         source: ../config/glance/glance.yml

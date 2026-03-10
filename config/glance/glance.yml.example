@@ -184,12 +184,15 @@ pages:
           - type: custom-api
             cache: 5m
             title: Kavita Latest
-            title-url: http://${HOST_IP}:5000
-            url: http://${HOST_IP}:5000/api/Series/recently-updated?pageSize=5
+            title-url: http://${HOST_IP}:${KAVITA_PORT}
+            method: POST
+            url: http://${HOST_IP}:${KAVITA_PORT}/api/Series/v2?pageNumber=1&pageSize=5
             headers:
-              Authorization: "Bearer kavita_api_key_here"
+              Authorization: "Bearer ${KAVITA_API_KEY}"
+              Content-Type: application/json
+            body: '{"statements":[],"combination":1,"sortOptions":{"sortField":5,"isAscending":false}}'
             template: |
-              {{ range .JSON.Array "" }}
+              {{ range .JSON.Array "content" }}
                 <li>
                   <div class="size-h4">{{ .String "name" }}</div>
                   <div style="font-size: 0.9rem; opacity: 0.8;">{{ .String "libraryName" }}</div>
@@ -501,12 +504,15 @@ pages:
           - type: custom-api
             cache: 5m
             title: Kavita Latest
-            title-url: http://${HOST_IP}:5000
-            url: http://${HOST_IP}:5000/api/Series/recently-updated?pageSize=5
+            title-url: http://${HOST_IP}:${KAVITA_PORT}
+            method: POST
+            url: http://${HOST_IP}:${KAVITA_PORT}/api/Series/v2?pageNumber=1&pageSize=5
             headers:
-              Authorization: "Bearer kavita_api_key_here"
+              Authorization: "Bearer ${KAVITA_API_KEY}"
+              Content-Type: application/json
+            body: '{"statements":[],"combination":1,"sortOptions":{"sortField":5,"isAscending":false}}'
             template: |
-              {{ range .JSON.Array "" }}
+              {{ range .JSON.Array "content" }}
                 <li>
                   <div class="size-h4">{{ .String "name" }}</div>
                   <div style="font-size: 0.9rem; opacity: 0.8;">{{ .String "libraryName" }}</div>
