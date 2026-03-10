@@ -320,6 +320,10 @@ get_services_for_profiles() {
                 services+=("kavita" "navidrome")
                 ;;
             monitoring)
+                services+=("wud" "uptime-kuma" "portainer")
+                ;;
+        esac
+    done
     
     # Remove duplicates
     local unique_services=($(echo "${services[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' '))
