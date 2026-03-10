@@ -497,27 +497,6 @@ module "git_platform_cli" {
 }
 
 # =============================================================================
-# LOCAL PREVIEW
-# =============================================================================
-
-resource "coder_app" "local_preview" {
-  agent_id     = coder_agent.main.id
-  slug         = "preview"
-  display_name = "Vite Preview"
-  icon         = "/icon/widgets.svg"
-  url          = "http://localhost:${local.preview_port}"
-  subdomain    = false
-  share        = "owner"
-  order        = 10
-
-  healthcheck {
-    url       = "http://localhost:${local.preview_port}"
-    interval  = 5
-    threshold = 5
-  }
-}
-
-# =============================================================================
 # VITE SCAFFOLD + DEV SERVER (coder_script)
 # =============================================================================
 
