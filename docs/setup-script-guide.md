@@ -197,11 +197,9 @@ Use arrow keys and space bar to select profiles:
 - `core` - Essential services (Glance, Vaultwarden)
 - `networking` - Traefik, Pi-hole, Cloudflare Tunnel
 - `ai` - AI/LLM services (Ollama, Open WebUI, etc.)
-- `dev` - Development tools (Coder, Gitea, GitLab)
+- `dev` - Development tools (Coder, Gitea)
 - `productivity` - Business apps (Paperless, N8N, NocoDB)
-- `personal` - Personal services (Immich, Mealie, Firefly)
-- `media` - Media servers (Kavita, Navidrome)
-- `monitoring` - Monitoring tools (Portainer, Uptime Kuma)
+- `monitoring` - Monitoring tools (Portainer, Uptime Kuma, WUD)
 - `automation` - Home automation (Home Assistant)
 
 **Resource check:** After selection, the script shows estimated requirements and validates available resources.

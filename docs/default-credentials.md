@@ -82,16 +82,6 @@ This document lists all default login credentials and access URLs for WeekendSta
   - User: `gitea`
   - Password: `gitea_db_password_change_me`
 
-### GitLab - DevOps Platform
-- **URL:** http://192.168.2.50:8929
-- **Username:** `root`
-- **Password:** Get from container:
-  ```bash
-  docker exec gitlab cat /etc/gitlab/initial_root_password
-  ```
-- **SSH:** Port 2224
-- **Note:** Only accessible via HTTPS tunnel in production
-
 ### Docker Registry
 - **URL:** http://192.168.2.50:5001
 - **Auth:** None (internal use)
@@ -268,29 +258,7 @@ This document lists all default login credentials and access URLs for WeekendSta
 
 ---
 
-## 👤 Personal Services
-
-### Mealie - Meal Planning
-- **URL:** http://192.168.2.50:9925
-- **Initial Setup:** Create account on first access
-
-### Firefly III - Personal Finance
-- **URL:** http://192.168.2.50:8086
-- **Initial Setup:** Create account on first access
-- **App Key:** `SomeRandomStringOf32CharsExactly` (must be exactly 32 chars)
-
-### wger - Workout Tracker
-- **URL:** http://192.168.2.50:8089
-- **Initial Setup:** Create account on first access
-
----
-
-## 📊 Monitoring Services
-
-### Cockpit - Server Administration
-- **URL:** http://192.168.2.50:9090
-- **Auth:** System user credentials (Linux users)
-- **Note:** Local network only (not exposed externally)
+##  Monitoring Services
 
 ### Dozzle - Docker Logs
 - **URL:** http://192.168.2.50:9999
@@ -300,32 +268,15 @@ This document lists all default login credentials and access URLs for WeekendSta
 - **URL:** http://192.168.2.50:3002
 - **Username:** `admin`
 - **Password:** `admin`
-- **Note:** Local network only (not exposed externally)
-
-### Netdata - System Monitoring
-- **URL:** http://192.168.2.50:19999
-- **Auth:** None by default
-- **Note:** Local network only (not exposed externally)
+- **Note:** Configure built-in auth via `WUD_AUTH_USER`/`WUD_AUTH_HASH` in `.env`
 
 ### Uptime Kuma - Service Monitoring
 - **URL:** http://192.168.2.50:3001
 - **Initial Setup:** Create admin account on first access
 
-### Duplicati - Backup Solution
-- **URL:** http://192.168.2.50:8200
-- **Auth:** Set password on first access (optional)
-
 ### Portainer - Container Management
 - **URL:** http://192.168.2.50:9000 (HTTP) or https://192.168.2.50:9443 (HTTPS)
 - **Initial Setup:** Create admin account on first access
-
-### NetBox - Network Documentation
-- **URL:** http://192.168.2.50:8484
-- **Username:** `admin`
-- **Password:** `admin`
-- **Database:**
-  - User: `netbox`
-  - Password: `netbox`
 
 ---
 
@@ -343,11 +294,10 @@ This document lists all default login credentials and access URLs for WeekendSta
 
 1. **Change ALL default passwords** immediately after first deployment
 2. **Use strong, unique passwords** for each service (use a password manager!)
-3. **Enable 2FA** where available (Vaultwarden, GitLab, etc.)
+3. **Enable 2FA** where available (Vaultwarden, Gitea, etc.)
 4. **Restrict external access** to only necessary services via Cloudflare Tunnel
-5. **Keep local-only services** (Cockpit, Netdata, WUD, Pi-Hole) behind the firewall
-6. **Regular backups** using Duplicati
-7. **Monitor updates** with What's Up Docker (WUD)
+5. **Keep local-only services** (Pi-Hole, Dozzle) behind the firewall
+6. **Monitor updates** with What's Up Docker (WUD)
 
 ---
 
@@ -357,7 +307,7 @@ This document lists all default login credentials and access URLs for WeekendSta
 - **Database passwords** are for internal container-to-container communication
 - **"Initial Setup"** means the service creates accounts on first web access
 - **Local-only services** are not exposed via Cloudflare Tunnel for security
-- **HTTPS-required services** (GitLab, Vaultwarden) only work via Cloudflare Tunnel
+- **HTTPS-required services** (Vaultwarden) only work via Cloudflare Tunnel
 - **GPU services** (Stable Diffusion, ComfyUI, DiffRhythm) require NVIDIA GPU with drivers
 
 ---
@@ -369,7 +319,6 @@ This document lists all default login credentials and access URLs for WeekendSta
 | **Glance** | http://192.168.2.50:8098 | No auth |
 | **Coder** | http://192.168.2.50:7080 | Create on first access |
 | **Gitea** | http://192.168.2.50:7001 | Create on first access |
-| **GitLab** | http://192.168.2.50:8929 | `root` / see container |
 | **Open WebUI** | http://192.168.2.50:3000 | Create on first access |
 | **SearXNG** | http://192.168.2.50:4000 | `searx` / `searxng-password-change-me` |
 | **n8n** | http://192.168.2.50:5678 | Create on first access |
@@ -383,13 +332,8 @@ This document lists all default login credentials and access URLs for WeekendSta
 | **Immich** | http://192.168.2.50:2283 | Create on first access |
 | **Kavita** | http://192.168.2.50:5000 | Create on first access |
 | **Navidrome** | http://192.168.2.50:4533 | Create on first access |
-| **Mealie** | http://192.168.2.50:9925 | Create on first access |
-| **Firefly III** | http://192.168.2.50:8086 | Create on first access |
-| **wger** | http://192.168.2.50:8089 | Create on first access |
-| **Cockpit** | http://192.168.2.50:9090 | System user |
 | **Dozzle** | http://192.168.2.50:9999 | No auth |
 | **WUD** | http://192.168.2.50:3002 | `admin` / `admin` |
 | **Uptime Kuma** | http://192.168.2.50:3001 | Create on first access |
 | **Portainer** | http://192.168.2.50:9000 | Create on first access |
-| **NetBox** | http://192.168.2.50:8484 | `admin` / `admin` |
 | **Pi-Hole** | http://192.168.2.50:8088/admin | Password: `pihole-admin-change-me` |

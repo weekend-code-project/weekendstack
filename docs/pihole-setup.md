@@ -118,8 +118,8 @@ On most Linux systems, `systemd-resolved` uses port 53. You **must** disable it 
 **After configuring your devices to use Pi-hole** (see [dns-setup-guide.md](dns-setup-guide.md)), all `.lab` domains will automatically work:
 
 - ✅ `http://home.lab` → Your Glance dashboard
-- ✅ `http://coder.lab` → Coder IDE  
-- ✅ `http://gitlab.lab` → GitLab instance
+- ✅ `http://coder.lab` → Coder IDE
+- ✅ `http://portainer.lab` → Portainer container management
 - ✅ Any other service at `http://[service].lab`
 
 **How it works:**
@@ -316,7 +316,7 @@ Goal: make your Mac use only `192.168.2.50` for DNS so `*.lab` resolves 100% con
 
 3. Deterministic DNS test (bypasses macOS resolver caching):
    ```bash
-   dig @192.168.2.50 gitlab.lab +short
+   dig @192.168.2.50 coder.lab +short
    dig @192.168.2.50 random123.lab +short
    ```
    Expected output: your server IP (the value of `HOST_IP`).

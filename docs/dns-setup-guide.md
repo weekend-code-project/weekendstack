@@ -4,7 +4,7 @@
 
 ## Why DNS Configuration is Required
 
-The Weekend Stack services use custom `.lab` domains (like `coder.lab`, `gitlab.lab`, etc.). These are not real internet domains - they're only for your local network. Your devices need to be told that these domains point to your server's IP address (`192.168.2.50` by default).
+The Weekend Stack services use custom `.lab` domains (like `coder.lab`, `portainer.lab`, etc.). These are not real internet domains - they're only for your local network. Your devices need to be told that these domains point to your server's IP address (`192.168.2.50` by default).
 
 **Without DNS configuration:**
 - ❌ Browser shows "Cannot resolve host" or "Server not found"
@@ -248,18 +248,13 @@ sudo nano /etc/hosts
 # Add these lines (replace 192.168.2.50 with your server IP)
 192.168.2.50 home.lab
 192.168.2.50 coder.lab
-192.168.2.50 gitlab.lab
 192.168.2.50 gitea.lab
 192.168.2.50 n8n.lab
 192.168.2.50 vaultwarden.lab
-192.168.2.50 nextcloud.lab
 192.168.2.50 paperless.lab
 192.168.2.50 immich.lab
-192.168.2.50 mealie.lab
 192.168.2.50 vikunja.lab
-192.168.2.50 firefly.lab
 192.168.2.50 focalboard.lab
-192.168.2.50 wger.lab
 192.168.2.50 trilium.lab
 192.168.2.50 hoarder.lab
 192.168.2.50 navidrome.lab

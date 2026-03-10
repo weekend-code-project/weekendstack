@@ -36,8 +36,7 @@ WeekendStack uses Docker's local volume driver with NFS backend. This approach:
 |---------|----------|-----------|--------------|-------|
 | **Paperless-NGX** | Productivity | Documents | 1GB-100GB | Multiple volumes (media, consume, export) |
 | **ResourceSpace** | Productivity | Digital assets | 10GB-1TB+ | Purpose-built for large media collections |
-| **GitLab** | Dev | Git repositories | 1GB-500GB | Performance-sensitive (git operations) |
-| **Gitea** | Dev | Git repositories | 500MB-100GB | Lighter than GitLab |
+| **Gitea** | Dev | Git repositories | 500MB-100GB | Lighter weight, suitable for most teams |
 | **Docker Registry** | Dev | Image cache | 5GB-200GB | Large sequential I/O |
 | **Home Assistant** | Automation | Config/recordings | 1GB-100GB | Only if using camera recordings |
 

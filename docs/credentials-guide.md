@@ -59,7 +59,6 @@ These services support credential configuration via environment variables. Admin
 |---------|------------|----------------|-------------------|
 | **NocoDB** | `${DEFAULT_ADMIN_EMAIL}` | `${DEFAULT_ADMIN_PASSWORD}` | `${NOCODB_DB_PASS}` |
 | **Paperless-ngx** | `${DEFAULT_ADMIN_USER}` | `${DEFAULT_ADMIN_PASSWORD}` | `${PAPERLESS_DB_PASS}` |
-| **NetBox** | `${NETBOX_SUPERUSER}` | `${NETBOX_SUPERUSER_PASSWORD}` | `${NETBOX_DB_PASSWORD}` |
 | **WUD** | `admin` | `${DEFAULT_ADMIN_PASSWORD}` | N/A |
 | **N8N** | Disabled by default | N/A | `${N8N_DB_PASS}` |
 | **Activepieces** | Web signup | N/A | `${ACTIVEPIECES_DB_PASS}` |
@@ -68,8 +67,7 @@ These services support credential configuration via environment variables. Admin
 
 **Access URLs:**
 - NocoDB: http://nocodb.lab
-- Paperless: http://paperless.lab  
-- NetBox: http://netbox.lab
+- Paperless: http://paperless.lab
 - WUD: http://wud.lab
 - Postiz: http://postiz.lab
 - Immich: http://immich.lab
@@ -100,14 +98,11 @@ These services require web-based account creation on first access. **No environm
 | **ByteStash** | http://bytestash.lab | Create account |
 | **Docmost** | http://docmost.lab | Create admin account |
 
-#### Personal Services
+#### Security & Vault
 
 | Service | URL | Setup Process |
 |---------|-----|---------------|
 | **Vaultwarden** | http://vault.lab | First signup (becomes admin) |
-| **Mealie** | http://mealie.lab | First signup becomes admin |
-| **Firefly III** | http://firefly.lab | Create account on first visit |
-| **wger** | http://wger.lab | Registration enabled |
 
 #### Media Services
 
@@ -125,20 +120,17 @@ These services require web-based account creation on first access. **No environm
 
 #### Development Services
 
-| Service | URL | Setup Process | Notes |
-|---------|-----|---------------|-------|
-| **Coder** | http://coder.lab:7080 | Create admin on first visit | |
-| **Gitea** | http://gitea.lab | Installation wizard | |
-| **GitLab** | http://gitlab.lab | Root password in logs | Check container logs for initial password |
-| **Guacamole** | http://guacamole.lab | Default: `guacadmin` / `guacadmin` | **CHANGE IMMEDIATELY!** |
+| Service | URL | Setup Process |
+|---------|-----|---------------|
+| **Coder** | http://coder.lab:7080 | Create admin on first visit |
+| **Gitea** | http://gitea.lab | Installation wizard |
 
 #### Monitoring Services
 
 | Service | URL | Setup Process |
 |---------|-----|---------------|
-| **Uptime Kuma** | http://uptime.lab | First signup becomes admin |
+| **Uptime Kuma** | http://uptime-kuma.lab | First signup becomes admin |
 | **Portainer** | http://portainer.lab:9443 | Create admin on first access |
-| **Duplicati** | http://duplicati.lab | Set password on first access |
 
 ---
 
@@ -152,7 +144,6 @@ Services accessible without login (public or uses Traefik auth for external acce
 | **IT-Tools** | http://it-tools.lab | Traefik auth (external only) |
 | **Excalidraw** | http://excalidraw.lab | Traefik auth (external only) |
 | **Dozzle** | http://dozzle.lab | Public (local network) |
-| **Netdata** | http://netdata.lab | Public (local network) |
 | **Traefik** | http://traefik.lab:8081 | Public dashboard (insecure mode) |
 | **Ollama** | http://ollama.lab:11434 | API service (no web UI) |
 | **LocalAI** | http://localai.lab | API service |
@@ -166,7 +157,6 @@ Services using system-level or SSH authentication:
 
 | Service | Port | Authentication |
 |---------|------|----------------|
-| **Cockpit** | 9090 | SSH credentials (same as host) |
 | **Pi-hole Web** | 8088 | Password: `${PIHOLE_WEBPASSWORD}` |
 
 ---
@@ -181,9 +171,6 @@ After deploying services, complete setup for all active services:
   - Login: `admin@example.com` / (your `DEFAULT_ADMIN_PASSWORD`)
   
 - [ ] **Paperless** → http://paperless.lab
-  - Login: `admin` / (your `DEFAULT_ADMIN_PASSWORD`)
-  
-- [ ] **NetBox** → http://netbox.lab
   - Login: `admin` / (your `DEFAULT_ADMIN_PASSWORD`)
 
 ### First-Time Setup Required (Visit to Configure)
@@ -212,18 +199,11 @@ After deploying services, complete setup for all active services:
   - Complete installation wizard
   - Use database credentials from `.env`
 
-- [ ] **GitLab** → http://gitlab.lab
-  - Check logs for root password: `docker compose logs gitlab | grep "Password:"`
-  - Login as `root` with that password
-
 **Personal & Productivity:**
 
 - [ ] **Immich** → http://immich.lab
   - Create your account
-  
-- [ ] **Mealie** → http://mealie.lab
-  - First signup = admin
-  
+
 - [ ] **Navidrome** → http://navidrome.lab
   - Create admin account
   
@@ -234,13 +214,6 @@ After deploying services, complete setup for all active services:
   - Check logs: `docker compose logs filebrowser | grep "password"`
   - Login as `admin` with generated password
   - **Change password immediately**
-
-**Security Critical:**
-
-- [ ] **Guacamole** → http://guacamole.lab
-  - **Default:** `guacadmin` / `guacadmin`
-  - **⚠️  CHANGE IMMEDIATELY after first login!**
-  - Go to Settings → Users → guacadmin → Change Password
 
 ---
 
@@ -268,7 +241,7 @@ openssl rand -hex 16
 ```bash
 openssl rand -base64 32
 ```
-**Used for:** Firefly III app key
+**Used for:** Service app keys requiring base64 format
 
 ### Special: Gitea Internal Token
 ```bash
@@ -283,7 +256,7 @@ openssl rand -hex 105
 ### 1. Change Default Credentials
 
 **Immediately after setup:**
-- Change any default passwords (especially Guacamole: `guacadmin`)
+- Change any default passwords immediately after first login
 - Update admin email from `admin@example.com` to your real email
 - Review all ENV-based service credentials
 
@@ -307,7 +280,6 @@ Enable MFA where supported:
 - **Vaultwarden:** Built-in TOTP/U2F support
 - **Home Assistant:** Settings → Your Account → Multi-factor Authentication
 - **Gitea:** Settings → Security → Two-Factor Authentication
-- **GitLab:** Profile → Account → Two-Factor Authentication
 
 ### 4. Regular Password Rotation
 

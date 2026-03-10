@@ -64,7 +64,7 @@ If you need to use multiple middlewares, chain them with commas:
 4. The error-pages service renders a custom page based on the error status code and configured theme
 
 **Important**: This middleware only handles errors returned by backend services. When Traefik itself cannot find a matching router (no route configured), it returns its default 404 page. This is expected behavior:
-- `https://cockpit.weekendcodeproject.dev/` → Traefik 404 (no external router, local-only service)
+- `https://dozzle.weekendcodeproject.dev/` → Traefik 404 (no external router, local-only service)
 - `https://service-not-running.weekendcodeproject.dev/` → Traefik 404 (container not running, no router registered)
 - `http://glance.lab/bad-page` → Custom 404 (if error-pages middleware is applied to glance router)
 

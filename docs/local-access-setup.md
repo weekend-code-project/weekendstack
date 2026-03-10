@@ -43,26 +43,26 @@ dig coder.lab
 │  Internet Access (from anywhere)                            │
 └─────────────────────────────────────────────────────────────┘
 
-https://gitlab.weekendcodeproject.dev
+https://coder.weekendcodeproject.dev
     ↓
 Cloudflare Tunnel (encrypted)
     ↓
 Traefik (192.168.2.50:443)
     ↓
-GitLab Container
+Coder Container
 
 
 ┌─────────────────────────────────────────────────────────────┐
 │  Local Access (from your home network)                      │
 └─────────────────────────────────────────────────────────────┘
 
-http://gitlab.lab
+http://coder.lab
     ↓
 Router DNS (*.lab → 192.168.2.50) or /etc/hosts lookup
     ↓
 Traefik (192.168.2.50:80)
     ↓
-GitLab Container (same container!)
+Coder Container (same container!)
 ```
 
 **Key Points:**
@@ -135,14 +135,14 @@ After configuring DNS, verify it's working:
 6. **Verify Configuration:**
    ```bash
    # From any device on your network
-   nslookup gitlab.lab
+   nslookup coder.lab
    # Should return: 192.168.2.50
    
    nslookup anything.lab
    # Should also return: 192.168.2.50
    ```
 
-**Result:** Now `gitlab.lab`, `mealie.lab`, `portainer.lab`, or **any** subdomain of `.lab` automatically resolves to `192.168.2.50` for all devices on your network!
+**Result:** Now `coder.lab`, `portainer.lab`, or **any** subdomain of `.lab` automatically resolves to `192.168.2.50` for all devices on your network!
 
 ---
 
@@ -160,13 +160,12 @@ If you can't configure router-level DNS, add entries manually on each device.
 2. **Add entries:** (adjust IP if your server uses different address)
    ```
    # Weekend Stack - Local Access
-   192.168.2.50    gitlab.lab gitea.lab coder.lab postiz.lab nocodb.lab paperless.lab n8n.lab focalboard.lab trilium.lab vikunja.lab docmost.lab activepieces.lab bytestash.lab excalidraw.lab it-tools.lab mealie.lab firefly.lab wger.lab dozzle.lab wud.lab uptime.lab netdata.lab portainer.lab duplicati.lab netbox.lab immich.lab kavita.lab navidrome.lab chat.lab librechat.lab anythingllm.lab searxng.lab localai.lab homer.lab vaultwarden.lab traefik.lab pihole.lab homeassistant.lab nodered.lab
+   192.168.2.50    gitea.lab coder.lab postiz.lab nocodb.lab paperless.lab n8n.lab focalboard.lab trilium.lab vikunja.lab docmost.lab activepieces.lab bytestash.lab excalidraw.lab it-tools.lab dozzle.lab wud.lab uptime-kuma.lab portainer.lab immich.lab kavita.lab navidrome.lab chat.lab librechat.lab anythingllm.lab searxng.lab localai.lab homer.lab vaultwarden.lab traefik.lab pihole.lab homeassistant.lab nodered.lab
    ```
    
    **Alternative (one per line for readability):**
    ```
    # Weekend Stack - Local Access
-   192.168.2.50    gitlab.lab
    192.168.2.50    gitea.lab
    192.168.2.50    coder.lab
    192.168.2.50    postiz.lab
@@ -181,16 +180,10 @@ If you can't configure router-level DNS, add entries manually on each device.
    192.168.2.50    bytestash.lab
    192.168.2.50    excalidraw.lab
    192.168.2.50    it-tools.lab
-   192.168.2.50    mealie.lab
-   192.168.2.50    firefly.lab
-   192.168.2.50    wger.lab
    192.168.2.50    dozzle.lab
    192.168.2.50    wud.lab
-   192.168.2.50    uptime.lab
-   192.168.2.50    netdata.lab
+   192.168.2.50    uptime-kuma.lab
    192.168.2.50    portainer.lab
-   192.168.2.50    duplicati.lab
-   192.168.2.50    netbox.lab
    192.168.2.50    immich.lab
    192.168.2.50    kavita.lab
    192.168.2.50    navidrome.lab
@@ -211,8 +204,8 @@ If you can't configure router-level DNS, add entries manually on each device.
 
 4. **Verify:**
    ```bash
-   ping gitlab.lab
-   # Should show: PING gitlab.lab (192.168.2.50)
+   ping coder.lab
+   # Should show: PING coder.lab (192.168.2.50)
    ```
 
 ##### For Windows:
@@ -232,7 +225,7 @@ If you can't configure router-level DNS, add entries manually on each device.
 
 5. **Verify in Command Prompt:**
    ```cmd
-   ping gitlab.lab
+   ping coder.lab
    ```
 
 ---
@@ -309,19 +302,19 @@ If your phone/PC is on a different network (IoT/Guest/VLAN) it may be blocked fr
 
 Once configured, use the `.lab` domain in your browser (HTTP):
 
-- **GitLab:** http://gitlab.lab
-- **Mealie:** http://mealie.lab
-- **Firefly:** http://firefly.lab
+- **Coder:** http://coder.lab
 - **Open WebUI:** http://chat.lab
 - **Portainer:** http://portainer.lab
+- **Gitea:** http://gitea.lab
+- **Uptime Kuma:** http://uptime-kuma.lab
 
 ### Accessing Services Remotely
 
 When away from your local network, use the `.weekendcodeproject.dev` domain:
 
-- **GitLab:** https://gitlab.weekendcodeproject.dev
-- **Mealie:** https://mealie.weekendcodeproject.dev
-- **Firefly:** https://firefly.weekendcodeproject.dev
+- **Coder:** https://coder.weekendcodeproject.dev
+- **Open WebUI:** https://chat.weekendcodeproject.dev
+- **Portainer:** https://portainer.weekendcodeproject.dev
 
 Both URLs reach the **same application** with the **same data**.
 
@@ -342,7 +335,7 @@ When accessing `*.lab` domains, you may see SSL certificate warnings because:
    - Browser will remember your exception
 
 2. **Use HTTP for Local Access** (no encryption):
-   - Access via `http://gitlab.lab` instead of `https://`
+   - Access via `http://service.lab` instead of `https://`
    - Only do this if you trust your local network
 
 3. **Set Up Local CA** (advanced):
@@ -359,16 +352,16 @@ No certificate warnings - Cloudflare provides valid SSL certificates.
 
 ## Troubleshooting
 
-### "Can't reach gitlab.lab"
+### "Can't reach a service"
 
 1. **Verify DNS resolution:**
    ```bash
-   nslookup gitlab.lab
+   nslookup coder.lab
    # Should show: Server pointing to 192.168.2.50
    
    # Or use ping
-   ping gitlab.lab
-   # Should show: PING gitlab.lab (192.168.2.50)
+   ping coder.lab
+   # Should show: PING coder.lab (192.168.2.50)
    ```
 
 2. **If using router DNS (Option A):**
@@ -378,8 +371,8 @@ No certificate warnings - Cloudflare provides valid SSL certificates.
 
 3. **If using hosts file (Option B):**
    ```bash
-   cat /etc/hosts | grep gitlab.lab
-   # Should show: 192.168.2.50    gitlab.lab
+   cat /etc/hosts | grep coder.lab
+   # Should show: 192.168.2.50    coder.lab
    ```
 
 3. **Verify server is reachable:**
@@ -447,7 +440,7 @@ If you have Pi-hole running in your stack, you can configure wildcard DNS there 
 
 5. **Verify:**
    ```bash
-   nslookup gitlab.lab
+   nslookup coder.lab
    nslookup anythingelse.lab
    # Both should return: 192.168.2.50
    ```
