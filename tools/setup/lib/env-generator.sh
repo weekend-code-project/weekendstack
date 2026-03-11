@@ -316,7 +316,8 @@ generate_env_interactive() {
         echo ""
         
         local git_choice
-        git_choice=$(prompt_input "Select git service [1-2]" "2")
+        read -r -p "  Choice [1-2, default 2 = Gitea]: " git_choice </dev/tty
+        git_choice="${git_choice:-2}"
         
         case "$git_choice" in
             1)

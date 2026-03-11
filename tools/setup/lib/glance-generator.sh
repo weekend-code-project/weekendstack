@@ -49,43 +49,63 @@ generate_glance_config() {
         profiles_raw="${profiles_raw// /,}"
     fi
 
+    # Service profiles: "all" implies these
     _glance_has_profile() {
         local check="$1"
         [[ ",$profiles_raw," == *",$check,"* ]] || [[ ",$profiles_raw," == *",all,"* ]]
     }
+    # Infrastructure profiles: pihole/networking/external are NEVER implied by "all"
+    _glance_has_infra_profile() {
+        local check="$1"
+        [[ ",$profiles_raw," == *",$check,"* ]]
+    }
 
-    local has_networking; _glance_has_profile "networking" && has_networking=true || has_networking=false
+    local has_networking; _glance_has_infra_profile "networking" && has_networking=true || has_networking=false
+    local has_pihole;     _glance_has_infra_profile "pihole"     && has_pihole=true     || has_pihole=false
     local has_monitoring; _glance_has_profile "monitoring" && has_monitoring=true || has_monitoring=false
     local has_ai;         _glance_has_profile "ai"         && has_ai=true         || has_ai=false
     local has_media;      _glance_has_profile "media"      && has_media=true      || has_media=false
 
     # ── Navigation URL strategy ───────────────────────────────────────────────
-    # When Traefik + link-router are installed (networking profile present),
-    # clickable links use /go/<service> so link-router can route appropriately
-    # for tunnel, local domain, or IP mode.
-    # When networking is not installed (pure IP mode), use direct HOST_IP:PORT.
+    # Use full absolute URLs so links work regardless of how glance is accessed
+    # (direct IP, lab domain, or Cloudflare tunnel).
+    # Priority: cloudflare/both → BASE_DOMAIN; pihole → LAB_DOMAIN; else → IP:PORT
 
-    # Pre-compute all navigation URLs to keep the heredoc readable
     local url_dozzle url_speedtest url_traefik url_pihole
-    local url_portainer url_uptimekuma url_wud url_netdata
+    local url_portainer url_uptimekuma url_wud
     local url_ollama url_whisper
     local url_immich url_kavita url_navidrome
 
-    if $has_networking; then
-        url_dozzle="/go/dozzle"
-        url_speedtest="/go/speedtest"
-        url_traefik="/go/traefik"
-        url_pihole="/go/pihole"
-        url_portainer="/go/portainer"
-        url_uptimekuma="/go/uptime-kuma"
-        url_wud="/go/wud"
-        url_netdata="/go/netdata"
-        url_ollama="/go/ollama"
-        url_whisper="/go/whisper"
-        url_immich="/go/immich"
-        url_kavita="/go/kavita"
-        url_navidrome="/go/navidrome"
+    if [[ "$domain_mode" == "cloudflare" || "$domain_mode" == "both" ]]; then
+        # Cloudflare tunnel — absolute HTTPS URLs (work from LAN and externally)
+        url_dozzle="https://dozzle.${base_domain}"
+        url_speedtest="https://speedtest.${base_domain}"
+        url_traefik="https://traefik.${base_domain}"
+        url_pihole="https://pihole.${base_domain}"
+        url_portainer="https://portainer.${base_domain}"
+        url_uptimekuma="https://uptime-kuma.${base_domain}"
+        url_wud="https://wud.${base_domain}"
+        url_ollama="https://ollama.${base_domain}"
+        url_whisper="https://whisper.${base_domain}"
+        url_immich="https://immich.${base_domain}"
+        url_kavita="https://kavita.${base_domain}"
+        url_navidrome="https://navidrome.${base_domain}"
+    elif [[ "$domain_mode" == "pihole" ]]; then
+        # Local lab domain (LAN only, requires Pi-hole DNS)
+        url_dozzle="https://dozzle.${lab_domain}"
+        url_speedtest="https://speedtest.${lab_domain}"
+        url_traefik="https://traefik.${lab_domain}"
+        url_pihole="https://pihole.${lab_domain}"
+        url_portainer="https://portainer.${lab_domain}"
+        url_uptimekuma="https://uptime-kuma.${lab_domain}"
+        url_wud="https://wud.${lab_domain}"
+        url_ollama="https://ollama.${lab_domain}"
+        url_whisper="https://whisper.${lab_domain}"
+        url_immich="https://immich.${lab_domain}"
+        url_kavita="https://kavita.${lab_domain}"
+        url_navidrome="https://navidrome.${lab_domain}"
     else
+        # IP-only — direct HOST_IP:PORT links
         url_dozzle="http://${host_ip}:9999"
         url_speedtest="http://${host_ip}:8765"
         url_traefik="http://${host_ip}:8081"
@@ -93,7 +113,6 @@ generate_glance_config() {
         url_portainer="http://${host_ip}:9000"
         url_uptimekuma="http://${host_ip}:3001"
         url_wud="http://${host_ip}:3002"
-        url_netdata="http://${host_ip}:19999"
         url_ollama="http://${host_ip}:11434"
         url_whisper="http://${host_ip}:9002"
         url_immich="http://${host_ip}:2283"
@@ -148,7 +167,7 @@ pages:
                 icon: si:speedtest
 GLANCE_EOF
 
-    # Networking profile entries
+    # Networking profile entries (Traefik only — Pi-hole is separate)
     if $has_networking; then
         cat >> "$output" << GLANCE_EOF
               # ── Networking ────────────────────────────────────────────────
@@ -156,6 +175,12 @@ GLANCE_EOF
                 url: ${url_traefik}
                 check-url: http://${host_ip}:8081/api/overview
                 icon: si:traefikproxy
+GLANCE_EOF
+    fi
+
+    # Pi-hole (only when pihole profile explicitly selected)
+    if $has_pihole; then
+        cat >> "$output" << GLANCE_EOF
               - title: Pi-hole
                 url: ${url_pihole}
                 check-url: http://${host_ip}:8088/admin/
@@ -179,10 +204,6 @@ GLANCE_EOF
                 url: ${url_wud}
                 check-url: http://${host_ip}:3002
                 icon: si:docker
-              - title: NetData
-                url: ${url_netdata}
-                check-url: http://${host_ip}:19999
-                icon: si:netdata
 GLANCE_EOF
     fi
 
@@ -374,7 +395,7 @@ GLANCE_EOF
                         {{ else }}
                           <span class="color-negative">●</span>
                         {{ end }}
-                        <a href="http://${host_ip}:3002" target="_blank" style="color: inherit; text-decoration: none;">{{ .String "name" }}</a>
+                        <a href="${url_wud}" target="_blank" style="color: inherit; text-decoration: none;">{{ .String "name" }}</a>
                       </div>
                       <div style="display: flex; gap: 1rem; margin-top: 0.25rem; font-size: 0.9rem; opacity: 0.8;">
                         {{ \$localValue := .String "updateKind.localValue" }}
