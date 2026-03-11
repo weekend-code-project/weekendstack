@@ -647,43 +647,38 @@ main_setup() {
         exit 1
     fi
     
-    # 9. Cloudflare Tunnel setup (only if networking profile selected AND BASE_DOMAIN configured)
-    if [[ " ${selected_profiles[@]} " =~ " networking " ]] || [[ " ${selected_profiles[@]} " =~ " all " ]]; then
-        show_setup_progress "Cloudflare Tunnel Configuration"
-        # Only run wizard when the user configured an external domain (DOMAIN_MODE=cloudflare|both)
-        local _domain_mode
-        _domain_mode=$(grep "^DOMAIN_MODE=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
-        local _base_domain
-        _base_domain=$(grep "^BASE_DOMAIN=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
-        if ! $SKIP_CLOUDFLARE && [[ "$SETUP_MODE" == "interactive" ]] && \
-           [[ "$_domain_mode" =~ ^(cloudflare|both)$ ]] && \
-           [[ -n "$_base_domain" && "$_base_domain" != "localhost" ]]; then
-            setup_cloudflare_tunnel || log_warn "Cloudflare Tunnel setup skipped"
-        elif [[ "$_domain_mode" == "ip" || "$_domain_mode" == "pihole" || "$_base_domain" == "localhost" || -z "$_base_domain" ]]; then
-            log_info "No external domain configured — skipping Cloudflare Tunnel setup"
-        else
-            log_info "Skipping Cloudflare Tunnel setup (--skip-cloudflare or quick mode)"
-        fi
-        # Immediately update custom profile after wizard so the tunnel service
-        # is included even if the user skips starting services
-        ensure_cloudflare_in_custom_profile
+    # 9. Cloudflare Tunnel setup (when external domain is configured)
+    show_setup_progress "Cloudflare Tunnel Configuration"
+    local _domain_mode
+    _domain_mode=$(grep "^DOMAIN_MODE=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
+    local _base_domain
+    _base_domain=$(grep "^BASE_DOMAIN=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
+    if ! $SKIP_CLOUDFLARE && [[ "$SETUP_MODE" == "interactive" ]] && \
+       [[ "$_domain_mode" =~ ^(cloudflare|both)$ ]] && \
+       [[ -n "$_base_domain" && "$_base_domain" != "localhost" ]]; then
+        setup_cloudflare_tunnel || log_warn "Cloudflare Tunnel setup skipped"
+    elif [[ "$_domain_mode" == "ip" || "$_base_domain" == "localhost" || -z "$_base_domain" ]]; then
+        log_info "No external domain configured — skipping Cloudflare Tunnel setup"
+    else
+        log_info "Skipping Cloudflare Tunnel setup (--skip-cloudflare or quick mode)"
     fi
+    # Immediately update custom profile after wizard so the tunnel service
+    # is included even if the user skips starting services
+    ensure_cloudflare_in_custom_profile
 
-    # 10. Certificate setup (only if networking profile selected AND local domain configured)
+    # 10. Certificate setup (when local domain / Pi-hole is configured)
     # Generates self-signed CA + wildcard cert for local *.lab HTTPS access
     # These certs are for LAN access only — Cloudflare handles TLS for remote access
-    if [[ " ${selected_profiles[@]} " =~ " networking " ]] || [[ " ${selected_profiles[@]} " =~ " all " ]]; then
-        show_setup_progress "Setting Up SSL Certificates"
-        local _dm
-        _dm=$(grep "^DOMAIN_MODE=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
-        if ! $SKIP_CERTS && [[ "$_dm" =~ ^(pihole|both)$ ]]; then
-            setup_certificates || log_warn "Certificate setup incomplete (continuing anyway)"
-        elif $SKIP_CERTS; then
-            log_info "Skipping certificate setup (--skip-certs)"
-        else
-            log_info "No local domain configured — skipping self-signed certificate generation"
-            log_info "(Certs are only needed for Pi-Hole / .lab domain access)"
-        fi
+    show_setup_progress "Setting Up SSL Certificates"
+    local _dm
+    _dm=$(grep "^DOMAIN_MODE=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
+    if ! $SKIP_CERTS && [[ "$_dm" =~ ^(pihole|both)$ ]]; then
+        setup_certificates || log_warn "Certificate setup incomplete (continuing anyway)"
+    elif $SKIP_CERTS; then
+        log_info "Skipping certificate setup (--skip-certs)"
+    else
+        log_info "No local domain configured — skipping self-signed certificate generation"
+        log_info "(Certs are only needed for Pi-Hole / .lab domain access)"
     fi
     
     # 10.5. Image Pull Planning
@@ -1011,8 +1006,10 @@ expand_profiles() {
     declare -A seen
     local -a result=()
 
-    # Base profiles that "all" maps to (no gpu/external — those are opt-in)
-    local ALL_CONCRETE=(core networking monitoring productivity dev ai media)
+    # Base profiles that "all" maps to.
+    # networking/pihole/external are NOT included here — they are auto-derived
+    # by the Access Configuration wizard and appended to COMPOSE_PROFILES directly.
+    local ALL_CONCRETE=(core monitoring productivity dev ai media)
 
     for p in "${input[@]}"; do
         if [[ "$p" == "all" ]]; then
@@ -1024,8 +1021,13 @@ expand_profiles() {
         fi
     done
 
-    # cloudflare-tunnel (external profile) depends_on traefik (networking profile)
+    # cloudflare-tunnel (external profile) depends on traefik (networking profile)
     if [[ -n "${seen[external]:-}" && -z "${seen[networking]:-}" ]]; then
+        result+=("networking")
+        seen[networking]=1
+    fi
+    # pihole also requires networking (Traefik provides HTTPS for pihole.lab)
+    if [[ -n "${seen[pihole]:-}" && -z "${seen[networking]:-}" ]]; then
         result+=("networking")
         seen[networking]=1
     fi

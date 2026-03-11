@@ -4,11 +4,12 @@
 
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
-# Profile definitions (from profile-matrix.md)
+# Profile definitions — networking is no longer a user-visible option;
+# Traefik/Pi-hole/Tunnel sub-profiles are auto-added by setup based on
+# the Access Configuration wizard answers.
 declare -A PROFILES=(
     ["all"]="All services"
-    ["core"]="Foundation (Glance, Link Router, Dozzle, Speedtest, Certs)"
-    ["networking"]="Network infrastructure (Traefik, Pi-hole, Cloudflare)"
+    ["core"]="Foundation (Glance, Dozzle, Speedtest)"
     ["monitoring"]="Container management and uptime monitoring (Portainer, Uptime Kuma, WUD)"
     ["productivity"]="Business apps (Vaultwarden, Paperless, NocoDB, N8N)"
     ["dev"]="Development tools (Coder, Gitea)"
@@ -20,7 +21,8 @@ declare -A PROFILES=(
 CORE_REQUIRED=true
 
 # Profile order for display (core is always installed, not shown as option)
-PROFILE_ORDER=("networking" "monitoring" "productivity" "dev" "ai" "media" "all")
+# Note: networking/traefik/pihole/external are auto-derived — not listed here
+PROFILE_ORDER=("monitoring" "productivity" "dev" "ai" "media" "all")
 
 show_profile_matrix() {
     log_header "Available Service Profiles"
@@ -176,7 +178,8 @@ select_profiles_interactive() {
             echo "Available deployment profiles:"
         fi
         echo ""
-        echo "Note: Core profile (Glance, Link Router, Dozzle, Speedtest, Certs) is always installed"
+        echo "Note: Core profile (Glance, Dozzle, Speedtest) is always installed"
+        echo "      Networking (Traefik/Pi-hole/Tunnel) is configured via the Access wizard"
         echo ""
         for i in $(seq 1 ${#PROFILE_ORDER[@]}); do
             local profile="${PROFILE_ORDER[$((i-1))]}"
@@ -184,7 +187,7 @@ select_profiles_interactive() {
         done
         echo ""
         echo "Enter profile numbers (space-separated) or press Enter for 'all':"
-        echo "Example: '1 4' for networking + dev"
+        echo "Example: '1 4' for monitoring + dev"
         echo ""
     } >&2
     
@@ -247,17 +250,18 @@ select_profiles_quick() {
     log_header "Quick Profile Selection"
     
     echo "Available quick deployment options:"
-    echo "  1) Foundation    - Core + Networking (recommended starter)"
-    echo "  2) Developer     - Foundation + Dev + AI services"
-    echo "  3) Productivity  - Foundation + Productivity + Media"
-    echo "  4) Complete      - All services"
-    echo "  5) Custom        - Choose specific profiles"
+echo "  1) Foundation    - Core only (recommended starter)"
+        echo "  2) Developer     - Core + Dev + AI services"
+        echo "  3) Productivity  - Core + Productivity + Media"
+        echo "  4) Complete      - All services"
+        echo "  5) Custom        - Choose specific profiles"
+        echo "  (Cloudflare Tunnel, local domain, and Pi-hole are configured in the Access wizard)"
     echo ""
     
     local choice
     # In quick mode, DRY_RUN mode, or if stdin is not a terminal, use default Foundation
     if [[ "${SETUP_MODE:-interactive}" == "quick" ]] || [[ "${DRY_RUN:-false}" == "true" ]] || ! [[ -t 0 ]]; then
-        log_info "Using default Foundation setup (core + networking)"
+        log_info "Using default Foundation setup (core only)"
         choice=0
     else
         choice=$(prompt_select "Select deployment type:" "Foundation" "Developer" "Productivity" "Complete" "Custom")
@@ -267,13 +271,13 @@ select_profiles_quick() {
     
     case $choice in
         0) # Foundation
-            selected_profiles=("core" "networking")
+            selected_profiles=("core")
             ;;
         1) # Developer
-            selected_profiles=("core" "networking" "dev" "ai")
+            selected_profiles=("core" "dev" "ai")
             ;;
         2) # Productivity
-            selected_profiles=("core" "networking" "productivity" "media")
+            selected_profiles=("core" "productivity" "media")
             ;;
         3) # Complete
             selected_profiles=("all")
@@ -302,10 +306,16 @@ get_services_for_profiles() {
     for profile in "${profiles[@]}"; do
         case "$profile" in
             core)
-                services+=("link-router" "glance" "vaultwarden")
+                services+=("glance" "vaultwarden")
                 ;;
             networking)
-                services+=("traefik" "pihole" "cert-generator" "pihole-dnsmasq-init" "error-pages")
+                services+=("traefik" "link-router" "cert-generator" "error-pages")
+                ;;
+            pihole)
+                services+=("pihole" "pihole-dnsmasq-init")
+                ;;
+            external)
+                services+=("cloudflare-tunnel")
                 ;;
             ai)
                 services+=("ollama" "open-webui" "searxng" "anythingllm" "librechat" "localai" "stable-diffusion" "diffrhythm")  # note: localai is an opt-in sub-profile now
@@ -347,7 +357,7 @@ estimate_resources() {
                 estimated_memory=$((estimated_memory + 1))
                 estimated_disk=$((estimated_disk + 5))
                 ;;
-            networking)
+            networking|pihole)
                 estimated_memory=$((estimated_memory + 2))
                 estimated_disk=$((estimated_disk + 5))
                 ;;

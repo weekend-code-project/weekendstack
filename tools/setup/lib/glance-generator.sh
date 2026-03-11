@@ -28,7 +28,7 @@ generate_glance_config() {
     local env_file="${2:-$_ws_root/.env}"
 
     # ── Read config from .env ────────────────────────────────────────────────
-    local host_ip base_domain lab_domain kavita_port
+    local host_ip base_domain lab_domain kavita_port domain_mode
     host_ip=$(grep "^HOST_IP=" "$env_file" 2>/dev/null | cut -d'=' -f2 | tr -d ' "') 
     host_ip="${host_ip:-192.168.2.50}"
     base_domain=$(grep "^BASE_DOMAIN=" "$env_file" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
@@ -37,6 +37,8 @@ generate_glance_config() {
     lab_domain="${lab_domain:-lab}"
     kavita_port=$(grep "^KAVITA_PORT=" "$env_file" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
     kavita_port="${kavita_port:-5002}"
+    domain_mode=$(grep "^DOMAIN_MODE=" "$env_file" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
+    domain_mode="${domain_mode:-ip}"
 
     # ── Determine enabled profiles ───────────────────────────────────────────
     local profiles_raw
@@ -56,6 +58,48 @@ generate_glance_config() {
     local has_monitoring; _glance_has_profile "monitoring" && has_monitoring=true || has_monitoring=false
     local has_ai;         _glance_has_profile "ai"         && has_ai=true         || has_ai=false
     local has_media;      _glance_has_profile "media"      && has_media=true      || has_media=false
+
+    # ── Navigation URL strategy ───────────────────────────────────────────────
+    # When Traefik + link-router are installed (networking profile present),
+    # clickable links use /go/<service> so link-router can route appropriately
+    # for tunnel, local domain, or IP mode.
+    # When networking is not installed (pure IP mode), use direct HOST_IP:PORT.
+
+    # Pre-compute all navigation URLs to keep the heredoc readable
+    local url_dozzle url_speedtest url_traefik url_pihole
+    local url_portainer url_uptimekuma url_wud url_netdata
+    local url_ollama url_whisper
+    local url_immich url_kavita url_navidrome
+
+    if $has_networking; then
+        url_dozzle="/go/dozzle"
+        url_speedtest="/go/speedtest"
+        url_traefik="/go/traefik"
+        url_pihole="/go/pihole"
+        url_portainer="/go/portainer"
+        url_uptimekuma="/go/uptime-kuma"
+        url_wud="/go/wud"
+        url_netdata="/go/netdata"
+        url_ollama="/go/ollama"
+        url_whisper="/go/whisper"
+        url_immich="/go/immich"
+        url_kavita="/go/kavita"
+        url_navidrome="/go/navidrome"
+    else
+        url_dozzle="http://${host_ip}:9999"
+        url_speedtest="http://${host_ip}:8765"
+        url_traefik="http://${host_ip}:8081"
+        url_pihole="http://${host_ip}:8088/admin"
+        url_portainer="http://${host_ip}:9000"
+        url_uptimekuma="http://${host_ip}:3001"
+        url_wud="http://${host_ip}:3002"
+        url_netdata="http://${host_ip}:19999"
+        url_ollama="http://${host_ip}:11434"
+        url_whisper="http://${host_ip}:9002"
+        url_immich="http://${host_ip}:2283"
+        url_kavita="http://${host_ip}:${kavita_port}"
+        url_navidrome="http://${host_ip}:4533"
+    fi
 
     # ── Ensure output directory exists ───────────────────────────────────────
     mkdir -p "$(dirname "$output")"
@@ -95,11 +139,11 @@ pages:
             sites:
               # ── Core (always present) ─────────────────────────────────────
               - title: Dozzle
-                url: /go/dozzle
+                url: ${url_dozzle}
                 check-url: http://${host_ip}:9999
                 icon: si:docker
               - title: Speedtest
-                url: /go/speedtest
+                url: ${url_speedtest}
                 check-url: http://${host_ip}:8765
                 icon: si:speedtest
 GLANCE_EOF
@@ -109,11 +153,11 @@ GLANCE_EOF
         cat >> "$output" << GLANCE_EOF
               # ── Networking ────────────────────────────────────────────────
               - title: Traefik
-                url: /go/traefik
+                url: ${url_traefik}
                 check-url: http://${host_ip}:8081/api/overview
                 icon: si:traefikproxy
               - title: Pi-hole
-                url: /go/pihole
+                url: ${url_pihole}
                 check-url: http://${host_ip}:8088/admin/
                 icon: si:pihole
 GLANCE_EOF
@@ -124,19 +168,19 @@ GLANCE_EOF
         cat >> "$output" << GLANCE_EOF
               # ── Monitoring ────────────────────────────────────────────────
               - title: Portainer
-                url: /go/portainer
+                url: ${url_portainer}
                 check-url: http://${host_ip}:9000
                 icon: si:portainer
               - title: Uptime Kuma
-                url: /go/uptime-kuma
+                url: ${url_uptimekuma}
                 check-url: http://${host_ip}:3001
                 icon: si:uptimekuma
               - title: WUD
-                url: /go/wud
+                url: ${url_wud}
                 check-url: http://${host_ip}:3002
                 icon: si:docker
               - title: NetData
-                url: /go/netdata
+                url: ${url_netdata}
                 check-url: http://${host_ip}:19999
                 icon: si:netdata
 GLANCE_EOF
@@ -147,11 +191,11 @@ GLANCE_EOF
         cat >> "$output" << GLANCE_EOF
               # ── AI ────────────────────────────────────────────────────────
               - title: Ollama
-                url: /go/ollama
+                url: ${url_ollama}
                 check-url: http://${host_ip}:11434/api/tags
                 icon: si:ollama
               - title: Whisper
-                url: /go/whisper
+                url: ${url_whisper}
                 check-url: http://${host_ip}:9002
                 icon: si:openai
 GLANCE_EOF
@@ -210,7 +254,7 @@ GLANCE_EOF
           - type: custom-api
             cache: 5m
             title: Immich Stats
-            title-url: http://${host_ip}:2283
+            title-url: ${url_immich}
             url: http://${host_ip}:2283/api/server-info/stats
             headers:
               x-api-key: "\${IMMICH_API_KEY}"
@@ -235,7 +279,7 @@ GLANCE_EOF
           - type: custom-api
             cache: 5m
             title: Kavita Latest
-            title-url: http://${host_ip}:${kavita_port}
+            title-url: ${url_kavita}
             method: POST
             url: http://${host_ip}:${kavita_port}/api/Series/v2?pageNumber=1&pageSize=5
             headers:
@@ -253,7 +297,7 @@ GLANCE_EOF
           - type: custom-api
             cache: 5m
             title: Navidrome Stats
-            title-url: http://${host_ip}:4533
+            title-url: ${url_navidrome}
             url: http://${host_ip}:4533/rest/getUser.view?u=admin&p=admin&v=1.16.1&c=glance&f=json
             template: |
               {{ \$artists := .JSON.Int "subsonic-response.user.artistCount" }}
@@ -283,7 +327,7 @@ GLANCE_EOF
           # ── Monitoring ─────────────────────────────────────────────────
           - type: custom-api
             title: What's Up Docker?
-            title-url: http://${host_ip}:3002
+            title-url: ${url_wud}
             cache: 1h
             url: http://wud:3000/api/containers/
             method: GET

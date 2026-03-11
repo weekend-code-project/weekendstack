@@ -23,11 +23,19 @@ get_init_containers_for_profiles() {
     local profiles=("$@")
     local init_list=()
     
-    # cert-generator and pihole-dnsmasq-init are always needed if networking profile
+    # cert-generator is needed when networking (Traefik) is active
+    # pihole-dnsmasq-init is needed when pihole profile is active
     for profile in "${profiles[@]}"; do
         case "$profile" in
             all|networking)
-                init_list+=("cert-generator" "pihole-dnsmasq-init")
+                init_list+=("cert-generator")
+                ;;
+        esac
+    done
+    for profile in "${profiles[@]}"; do
+        case "$profile" in
+            all|pihole)
+                init_list+=("pihole-dnsmasq-init")
                 ;;
         esac
     done
@@ -131,7 +139,15 @@ get_startup_order() {
     for profile in "${profiles[@]}"; do
         case "$profile" in
             all|networking)
-                order+=("traefik" "pihole")
+                order+=("traefik")
+                ;;
+        esac
+    done
+    
+    for profile in "${profiles[@]}"; do
+        case "$profile" in
+            all|pihole)
+                order+=("pihole")
                 ;;
         esac
     done

@@ -147,14 +147,10 @@ generate_env_interactive() {
     
     log_success "System settings configured"
     
-    # Check if networking profile is selected
-    local has_networking=false
+    # Check which optional capability profiles are selected
     local has_dev=false
     local has_ai=false
     for profile in "$@"; do
-        if [[  "$profile" == "networking" ]] || [[ "$profile" == "all" ]]; then
-            has_networking=true
-        fi
         if [[ "$profile" == "dev" ]] || [[ "$profile" == "all" ]]; then
             has_dev=true
         fi
@@ -163,11 +159,8 @@ generate_env_interactive() {
         fi
     done
     
-    # Calculate total steps based on selected profiles
-    local total_steps=3  # Base: System Settings + Admin Credentials + File Storage
-    if $has_networking; then
-        ((total_steps++))  # Add Domain Configuration
-    fi
+    # Calculate total steps (Access Configuration is always step 2)
+    local total_steps=4  # System Settings + Access Configuration + Admin Credentials + File Storage
     if $has_dev; then
         ((total_steps++))  # Add Git Service Selection
     fi
@@ -178,118 +171,131 @@ generate_env_interactive() {
     local lab_domain=""
     local base_domain="localhost"
     local domain_mode="ip"
+    local use_pihole=false
     local _step=1  # running step counter
     
     # ========================================================================
-    # STEP: Domain Configuration (only if networking profile selected)
+    # STEP: Access Configuration (always shown — determines networking stack)
     # ========================================================================
-    if $has_networking; then
-        _step=$((_step + 1))
-        clear
-        show_progress $_step $total_steps "Domain Configuration"
+    _step=$((_step + 1))
+    clear
+    show_progress $_step $total_steps "Access Configuration"
+    
+    # --- Question 1: Cloudflare Tunnel (remote/external access) ---
+    echo -e "${BOLD}Remote access via Cloudflare Tunnel?${NC}"
+    echo "  Exposes services publicly using a domain you own in Cloudflare."
+    echo "  Example: weekendcodeproject.dev → https://service.weekendcodeproject.dev"
+    echo "  Skip this for a LAN-only or IP-only setup."
+    echo ""
+    read -p "  Set up Cloudflare Tunnel? [y/N]: " -r _cf_yn </dev/tty
+    echo ""
+    
+    if [[ "$_cf_yn" =~ ^[Yy]$ ]]; then
+        read -p "  External domain (e.g. weekendcodeproject.dev): " -r base_domain_input </dev/tty
+        base_domain_input="${base_domain_input// /}"
         
-        # --- Cloudflare Tunnel ---
-        echo -e "${BOLD}Cloudflare Tunnel (external access)${NC}"
-        echo "  Exposes services publicly via a domain in your Cloudflare account."
-        echo "  Example: weekendcodeproject.dev → https://service.weekendcodeproject.dev"
-        echo ""
-        read -p "  Set up Cloudflare Tunnel? [y/N]: " -r _cf_yn </dev/tty
-        echo ""
-        
-        if [[ "$_cf_yn" =~ ^[Yy]$ ]]; then
-            read -p "  External domain (e.g. weekendcodeproject.dev): " -r base_domain_input </dev/tty
-            base_domain_input="${base_domain_input// /}"
-            
-            if [[ -n "$base_domain_input" ]]; then
-                base_domain="$base_domain_input"
-                log_success "External domain set: $base_domain"
+        if [[ -n "$base_domain_input" ]]; then
+            base_domain="$base_domain_input"
+            log_success "External domain set: $base_domain"
 
-                # Collect Cloudflare API token inline so tunnel setup is fully automated
-                echo ""
-                echo "  Cloudflare API token is needed to create the tunnel and DNS records."
-                echo "  Permissions: Account:Cloudflare Tunnel:Edit + Zone:DNS:Edit"
-                echo "  Create at:   https://dash.cloudflare.com/profile/api-tokens"
-                echo ""
-                local _cf_token_existing=""
-                if [[ -f "${SCRIPT_DIR}/.env" ]]; then
-                    _cf_token_existing=$(grep "^CLOUDFLARE_API_TOKEN=" "${SCRIPT_DIR}/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
-                fi
-                if [[ -n "$_cf_token_existing" ]]; then
-                    log_info "Existing Cloudflare API token found — press Enter to keep it"
-                    read -p "  Cloudflare API token [keep existing]: " -r _cf_token_input </dev/tty
-                    if [[ -z "$_cf_token_input" ]]; then
-                        CLOUDFLARE_API_TOKEN="$_cf_token_existing"
-                        log_info "Keeping existing Cloudflare API token"
-                    else
-                        CLOUDFLARE_API_TOKEN="$_cf_token_input"
-                        log_success "Cloudflare API token set"
-                    fi
-                else
-                    read -p "  Cloudflare API token (press Enter to configure later): " -r _cf_token_input </dev/tty
-                    if [[ -n "$_cf_token_input" ]]; then
-                        CLOUDFLARE_API_TOKEN="$_cf_token_input"
-                        log_success "Cloudflare API token set"
-                    else
-                        log_info "API token skipped — run './setup.sh --cloudflare-only' to configure the tunnel later"
-                    fi
-                fi
-                export CLOUDFLARE_API_TOKEN
-            else
-                base_domain="localhost"
-                log_info "No domain entered — Cloudflare Tunnel will not be configured"
+            # Collect Cloudflare API token inline so tunnel setup is fully automated
+            echo ""
+            echo "  Cloudflare API token is needed to create the tunnel and DNS records."
+            echo "  Permissions: Account:Cloudflare Tunnel:Edit + Zone:DNS:Edit"
+            echo "  Create at:   https://dash.cloudflare.com/profile/api-tokens"
+            echo ""
+            local _cf_token_existing=""
+            if [[ -f "${SCRIPT_DIR}/.env" ]]; then
+                _cf_token_existing=$(grep "^CLOUDFLARE_API_TOKEN=" "${SCRIPT_DIR}/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
             fi
+            if [[ -n "$_cf_token_existing" ]]; then
+                log_info "Existing Cloudflare API token found — press Enter to keep it"
+                read -p "  Cloudflare API token [keep existing]: " -r _cf_token_input </dev/tty
+                if [[ -z "$_cf_token_input" ]]; then
+                    CLOUDFLARE_API_TOKEN="$_cf_token_existing"
+                    log_info "Keeping existing Cloudflare API token"
+                else
+                    CLOUDFLARE_API_TOKEN="$_cf_token_input"
+                    log_success "Cloudflare API token set"
+                fi
+            else
+                read -p "  Cloudflare API token (press Enter to configure later): " -r _cf_token_input </dev/tty
+                if [[ -n "$_cf_token_input" ]]; then
+                    CLOUDFLARE_API_TOKEN="$_cf_token_input"
+                    log_success "Cloudflare API token set"
+                else
+                    log_info "API token skipped — run './setup.sh --cloudflare-only' to configure the tunnel later"
+                fi
+            fi
+            export CLOUDFLARE_API_TOKEN
         else
             base_domain="localhost"
-            log_info "Skipping Cloudflare Tunnel — services accessible by IP address"
+            log_info "No domain entered — Cloudflare Tunnel will not be configured"
         fi
-        
-        echo ""
-        echo -e "${BOLD}Local domain (Pi-Hole LAN access)${NC}"
-        echo "  A short suffix for LAN-only HTTPS access using self-signed certificates."
-        echo "  Example: lab → services available at https://service.lab (on your network)"
-        echo "  Skip this if you don't plan to configure Pi-Hole or custom DNS."
-        echo ""
-        read -p "  Local DNS suffix (press Enter to skip, default 'lab'): " -r lab_domain_input </dev/tty
-        lab_domain_input="${lab_domain_input// /}"
-        
-        if [[ -n "$lab_domain_input" ]]; then
-            lab_domain="$lab_domain_input"
-            log_success "Local domain set: .$lab_domain"
-        elif [[ -z "$lab_domain_input" ]]; then
-            # Offer the default on a plain Enter
-            lab_domain="lab"
-            log_info "Using default local domain: .lab"
-        fi
-        
-        # Compute DOMAIN_MODE
-        local has_ext=false has_local=false
-        [[ "$base_domain" != "localhost" ]] && has_ext=true
-        [[ -n "$lab_domain" ]] && has_local=true
-        
-        if $has_ext && $has_local; then
-            domain_mode="both"
-        elif $has_ext; then
-            domain_mode="cloudflare"
-        elif $has_local; then
-            domain_mode="pihole"
-        else
-            domain_mode="ip"
-            lab_domain=""   # ensure no stale value
-        fi
-        
-        echo ""
-        case "$domain_mode" in
-            both)      log_success "Domain mode: both (Cloudflare + Pi-Hole)" ;;
-            cloudflare) log_success "Domain mode: Cloudflare Tunnel only" ;;
-            pihole)    log_success "Domain mode: Pi-Hole local DNS only" ;;
-            ip)
-                log_info "Domain mode: IP only — services accessible via ${host_ip}"
-                log_info "No Cloudflare Tunnel or Pi-Hole DNS will be configured."
-                ;;
-        esac
-        
-        log_success "Domain configuration complete"
+    else
+        base_domain="localhost"
+        log_info "Skipping Cloudflare Tunnel"
     fi
+    
+    echo ""
+    # --- Question 2: Local domain (e.g. .lab) for LAN access ---
+    echo -e "${BOLD}Local domain for LAN access (e.g. .lab)?${NC}"
+    echo "  Gives services a friendly name on your local network using self-signed certs."
+    echo "  Example: lab → https://glance.lab, https://nocodb.lab (LAN only)"
+    echo "  Skip this for pure IP or tunnel-only setups."
+    echo ""
+    read -p "  Set up a local domain? [y/N]: " -r _lab_yn </dev/tty
+    echo ""
+    
+    if [[ "$_lab_yn" =~ ^[Yy]$ ]]; then
+        read -p "  Local domain suffix (press Enter for 'lab'): " -r lab_domain_input </dev/tty
+        lab_domain_input="${lab_domain_input// /}"
+        lab_domain="${lab_domain_input:-lab}"
+        log_success "Local domain set: .${lab_domain}"
+        
+        echo ""
+        echo -e "${BOLD}DNS for local domain?${NC}"
+        echo "  1) Install Pi-hole  — handles DNS + optional ad blocking (recommended)"
+        echo "  2) Manual DNS       — you add records to your own DNS server/router"
+        echo ""
+        read -p "  DNS option [1/2, default 1]: " -r _dns_choice </dev/tty
+        echo ""
+        if [[ "${_dns_choice:-1}" == "2" ]]; then
+            use_pihole=false
+            log_info "Manual DNS selected — add an A/wildcard record for *.${lab_domain} → ${host_ip}"
+        else
+            use_pihole=true
+            log_success "Pi-hole will be installed for local DNS"
+        fi
+    else
+        log_info "No local domain — services accessible by IP or tunnel only"
+    fi
+    
+    # --- Compute DOMAIN_MODE ---
+    local has_ext=false has_local=false
+    [[ "$base_domain" != "localhost" ]] && has_ext=true
+    [[ -n "$lab_domain" ]] && has_local=true
+    
+    if $has_ext && $has_local; then
+        domain_mode="both"
+    elif $has_ext; then
+        domain_mode="cloudflare"
+    elif $has_local; then
+        domain_mode="pihole"
+    else
+        domain_mode="ip"
+        lab_domain=""   # ensure no stale value
+    fi
+    
+    echo ""
+    case "$domain_mode" in
+        both)       log_success "Access mode: Cloudflare Tunnel + local .${lab_domain} domain" ;;
+        cloudflare) log_success "Access mode: Cloudflare Tunnel (${base_domain})" ;;
+        pihole)     log_success "Access mode: local .${lab_domain} domain" ;;
+        ip)         log_info    "Access mode: IP only — no reverse proxy will be installed" ;;
+    esac
+    
+    log_success "Access configuration complete"
     
     # ========================================================================
     # STEP: Git Service Selection (only if dev profile selected)
@@ -659,6 +665,21 @@ generate_env_interactive() {
     fi
     if $has_ai && $use_gpu; then
         profiles_csv="${profiles_csv},gpu"
+    fi
+    
+    # Auto-append access sub-profiles derived from the Access Configuration wizard.
+    # These are never selected manually — they are driven entirely by the two questions.
+    #   networking  = Traefik + Link-Router + Cert-Generator + Error-Pages
+    #   pihole      = Pi-hole + pihole-dnsmasq-init
+    #   external    = Cloudflare Tunnel container
+    if [[ "$domain_mode" != "ip" ]]; then
+        profiles_csv="${profiles_csv},networking"
+    fi
+    if $use_pihole; then
+        profiles_csv="${profiles_csv},pihole"
+    fi
+    if [[ "$domain_mode" == "cloudflare" || "$domain_mode" == "both" ]]; then
+        profiles_csv="${profiles_csv},external"
     fi
     
     # Write the full expanded profile list to COMPOSE_PROFILES in .env so that

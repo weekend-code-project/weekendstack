@@ -289,6 +289,14 @@ add_service_urls() {
             all|networking)
                 echo "**Network Services:**" >> "$summary_file"
                 echo "- [Traefik Dashboard](https://traefik.$lab_domain:8081) - Reverse proxy" >> "$summary_file"
+                echo "- [Link Router](https://go.$lab_domain) - Go links service" >> "$summary_file"
+                echo "" >> "$summary_file"
+                ;;
+        esac
+        
+        case "$profile" in
+            all|pihole)
+                echo "**DNS & Ad Blocking:**" >> "$summary_file"
                 echo "- [Pi-hole Admin](http://pihole.$lab_domain/admin) - DNS and ad blocking" >> "$summary_file"
                 echo "" >> "$summary_file"
                 ;;
@@ -365,6 +373,10 @@ display_summary_to_console() {
         has_networking=true
     fi
     
+    local domain_mode=$(grep "^DOMAIN_MODE=" "$stack_dir/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
+    local has_local_domain=false
+    [[ "$domain_mode" == "pihole" || "$domain_mode" == "both" ]] && has_local_domain=true
+    
     clear
     echo ""
     log_header "Setup Complete!"
@@ -412,7 +424,7 @@ display_summary_to_console() {
     echo "    Direct IP:   http://$host_ip:8080 (glance)"
     echo "    Direct IP:   http://$host_ip:7080 (coder)"
     
-    if $has_networking; then
+    if $has_local_domain; then
         echo ""
         echo "  With Pi-hole DNS configured:"
         echo "    Dashboard:   https://$lab_domain"
@@ -422,7 +434,7 @@ display_summary_to_console() {
     
     echo ""
     
-    if $has_networking; then
+    if $has_local_domain; then
         echo -e "${BOLD}DNS Configuration:${NC}"
         echo "  Set your device/router DNS to: $host_ip"
         echo "  This enables .${lab_domain} domain access for all services"

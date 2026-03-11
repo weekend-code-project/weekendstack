@@ -11,9 +11,14 @@
 #   ✓ Correct:  docker compose -f compose/docker-compose.networking.yml up
 #   ✗ Wrong:    cd compose && docker compose -f docker-compose.networking.yml up
 #
-# Usage:
-#   docker compose --profile networking up -d
-#   docker compose --profile proxy up -d  (legacy alias)
+# Profiles used by this file:
+#   networking  - Traefik, Link-Router, Cert-Generator, Error-Pages
+#                 Auto-added by setup.sh when tunnel OR local domain is configured
+#   pihole      - Pi-hole + dnsmasq-init
+#                 Auto-added by setup.sh when local domain + Pi-hole DNS is selected
+#   external    - Cloudflare Tunnel connector
+#                 Auto-added by setup.sh when tunnel is configured
+#   proxy       - Alias for networking (legacy)
 # =============================================================================
 
 services:
@@ -234,7 +239,7 @@ services:
     container_name: pihole-dnsmasq-init
     restart: "no"
     profiles:
-      - networking
+      - pihole
     environment:
       HOST_IP: ${HOST_IP}
       LAB_DOMAIN: ${LAB_DOMAIN:-lab}
@@ -419,7 +424,7 @@ services:
       - traefik-network
       - shared-network
     profiles:
-      - networking
+      - pihole
     depends_on:
       pihole-dnsmasq-init:
         condition: service_completed_successfully
