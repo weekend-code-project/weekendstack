@@ -12,9 +12,9 @@
 # Rules:
 #   - Single page only ("Home", slug: home)  — no separate External page
 #   - Monitor widget entries filtered by enabled profile
-#   - Small column: server-stats, speedtest (always), then profile-gated widgets
-#   - Speedtest is always present (core profile)
-#   - Tunnel presence drives FORCE_LINK_MODE in .env, not glance.yml URLs
+#   - Speedtest in monitor widget (core, always), no separate custom-api widget
+#   - Dozzle in monitor widget (monitoring section, gated by monitoring profile)
+#   - Small column: server-stats (always), then profile-gated widgets
 #   - Navigation url: fields always use /go/<service> (link-router handles context)
 #   - Internal API urls use Docker-network service names (not HOST_IP) where possible
 # ==============================================================================
@@ -157,10 +157,6 @@ pages:
             title: APIs & Monitoring
             sites:
               # ── Core (always present) ─────────────────────────────────────
-              - title: Dozzle
-                url: ${url_dozzle}
-                check-url: http://${host_ip}:9999
-                icon: si:docker
               - title: Speedtest
                 url: ${url_speedtest}
                 check-url: http://${host_ip}:8765
@@ -188,10 +184,14 @@ GLANCE_EOF
 GLANCE_EOF
     fi
 
-    # Monitoring profile entries
+    # Monitoring profile entries (Dozzle, Portainer, Uptime Kuma, WUD)
     if $has_monitoring; then
         cat >> "$output" << GLANCE_EOF
               # ── Monitoring ────────────────────────────────────────────────
+              - title: Dozzle
+                url: ${url_dozzle}
+                check-url: http://${host_ip}:9999
+                icon: si:docker
               - title: Portainer
                 url: ${url_portainer}
                 check-url: http://${host_ip}:9000
@@ -235,36 +235,6 @@ GLANCE_EOF
             servers:
               - type: local
                 name: Docker VM
-
-          - type: custom-api
-            title: Latest Speedtest
-            cache: 5m
-            url: http://speedtest-tracker:80/api/speedtest/latest
-            template: |
-              {{ \$data := .JSON.Get "data" }}
-              {{ if \$data }}
-                <div style="display: flex; justify-content: space-around; padding: 1rem 0;">
-                  <div style="text-align: center;">
-                    <div style="font-size: 1.6rem; font-weight: bold;" class="color-primary">{{ \$data.String "download" }}</div>
-                    <div style="font-size: 0.9rem; opacity: 0.8;">↓ Mbps</div>
-                  </div>
-                  <div style="text-align: center;">
-                    <div style="font-size: 1.6rem; font-weight: bold;" class="color-primary">{{ \$data.String "upload" }}</div>
-                    <div style="font-size: 0.9rem; opacity: 0.8;">↑ Mbps</div>
-                  </div>
-                  <div style="text-align: center;">
-                    <div style="font-size: 1.6rem; font-weight: bold;">{{ \$data.String "ping" }}</div>
-                    <div style="font-size: 0.9rem; opacity: 0.8;">Ping (ms)</div>
-                  </div>
-                </div>
-                <div style="text-align: center; font-size: 0.85rem; opacity: 0.7; margin-top: 0.5rem;">
-                  Last test: {{ \$data.String "created_at" }}
-                </div>
-              {{ else }}
-                <div style="text-align: center; padding: 1rem; opacity: 0.7;">
-                  No speedtest results yet. Tests run automatically every hour.
-                </div>
-              {{ end }}
 GLANCE_EOF
 
     # Media profile widgets

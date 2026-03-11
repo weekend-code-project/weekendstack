@@ -164,18 +164,19 @@ services:
       - traefik.http.routers.dozzle-lab-http.middlewares=redirect-to-https@file
       - traefik.http.routers.dozzle-lab-http.service=dozzle
       
-      # Local .lab domain (HTTPS)
+      # Local .lab domain (HTTPS) — auth required (exposes all container logs)
       - traefik.http.routers.dozzle-lab.entrypoints=websecure
       - traefik.http.routers.dozzle-lab.rule=Host(`dozzle.${LAB_DOMAIN}`)
       - traefik.http.routers.dozzle-lab.tls=true
+      - traefik.http.routers.dozzle-lab.middlewares=monitoring-auth@file
       - traefik.http.routers.dozzle-lab.service=dozzle
       
       # External domain (Cloudflare Tunnel) — auth required (shows all container logs)
       - traefik.http.routers.dozzle-external.entrypoints=websecure
       - traefik.http.routers.dozzle-external.rule=Host(`dozzle.${BASE_DOMAIN}`)
       - traefik.http.routers.dozzle-external.tls=true
+      - traefik.http.routers.dozzle-external.middlewares=monitoring-auth@file
       - traefik.http.routers.dozzle-external.service=dozzle
-      - traefik.http.routers.dozzle-external.middlewares=it-tools-auth@file
       
       # Service definition
       - traefik.http.services.dozzle.loadbalancer.server.port=8080
@@ -239,12 +240,14 @@ services:
       - traefik.http.routers.speedtest-lab.entrypoints=websecure
       - traefik.http.routers.speedtest-lab.rule=Host(`speedtest.${LAB_DOMAIN}`)
       - traefik.http.routers.speedtest-lab.tls=true
+      - traefik.http.routers.speedtest-lab.middlewares=monitoring-auth@file
       - traefik.http.routers.speedtest-lab.service=speedtest
       
-      # External domain (Cloudflare Tunnel)
+      # External domain (Cloudflare Tunnel) — auth required
       - traefik.http.routers.speedtest-external.entrypoints=websecure
       - traefik.http.routers.speedtest-external.rule=Host(`speedtest.${BASE_DOMAIN}`)
       - traefik.http.routers.speedtest-external.tls=true
+      - traefik.http.routers.speedtest-external.middlewares=monitoring-auth@file
       - traefik.http.routers.speedtest-external.service=speedtest
       
       # Service definition

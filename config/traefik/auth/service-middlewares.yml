@@ -1,5 +1,10 @@
 http:
   middlewares:
+    # ── Basic Auth: Monitoring Services (WUD, Portainer, Uptime Kuma, Dozzle) ────────
+    monitoring-auth:
+      basicAuth:
+        usersFile: /config/traefik/auth/htpasswd-admin
+
     # ── Basic Auth: AI Services (Whisper, LocalAI, Ollama) ───────────────────
     ai-services-auth:
       basicAuth:

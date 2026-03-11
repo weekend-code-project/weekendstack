@@ -83,12 +83,14 @@ services:
       - traefik.http.routers.wud-lab.entrypoints=websecure
       - traefik.http.routers.wud-lab.rule=Host(`wud.${LAB_DOMAIN}`)
       - traefik.http.routers.wud-lab.tls=true
+      - traefik.http.routers.wud-lab.middlewares=monitoring-auth@file
       - traefik.http.routers.wud-lab.service=wud
 
       # External domain (Cloudflare Tunnel)
       - traefik.http.routers.wud-external.entrypoints=websecure
       - traefik.http.routers.wud-external.rule=Host(`wud.${BASE_DOMAIN}`)
       - traefik.http.routers.wud-external.tls=true
+      - traefik.http.routers.wud-external.middlewares=monitoring-auth@file
       - traefik.http.routers.wud-external.service=wud
 
       # Service definition
@@ -144,12 +146,14 @@ services:
       - traefik.http.routers.uptime-kuma-lab.entrypoints=websecure
       - traefik.http.routers.uptime-kuma-lab.rule=Host(`uptime-kuma.${LAB_DOMAIN}`)
       - traefik.http.routers.uptime-kuma-lab.tls=true
+      - traefik.http.routers.uptime-kuma-lab.middlewares=monitoring-auth@file
       - traefik.http.routers.uptime-kuma-lab.service=uptime-kuma
 
       # External domain (Cloudflare Tunnel)
       - traefik.http.routers.uptime-kuma-external.entrypoints=websecure
       - traefik.http.routers.uptime-kuma-external.rule=Host(`uptime-kuma.${BASE_DOMAIN}`)
       - traefik.http.routers.uptime-kuma-external.tls=true
+      - traefik.http.routers.uptime-kuma-external.middlewares=monitoring-auth@file
       - traefik.http.routers.uptime-kuma-external.service=uptime-kuma
 
       # Service definition
@@ -206,12 +210,14 @@ services:
       - traefik.http.routers.portainer-lab.entrypoints=websecure
       - traefik.http.routers.portainer-lab.rule=Host(`portainer.${LAB_DOMAIN}`)
       - traefik.http.routers.portainer-lab.tls=true
+      - traefik.http.routers.portainer-lab.middlewares=monitoring-auth@file
       - traefik.http.routers.portainer-lab.service=portainer
 
       # External domain (Cloudflare Tunnel)
       - traefik.http.routers.portainer-external.entrypoints=websecure
       - traefik.http.routers.portainer-external.rule=Host(`portainer.${BASE_DOMAIN}`)
       - traefik.http.routers.portainer-external.tls=true
+      - traefik.http.routers.portainer-external.middlewares=monitoring-auth@file
       - traefik.http.routers.portainer-external.service=portainer
 
       # Service definition
