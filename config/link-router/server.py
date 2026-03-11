@@ -22,7 +22,12 @@ BASE_DOMAIN = _env("BASE_DOMAIN", "")
 LAB_SCHEME = _env("LAB_SCHEME", "http")
 EXTERNAL_SCHEME = _env("EXTERNAL_SCHEME", "https")
 HOST_IP = _env("HOST_IP", "192.168.2.50")
-FORCE_LINK_MODE = _env("FORCE_LINK_MODE", "").lower()  # Options: "local", "external", "" (auto-detect)
+# FORCE_LINK_MODE is written by setup.sh:
+#   "external" — tunnel configured, all /go/ links go to service.BASE_DOMAIN
+#   "ip"       — no tunnel, all /go/ links go to HOST_IP:PORT
+#   "lab"      — force .lab domain routing (power users / debug only)
+#   ""         — auto-detect from Host header (legacy / manual override)
+FORCE_LINK_MODE = _env("FORCE_LINK_MODE", "").lower()
 
 # Port mappings for IP-based access (from docker ps output)
 PORT_MAP = {
@@ -127,20 +132,37 @@ def is_tunnel_available() -> bool:
 
 
 def choose_mode(host: str) -> str:
-    # Check if mode is forced via environment variable
-    if FORCE_LINK_MODE == "local":
+    """Determine URL routing mode.
+
+    Priority order:
+      1. FORCE_LINK_MODE env var (set by setup.sh based on tunnel presence)
+      2. BASE_DOMAIN configured → assume tunnel available → external
+      3. Fall back: inspect Host header (.lab → lab, IP → ip)
+
+    setup.sh sets FORCE_LINK_MODE=external when CLOUDFLARE_TUNNEL_ID is
+    configured so that all /go/ links always resolve through the tunnel,
+    regardless of which hostname the user used to reach the dashboard.
+    When no tunnel is configured, setup.sh sets FORCE_LINK_MODE=ip so
+    all links go directly to HOST_IP:PORT (most reliable, no DNS needed).
+    """
+    # 1. Explicit force override
+    if FORCE_LINK_MODE in ("local", "lab"):
         return "lab"
-    elif FORCE_LINK_MODE == "external":
+    if FORCE_LINK_MODE == "external":
         return "external"
-    
-    # Auto-detect based on incoming Host header
+    if FORCE_LINK_MODE == "ip":
+        return "ip"
+
+    # 2. BASE_DOMAIN configured → tunnel exists → use external URLs
+    if BASE_DOMAIN:
+        return "external"
+
+    # 3. No tunnel: fall back to Host-header detection
     host = (host or "").strip().lower()
     if host.endswith(f".{LAB_DOMAIN}"):
         return "lab"
-    # Check if it's an IP address with port
-    if any(char.isdigit() for char in host.split(":")[0]):
-        return "ip"
-    return "external"
+    # IP address (with optional port) → ip mode
+    return "ip"
 
 
 class Handler(BaseHTTPRequestHandler):

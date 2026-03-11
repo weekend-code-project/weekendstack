@@ -877,17 +877,25 @@ CFEOF
 # Docker silently creates a directory when a bind-mount source file is missing.
 # For files with a .example counterpart, copies the example after fixing the phantom.
 preflight_fix_mounts() {
+    # NOTE: glance.yml is handled separately below (generated, not copied from .example)
     local file_mounts=(
-        "$SCRIPT_DIR/config/glance/glance.yml"
         "$SCRIPT_DIR/config/filebrowser/init-filebrowser.sh"
     )
     local fixed=0
 
+    # Glance config: remove phantom directory if Docker created one, then generate.
+    local glance_cfg="$SCRIPT_DIR/config/glance/glance.yml"
+    if [[ -d "$glance_cfg" ]]; then
+        log_warn "Found directory where a file is expected: $glance_cfg"
+        rmdir "$glance_cfg" 2>/dev/null || rm -rf "$glance_cfg"
+        fixed=$((fixed + 1))
+    fi
+
+    # Fix any remaining phantom directories (mounted files Docker may turn into dirs)
     for path in "${file_mounts[@]}"; do
         if [[ -d "$path" ]]; then
             log_warn "Found directory where a file is expected: $path"
             rmdir "$path" 2>/dev/null || rm -rf "$path"
-            # Copy from .example if available, otherwise create an empty placeholder
             local example="${path}.example"
             if [[ -f "$example" ]]; then
                 cp "$example" "$path"
@@ -974,6 +982,25 @@ preflight_fix_mounts() {
             done
         fi
     fi
+
+    # Set FORCE_LINK_MODE in .env to drive link-router URL routing.
+    # "external" = Cloudflare tunnel configured → all /go/ links route through tunnel.
+    # "ip"       = No tunnel → all /go/ links go directly to HOST_IP:PORT (no DNS needed).
+    if type update_env_var &>/dev/null && [[ -f "$SCRIPT_DIR/.env" ]]; then
+        local _tunnel_enabled _tunnel_token
+        _tunnel_enabled=$(grep "^CLOUDFLARE_TUNNEL_ENABLED=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
+        _tunnel_token=$(grep "^CLOUDFLARE_TUNNEL_TOKEN=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' ')
+        if [[ "$_tunnel_enabled" == "true" && -n "$_tunnel_token" ]]; then
+            update_env_var "FORCE_LINK_MODE" "external" "$SCRIPT_DIR/.env"
+            log_info "Tunnel active — FORCE_LINK_MODE=external (all /go/ links via tunnel)"
+        else
+            update_env_var "FORCE_LINK_MODE" "ip" "$SCRIPT_DIR/.env"
+            log_info "No tunnel — FORCE_LINK_MODE=ip (all /go/ links via HOST_IP:PORT)"
+        fi
+    fi
+
+    # Generate Glance dashboard config filtered by selected profiles.
+    generate_glance_config "$SCRIPT_DIR/config/glance/glance.yml" "$SCRIPT_DIR/.env"
 }
 
 # Expand abstract "all" profile into concrete Docker Compose profile names and

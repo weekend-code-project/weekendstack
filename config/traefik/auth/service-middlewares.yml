@@ -22,9 +22,4 @@ http:
         replacement: "${1}/guacamole/"
         permanent: false
 
-    # ── Redirect: Glance external — redirect root to /external ───────────────
-    glance-external-redirect:
-      redirectRegex:
-        regex: "^(https?://[^/]+)/$"
-        replacement: "${1}/external"
-        permanent: false
+
