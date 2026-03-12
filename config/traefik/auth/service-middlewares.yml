@@ -20,17 +20,19 @@ http:
       basicAuth:
         usersFile: /config/traefik/auth/htpasswd-admin
 
-    # ── Docmost fix: strip Transfer-Encoding header forwarded by Traefik ───────
-    # Root cause: Traefik converts HTTP/2 (from Cloudflare tunnel) to HTTP/1.1
-    # and adds "Transfer-Encoding: chunked" for empty-body POST requests (e.g.
-    # POST /api/users/me). Fastify sees TE=chunked → expects a body → finds no
-    # Content-Type → returns 415. Removing the header lets Fastify treat the
-    # request as body-less, so guards (JWT, workspace) run normally.
-    # Applied globally to all Docmost routes (docmost-external, docmost-lab).
-    docmost-strip-te:
-      headers:
-        customRequestHeaders:
-          Transfer-Encoding: ""
+    # ── Docmost fix: buffer requests to force Content-Length instead of chunked ──
+    # Root cause: Traefik streams requests to Docmost using Transfer-Encoding:
+    # chunked (HTTP/1.1) because cloudflared doesn't set Content-Length for
+    # body-less POSTs (e.g. POST /api/users/me). Fastify sees TE=chunked,
+    # expects a body, finds no Content-Type, and returns 415.
+    # The buffering middleware makes Traefik read the full body first, then send
+    # with Content-Length set. Empty bodies → Content-Length: 0 → Fastify skips
+    # Content-Type check → guards run normally (401 unauthenticated, 200 authed).
+    # Applied globally to all Docmost routes.
+    docmost-buffer:
+      buffering:
+        maxRequestBodyBytes: 104857600
+        memRequestBodyBytes: 10485760
 
     # ── Redirect: Guacamole requires /guacamole/ path ────────────────────────
     guacamole-redirect:
