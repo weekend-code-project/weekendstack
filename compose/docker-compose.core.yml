@@ -106,10 +106,11 @@ services:
       - traefik.http.routers.glance-http.middlewares=redirect-to-https@file
       - traefik.http.routers.glance-http.service=glance
       
-      # HTTPS router - Local .lab (No auth for trusted network)
+      # HTTPS router - Local .lab
       - traefik.http.routers.glance.entrypoints=websecure
       - "traefik.http.routers.glance.rule=(Host(`home.${LAB_DOMAIN}`) || Host(`${HOST_IP}`)) && !PathPrefix(`/go/`)"
       - traefik.http.routers.glance.priority=100
+      - traefik.http.routers.glance.middlewares=it-tools-auth@file
       - traefik.http.routers.glance.service=glance
       - traefik.http.routers.glance.tls=true
       

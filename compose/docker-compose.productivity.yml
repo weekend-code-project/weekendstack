@@ -1423,6 +1423,7 @@ services:
       - traefik.http.routers.bytestash-external.entrypoints=websecure
       - traefik.http.routers.bytestash-external.rule=Host(`bytestash.${BASE_DOMAIN}`)
       - traefik.http.routers.bytestash-external.tls=true
+      - traefik.http.routers.bytestash-external.middlewares=it-tools-auth@file
       - traefik.http.routers.bytestash-external.service=bytestash
       
       # Local .lab domain (HTTP)
@@ -1435,6 +1436,7 @@ services:
       - traefik.http.routers.bytestash-lab.entrypoints=websecure
       - traefik.http.routers.bytestash-lab.rule=Host(`bytestash.${LAB_DOMAIN}`)
       - traefik.http.routers.bytestash-lab.tls=true
+      - traefik.http.routers.bytestash-lab.middlewares=it-tools-auth@file
       - traefik.http.routers.bytestash-lab.service=bytestash
       
       # Service definition
