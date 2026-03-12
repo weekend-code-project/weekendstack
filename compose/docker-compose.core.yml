@@ -154,6 +154,7 @@ services:
       - glance.icon=si:logstash
       - glance.url=/go/dozzle
       - glance.description=Log Viewer
+      - glance.hide=true
       
       # Traefik Configuration
       - traefik.enable=true
@@ -226,6 +227,7 @@ services:
       - glance.icon=si:speedtest
       - glance.url=/go/speedtest
       - glance.description=Internet Speed Monitor
+      - glance.hide=true
       
       # Traefik Configuration
       - traefik.enable=true
@@ -240,14 +242,12 @@ services:
       - traefik.http.routers.speedtest-lab.entrypoints=websecure
       - traefik.http.routers.speedtest-lab.rule=Host(`speedtest.${LAB_DOMAIN}`)
       - traefik.http.routers.speedtest-lab.tls=true
-      - traefik.http.routers.speedtest-lab.middlewares=monitoring-auth@file
       - traefik.http.routers.speedtest-lab.service=speedtest
       
-      # External domain (Cloudflare Tunnel) — auth required
+      # External domain (Cloudflare Tunnel)
       - traefik.http.routers.speedtest-external.entrypoints=websecure
       - traefik.http.routers.speedtest-external.rule=Host(`speedtest.${BASE_DOMAIN}`)
       - traefik.http.routers.speedtest-external.tls=true
-      - traefik.http.routers.speedtest-external.middlewares=monitoring-auth@file
       - traefik.http.routers.speedtest-external.service=speedtest
       
       # Service definition

@@ -348,11 +348,19 @@ services:
       - traefik.http.routers.traefik-lab-http.middlewares=redirect-to-https@file
       - traefik.http.routers.traefik-lab-http.service=api@internal
       
-      # HTTPS router for .lab domain - Traefik dashboard
+      # HTTPS router for .lab domain - Traefik dashboard (auth required)
       - traefik.http.routers.traefik-lab.entrypoints=websecure
       - traefik.http.routers.traefik-lab.rule=Host(`traefik.${LAB_DOMAIN}`)
       - traefik.http.routers.traefik-lab.tls=true
+      - traefik.http.routers.traefik-lab.middlewares=monitoring-auth@file
       - traefik.http.routers.traefik-lab.service=api@internal
+
+      # External domain (Cloudflare Tunnel) - auth required
+      - traefik.http.routers.traefik-external.entrypoints=websecure
+      - traefik.http.routers.traefik-external.rule=Host(`traefik.${BASE_DOMAIN}`)
+      - traefik.http.routers.traefik-external.tls=true
+      - traefik.http.routers.traefik-external.middlewares=monitoring-auth@file
+      - traefik.http.routers.traefik-external.service=api@internal
 
   # =============================================================================
   # CLOUDFLARE TUNNEL - SECURE EXTERNAL ACCESS

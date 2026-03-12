@@ -83,10 +83,11 @@ services:
       - traefik.http.routers.ollama-lab-http.middlewares=redirect-to-https@file
       - traefik.http.routers.ollama-lab-http.service=ollama
       
-      # Local .lab domain (HTTPS)
+      # Local .lab domain (HTTPS) - auth required
       - traefik.http.routers.ollama-lab.entrypoints=websecure
       - "traefik.http.routers.ollama-lab.rule=Host(`ollama.${LAB_DOMAIN}`)"
       - traefik.http.routers.ollama-lab.tls=true
+      - traefik.http.routers.ollama-lab.middlewares=ai-services-auth@file
       - traefik.http.routers.ollama-lab.service=ollama
       
       # Service definition
@@ -161,10 +162,11 @@ services:
       - traefik.http.routers.ollama-lab-http.middlewares=redirect-to-https@file
       - traefik.http.routers.ollama-lab-http.service=ollama
       
-      # Local .lab domain (HTTPS)
+      # Local .lab domain (HTTPS) - auth required
       - traefik.http.routers.ollama-lab.entrypoints=websecure
       - "traefik.http.routers.ollama-lab.rule=Host(`ollama.${LAB_DOMAIN}`)"
       - traefik.http.routers.ollama-lab.tls=true
+      - traefik.http.routers.ollama-lab.middlewares=ai-services-auth@file
       - traefik.http.routers.ollama-lab.service=ollama
       
       # Service definition
@@ -524,10 +526,11 @@ services:
       - traefik.http.routers.whisper-lab-http.service=whisper
       - traefik.http.routers.whisper-lab-http.priority=21
       
-      # Local .lab domain (HTTPS) - No auth for local network
+      # Local .lab domain (HTTPS) - auth required
       - traefik.http.routers.whisper-lab.entrypoints=websecure
       - "traefik.http.routers.whisper-lab.rule=Host(`whisper.${LAB_DOMAIN}`)"
       - traefik.http.routers.whisper-lab.tls=true
+      - traefik.http.routers.whisper-lab.middlewares=ai-services-auth@file
       - traefik.http.routers.whisper-lab.service=whisper
       - traefik.http.routers.whisper-lab.priority=21
       

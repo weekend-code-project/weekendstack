@@ -20,11 +20,17 @@ http:
       basicAuth:
         usersFile: /config/traefik/auth/htpasswd-admin
 
+    # ── Proxy Headers: Docmost (tells NestJS the original protocol was HTTPS)
+    # Required for correct cookie domain, CORS, and collaboration token URLs.
+    docmost-headers:
+      headers:
+        customRequestHeaders:
+          X-Forwarded-Proto: "https"
+
     # ── Redirect: Guacamole requires /guacamole/ path ────────────────────────
     guacamole-redirect:
       redirectRegex:
         regex: "^(https?://[^/]+)/?$"
         replacement: "${1}/guacamole/"
         permanent: false
-
 
