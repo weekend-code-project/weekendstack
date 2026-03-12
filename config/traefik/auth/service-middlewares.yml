@@ -20,12 +20,13 @@ http:
       basicAuth:
         usersFile: /config/traefik/auth/htpasswd-admin
 
-    # ── Proxy Headers: Docmost (tells NestJS the original protocol was HTTPS)
-    # Required for correct cookie domain, CORS, and collaboration token URLs.
-    docmost-headers:
+    # ── Collab-token fix: force Content-Type so NestJS body-parser accepts the
+    # POST. Applied only to /api/auth/collab-token via a path-specific router.
+    # (Traefik or Cloudflare strips Content-Type on this path for auth'd users.)
+    docmost-collab-json:
       headers:
         customRequestHeaders:
-          X-Forwarded-Proto: "https"
+          Content-Type: "application/json"
 
     # ── Redirect: Guacamole requires /guacamole/ path ────────────────────────
     guacamole-redirect:
