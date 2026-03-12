@@ -20,13 +20,17 @@ http:
       basicAuth:
         usersFile: /config/traefik/auth/htpasswd-admin
 
-    # ── Collab-token fix: force Content-Type so NestJS body-parser accepts the
-    # POST. Applied only to /api/auth/collab-token via a path-specific router.
-    # (Traefik or Cloudflare strips Content-Type on this path for auth'd users.)
-    docmost-collab-json:
+    # ── Docmost fix: strip Transfer-Encoding header forwarded by Traefik ───────
+    # Root cause: Traefik converts HTTP/2 (from Cloudflare tunnel) to HTTP/1.1
+    # and adds "Transfer-Encoding: chunked" for empty-body POST requests (e.g.
+    # POST /api/users/me). Fastify sees TE=chunked → expects a body → finds no
+    # Content-Type → returns 415. Removing the header lets Fastify treat the
+    # request as body-less, so guards (JWT, workspace) run normally.
+    # Applied globally to all Docmost routes (docmost-external, docmost-lab).
+    docmost-strip-te:
       headers:
         customRequestHeaders:
-          Content-Type: "application/json"
+          Transfer-Encoding: ""
 
     # ── Redirect: Guacamole requires /guacamole/ path ────────────────────────
     guacamole-redirect:
