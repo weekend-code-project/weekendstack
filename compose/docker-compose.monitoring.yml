@@ -162,11 +162,13 @@ services:
   # PORTAINER - Container Management UI
   # =============================================================================
   # Easy-to-use Docker container management interface
-  # Authentication: own admin account created on first run
+  # Authentication: auto-seeded admin password from setup-generated hash file
   # =============================================================================
   portainer:
     image: portainer/portainer-ce:latest
     container_name: portainer
+    command:
+      - --admin-password-file=/run/secrets/portainer-admin-password
     networks:
       - monitoring-network
       - shared-network
@@ -180,6 +182,10 @@ services:
         source: portainer-data
         target: /data
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - type: bind
+        source: ../config/portainer/admin-password-hash
+        target: /run/secrets/portainer-admin-password
+        read_only: true
     restart: unless-stopped
     deploy:
       resources:

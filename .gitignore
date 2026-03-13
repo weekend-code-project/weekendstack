@@ -22,6 +22,7 @@ config/coder/scripts/deploy-all-templates.sh
 config/coder/scripts/lib/
 config/traefik/config.yml
 config/glance/glance.yml
+config/portainer/admin-password-hash
 
 # Cloudflare tunnel credentials and config
 config/cloudflare/.cloudflared/

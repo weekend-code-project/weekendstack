@@ -878,25 +878,41 @@ preflight_fix_mounts() {
     )
     local fixed=0
 
+    _remove_phantom_dir() {
+        local target="$1"
+        [[ -d "$target" ]] || return 0
+        rmdir "$target" 2>/dev/null || \
+            rm -rf "$target" 2>/dev/null || \
+            sudo rm -rf "$target" 2>/dev/null || true
+        if [[ -d "$target" ]]; then
+            log_warn "Unable to remove phantom directory: $target"
+            return 1
+        fi
+        return 0
+    }
+
     # Glance config: remove phantom directory if Docker created one, then generate.
     local glance_cfg="$SCRIPT_DIR/config/glance/glance.yml"
     if [[ -d "$glance_cfg" ]]; then
         log_warn "Found directory where a file is expected: $glance_cfg"
-        rmdir "$glance_cfg" 2>/dev/null || rm -rf "$glance_cfg"
-        fixed=$((fixed + 1))
+        if _remove_phantom_dir "$glance_cfg"; then
+            fixed=$((fixed + 1))
+        fi
     fi
 
     # Fix any remaining phantom directories (mounted files Docker may turn into dirs)
     for path in "${file_mounts[@]}"; do
         if [[ -d "$path" ]]; then
             log_warn "Found directory where a file is expected: $path"
-            rmdir "$path" 2>/dev/null || rm -rf "$path"
+            if ! _remove_phantom_dir "$path"; then
+                continue
+            fi
             local example="${path}.example"
             if [[ -f "$example" ]]; then
-                cp "$example" "$path"
+                cp "$example" "$path" 2>/dev/null || sudo cp "$example" "$path" 2>/dev/null || true
                 log_success "Fixed phantom directory -> copied from .example: $path"
             else
-                touch "$path"
+                touch "$path" 2>/dev/null || sudo touch "$path" 2>/dev/null || true
                 log_success "Fixed phantom directory -> placeholder file: $path"
             fi
             fixed=$((fixed + 1))
@@ -909,13 +925,15 @@ preflight_fix_mounts() {
     else
         local traefik_cfg="$SCRIPT_DIR/config/traefik/config.yml"
         if [[ -d "$traefik_cfg" ]]; then
-            rmdir "$traefik_cfg" 2>/dev/null || rm -rf "$traefik_cfg"
+            if ! _remove_phantom_dir "$traefik_cfg"; then
+                log_warn "Traefik static config path is still a directory; continuing"
+            fi
             local traefik_example="${traefik_cfg}.example"
             if [[ -f "$traefik_example" ]]; then
-                cp "$traefik_example" "$traefik_cfg"
+                cp "$traefik_example" "$traefik_cfg" 2>/dev/null || sudo cp "$traefik_example" "$traefik_cfg" 2>/dev/null || true
                 log_success "Fixed phantom directory -> copied from .example: $traefik_cfg"
             else
-                touch "$traefik_cfg"
+                touch "$traefik_cfg" 2>/dev/null || sudo touch "$traefik_cfg" 2>/dev/null || true
                 log_success "Fixed phantom directory -> placeholder file: $traefik_cfg"
             fi
             fixed=$((fixed + 1))
@@ -976,6 +994,17 @@ preflight_fix_mounts() {
                 cp "$htpasswd_file" "$f" 2>/dev/null || true
             done
         fi
+    fi
+
+    # Portainer first-run auto-bootstrap: expects only bcrypt hash content
+    # (no username prefix) passed via --admin-password-file.
+    local portainer_dir="$SCRIPT_DIR/config/portainer"
+    local portainer_hash_file="$portainer_dir/admin-password-hash"
+    mkdir -p "$portainer_dir"
+    if [[ -f "$htpasswd_file" ]]; then
+        cut -d':' -f2- "$htpasswd_file" > "$portainer_hash_file"
+        chmod 600 "$portainer_hash_file"
+        log_info "Generated Portainer admin password hash: $portainer_hash_file"
     fi
 
     # Set FORCE_LINK_MODE in .env to drive link-router URL routing.
@@ -1176,6 +1205,9 @@ start_services() {
     
     # Ensure cloudflare-tunnel is in custom profile if enabled
     ensure_cloudflare_in_custom_profile
+
+    # Ensure generated mount-backed config files exist (Traefik auth, Portainer hash, Glance config).
+    preflight_fix_mounts
     
     if docker compose up -d; then
         log_success "Services started"
@@ -1211,6 +1243,9 @@ restart_services() {
     
     # Ensure cloudflare-tunnel is in custom profile if enabled
     ensure_cloudflare_in_custom_profile
+
+    # Ensure generated mount-backed config files exist before recreation.
+    preflight_fix_mounts
     
     # Use up -d instead of restart to also start any newly-enabled services
     if docker compose up -d --force-recreate; then
