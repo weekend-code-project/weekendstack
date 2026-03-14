@@ -6,9 +6,8 @@
 # Included services:
 # - WUD (What's Up Docker): Container update manager (built-in basic auth)
 # - Uptime Kuma: Service uptime monitoring (own admin setup)
-# - Portainer: Container management UI (own login system)
 #
-# Note: Dozzle (logs) and Speedtest are in core profile (docker-compose.core.yml)
+# Note: Speedtest is in core profile (docker-compose.core.yml)
 #
 # IMPORTANT: Always run from project root directory
 #   ✓ Correct:  docker compose -f compose/docker-compose.monitoring.yml up
@@ -24,7 +23,6 @@ networks:
 
 volumes:
   uptime-kuma-data:
-  portainer-data:
 
 services:
   # =============================================================================
@@ -158,64 +156,3 @@ services:
       - traefik.http.services.uptime-kuma.loadbalancer.server.port=3001
       - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
-  # =============================================================================
-  # PORTAINER - Container Management UI
-  # =============================================================================
-  # Easy-to-use Docker container management interface
-  # Authentication: own admin account created on first run
-  # =============================================================================
-  portainer:
-    image: portainer/portainer-ce:latest
-    container_name: portainer
-    networks:
-      - monitoring-network
-      - shared-network
-    profiles:
-      - monitoring
-    ports:
-      - "${PORTAINER_PORT:-9443}:9443"
-      - "9000:9000"
-    volumes:
-      - type: volume
-        source: portainer-data
-        target: /data
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 256m
-    labels:
-      # Glance Configuration
-      - glance.id=portainer
-      - glance.group=Monitoring
-      - glance.name=Portainer
-      - glance.icon=si:portainer
-      - glance.url=/go/portainer
-      - glance.description=Container Management
-      - glance.hide=true
-
-      # Traefik Configuration
-      - traefik.enable=true
-
-      # Local .lab domain (HTTP)
-      - traefik.http.routers.portainer-lab-http.entrypoints=web
-      - traefik.http.routers.portainer-lab-http.rule=Host(`portainer.${LAB_DOMAIN}`)
-      - traefik.http.routers.portainer-lab-http.middlewares=redirect-to-https@file
-      - traefik.http.routers.portainer-lab-http.service=portainer
-
-      # Local .lab domain (HTTPS)
-      - traefik.http.routers.portainer-lab.entrypoints=websecure
-      - traefik.http.routers.portainer-lab.rule=Host(`portainer.${LAB_DOMAIN}`)
-      - traefik.http.routers.portainer-lab.tls=true
-      - traefik.http.routers.portainer-lab.service=portainer
-
-      # External domain (Cloudflare Tunnel) - Portainer has its own login
-      - traefik.http.routers.portainer-external.entrypoints=websecure
-      - traefik.http.routers.portainer-external.rule=Host(`portainer.${BASE_DOMAIN}`)
-      - traefik.http.routers.portainer-external.tls=true
-      - traefik.http.routers.portainer-external.service=portainer
-
-      # Service definition
-      - traefik.http.services.portainer.loadbalancer.server.port=9000
-      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}

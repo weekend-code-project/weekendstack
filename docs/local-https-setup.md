@@ -313,7 +313,6 @@ Visit any `.lab` domain with HTTPS:
 ```
 https://home.lab
 https://coder.lab
-https://portainer.lab
 ```
 
 **Expected Result:**

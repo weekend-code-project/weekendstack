@@ -130,7 +130,6 @@ These services require web-based account creation on first access. **No environm
 | Service | URL | Setup Process |
 |---------|-----|---------------|
 | **Uptime Kuma** | http://uptime-kuma.lab | First signup becomes admin |
-| **Portainer** | http://portainer.lab:9443 | Create admin on first access |
 
 ---
 
@@ -143,7 +142,6 @@ Services accessible without login (public or uses Traefik auth for external acce
 | **Glance** | http://glance.lab | Public dashboard |
 | **IT-Tools** | http://it-tools.lab | Traefik auth (external only) |
 | **Excalidraw** | http://excalidraw.lab | Traefik auth (external only) |
-| **Dozzle** | http://dozzle.lab | Public (local network) |
 | **Traefik** | http://traefik.lab:8081 | Public dashboard (insecure mode) |
 | **Ollama** | http://ollama.lab:11434 | API service (no web UI) |
 | **LocalAI** | http://localai.lab | API service |
@@ -184,9 +182,6 @@ After deploying services, complete setup for all active services:
 - [ ] **Home Assistant** → http://homeassistant.lab
   - Complete setup wizard
   
-- [ ] **Portainer** → http://portainer.lab:9443
-  - Create admin account
-
 **AI & Development:**
 
 - [ ] **Open WebUI** → http://open-webui.lab

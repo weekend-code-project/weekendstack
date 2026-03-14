@@ -5,7 +5,6 @@
 #
 # Core services:
 # - Glance: Dashboard / Start Page
-# - Dozzle: Real-time log viewer (essential troubleshooting)
 # - Speedtest Tracker: Internet speed monitoring
 #
 # Additional development services are defined in separate compose files
@@ -64,8 +63,6 @@ services:
       SPEEDTEST_URL: ${SPEEDTEST_URL:-}
       SPEEDTEST_TRACKER_API_TOKEN: ${SPEEDTEST_TRACKER_API_TOKEN:-}
       WUD_URL: ${WUD_URL:-}
-      WUD_AUTH_USER: ${WUD_AUTH_USER:-admin}
-      WUD_AUTH_PASSWORD: ${WUD_AUTH_PASSWORD:-admin}
       KAVITA_PORT: ${KAVITA_PORT:-5002}
       KAVITA_API_KEY: ${KAVITA_API_KEY:-}
     volumes:
@@ -120,69 +117,6 @@ services:
 
       - "com.docker.compose.service=glance"
       - "description=Glance - Dashboard / Start Page"
-
-  # =============================================================================
-  # DOZZLE - Real-time Docker Log Viewer
-  # =============================================================================
-  # Lightweight, web-based Docker log viewer. No database required.
-  # Essential for troubleshooting services
-  # =============================================================================
-  dozzle:
-    image: amir20/dozzle:latest
-    container_name: dozzle
-    networks:
-      - core-network
-      - shared-network
-    profiles:
-      - core
-    ports:
-      - "${DOZZLE_PORT:-9999}:8080"
-    environment:
-      DOZZLE_LEVEL: info
-      DOZZLE_TAILSIZE: 300
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 128m
-    labels:
-      # Glance Configuration
-      - glance.id=dozzle
-      - glance.group=Monitoring
-      - glance.name=Dozzle
-      - glance.icon=si:logstash
-      - glance.url=/go/dozzle
-      - glance.description=Log Viewer
-      - glance.hide=true
-      
-      # Traefik Configuration
-      - traefik.enable=true
-      
-      # Local .lab domain (HTTP)
-      - traefik.http.routers.dozzle-lab-http.entrypoints=web
-      - traefik.http.routers.dozzle-lab-http.rule=Host(`dozzle.${LAB_DOMAIN}`)
-      - traefik.http.routers.dozzle-lab-http.middlewares=redirect-to-https@file
-      - traefik.http.routers.dozzle-lab-http.service=dozzle
-      
-      # Local .lab domain (HTTPS) — auth required (exposes all container logs)
-      - traefik.http.routers.dozzle-lab.entrypoints=websecure
-      - traefik.http.routers.dozzle-lab.rule=Host(`dozzle.${LAB_DOMAIN}`)
-      - traefik.http.routers.dozzle-lab.tls=true
-      - traefik.http.routers.dozzle-lab.middlewares=monitoring-auth@file
-      - traefik.http.routers.dozzle-lab.service=dozzle
-      
-      # External domain (Cloudflare Tunnel) — auth required (shows all container logs)
-      - traefik.http.routers.dozzle-external.entrypoints=websecure
-      - traefik.http.routers.dozzle-external.rule=Host(`dozzle.${BASE_DOMAIN}`)
-      - traefik.http.routers.dozzle-external.tls=true
-      - traefik.http.routers.dozzle-external.middlewares=monitoring-auth@file
-      - traefik.http.routers.dozzle-external.service=dozzle
-      
-      # Service definition
-      - traefik.http.services.dozzle.loadbalancer.server.port=8080
-      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
   # =============================================================================
   # SPEEDTEST TRACKER - Internet Speed Monitor  

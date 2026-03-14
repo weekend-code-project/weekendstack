@@ -5,8 +5,8 @@
 # Re-run setup.sh or: bash tools/setup/lib/glance-generator.sh
 # to regenerate it after changing service profiles.
 #
-# Generated: 2026-03-12 14:48:48
-# Profiles:  all,gitea,open-webui,networking,external
+# Generated: 2026-03-14 13:46:45
+# Profiles:  all,networking,external
 # ==============================================================================
 
 server:
@@ -31,39 +31,31 @@ pages:
             sites:
               # ── Core (always present) ─────────────────────────────────────
               - title: Speedtest
-                url: https://speedtest.weekendcodeproject.dev
-                check-url: http://192.168.2.160:8765
+                url: http://192.168.2.50:8765
+                check-url: http://192.168.2.50:8765
                 icon: si:speedtest
               # ── Networking ────────────────────────────────────────────────
               - title: Traefik
-                url: https://traefik.weekendcodeproject.dev
-                check-url: http://192.168.2.160:8081/api/overview
+                url: http://192.168.2.50:8081
+                check-url: http://192.168.2.50:8081/api/overview
                 icon: si:traefikproxy
               # ── Monitoring ────────────────────────────────────────────────
-              - title: Dozzle
-                url: https://dozzle.weekendcodeproject.dev
-                check-url: http://192.168.2.160:9999
-                icon: si:docker
-              - title: Portainer
-                url: https://portainer.weekendcodeproject.dev
-                check-url: http://192.168.2.160:9000
-                icon: si:portainer
               - title: Uptime Kuma
-                url: https://uptime-kuma.weekendcodeproject.dev
-                check-url: http://192.168.2.160:3001
+                url: http://192.168.2.50:3001
+                check-url: http://192.168.2.50:3001
                 icon: si:uptimekuma
               - title: WUD
-                url: https://wud.weekendcodeproject.dev
-                check-url: http://192.168.2.160:3002
+                url: http://192.168.2.50:3002
+                check-url: http://192.168.2.50:3002
                 icon: si:docker
               # ── AI ────────────────────────────────────────────────────────
               - title: Ollama
-                url: https://ollama.weekendcodeproject.dev
-                check-url: http://192.168.2.160:11434/api/tags
+                url: http://192.168.2.50:11434
+                check-url: http://192.168.2.50:11434/api/tags
                 icon: si:ollama
               - title: Whisper
-                url: https://whisper.weekendcodeproject.dev
-                check-url: http://192.168.2.160:9002
+                url: http://192.168.2.50:9002
+                check-url: http://192.168.2.50:9002
                 icon: si:openai
 
           - type: docker-containers
@@ -81,8 +73,8 @@ pages:
           - type: custom-api
             cache: 5m
             title: Immich Stats
-            title-url: https://immich.weekendcodeproject.dev
-            url: http://192.168.2.160:2283/api/server-info/stats
+            title-url: http://192.168.2.50:2283
+            url: http://192.168.2.50:2283/api/server-info/stats
             headers:
               x-api-key: "${IMMICH_API_KEY}"
             template: |
@@ -106,9 +98,9 @@ pages:
           - type: custom-api
             cache: 5m
             title: Kavita Latest
-            title-url: https://kavita.weekendcodeproject.dev
+            title-url: http://192.168.2.50:5002
             method: POST
-            url: http://192.168.2.160:5002/api/Series/v2?pageNumber=1&pageSize=5
+            url: http://192.168.2.50:5002/api/Series/v2?pageNumber=1&pageSize=5
             headers:
               Authorization: "Bearer ${KAVITA_API_KEY}"
               Content-Type: application/json
@@ -124,8 +116,8 @@ pages:
           - type: custom-api
             cache: 5m
             title: Navidrome Stats
-            title-url: https://navidrome.weekendcodeproject.dev
-            url: http://192.168.2.160:4533/rest/getUser.view?u=admin&p=admin&v=1.16.1&c=glance&f=json
+            title-url: http://192.168.2.50:4533
+            url: http://192.168.2.50:4533/rest/getUser.view?u=admin&p=admin&v=1.16.1&c=glance&f=json
             template: |
               {{ $artists := .JSON.Int "subsonic-response.user.artistCount" }}
               {{ $albums := .JSON.Int "subsonic-response.user.albumCount" }}
@@ -148,7 +140,7 @@ pages:
           # ── Monitoring ─────────────────────────────────────────────────
           - type: custom-api
             title: What's Up Docker?
-            title-url: https://wud.weekendcodeproject.dev
+            title-url: http://192.168.2.50:3002
             cache: 1h
             url: http://wud:3000/api/containers/
             method: GET
@@ -195,7 +187,7 @@ pages:
                         {{ else }}
                           <span class="color-negative">●</span>
                         {{ end }}
-                        <a href="https://wud.weekendcodeproject.dev" target="_blank" style="color: inherit; text-decoration: none;">{{ .String "name" }}</a>
+                        <a href="http://192.168.2.50:3002" target="_blank" style="color: inherit; text-decoration: none;">{{ .String "name" }}</a>
                       </div>
                       <div style="display: flex; gap: 1rem; margin-top: 0.25rem; font-size: 0.9rem; opacity: 0.8;">
                         {{ $localValue := .String "updateKind.localValue" }}

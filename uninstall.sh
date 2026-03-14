@@ -60,6 +60,7 @@ show_usage() {
     echo -e "    ${RED}Level 3${NC} - Complete Cleanup (nuclear)"
     echo "      • Everything from Level 2"
     echo "      • Remove all Docker images (will need to re-download)"
+    echo "      • Deep prune Docker system/builder caches and volumes"
     echo "      • Nothing is kept"
     echo ""
     echo "EXAMPLES:"
@@ -233,6 +234,7 @@ show_confirmation() {
             echo "This will:"
             echo -e "  ${RED}✗${NC} Everything from Level 2"
             echo -e "  ${RED}✗${NC} Remove ALL Docker images (~2-10GB)"
+            echo -e "  ${RED}✗${NC} Run Docker deep prune (system + builder + volumes)"
             echo ""
             echo -e "${RED}Nothing is preserved. Full re-download required on next setup.${NC}"
             ;;
@@ -352,6 +354,18 @@ remove_images() {
     else
         log_info "No images to remove"
     fi
+}
+
+deep_prune_docker_state() {
+    log_header "Deep Pruning Docker State"
+
+    log_info "Running: docker system prune -af --volumes"
+    docker system prune -af --volumes >/dev/null 2>&1 || true
+
+    log_info "Running: docker builder prune -af"
+    docker builder prune -af >/dev/null 2>&1 || true
+
+    log_success "Deep prune complete"
 }
 
 remove_volumes() {
@@ -590,6 +604,7 @@ EOF
     if [[ "$level" -ge 3 ]]; then
         cat >> "$summary_file" << EOF
 **Note:** Docker images will be re-downloaded during setup.
+**Note:** Docker system and builder caches were deeply pruned.
 
 EOF
     fi
@@ -645,6 +660,7 @@ execute_cleanup() {
     # Level 3: images
     if [[ "$level" -ge 3 ]]; then
         remove_images
+        deep_prune_docker_state
     fi
     
     # Generate summary

@@ -158,8 +158,6 @@ docker compose --profile dev up -d       # Development services only
 | Service | Port | Description |
 |---------|------|-------------|
 | **Cockpit** | 9090 | Local-only server administration UI (🔒 local network only) |
-| **Portainer** | 9000 (HTTP), 9443 (HTTPS) | Docker container management UI |
-| **Dozzle** | 9999 | Real-time container log viewer |
 | **What's Up Docker (WUD)** | 3000 | Docker update notifications (🔒 local network only) |
 | **Netdata** | 19999 | Real-time system & container metrics (🔒 local network only) |
 | **Uptime Kuma** | 3001 | Service uptime monitoring |
@@ -306,7 +304,6 @@ docker compose --profile personal up -d
 **Main Dashboards:**
 - **Glance**: http://home.lab - Main dashboard / start page
 - **Traefik**: http://traefik.lab/dashboard/ - Routing status
-- **Portainer**: http://portainer.lab - Container management
 - **Cockpit**: http://cockpit.lab - Server management (local only)
 
 **Quick Access:**
@@ -335,7 +332,6 @@ Notes:
 **Dashboards:**
 - **Glance**: http://glance.lab - Dashboard / start page
 - **Traefik**: http://traefik.lab/dashboard/ - Routing status
-- **Portainer**: http://HOST_IP:9000 - Container management
 - **Cockpit**: http://cockpit.lab - Server management (local only)
 
 Setup docs:

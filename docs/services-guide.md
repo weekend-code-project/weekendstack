@@ -28,7 +28,7 @@ docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 | **AI** | Open WebUI, SearXNG | `ai` |
 | **Productivity** | n8n, Paperless, NocoDB, Activepieces, Hoarder, File Browser, Focalboard, Trilium, Vikunja, Vaultwarden | `productivity` |
 | **Media** | Immich, Kavita, Navidrome | `media` |
-| **Monitoring** | WUD, Uptime Kuma, Portainer | `monitoring` |
+| **Monitoring** | WUD, Uptime Kuma | `monitoring` |
 | **Networking** | Pi-Hole | `networking` |
 
 ---
@@ -647,13 +647,14 @@ Container update manager — shows available image updates without auto-applying
 
 **Access:**
 - URL: `http://192.168.2.50:3002`
-- Auth: Built-in basic auth (configure `WUD_AUTH_USER` / `WUD_AUTH_HASH` in `.env`)
+- Auth: Route protection is handled by Traefik middleware
 
 **Key Variables:**
 ```env
 WUD_PORT=3002
-WUD_AUTH_USER=admin
-WUD_AUTH_HASH=
+WUD_WATCHER_LOCAL_CRON="0 0 * * *"
+WUD_WATCHER_LOCAL_WATCHBYDEFAULT=true
+WUD_TRIGGER_DOCKER_ENABLE=false
 ```
 
 ### Uptime Kuma - Service Monitoring
@@ -668,20 +669,6 @@ Self-hosted uptime monitoring tool. Create your admin account on first access.
 **Key Variables:**
 ```env
 UPTIME_KUMA_PORT=3001
-```
-
-### Portainer - Container Management
-**Port:** 9000 (HTTP), 9443 (HTTPS) | **Domain:** `portainer.${LAB_DOMAIN}`
-
-Docker container management UI. Create your admin account on first access.
-
-**Access:**
-- URL: `http://192.168.2.50:9000` or `https://192.168.2.50:9443`
-- Auth: Admin account created on first run
-
-**Key Variables:**
-```env
-PORTAINER_PORT=9443
 ```
 
 ---
@@ -736,5 +723,3 @@ PIHOLE_WEBPASSWORD=pihole-admin-change-me
 | 8097 | Focalboard | |
 | 8123 | Home Assistant | |
 | 8222 | Vaultwarden | HTTPS only |
-| 9000 | Portainer | |
-| 9999 | Dozzle | |

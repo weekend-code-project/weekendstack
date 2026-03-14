@@ -142,7 +142,7 @@ After configuring DNS, verify it's working:
    # Should also return: 192.168.2.50
    ```
 
-**Result:** Now `coder.lab`, `portainer.lab`, or **any** subdomain of `.lab` automatically resolves to `192.168.2.50` for all devices on your network!
+**Result:** Now `coder.lab` or **any** subdomain of `.lab` automatically resolves to `192.168.2.50` for all devices on your network!
 
 ---
 
@@ -160,7 +160,7 @@ If you can't configure router-level DNS, add entries manually on each device.
 2. **Add entries:** (adjust IP if your server uses different address)
    ```
    # Weekend Stack - Local Access
-   192.168.2.50    gitea.lab coder.lab postiz.lab nocodb.lab paperless.lab n8n.lab focalboard.lab trilium.lab vikunja.lab docmost.lab activepieces.lab bytestash.lab excalidraw.lab it-tools.lab dozzle.lab wud.lab uptime-kuma.lab portainer.lab immich.lab kavita.lab navidrome.lab chat.lab librechat.lab anythingllm.lab searxng.lab localai.lab homer.lab vaultwarden.lab traefik.lab pihole.lab homeassistant.lab nodered.lab
+   192.168.2.50    gitea.lab coder.lab postiz.lab nocodb.lab paperless.lab n8n.lab focalboard.lab trilium.lab vikunja.lab docmost.lab activepieces.lab bytestash.lab excalidraw.lab it-tools.lab wud.lab uptime-kuma.lab immich.lab kavita.lab navidrome.lab chat.lab librechat.lab anythingllm.lab searxng.lab localai.lab homer.lab vaultwarden.lab traefik.lab pihole.lab homeassistant.lab nodered.lab
    ```
    
    **Alternative (one per line for readability):**
@@ -180,10 +180,8 @@ If you can't configure router-level DNS, add entries manually on each device.
    192.168.2.50    bytestash.lab
    192.168.2.50    excalidraw.lab
    192.168.2.50    it-tools.lab
-   192.168.2.50    dozzle.lab
    192.168.2.50    wud.lab
    192.168.2.50    uptime-kuma.lab
-   192.168.2.50    portainer.lab
    192.168.2.50    immich.lab
    192.168.2.50    kavita.lab
    192.168.2.50    navidrome.lab
@@ -304,7 +302,6 @@ Once configured, use the `.lab` domain in your browser (HTTP):
 
 - **Coder:** http://coder.lab
 - **Open WebUI:** http://chat.lab
-- **Portainer:** http://portainer.lab
 - **Gitea:** http://gitea.lab
 - **Uptime Kuma:** http://uptime-kuma.lab
 
@@ -314,7 +311,6 @@ When away from your local network, use the `.weekendcodeproject.dev` domain:
 
 - **Coder:** https://coder.weekendcodeproject.dev
 - **Open WebUI:** https://chat.weekendcodeproject.dev
-- **Portainer:** https://portainer.weekendcodeproject.dev
 
 Both URLs reach the **same application** with the **same data**.
 

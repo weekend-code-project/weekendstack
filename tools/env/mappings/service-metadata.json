@@ -17,12 +17,6 @@
     "template": "core/vaultwarden.env.example",
     "profile": "core"
   },
-  "dozzle": {
-    "display_name": "Dozzle",
-    "description": "Docker log viewer",
-    "template": "core/dozzle.env.example",
-    "profile": "core"
-  },
   "speedtest-tracker": {
     "display_name": "Speedtest Tracker",
     "description": "Network speed monitoring",
@@ -356,12 +350,6 @@
     "display_name": "Netdata",
     "description": "Real-time performance monitoring",
     "template": "monitoring/netdata.env.example",
-    "profile": "monitoring"
-  },
-  "portainer": {
-    "display_name": "Portainer",
-    "description": "Docker management UI",
-    "template": "monitoring/portainer.env.example",
     "profile": "monitoring"
   },
   "netbox": {

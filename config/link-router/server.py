@@ -74,11 +74,9 @@ PORT_MAP = {
     
     # Monitoring
     "cockpit": 9090,  # Cockpit web interface
-    "portainer": 9000,
     "uptime-kuma": 3001,
     "uptimekuma": 3001,  # Alias
     "netdata": 19999,
-    "dozzle": 9999,
     "wud": 3002,
     "homeassistant": 8123,
     "speedtest": 8765,

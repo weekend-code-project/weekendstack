@@ -1,6 +1,6 @@
 # Monitoring Services Setup Guide
 
-This guide covers the monitoring and container management services included in the `monitoring` profile. All services have their own login system and are safe for Cloudflare tunnel exposure.
+This guide covers the monitoring services included in the `monitoring` profile.
 
 ## Services Overview
 
@@ -8,7 +8,6 @@ This guide covers the monitoring and container management services included in t
 |---------|------|-------------|---------|
 | WUD | 3002 | `wud.lab` | Container update manager |
 | Uptime Kuma | 3001 | `uptime-kuma.lab` | Service uptime monitoring |
-| Portainer | 9000/9443 | `portainer.lab` | Docker container management |
 
 ## Quick Start
 
@@ -30,18 +29,14 @@ See [wud-setup.md](wud-setup.md) for detailed configuration.
 ### Environment Variables
 ```env
 WUD_PORT=3002
-WUD_AUTH_USER=admin
-WUD_AUTH_HASH=          # htpasswd -nbm USER PASS → copy hash after colon
+WUD_WATCHER_LOCAL_CRON="0 0 * * *"
+WUD_WATCHER_LOCAL_WATCHBYDEFAULT=true
+WUD_TRIGGER_DOCKER_ENABLE=false
 ```
 
 ### Authentication
-WUD has built-in basic auth. Leave `WUD_AUTH_HASH` empty on first setup and set it after installation.
-
-To generate a hash:
-```bash
-docker run --rm httpd:2-alpine htpasswd -nbm admin yourpassword
-# Copy everything after the colon into WUD_AUTH_HASH
-```
+WUD built-in basic auth is disabled by default in this stack.
+If you expose WUD externally, keep Traefik auth enabled on the route.
 
 ### How to Update Containers
 
@@ -85,44 +80,7 @@ SQLite database in the `uptime-kuma-data` volume.
 
 ---
 
-## Portainer
-
-Docker management UI for containers, images, networks, and volumes.
-
-### Access
-- **Local (HTTP):** http://192.168.2.50:9000
-- **Local (HTTPS):** https://192.168.2.50:9443
-
-### Environment Variables
-```env
-PORTAINER_PORT=9443
-```
-
-### First-Time Setup
-1. Navigate to the web UI immediately after starting
-2. Create your admin account (the setup page disables after 5 minutes)
-3. Select "Local" environment to connect to the Docker socket
-
-### Features
-- Container management (start, stop, restart, logs)
-- Image management and cleanup
-- Network and volume management
-- Stack deployment (docker compose via UI)
-- User management
-
-### Troubleshooting
-
-**Socket Error:**
-Ensure the Docker socket is mounted correctly:
-```yaml
-volumes:
-  - /var/run/docker.sock:/var/run/docker.sock
-```
-
----
-
 ## Recommended Workflow
 
-1. **Portainer** — Day-to-day container management and quick troubleshooting
-2. **Uptime Kuma** — Add monitors for all public-facing services; set up alerts
-3. **WUD** — Check weekly for available image updates; apply deliberately
+1. **Uptime Kuma** — Add monitors for all public-facing services; set up alerts
+2. **WUD** — Check weekly for available image updates; apply deliberately

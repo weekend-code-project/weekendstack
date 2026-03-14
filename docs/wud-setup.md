@@ -13,14 +13,7 @@ docker compose --profile monitoring up -d wud
 - **Local:** http://192.168.2.50:3002
 - **External:** https://wud.weekendcodeproject.dev
 
-Both require authentication.
-
-## Default Credentials
-
-- **Username:** `admin`
-- **Password:** `admin`
-
-⚠️ **Change these in production!** See "Changing the Password" below.
+External access should remain behind Traefik auth.
 
 ## Environment Variables
 
@@ -28,48 +21,15 @@ Both require authentication.
 WUD_PORT=3002
 WUD_DOMAIN=wud.${BASE_DOMAIN}
 WUD_MEMORY_LIMIT=256m
-
-# Authentication (htpasswd apr1/MD5 format)
-# Default: admin / admin
-WUD_AUTH_USER=admin
-WUD_AUTH_HASH='$apr1$riKwQzd1$/ATDPpfbknUNr4RurjIER0'
+WUD_WATCHER_LOCAL_CRON="0 0 * * *"
+WUD_WATCHER_LOCAL_WATCHBYDEFAULT=true
+WUD_TRIGGER_DOCKER_ENABLE=false
 ```
 
-## Changing the Password
+## Authentication
 
-WUD uses htpasswd MD5 (apr1) format for password hashes.
-
-### Step 1: Generate a New Hash
-
-```bash
-docker run --rm httpd:2-alpine htpasswd -nbm myuser mypassword
-```
-
-Example output:
-```
-myuser:$apr1$Xyz123$AbCdEfGhIjKlMnOp
-```
-
-### Step 2: Update .env File
-
-Copy **only the hash part** (everything after the colon) and wrap it in single quotes:
-
-```env
-WUD_AUTH_USER=myuser
-WUD_AUTH_HASH='$apr1$Xyz123$AbCdEfGhIjKlMnOp'
-```
-
-**Important:** The single quotes are required to prevent `$` from being interpreted as variables.
-
-### Step 3: Restart WUD
-
-```bash
-docker compose --profile monitoring up -d wud
-```
-
-### Step 4: Test Login
-
-Visit http://192.168.2.50:3002 and log in with your new credentials.
+WUD built-in basic auth is disabled by default in this stack.
+If needed, you can enable WUD's built-in auth, but Traefik route protection is the default control plane.
 
 ## How WUD Works
 
@@ -123,13 +83,6 @@ docker compose --profile all up -d
 docker compose pull paperless-ngx
 docker compose --profile productivity up -d paperless-ngx
 ```
-
-### Method 3: Via Portainer
-
-1. Open Portainer (http://192.168.2.50:9000)
-2. Go to Containers
-3. Select the container to update
-4. Click "Recreate" with "Pull latest image" checked
 
 ## Configuration Options
 

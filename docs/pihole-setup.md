@@ -119,7 +119,6 @@ On most Linux systems, `systemd-resolved` uses port 53. You **must** disable it 
 
 - ✅ `http://home.lab` → Your Glance dashboard
 - ✅ `http://coder.lab` → Coder IDE
-- ✅ `http://portainer.lab` → Portainer container management
 - ✅ Any other service at `http://[service].lab`
 
 **How it works:**

@@ -162,7 +162,6 @@ docker compose logs -f
 # Specific service
 docker compose logs -f <service-name>
 
-# Or use Dozzle: https://dozzle.$lab_domain
 \`\`\`
 
 ### Update Services
@@ -336,9 +335,7 @@ add_service_urls() {
         case "$profile" in
             all|monitoring)
                 echo "**Monitoring Tools:**" >> "$summary_file"
-                echo "- [Portainer](https://portainer.$lab_domain) - Docker management" >> "$summary_file"
                 echo "- [Uptime Kuma](https://uptime.$lab_domain) - Uptime monitoring" >> "$summary_file"
-                echo "- [Dozzle](https://dozzle.$lab_domain) - Real-time logs" >> "$summary_file"
                 echo "" >> "$summary_file"
                 ;;
         esac
@@ -389,14 +386,12 @@ display_summary_to_console() {
     declare -A service_ports=(
         ["glance"]="8080"
         ["coder"]="7080"
-        ["dozzle"]="9999"
         ["traefik"]="8081"
         ["pihole"]="8091"
         ["gitea"]="3006"
         ["gitlab"]="8929"
         ["guacamole"]="8090"
         ["speedtest-tracker"]="8765"
-        ["portainer"]="9000"
     )
     
     # Get running services (exclude databases and support services)

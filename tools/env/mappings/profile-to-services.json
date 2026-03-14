@@ -3,7 +3,6 @@
     "link-router",
     "glance",
     "vaultwarden",
-    "dozzle",
     "speedtest-tracker"
   ],
   "networking": [
@@ -79,7 +78,6 @@
     "wud",
     "uptime-kuma",
     "netdata",
-    "portainer",
     "netbox",
     "duplicati",
     "guacamole",

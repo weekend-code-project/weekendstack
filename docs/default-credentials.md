@@ -260,22 +260,13 @@ This document lists all default login credentials and access URLs for WeekendSta
 
 ##  Monitoring Services
 
-### Dozzle - Docker Logs
-- **URL:** http://192.168.2.50:9999
-- **Auth:** None (read-only log viewer)
-
 ### What's Up Docker (WUD) - Update Manager
 - **URL:** http://192.168.2.50:3002
-- **Username:** `admin`
-- **Password:** `admin`
-- **Note:** Configure built-in auth via `WUD_AUTH_USER`/`WUD_AUTH_HASH` in `.env`
+- **Auth:** Protected by Traefik route middleware when exposed externally
+- **Note:** Manual update checks by default; enable trigger updates with `WUD_TRIGGER_DOCKER_ENABLE=true`
 
 ### Uptime Kuma - Service Monitoring
 - **URL:** http://192.168.2.50:3001
-- **Initial Setup:** Create admin account on first access
-
-### Portainer - Container Management
-- **URL:** http://192.168.2.50:9000 (HTTP) or https://192.168.2.50:9443 (HTTPS)
 - **Initial Setup:** Create admin account on first access
 
 ---
@@ -296,7 +287,7 @@ This document lists all default login credentials and access URLs for WeekendSta
 2. **Use strong, unique passwords** for each service (use a password manager!)
 3. **Enable 2FA** where available (Vaultwarden, Gitea, etc.)
 4. **Restrict external access** to only necessary services via Cloudflare Tunnel
-5. **Keep local-only services** (Pi-Hole, Dozzle) behind the firewall
+5. **Keep local-only services** (Pi-Hole) behind the firewall
 6. **Monitor updates** with What's Up Docker (WUD)
 
 ---
@@ -332,8 +323,6 @@ This document lists all default login credentials and access URLs for WeekendSta
 | **Immich** | http://192.168.2.50:2283 | Create on first access |
 | **Kavita** | http://192.168.2.50:5000 | Create on first access |
 | **Navidrome** | http://192.168.2.50:4533 | Create on first access |
-| **Dozzle** | http://192.168.2.50:9999 | No auth |
-| **WUD** | http://192.168.2.50:3002 | `admin` / `admin` |
+| **WUD** | http://192.168.2.50:3002 | Traefik auth (when exposed externally) |
 | **Uptime Kuma** | http://192.168.2.50:3001 | Create on first access |
-| **Portainer** | http://192.168.2.50:9000 | Create on first access |
 | **Pi-Hole** | http://192.168.2.50:8088/admin | Password: `pihole-admin-change-me` |

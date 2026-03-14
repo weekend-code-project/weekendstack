@@ -9,8 +9,8 @@ source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 # the Access Configuration wizard answers.
 declare -A PROFILES=(
     ["all"]="All services"
-    ["core"]="Foundation (Glance, Dozzle, Speedtest)"
-    ["monitoring"]="Container management and uptime monitoring (Portainer, Uptime Kuma, WUD)"
+    ["core"]="Foundation (Glance, Speedtest)"
+    ["monitoring"]="Uptime and update monitoring (Uptime Kuma, WUD)"
     ["productivity"]="Business apps (Vaultwarden, Paperless, NocoDB, N8N)"
     ["dev"]="Development tools (Coder, Gitea)"
     ["ai"]="AI & LLM services (Ollama, Open WebUI, LocalAI)"
@@ -178,7 +178,7 @@ select_profiles_interactive() {
             echo "Available deployment profiles:"
         fi
         echo ""
-        echo "Note: Core profile (Glance, Dozzle, Speedtest) is always installed"
+            echo "Note: Core profile (Glance, Speedtest) is always installed"
         echo "      Networking (Traefik/Pi-hole/Tunnel) is configured via the Access wizard"
         echo ""
         for i in $(seq 1 ${#PROFILE_ORDER[@]}); do
@@ -330,7 +330,7 @@ get_services_for_profiles() {
                 services+=("kavita" "navidrome")
                 ;;
             monitoring)
-                services+=("wud" "uptime-kuma" "portainer")
+                services+=("wud" "uptime-kuma")
                 ;;
         esac
     done

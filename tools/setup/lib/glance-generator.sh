@@ -13,7 +13,7 @@
 #   - Single page only ("Home", slug: home)  — no separate External page
 #   - Monitor widget entries filtered by enabled profile
 #   - Speedtest in monitor widget (core, always), no separate custom-api widget
-#   - Dozzle in monitor widget (monitoring section, gated by monitoring profile)
+#   - Monitoring tools in monitor widget (monitoring section, gated by monitoring profile)
 #   - Small column: server-stats (always), then profile-gated widgets
 #   - Navigation url: fields always use /go/<service> (link-router handles context)
 #   - Internal API urls use Docker-network service names (not HOST_IP) where possible
@@ -71,18 +71,16 @@ generate_glance_config() {
     # (direct IP, lab domain, or Cloudflare tunnel).
     # Priority: cloudflare/both → BASE_DOMAIN; pihole → LAB_DOMAIN; else → IP:PORT
 
-    local url_dozzle url_speedtest url_traefik url_pihole
-    local url_portainer url_uptimekuma url_wud
+    local url_speedtest url_traefik url_pihole
+    local url_uptimekuma url_wud
     local url_ollama url_whisper
     local url_immich url_kavita url_navidrome
 
     if [[ "$domain_mode" == "cloudflare" || "$domain_mode" == "both" ]]; then
         # Cloudflare tunnel — absolute HTTPS URLs (work from LAN and externally)
-        url_dozzle="https://dozzle.${base_domain}"
         url_speedtest="https://speedtest.${base_domain}"
         url_traefik="https://traefik.${base_domain}"
         url_pihole="https://pihole.${base_domain}"
-        url_portainer="https://portainer.${base_domain}"
         url_uptimekuma="https://uptime-kuma.${base_domain}"
         url_wud="https://wud.${base_domain}"
         url_ollama="https://ollama.${base_domain}"
@@ -92,11 +90,9 @@ generate_glance_config() {
         url_navidrome="https://navidrome.${base_domain}"
     elif [[ "$domain_mode" == "pihole" ]]; then
         # Local lab domain (LAN only, requires Pi-hole DNS)
-        url_dozzle="https://dozzle.${lab_domain}"
         url_speedtest="https://speedtest.${lab_domain}"
         url_traefik="https://traefik.${lab_domain}"
         url_pihole="https://pihole.${lab_domain}"
-        url_portainer="https://portainer.${lab_domain}"
         url_uptimekuma="https://uptime-kuma.${lab_domain}"
         url_wud="https://wud.${lab_domain}"
         url_ollama="https://ollama.${lab_domain}"
@@ -106,11 +102,9 @@ generate_glance_config() {
         url_navidrome="https://navidrome.${lab_domain}"
     else
         # IP-only — direct HOST_IP:PORT links
-        url_dozzle="http://${host_ip}:9999"
         url_speedtest="http://${host_ip}:8765"
         url_traefik="http://${host_ip}:8081"
         url_pihole="http://${host_ip}:8088/admin"
-        url_portainer="http://${host_ip}:9000"
         url_uptimekuma="http://${host_ip}:3001"
         url_wud="http://${host_ip}:3002"
         url_ollama="http://${host_ip}:11434"
@@ -184,18 +178,10 @@ GLANCE_EOF
 GLANCE_EOF
     fi
 
-    # Monitoring profile entries (Dozzle, Portainer, Uptime Kuma, WUD)
+    # Monitoring profile entries (Uptime Kuma, WUD)
     if $has_monitoring; then
         cat >> "$output" << GLANCE_EOF
               # ── Monitoring ────────────────────────────────────────────────
-              - title: Dozzle
-                url: ${url_dozzle}
-                check-url: http://${host_ip}:9999
-                icon: si:docker
-              - title: Portainer
-                url: ${url_portainer}
-                check-url: http://${host_ip}:9000
-                icon: si:portainer
               - title: Uptime Kuma
                 url: ${url_uptimekuma}
                 check-url: http://${host_ip}:3001

@@ -65,8 +65,6 @@ This matrix shows which Docker Compose profiles start each service in the Weeken
 | Media | immich-server |  | ✓ |  |  |  |  |  |  |  |  | ✓ |  |  |
 | Media | kavita |  | ✓ |  |  |  |  |  |  |  |  | ✓ |  |  |
 | Media | navidrome |  | ✓ |  |  |  |  |  |  |  |  | ✓ |  |  |
-| Monitoring | dozzle |  | ✓ |  |  |  |  |  |  |  |  |  | ✓ |  |
-| Monitoring | portainer |  | ✓ |  |  |  |  |  |  |  |  |  | ✓ |  |
 | Monitoring | uptime-kuma |  | ✓ |  |  |  |  |  |  |  |  |  | ✓ |  |
 | Monitoring | wud |  | ✓ |  |  |  |  |  |  |  |  |  | ✓ |  |
 <!-- PROFILE-MATRIX:END -->

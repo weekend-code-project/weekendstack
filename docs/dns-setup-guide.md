@@ -4,7 +4,7 @@
 
 ## Why DNS Configuration is Required
 
-The Weekend Stack services use custom `.lab` domains (like `coder.lab`, `portainer.lab`, etc.). These are not real internet domains - they're only for your local network. Your devices need to be told that these domains point to your server's IP address (`192.168.2.50` by default).
+The Weekend Stack services use custom `.lab` domains (like `coder.lab`, `wud.lab`, etc.). These are not real internet domains - they're only for your local network. Your devices need to be told that these domains point to your server's IP address (`192.168.2.50` by default).
 
 **Without DNS configuration:**
 - ❌ Browser shows "Cannot resolve host" or "Server not found"
@@ -273,8 +273,6 @@ sudo nano /etc/hosts
 192.168.2.50 nodered.lab
 192.168.2.50 grafana.lab
 192.168.2.50 prometheus.lab
-192.168.2.50 portainer.lab
-192.168.2.50 dozzle.lab
 192.168.2.50 uptime-kuma.lab
 192.168.2.50 bytestash.lab
 192.168.2.50 it-tools.lab
@@ -374,7 +372,6 @@ nslookup coder.lab
 Open your browser and visit:
 - http://home.lab (Glance dashboard)
 - http://coder.lab (Coder IDE)
-- http://portainer.lab (Portainer)
 
 **If browser loads the page:** ✅ DNS is working!
 

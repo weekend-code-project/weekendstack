@@ -199,7 +199,7 @@ Use arrow keys and space bar to select profiles:
 - `ai` - AI/LLM services (Ollama, Open WebUI, etc.)
 - `dev` - Development tools (Coder, Gitea)
 - `productivity` - Business apps (Paperless, N8N, NocoDB)
-- `monitoring` - Monitoring tools (Portainer, Uptime Kuma, WUD)
+- `monitoring` - Monitoring tools (Uptime Kuma, WUD)
 
 **Resource check:** After selection, the script shows estimated requirements and validates available resources.
 
@@ -508,7 +508,6 @@ Quick Access:
   • Dashboard:    https://lab
   • Open WebUI:   https://open-webui.lab
   • Coder:        https://coder.lab
-  • Portainer:    https://portainer.lab
 
 Next Steps:
   1. Trust CA certificate (see SETUP_SUMMARY.md)
