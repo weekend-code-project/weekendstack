@@ -615,6 +615,18 @@ generate_env_interactive() {
     if [[ -n "$admin_password" ]]; then
         update_env_var "DEFAULT_ADMIN_PASSWORD" "$admin_password" "$env_file"
     fi
+
+    # Explicitly propagate admin credentials to services that support env-based seeding.
+    # .env variable interpolation (${DEFAULT_ADMIN_*}) may not resolve across all Compose versions.
+    local _final_email _final_pass
+    _final_email=$(grep "^DEFAULT_ADMIN_EMAIL=" "$env_file" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+    _final_pass=$(grep "^DEFAULT_ADMIN_PASSWORD=" "$env_file" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+    update_env_var "NOCODB_ADMIN_EMAIL"       "$_final_email" "$env_file"
+    update_env_var "NOCODB_ADMIN_PASSWORD"    "$_final_pass"  "$env_file"
+    update_env_var "POSTIZ_ADMIN_EMAIL"       "$_final_email" "$env_file"
+    update_env_var "POSTIZ_ADMIN_PASSWORD"    "$_final_pass"  "$env_file"
+    update_env_var "RESOURCESPACE_ADMIN_EMAIL"    "$_final_email" "$env_file"
+    update_env_var "RESOURCESPACE_ADMIN_PASSWORD" "$_final_pass"  "$env_file"
     
     # Set storage paths
     update_env_var "FILES_BASE_DIR" "$files_dir" "$env_file"
@@ -650,6 +662,8 @@ generate_env_interactive() {
         update_env_var "POSTIZ_NEXTAUTH_URL" "https://postiz.${base_domain}" "$env_file"
         update_env_var "POSTIZ_BASE_URL" "https://postiz.${base_domain}" "$env_file"
         update_env_var "NOCODB_PUBLIC_URL" "https://nocodb.${base_domain}" "$env_file"
+        # Speedtest APP_URL must match the public URL for correct redirects and login
+        update_env_var "SPEEDTEST_APP_URL" "https://speedtest.${base_domain}" "$env_file"
     fi
     
     # Set registry cache configuration

@@ -1,0 +1,27 @@
+#!/bin/sh
+# FileBrowser admin password initialization script.
+# Copied to /custom-cont-init.d/99-set-password.sh inside the filebrowser:s6 container.
+# Runs once at startup (before the main filebrowser process) to apply DEFAULT_ADMIN_PASSWORD.
+
+ADMIN_PASS="${DEFAULT_ADMIN_PASSWORD:-}"
+DB="/config/filebrowser.db"
+FB="filebrowser"
+
+if [ -z "$ADMIN_PASS" ]; then
+    echo "[filebrowser-init] DEFAULT_ADMIN_PASSWORD not set — skipping admin password update"
+    exit 0
+fi
+
+# If the DB doesn't exist yet, initialize it with the admin user and password.
+if [ ! -f "$DB" ]; then
+    echo "[filebrowser-init] Initializing FileBrowser DB with admin credentials..."
+    $FB config init -d "$DB" 2>/dev/null || true
+    $FB users add admin "$ADMIN_PASS" --perm.admin -d "$DB" 2>/dev/null || true
+    echo "[filebrowser-init] FileBrowser DB initialized."
+else
+    # DB already exists — update admin (id=1) password so it stays in sync with setup credentials.
+    echo "[filebrowser-init] Updating admin password..."
+    $FB users update 1 --password "$ADMIN_PASS" -d "$DB" 2>/dev/null || \
+    $FB users update admin --password "$ADMIN_PASS" -d "$DB" 2>/dev/null || \
+    echo "[filebrowser-init] Could not update admin password"
+fi

@@ -1,10 +1,13 @@
 #!/bin/bash
 
 CONFIG_FILE="/var/www/html/include/config.php"
-DB_HOST="resourcespace-db"
-DB_NAME="resourcespace"
-DB_USER="resourcespace"
-DB_PASS="resourcespace_password_2024"
+DB_HOST="${RESOURCESPACE_DB_HOST:-resourcespace-db}"
+DB_NAME="${RESOURCESPACE_DB_NAME:-resourcespace}"
+DB_USER="${RESOURCESPACE_DB_USER:-resourcespace}"
+DB_PASS="${RESOURCESPACE_DB_PASS:-resourcespace_password_2024}"
+ADMIN_USERNAME="${RESOURCESPACE_ADMIN_USERNAME:-admin}"
+ADMIN_PASSWORD="${RESOURCESPACE_ADMIN_PASSWORD:-${DEFAULT_ADMIN_PASSWORD:-resourcespace_admin_2024}}"
+ADMIN_EMAIL="${RESOURCESPACE_ADMIN_EMAIL:-${DEFAULT_ADMIN_EMAIL:-admin@localhost}}"
 
 # Wait for database to be ready
 echo "Waiting for database..."
@@ -44,10 +47,10 @@ if [ ! -f "$CONFIG_FILE" ]; then
 \$email_from = 'resourcespace@localhost';
 \$email_notify = 'admin@localhost';
 
-// Admin account (change these!)
-\$default_admin_username = 'admin';
-\$default_admin_password = 'resourcespace_admin_2024';
-\$default_admin_email = 'admin@localhost';
+// Admin account (set from RESOURCESPACE_ADMIN_* env vars)
+\$default_admin_username = '$ADMIN_USERNAME';
+\$default_admin_password = '$ADMIN_PASSWORD';
+\$default_admin_email = '$ADMIN_EMAIL';
 \$default_admin_fullname = 'Administrator';
 
 // Trust proxy headers for HTTPS
@@ -93,7 +96,7 @@ done
 # Create admin user with proper password hash (bcrypt with HMAC)
 echo "Setting up admin user..."
 ADMIN_PASS_HASH=$(php -r '
-$password = "RSadminresourcespace_admin_2024";
+$password = "RSadmin$ADMIN_PASSWORD";
 $scramble_key = "'"$SCRAMBLE_KEY"'";
 $hmac = hash_hmac("sha256", $password, $scramble_key);
 echo password_hash($hmac, PASSWORD_DEFAULT);
@@ -105,19 +108,19 @@ USER_COUNT=$(mysql -h"$DB_HOST" -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" -se "SELECT
 if [ "$USER_COUNT" = "0" ]; then
     mysql -h"$DB_HOST" -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" << SQLEOF 2>/dev/null
 INSERT INTO user (username, password, fullname, email, usergroup, approved) 
-VALUES ('admin', '$ADMIN_PASS_HASH', 'Administrator', 'admin@localhost', 3, 1);
+VALUES ('$ADMIN_USERNAME', '$ADMIN_PASS_HASH', 'Administrator', '$ADMIN_EMAIL', 3, 1);
 SQLEOF
 else
     mysql -h"$DB_HOST" -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" << SQLEOF 2>/dev/null
-UPDATE user SET password='$ADMIN_PASS_HASH' WHERE username='admin' LIMIT 1;
+UPDATE user SET password='$ADMIN_PASS_HASH', email='$ADMIN_EMAIL' WHERE username='$ADMIN_USERNAME' LIMIT 1;
 SQLEOF
 fi
 
 echo "========================================="
 echo "ResourceSpace is ready!"
 echo "URL: http://resourcespace.lab/"
-echo "Username: admin"
-echo "Password: resourcespace_admin_2024"
+echo "Username: $ADMIN_USERNAME"
+echo "Password: (from RESOURCESPACE_ADMIN_PASSWORD / DEFAULT_ADMIN_PASSWORD)"
 echo "========================================="
 
 # Wait for Apache process

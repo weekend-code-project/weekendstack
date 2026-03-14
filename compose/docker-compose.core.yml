@@ -142,7 +142,7 @@ services:
       TZ: ${TZ:-America/New_York}
       DB_CONNECTION: sqlite
       APP_KEY: base64:02KsGT9QvDav6HUStRvjqDjUqFKa96RDS7SibKfZ1VI=
-      APP_URL: http://${HOST_IP}:${SPEEDTEST_PORT:-8765}
+      APP_URL: ${SPEEDTEST_APP_URL:-http://${HOST_IP}:${SPEEDTEST_PORT:-8765}}
       SPEEDTEST_SCHEDULE: ${SPEEDTEST_SCHEDULE:-0 * * * *}
       # Admin credentials — only applied on first run (DB init)
       APP_ADMIN_EMAIL: ${DEFAULT_ADMIN_EMAIL:-admin@example.com}

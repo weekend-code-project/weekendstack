@@ -44,8 +44,7 @@ services:
     ports:
       - "${WUD_PORT:-3002}:3000"
     environment:
-      - WUD_TRIGGER_DOCKER_ENABLE=${WUD_TRIGGER_DOCKER_ENABLE:-false}
-      - WUD_TRIGGER_DOCKERHUB_ENABLE=false
+      - WUD_TRIGGER_DOCKER_LOCAL_SOCKET=${WUD_TRIGGER_DOCKER_LOCAL_SOCKET:-/var/run/docker.sock}
       - WUD_WATCHER_LOCAL_CRON=0 0 * * *
       - WUD_WATCHER_LOCAL_WATCHBYDEFAULT=true
       # Built-in basic auth disabled by default.
@@ -53,7 +52,7 @@ services:
       # Then add WUD_AUTH_BASIC_MYAUTH_USER and WUD_AUTH_BASIC_MYAUTH_HASH env vars here (or in .env)
       - TZ=${TZ:-America/New_York}
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/run/docker.sock:/var/run/docker.sock
     restart: unless-stopped
     deploy:
       resources:

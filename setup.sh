@@ -955,11 +955,9 @@ preflight_fix_mounts() {
     admin_pass=${admin_pass:-changeme}
 
     # Check if any htpasswd file already has the right user; regenerate if not.
-    local needs_regen=false
+    # Always regenerate so password changes from setup are reflected.
+    local needs_regen=true
     local htpasswd_file="$auth_dir/htpasswd-admin"
-    if [[ ! -f "$htpasswd_file" ]] || ! grep -q "^${admin_user}:" "$htpasswd_file" 2>/dev/null; then
-        needs_regen=true
-    fi
 
     if $needs_regen; then
         if command -v htpasswd >/dev/null 2>&1; then

@@ -443,6 +443,8 @@ display_summary_to_console() {
     
     echo -e "${BOLD}Important:${NC}"
     echo "  • Change default passwords after first login!"
+    echo "  • Focalboard: first account created becomes admin — sign up with your email/password"
+    echo "  • Uptime Kuma: add Docker host in Settings → Docker Hosts → Socket: /var/run/docker.sock"
     echo ""
     
     log_success "Your WeekendStack is ready to use!"
