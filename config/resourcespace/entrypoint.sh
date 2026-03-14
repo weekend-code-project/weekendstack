@@ -96,7 +96,7 @@ done
 # Create admin user with proper password hash (bcrypt with HMAC)
 echo "Setting up admin user..."
 ADMIN_PASS_HASH=$(php -r '
-$password = "RSadmin$ADMIN_PASSWORD";
+$password = "RSadmin'"$ADMIN_PASSWORD"'";
 $scramble_key = "'"$SCRAMBLE_KEY"'";
 $hmac = hash_hmac("sha256", $password, $scramble_key);
 echo password_hash($hmac, PASSWORD_DEFAULT);
