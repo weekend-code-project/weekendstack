@@ -727,17 +727,17 @@ services:
       REDIS_URL: redis://postiz-redis:6379
       
       # Application Configuration
-      # Default to local *.lab for LAN HTTP access; override to https://postiz.${BASE_DOMAIN} later.
-      MAIN_URL: ${POSTIZ_MAIN_URL:-http://postiz.lab}
-      FRONTEND_URL: ${POSTIZ_FRONTEND_URL:-http://postiz.lab}
-      NEXT_PUBLIC_BACKEND_URL: ${POSTIZ_NEXT_PUBLIC_BACKEND_URL:-http://postiz.lab/api}
+      # Keep these values aligned with the browser URL to avoid OAuth mixed-content/callback issues.
+      MAIN_URL: ${POSTIZ_MAIN_URL:-https://postiz.${BASE_DOMAIN}}
+      FRONTEND_URL: ${POSTIZ_FRONTEND_URL:-https://postiz.${BASE_DOMAIN}}
+      NEXT_PUBLIC_BACKEND_URL: ${POSTIZ_NEXT_PUBLIC_BACKEND_URL:-https://postiz.${BASE_DOMAIN}/api}
       BACKEND_URL: http://localhost:3000
       BACKEND_INTERNAL_URL: http://localhost:3000
       NEXT_PUBLIC_BACKEND_INTERNAL_URL: http://localhost:3000
-      NEXTAUTH_URL: ${POSTIZ_NEXTAUTH_URL:-http://postiz.lab}
+      NEXTAUTH_URL: ${POSTIZ_NEXTAUTH_URL:-https://postiz.${BASE_DOMAIN}}
       NEXTAUTH_SECRET: ${POSTIZ_NEXTAUTH_SECRET:-postiz-nextauth-secret-change-me-2024}
       JWT_SECRET: ${POSTIZ_JWT_SECRET:-postiz-jwt-secret-change-me-2024}
-      BASE_URL: ${POSTIZ_BASE_URL:-http://postiz.lab}
+      BASE_URL: ${POSTIZ_BASE_URL:-https://postiz.${BASE_DOMAIN}}
       
       # Storage Configuration
       STORAGE_PROVIDER: local
@@ -1423,7 +1423,6 @@ services:
       - traefik.http.routers.bytestash-external.entrypoints=websecure
       - traefik.http.routers.bytestash-external.rule=Host(`bytestash.${BASE_DOMAIN}`)
       - traefik.http.routers.bytestash-external.tls=true
-      - traefik.http.routers.bytestash-external.middlewares=it-tools-auth@file
       - traefik.http.routers.bytestash-external.service=bytestash
       
       # Local .lab domain (HTTP)
@@ -1436,7 +1435,6 @@ services:
       - traefik.http.routers.bytestash-lab.entrypoints=websecure
       - traefik.http.routers.bytestash-lab.rule=Host(`bytestash.${LAB_DOMAIN}`)
       - traefik.http.routers.bytestash-lab.tls=true
-      - traefik.http.routers.bytestash-lab.middlewares=it-tools-auth@file
       - traefik.http.routers.bytestash-lab.service=bytestash
       
       # Service definition
@@ -1497,6 +1495,15 @@ services:
         condition: service_healthy
     environment:
       TZ: ${TIMEZONE:-UTC}
+      RESOURCESPACE_DB_HOST: resourcespace-db
+      RESOURCESPACE_DB_NAME: ${RESOURCESPACE_DBNAME:-resourcespace}
+      RESOURCESPACE_DB_USER: ${RESOURCESPACE_DBUSER:-resourcespace}
+      RESOURCESPACE_DB_PASS: ${RESOURCESPACE_DBPASS:-resourcespace_password_2024}
+      RESOURCESPACE_ADMIN_USERNAME: ${RESOURCESPACE_ADMIN_USERNAME:-admin}
+      RESOURCESPACE_ADMIN_PASSWORD: ${RESOURCESPACE_ADMIN_PASSWORD:-}
+      RESOURCESPACE_ADMIN_EMAIL: ${RESOURCESPACE_ADMIN_EMAIL:-}
+      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-}
+      DEFAULT_ADMIN_EMAIL: ${DEFAULT_ADMIN_EMAIL:-}
       
     volumes:
       - type: volume

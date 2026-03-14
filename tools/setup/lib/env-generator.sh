@@ -640,6 +640,17 @@ generate_env_interactive() {
     if [[ "$base_domain" != "localhost" ]]; then
         update_env_var "DOCMOST_APP_URL" "https://docmost.${base_domain}" "$env_file"
     fi
+
+    # Set external-facing app URLs for services that depend on absolute callback/public URLs.
+    # Postiz OAuth and NocoDB auth links must match the browser URL when exposed via Cloudflare.
+    if [[ "$domain_mode" == "cloudflare" || "$domain_mode" == "both" ]]; then
+        update_env_var "POSTIZ_MAIN_URL" "https://postiz.${base_domain}" "$env_file"
+        update_env_var "POSTIZ_FRONTEND_URL" "https://postiz.${base_domain}" "$env_file"
+        update_env_var "POSTIZ_NEXT_PUBLIC_BACKEND_URL" "https://postiz.${base_domain}/api" "$env_file"
+        update_env_var "POSTIZ_NEXTAUTH_URL" "https://postiz.${base_domain}" "$env_file"
+        update_env_var "POSTIZ_BASE_URL" "https://postiz.${base_domain}" "$env_file"
+        update_env_var "NOCODB_PUBLIC_URL" "https://nocodb.${base_domain}" "$env_file"
+    fi
     
     # Set registry cache configuration
     # The registry cache is used during setup to optimize Docker image pulls

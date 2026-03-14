@@ -44,6 +44,7 @@ services:
     ports:
       - "${WUD_PORT:-3002}:3000"
     environment:
+      - WUD_TRIGGER_DOCKER_ENABLE=${WUD_TRIGGER_DOCKER_ENABLE:-false}
       - WUD_TRIGGER_DOCKERHUB_ENABLE=false
       - WUD_WATCHER_LOCAL_CRON=0 0 * * *
       - WUD_WATCHER_LOCAL_WATCHBYDEFAULT=true

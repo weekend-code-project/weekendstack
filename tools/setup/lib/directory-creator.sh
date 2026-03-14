@@ -149,7 +149,7 @@ create_config_directories() {
     # Docker silently creates a directory at a bind-mount source path if the file is missing.
     # For files with .example counterparts, copy the example; otherwise create a placeholder.
     _ensure_from_example "$stack_dir/config/glance/glance.yml"
-    _ensure_file_not_dir "$stack_dir/config/filebrowser/init-filebrowser.sh"
+    _ensure_from_example "$stack_dir/config/filebrowser/init-filebrowser.sh"
 
     # Traefik config.yml — copy from .example if missing or empty.
     _ensure_traefik_static_config "$stack_dir/config/traefik/config.yml"
