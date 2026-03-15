@@ -360,6 +360,50 @@ cf_save_tunnel_credentials() {
     return 0
 }
 
+# Infer the base domain from an existing tunnel's ingress configuration.
+# Queries /accounts/{id}/cfd_tunnel/{tunnel_id}/configurations and extracts
+# the first non-catch-all hostname, stripping any leading "*.".
+# Returns 0 and echoes the domain on success, 1 if it cannot be determined.
+cf_infer_domain_from_tunnel() {
+    local account_id="$1"
+    local tunnel_id="$2"
+
+    local response
+    response=$(cf_api_call GET "/accounts/$account_id/cfd_tunnel/$tunnel_id/configurations" 2>/dev/null)
+    if [[ $? -ne 0 ]]; then
+        return 1
+    fi
+
+    # Extract all hostnames from ingress rules, skip the catch-all (empty hostname)
+    local hostname
+    hostname=$(echo "$response" | jq -r '
+        .result.config.ingress[]?
+        | select(.hostname != null and .hostname != "")
+        | .hostname' 2>/dev/null | head -1)
+
+    if [[ -z "$hostname" ]]; then
+        return 1
+    fi
+
+    # Strip leading "*." wildcard to get the bare domain
+    local domain="${hostname#\*.}"
+
+    # Strip any leading subdomain that looks like a service name (e.g. traefik.example.com → example.com)
+    # We want the registrable domain: last two labels. Only strip if there are 3+ labels.
+    local label_count
+    label_count=$(echo "$domain" | tr -cd '.' | wc -c)
+    if [[ "$label_count" -ge 2 ]]; then
+        domain=$(echo "$domain" | awk -F. '{print $(NF-1)"."$NF}')
+    fi
+
+    if [[ -z "$domain" ]]; then
+        return 1
+    fi
+
+    echo "$domain"
+    return 0
+}
+
 # List all tunnels and let user pick one or create new
 # Returns: tunnel_id|tunnel_name  or empty on "create new"
 cf_pick_existing_tunnel() {
@@ -387,7 +431,7 @@ cf_pick_existing_tunnel() {
     echo "" >&2
     log_info "Found $count existing tunnel(s) in your account:"
     echo "" >&2
-    
+
     local i=1
     local ids=() names=()
     while IFS='|' read -r tid tname; do
@@ -396,28 +440,20 @@ cf_pick_existing_tunnel() {
         names+=("$tname")
         i=$((i + 1))
     done <<< "$tunnel_list"
-    
-    echo "  $i. Create a new tunnel" >&2
     echo "" >&2
-    
+
     local choice
-    # Read from /dev/tty so the prompt works correctly inside $() captures
-    echo -n "Select tunnel [1-$i] (default: 1 — reuse existing): " >&2
+    echo -n "Select tunnel [1]: " >&2
     read -r choice </dev/tty
     choice=${choice:-1}
-    
-    if [[ "$choice" -eq "$i" ]] 2>/dev/null; then
-        # User wants to create new
-        return 1
-    fi
-    
+
     if [[ "$choice" -ge 1 ]] && [[ "$choice" -lt "$i" ]] 2>/dev/null; then
         local idx=$((choice - 1))
         echo "${ids[$idx]}|${names[$idx]}"
         return 0
     fi
-    
-    log_warn "Invalid selection, creating new tunnel"
+
+    log_warn "Invalid selection."
     return 1
 }
 
@@ -471,10 +507,11 @@ cf_setup_tunnel_automated() {
     local domain="$2"
     local stack_dir="${SCRIPT_DIR}"
     
-    if [[ -z "$tunnel_name" ]] || [[ -z "$domain" ]]; then
-        log_error "Tunnel name and domain required"
+    if [[ -z "$tunnel_name" ]]; then
+        log_error "Tunnel name required"
         return 1
     fi
+    # domain may be empty — it will be inferred from the tunnel's ingress config
     
     # Validate API token and get account ID
     local account_id
@@ -491,22 +528,20 @@ cf_setup_tunnel_automated() {
     if [[ $? -eq 0 && -n "$picked" ]]; then
         tunnel_id=$(echo "$picked" | cut -d'|' -f1)
         tunnel_name=$(echo "$picked" | cut -d'|' -f2)
-        log_success "Using existing tunnel: $tunnel_name (ID: $tunnel_id)"
-    else
-        # Create new tunnel
-        log_header "Creating Cloudflare Tunnel"
-        
-        local tunnel_response
-        tunnel_response=$(cf_create_tunnel "$account_id" "$tunnel_name")
-        
-        if [[ $? -ne 0 ]]; then
-            log_error "Failed to create tunnel"
-            return 1
+        log_success "Using tunnel: $tunnel_name (ID: $tunnel_id)"
+
+        # Infer domain from tunnel ingress if not already known
+        if [[ -z "$domain" || "$domain" == "localhost" ]]; then
+            local inferred_domain
+            inferred_domain=$(cf_infer_domain_from_tunnel "$account_id" "$tunnel_id" 2>/dev/null)
+            if [[ -n "$inferred_domain" ]]; then
+                log_info "Detected domain from tunnel config: $inferred_domain"
+                domain="$inferred_domain"
+            fi
         fi
-        
-        tunnel_id=$(echo "$tunnel_response" | jq -r '.result.id')
-        
-        log_success "Created tunnel: $tunnel_name (ID: $tunnel_id)"
+    else
+        log_error "No tunnel selected. Create a tunnel first at https://one.dash.cloudflare.com/ (Networks → Tunnels)."
+        return 1
     fi
     
     # Export account ID so update_env_cloudflare can fetch the tunnel token
@@ -535,8 +570,9 @@ cf_setup_tunnel_automated() {
     # Offer to clean up old tunnels to prevent API token sprawl
     cf_cleanup_old_tunnels "$account_id" "$tunnel_id"
     
-    # Output tunnel info (include tunnel_name since user may have picked a different one)
-    echo "$tunnel_id|$account_id|$tunnel_name"
+    # Output tunnel info (include tunnel_name since user may have picked a different one,
+    # and domain since it may have been inferred from the tunnel config)
+    echo "$tunnel_id|$account_id|$tunnel_name|$domain"
     return 0
 }
 
@@ -546,5 +582,6 @@ export -f cf_list_tunnels cf_get_tunnel cf_create_tunnel
 export -f cf_get_tunnel_token cf_delete_tunnel
 export -f cf_create_dns_record cf_check_dns_record
 export -f cf_validate_token cf_save_tunnel_credentials
+export -f cf_infer_domain_from_tunnel
 export -f cf_pick_existing_tunnel cf_cleanup_old_tunnels
 export -f cf_setup_tunnel_automated

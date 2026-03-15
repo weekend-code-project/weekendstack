@@ -156,32 +156,23 @@ setup_cloudflare_tunnel() {
         return $?
     fi
 
-    # No token — offer to skip or enter token now
+    # No token — ask if they want to enter one or configure manually
     echo ""
-    echo "No Cloudflare API token found."
-    echo "  • Enter a token now to set up the tunnel automatically, or"
-    echo "  • Skip and run './setup.sh --cloudflare-only' later."
-    echo ""
-    echo "  Token permissions needed: Account:Cloudflare Tunnel:Edit + Zone:DNS:Edit"
-    echo "  Create at: https://dash.cloudflare.com/profile/api-tokens"
-    echo ""
+    read -p "  Auto-configure with API key? [y/N]: " -r _cf_api_yn </dev/tty
+    if [[ ! "$_cf_api_yn" =~ ^[Yy]$ ]]; then
+        log_info "Skipping Cloudflare Tunnel setup — run './setup.sh --cloudflare-only' later."
+        return 0
+    fi
 
     local method
-    read -p "? Enter API token now, or skip? [token/skip] [skip]: " -r method </dev/tty
-    method=${method:-skip}
-
-    if [[ "$method" == "skip" || "$method" == "s" ]]; then
-        log_info "Skipping Cloudflare Tunnel setup"
-        log_info "You can configure it later by running: ./setup.sh --cloudflare-only"
+    read -p "  API token: " -r method </dev/tty
+    if [[ -z "$method" ]]; then
+        log_info "No token entered — skipping. Run './setup.sh --cloudflare-only' later."
         return 0
-    else
-        # Treat any non-skip input as the token itself
-        if [[ "$method" != "token" && "$method" != "t" ]]; then
-            export CLOUDFLARE_API_TOKEN="$method"
-        fi
-        setup_tunnel_with_api
-        return $?
     fi
+    export CLOUDFLARE_API_TOKEN="$method"
+    setup_tunnel_with_api
+    return $?
 }
 
 setup_tunnel_with_cli() {
@@ -282,25 +273,15 @@ setup_tunnel_with_api() {
     
     local stack_dir="${SCRIPT_DIR}"
 
-    # 1. Domain name — use what's already in .env if set, only prompt if missing
-    local current_domain
-    current_domain=$(grep "^BASE_DOMAIN=" "$stack_dir/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+    # 1. Domain — read from .env now; we'll confirm or prompt AFTER tunnel
+    #    selection so an existing tunnel can supply the domain automatically.
     local domain
-    if [[ -n "$current_domain" && "$current_domain" != "localhost" ]]; then
-        domain="$current_domain"
+    domain=$(grep "^BASE_DOMAIN=" "$stack_dir/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+    if [[ -n "$domain" && "$domain" != "localhost" ]]; then
         log_info "Using domain: $domain"
     else
-        echo "Enter the domain name you want to use for external access."
-        echo "This domain must be added to your Cloudflare account."
-        echo ""
-        domain=$(prompt_input "Domain name (e.g., example.com)" "")
-        if [[ -z "$domain" ]]; then
-            log_error "Domain name is required for Cloudflare Tunnel"
-            return 1
-        fi
-        sed -i "s|^BASE_DOMAIN=.*|BASE_DOMAIN=$domain|" "$stack_dir/.env"
+        domain=""   # mark as unknown; will be inferred from tunnel or prompted
     fi
-    export CLOUDFLARE_DOMAIN="$domain"
 
     # 2. Tunnel name — use existing or default without prompting
     local tunnel_name="weekendstack-tunnel"
@@ -311,27 +292,14 @@ setup_tunnel_with_api() {
     fi
     log_info "Tunnel name: $tunnel_name"
 
-    echo ""
-    log_step "API Token Configuration"
-    echo ""
-    echo "You need a Cloudflare API token with these permissions:"
-    echo "  • Account - Cloudflare Tunnel - Edit"
-    echo "  • Zone - DNS - Edit (for zone: $domain)"
-    echo ""
-    echo "Create token at: https://dash.cloudflare.com/profile/api-tokens"
-    echo ""
-    
-    # Check if API token already in .env
+    # Use existing token from env var (passed in), .env file, or prompt
     local api_token=""
-    if [[ -f "$stack_dir/.env" ]]; then
+    if [[ -n "${CLOUDFLARE_API_TOKEN:-}" ]]; then
+        api_token="$CLOUDFLARE_API_TOKEN"
+        log_info "Using Cloudflare API token"
+    elif [[ -f "$stack_dir/.env" ]]; then
         api_token=$(grep "^CLOUDFLARE_API_TOKEN=" "$stack_dir/.env" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
-    fi
-    
-    if [[ -n "$api_token" ]]; then
-        log_info "Found existing API token in .env"
-        if ! prompt_yes_no "Use existing API token?" "y"; then
-            api_token=""
-        fi
+        [[ -n "$api_token" ]] && log_info "Using existing API token from .env"
     fi
     
     if [[ -z "$api_token" ]]; then
@@ -424,7 +392,8 @@ setup_tunnel_with_api() {
     echo ""
     log_header "Creating Cloudflare Tunnel via API"
     
-    # Run automated setup
+    # Run automated setup (domain may be empty — cf_setup_tunnel_automated will
+    # attempt to infer it from the selected tunnel's ingress configuration)
     local result
     result=$(cf_setup_tunnel_automated "$tunnel_name" "$domain")
     
@@ -434,10 +403,34 @@ setup_tunnel_with_api() {
         return 1
     fi
     
-    # Parse result (format: tunnel_id|account_id|tunnel_name)
-    local tunnel_id=$(echo "$result" | cut -d'|' -f1)
-    local account_id=$(echo "$result" | cut -d'|' -f2)
-    local resolved_name=$(echo "$result" | cut -d'|' -f3)
+    # Parse result (format: tunnel_id|account_id|tunnel_name|inferred_domain)
+    local tunnel_id; tunnel_id=$(echo "$result" | cut -d'|' -f1)
+    local account_id; account_id=$(echo "$result" | cut -d'|' -f2)
+    local resolved_name; resolved_name=$(echo "$result" | cut -d'|' -f3)
+    local inferred_domain; inferred_domain=$(echo "$result" | cut -d'|' -f4)
+
+    # Use inferred domain if we didn't have one going in
+    if [[ -z "$domain" && -n "$inferred_domain" ]]; then
+        domain="$inferred_domain"
+        log_success "Domain inferred from tunnel config: $domain"
+        sed -i "s|^BASE_DOMAIN=.*|BASE_DOMAIN=$domain|" "$stack_dir/.env"
+    fi
+
+    # If domain is still unknown (new tunnel, no inference possible), prompt now
+    if [[ -z "$domain" ]]; then
+        echo ""
+        echo "Enter the domain name you want to use for external access."
+        echo "This domain must be added to your Cloudflare account."
+        echo ""
+        domain=$(prompt_input "Domain name (e.g., example.com)" "")
+        if [[ -z "$domain" ]]; then
+            log_error "Domain name is required for Cloudflare Tunnel"
+            return 1
+        fi
+        sed -i "s|^BASE_DOMAIN=.*|BASE_DOMAIN=$domain|" "$stack_dir/.env"
+    fi
+    export CLOUDFLARE_DOMAIN="$domain"
+
     # User may have picked an existing tunnel with a different name
     if [[ -n "$resolved_name" ]]; then
         tunnel_name="$resolved_name"
@@ -685,6 +678,10 @@ EOF
     
     # Ensure BASE_DOMAIN is set
     sed -i "s/^BASE_DOMAIN=.*/BASE_DOMAIN=$domain/" "$env_file"
+    # Also update CODER_ACCESS_URL if the dev profile is installed
+    if grep -q "^CODER_ACCESS_URL=" "$env_file" 2>/dev/null; then
+        sed -i "s|^CODER_ACCESS_URL=.*|CODER_ACCESS_URL=https://coder.${domain}|" "$env_file"
+    fi
     
     # Save tunnel token for token-based run
     local account_id="${CLOUDFLARE_ACCOUNT_ID}"

@@ -189,49 +189,12 @@ generate_env_interactive() {
     echo ""
     read -p "  Set up Cloudflare Tunnel? [y/N]: " -r _cf_yn </dev/tty
     echo ""
-    
-    if [[ "$_cf_yn" =~ ^[Yy]$ ]]; then
-        read -p "  External domain (e.g. weekendcodeproject.dev): " -r base_domain_input </dev/tty
-        base_domain_input="${base_domain_input// /}"
-        
-        if [[ -n "$base_domain_input" ]]; then
-            base_domain="$base_domain_input"
-            log_success "External domain set: $base_domain"
 
-            # Collect Cloudflare API token inline so tunnel setup is fully automated
-            echo ""
-            echo "  Cloudflare API token is needed to create the tunnel and DNS records."
-            echo "  Permissions: Account:Cloudflare Tunnel:Edit + Zone:DNS:Edit"
-            echo "  Create at:   https://dash.cloudflare.com/profile/api-tokens"
-            echo ""
-            local _cf_token_existing=""
-            if [[ -f "${SCRIPT_DIR}/.env" ]]; then
-                _cf_token_existing=$(grep "^CLOUDFLARE_API_TOKEN=" "${SCRIPT_DIR}/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
-            fi
-            if [[ -n "$_cf_token_existing" ]]; then
-                log_info "Existing Cloudflare API token found — press Enter to keep it"
-                read -p "  Cloudflare API token [keep existing]: " -r _cf_token_input </dev/tty
-                if [[ -z "$_cf_token_input" ]]; then
-                    CLOUDFLARE_API_TOKEN="$_cf_token_existing"
-                    log_info "Keeping existing Cloudflare API token"
-                else
-                    CLOUDFLARE_API_TOKEN="$_cf_token_input"
-                    log_success "Cloudflare API token set"
-                fi
-            else
-                read -p "  Cloudflare API token (press Enter to configure later): " -r _cf_token_input </dev/tty
-                if [[ -n "$_cf_token_input" ]]; then
-                    CLOUDFLARE_API_TOKEN="$_cf_token_input"
-                    log_success "Cloudflare API token set"
-                else
-                    log_info "API token skipped — run './setup.sh --cloudflare-only' to configure the tunnel later"
-                fi
-            fi
-            export CLOUDFLARE_API_TOKEN
-        else
-            base_domain="localhost"
-            log_info "No domain entered — Cloudflare Tunnel will not be configured"
-        fi
+    if [[ "$_cf_yn" =~ ^[Yy]$ ]]; then
+        # Just track intent — token, tunnel selection, and domain inference happen
+        # in the Cloudflare wizard step (after image pulls, before service start).
+        domain_mode="cloudflare"
+        log_info "Cloudflare Tunnel selected — token and tunnel setup will come later."
     else
         base_domain="localhost"
         log_info "Skipping Cloudflare Tunnel"
@@ -272,8 +235,9 @@ generate_env_interactive() {
     fi
     
     # --- Compute DOMAIN_MODE ---
+    # has_ext is true if cloudflare was selected (even before domain is known)
     local has_ext=false has_local=false
-    [[ "$base_domain" != "localhost" ]] && has_ext=true
+    [[ "$domain_mode" == "cloudflare" || "$base_domain" != "localhost" ]] && has_ext=true
     [[ -n "$lab_domain" ]] && has_local=true
     
     if $has_ext && $has_local; then
@@ -290,7 +254,7 @@ generate_env_interactive() {
     echo ""
     case "$domain_mode" in
         both)       log_success "Access mode: Cloudflare Tunnel + local .${lab_domain} domain" ;;
-        cloudflare) log_success "Access mode: Cloudflare Tunnel (${base_domain})" ;;
+        cloudflare) log_success "Access mode: Cloudflare Tunnel (domain configured in next step)" ;;
         pihole)     log_success "Access mode: local .${lab_domain} domain" ;;
         ip)         log_info    "Access mode: IP only — no reverse proxy will be installed" ;;
     esac
@@ -499,13 +463,8 @@ generate_env_interactive() {
     else
         echo "  Local Domain:     none (Pi-Hole DNS not configured)"
     fi
-    if [[ "$base_domain" != "localhost" ]]; then
-        echo "  External Domain:  $base_domain (Cloudflare Tunnel)"
-        if [[ -n "${CLOUDFLARE_API_TOKEN:-}" ]]; then
-            echo "  Cloudflare Token: set (tunnel will be created automatically)"
-        else
-            echo "  Cloudflare Token: not set (configure later with --cloudflare-only)"
-        fi
+    if [[ "$domain_mode" == "cloudflare" || "$domain_mode" == "both" ]]; then
+        echo "  External Domain:  (configured in Cloudflare wizard step)"
     else
         echo "  External Access:  disabled (IP only)"
     fi

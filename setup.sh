@@ -366,6 +366,68 @@ setup_coder_github_ssh_key() {
     echo ""
 }
 
+# Prompt for the Kavita API key used by the Glance widget.
+# Called after services are started (so Kavita is accessible).
+# Saves KAVITA_API_KEY to .env; glance-generator skips the widget when the key is empty.
+setup_kavita_glance_widget() {
+    # Build the Kavita URL the same way the rest of setup does
+    local domain_mode base_domain host_ip kavita_port lab_domain
+    domain_mode=$(grep "^DOMAIN_MODE=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
+    base_domain=$(grep "^BASE_DOMAIN=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
+    host_ip=$(grep "^HOST_IP=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
+    kavita_port=$(grep "^KAVITA_PORT=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' "'); kavita_port="${kavita_port:-5002}"
+    lab_domain=$(grep "^LAB_DOMAIN=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' "'); lab_domain="${lab_domain:-lab}"
+
+    local kavita_url
+    if [[ "$domain_mode" == "cloudflare" || "$domain_mode" == "both" ]]; then
+        kavita_url="https://kavita.${base_domain}"
+    elif [[ "$domain_mode" == "pihole" ]]; then
+        kavita_url="https://kavita.${lab_domain}"
+    else
+        kavita_url="http://${host_ip}:${kavita_port}"
+    fi
+
+    echo ""
+    log_step "Kavita Glance Widget"
+    echo ""
+    echo "The Kavita widget shows recently added manga/books in your Glance dashboard."
+    echo ""
+    if ! prompt_yes_no "Configure the Kavita Glance widget?" "y"; then
+        log_info "Kavita widget skipped — it will be omitted from Glance"
+        if grep -q "^KAVITA_API_KEY=" "$SCRIPT_DIR/.env"; then
+            sed -i "s|^KAVITA_API_KEY=.*|KAVITA_API_KEY=|" "$SCRIPT_DIR/.env"
+        else
+            echo "KAVITA_API_KEY=" >> "$SCRIPT_DIR/.env"
+        fi
+        return 0
+    fi
+    echo ""
+    echo "To get your Kavita API key:"
+    echo "  1. Open Kavita: ${kavita_url}"
+    echo "     (Complete the initial account setup if this is your first install)"
+    echo "  2. Click your user icon → Settings"
+    echo "  3. Go to Account → API Key / OPDS"
+    echo "  4. Copy the API key"
+    echo ""
+    local api_key
+    api_key=$(prompt_input "Paste your Kavita API key (or press Enter to skip)" "")
+    if [[ -z "$api_key" ]]; then
+        log_info "No key entered — Kavita widget will be omitted from Glance"
+        if grep -q "^KAVITA_API_KEY=" "$SCRIPT_DIR/.env"; then
+            sed -i "s|^KAVITA_API_KEY=.*|KAVITA_API_KEY=|" "$SCRIPT_DIR/.env"
+        else
+            echo "KAVITA_API_KEY=" >> "$SCRIPT_DIR/.env"
+        fi
+        return 0
+    fi
+    if grep -q "^KAVITA_API_KEY=" "$SCRIPT_DIR/.env"; then
+        sed -i "s|^KAVITA_API_KEY=.*|KAVITA_API_KEY=$api_key|" "$SCRIPT_DIR/.env"
+    else
+        echo "KAVITA_API_KEY=$api_key" >> "$SCRIPT_DIR/.env"
+    fi
+    log_success "Kavita API key saved — widget will appear in Glance"
+}
+
 # Wait for the Coder HTTP API to respond before attempting template deployment.
 # Polls /api/v2/buildinfo up to max_wait seconds (default: 180).
 # Returns 0 when Coder is ready, 1 on timeout.
@@ -396,7 +458,6 @@ wait_for_coder() {
 deploy_coder_templates_interactive() {
     local marker_file="$SCRIPT_DIR/config/coder/.template_deployment_complete"
     local deploy_script="$SCRIPT_DIR/config/coder/scripts/deploy-all-templates.sh"
-    local template_info_script="$SCRIPT_DIR/config/coder/scripts/lib/get-template-info.sh"
     local coder_api_script="$SCRIPT_DIR/config/coder/scripts/lib/coder-api.sh"
 
     # Fall back to tools/coder/scripts if config copy is missing (e.g. after Level 2 uninstall)
@@ -406,103 +467,143 @@ deploy_coder_templates_interactive() {
         cp -r "$tools_scripts"/. "$SCRIPT_DIR/config/coder/scripts/"
         chmod +x "$SCRIPT_DIR/config/coder/scripts"/*.sh "$SCRIPT_DIR/config/coder/scripts/lib"/*.sh 2>/dev/null || true
     fi
-    
-    # Check if deploy script exists
+
     if [[ ! -x "$deploy_script" ]]; then
-        log_warn "Coder template deployment script not found or not executable: $deploy_script"
+        log_warn "Coder template deployment script not found: $deploy_script"
         return 1
     fi
 
-    # Wait for Coder API to be available before doing anything else
+    # Wait for Coder API before showing anything
     if ! wait_for_coder 180; then
         return 1
     fi
-    
-    clear
-    log_header "Coder Template Deployment"
-    
-    # Check if user has configured authentication
-    if [[ -z "${CODER_SESSION_TOKEN:-}" ]]; then
-        echo ""
-        log_info "Coder templates require authentication to deploy."
-        echo ""
-        
-        if [[ -x "$coder_api_script" ]]; then
-            if ! "$coder_api_script" setup; then
-                log_warn "Coder authentication setup cancelled or failed"
-                log_info "You can complete this later by running: $coder_api_script setup"
-                log_info "Then deploy templates with: make coder-templates"
-                return 1
-            fi
-            # Reload .env to get the new token
-            if [[ -f "$SCRIPT_DIR/.env" ]]; then
-                set -a
-                source "$SCRIPT_DIR/.env"
-                set +a
-            fi
-        else
-            log_error "Coder API script not found: $coder_api_script"
-            return 1
-        fi
-    fi
-    
-    # Check if templates already deployed — verify against live Coder API, not just marker
-    local already_deployed=false
-    local deployment_info=""
-    if [[ -f "$marker_file" ]]; then
-        # Verify templates actually exist in the live Coder instance
-        local coder_url="${CODER_ACCESS_URL:-http://localhost:7080}"
-        local live_count=0
-        if [[ -n "${CODER_SESSION_TOKEN:-}" ]]; then
-            live_count=$(curl -sf "$coder_url/api/v2/templates" \
-                -H "Coder-Session-Token: $CODER_SESSION_TOKEN" 2>/dev/null \
-                | jq '[.[] | select(.deprecated == false)] | length' 2>/dev/null || echo 0)
-        else
-            live_count=$(curl -sf "$coder_url/api/v2/templates" 2>/dev/null \
-                | jq 'length' 2>/dev/null || echo 0)
-        fi
 
-        if [[ "${live_count:-0}" -gt 0 ]]; then
-            already_deployed=true
-            # Try to extract deployment info from JSON marker
-            if grep -q "deployment_date" "$marker_file" 2>/dev/null; then
-                local deploy_date=$(grep "deployment_date" "$marker_file" | cut -d'"' -f4)
-                local successful=$(grep '"successful":' "$marker_file" | grep -o '[0-9]*')
-                deployment_info="Last deployed: $deploy_date ($successful templates, $live_count active in Coder)"
-            else
-                deployment_info="Templates previously deployed ($live_count active in Coder)"
-            fi
-        else
-            log_info "Marker file found but no templates exist in Coder — will deploy"
-            rm -f "$marker_file"
-        fi
-    fi
-    
-    # Show template information
-    if [[ -x "$template_info_script" ]]; then
-        "$template_info_script" display
-    fi
-    
+    clear
+    local coder_url="${CODER_ACCESS_URL:-http://localhost:7080}"
+
+    # ── Step 1: Ask if user wants to install templates ────────────────────────
     echo ""
-    
-    # Prompt based on deployment status
-    if [[ "$already_deployed" == "true" ]]; then
-        log_info "$deployment_info"
-        echo ""
-        if prompt_yes_no "Install/update templates (deploy new or update existing)?" "n"; then
-            log_info "Installing/updating templates..."
-            "$deploy_script" --interactive --skip-confirm
-        else
-            log_info "Skipping template deployment"
-            log_info "You can deploy templates later with: make coder-templates"
+    log_header "Install Coder Templates"
+    echo ""
+    echo "Coder templates are pre-built workspace blueprints that let developers"
+    echo "spin up ready-to-code environments with one click. This stack includes:"
+    echo ""
+    # List templates from disk
+    local templates_dir="$SCRIPT_DIR/config/coder/templates"
+    if [[ -d "$templates_dir" ]]; then
+        for t in "$templates_dir"/*/; do
+            local tname
+            tname=$(basename "$t")
+            local desc=""
+            if [[ -f "$t/README.md" ]]; then
+                desc=$(head -3 "$t/README.md" | grep -v "^#" | grep -v "^$" | head -1)
+            fi
+            echo "  ○ ${tname}${desc:+  — $desc}"
+        done
+    fi
+    echo ""
+
+    if ! prompt_yes_no "Install Coder templates?" "y"; then
+        log_info "Skipping template installation. Run 'make coder-templates' later."
+        return 0
+    fi
+
+    # ── Step 2: Authenticate ──────────────────────────────────────────────────
+    echo ""
+    echo "─────────────────────────────────────────────────────────────────"
+    echo ""
+    echo "  Step 1 — Log into Coder"
+    echo ""
+    echo "  Open this URL and sign in (first user becomes admin):"
+    echo -e "  ${BOLD}${coder_url}${NC}"
+    echo ""
+    echo "─────────────────────────────────────────────────────────────────"
+    echo ""
+    echo "  Step 2 — Get your CLI session token"
+    echo ""
+    echo "  Open this URL while logged in:"
+    echo -e "  ${BOLD}${coder_url}/cli-auth${NC}"
+    echo ""
+    echo "─────────────────────────────────────────────────────────────────"
+    echo ""
+
+    local token=""
+    # Use existing token silently if it passes validation
+    if [[ -n "${CODER_SESSION_TOKEN:-}" ]]; then
+        local user_info
+        user_info=$(curl -sf --max-time 5 \
+            -H "Coder-Session-Token: $CODER_SESSION_TOKEN" \
+            "$coder_url/api/v2/users/me" 2>/dev/null || true)
+        if [[ -n "$user_info" ]] && echo "$user_info" | grep -q '"username"'; then
+            token="$CODER_SESSION_TOKEN"
+            local uname
+            uname=$(echo "$user_info" | grep -o '"username":"[^"]*"' | cut -d'"' -f4)
+            log_success "Already authenticated as: $uname"
         fi
+    fi
+
+    if [[ -z "$token" ]]; then
+        while true; do
+            read -rp "  Paste your Coder session token: " token
+            if [[ -z "$token" ]]; then
+                log_warn "Token cannot be empty. Try again."
+                continue
+            fi
+            # Validate token
+            local user_info
+            user_info=$(curl -sf --max-time 5 \
+                -H "Coder-Session-Token: $token" \
+                "$coder_url/api/v2/users/me" 2>/dev/null || true)
+            if [[ -n "$user_info" ]] && echo "$user_info" | grep -q '"username"'; then
+                local uname
+                uname=$(echo "$user_info" | grep -o '"username":"[^"]*"' | cut -d'"' -f4)
+                log_success "Authenticated as: $uname"
+                break
+            else
+                log_warn "Token invalid or Coder not reachable. Try again."
+                token=""
+            fi
+        done
+
+        # Save token to .env
+        if grep -q "^CODER_SESSION_TOKEN=" "$SCRIPT_DIR/.env" 2>/dev/null; then
+            sed -i "s|^CODER_SESSION_TOKEN=.*|CODER_SESSION_TOKEN=$token|" "$SCRIPT_DIR/.env"
+        else
+            echo "CODER_SESSION_TOKEN=$token" >> "$SCRIPT_DIR/.env"
+        fi
+        export CODER_SESSION_TOKEN="$token"
+    fi
+
+    # ── Step 3: Deploy templates, showing live progress ───────────────────────
+    echo ""
+    echo "  Deploying templates:"
+    echo ""
+
+    local templates_dir="$SCRIPT_DIR/config/coder/templates"
+    local push_script="$SCRIPT_DIR/config/coder/scripts/push-template.sh"
+    local ok=0 fail=0
+
+    for t in "$templates_dir"/*/; do
+        local tname
+        tname=$(basename "$t")
+        printf "  ○ %-20s" "$tname"
+        local log_out
+        log_out=$(CODER_SESSION_TOKEN="$token" CODER_ACCESS_URL="$coder_url" \
+            "$push_script" "$tname" 2>&1) && {
+            printf "\r  ● %s\n" "$tname"
+            ok=$((ok + 1))
+        } || {
+            printf "\r  ✗ %s (failed)\n" "$tname"
+            fail=$((fail + 1))
+        }
+    done
+
+    echo ""
+    if [[ $fail -eq 0 ]]; then
+        log_success "All $ok templates installed successfully"
+        date > "$marker_file"
     else
-        if prompt_yes_no "Deploy Coder templates now?" "y"; then
-            "$deploy_script" --interactive --skip-confirm
-        else
-            log_info "Skipping template deployment"
-            log_info "You can deploy templates later with: make coder-templates"
-        fi
+        log_warn "$ok installed, $fail failed — run 'make coder-templates' to retry"
     fi
 }
 
@@ -654,10 +755,9 @@ main_setup() {
     local _base_domain
     _base_domain=$(grep "^BASE_DOMAIN=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
     if ! $SKIP_CLOUDFLARE && [[ "$SETUP_MODE" == "interactive" ]] && \
-       [[ "$_domain_mode" =~ ^(cloudflare|both)$ ]] && \
-       [[ -n "$_base_domain" && "$_base_domain" != "localhost" ]]; then
+       [[ "$_domain_mode" =~ ^(cloudflare|both)$ ]]; then
         setup_cloudflare_tunnel || log_warn "Cloudflare Tunnel setup skipped"
-    elif [[ "$_domain_mode" == "ip" || "$_base_domain" == "localhost" || -z "$_base_domain" ]]; then
+    elif [[ "$_domain_mode" == "ip" || -z "$_domain_mode" ]]; then
         log_info "No external domain configured — skipping Cloudflare Tunnel setup"
     else
         log_info "Skipping Cloudflare Tunnel setup (--skip-cloudflare or quick mode)"
@@ -760,7 +860,7 @@ main_setup() {
     if ! generate_setup_summary "${selected_profiles[@]}"; then
         log_warn "Failed to generate summary (continuing anyway)"
     fi
-    
+
     # Ask to start services
     echo ""
     echo -e "${BOLD}${GREEN}Setup Complete!${NC}"
@@ -802,13 +902,22 @@ main_setup() {
             fi
         fi
         start_services_with_profiles "${selected_profiles[@]}"
-        
+
         # Deploy Coder templates if dev profile was selected (or 'all')
         if [[ " ${selected_profiles[*]} " =~ " dev " ]] || [[ " ${selected_profiles[*]} " =~ " all " ]]; then
             deploy_coder_templates_interactive
             setup_coder_github_ssh_key
         fi
-        
+
+        # Kavita Glance widget — runs after services are up so Kavita is accessible
+        if [[ "$SETUP_MODE" == "interactive" ]] && \
+           { [[ " ${selected_profiles[*]} " =~ " media " ]] || [[ " ${selected_profiles[*]} " =~ " all " ]]; }; then
+            setup_kavita_glance_widget
+            # Regenerate glance config (now with or without kavita widget) and reload
+            generate_glance_config "$SCRIPT_DIR/config/glance/glance.yml" "$SCRIPT_DIR/.env"
+            docker restart glance 2>/dev/null || true
+        fi
+
         display_summary_to_console
     else
         log_info "Services not started. Run './setup.sh --start' when ready."
@@ -1062,7 +1171,7 @@ start_services_with_profiles() {
 
     log_step "Starting services for profiles: ${profiles[*]}"
 
-    if docker compose $profile_args up -d; then
+    if docker compose $profile_args up -d --build; then
         log_success "Services started successfully"
 
         echo ""

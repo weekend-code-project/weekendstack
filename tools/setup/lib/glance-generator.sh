@@ -28,7 +28,7 @@ generate_glance_config() {
     local env_file="${2:-$_ws_root/.env}"
 
     # ── Read config from .env ────────────────────────────────────────────────
-    local host_ip base_domain lab_domain kavita_port domain_mode
+    local host_ip base_domain lab_domain kavita_port domain_mode kavita_api_key
     host_ip=$(grep "^HOST_IP=" "$env_file" 2>/dev/null | cut -d'=' -f2 | tr -d ' "') 
     host_ip="${host_ip:-192.168.2.50}"
     base_domain=$(grep "^BASE_DOMAIN=" "$env_file" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
@@ -39,6 +39,8 @@ generate_glance_config() {
     kavita_port="${kavita_port:-5002}"
     domain_mode=$(grep "^DOMAIN_MODE=" "$env_file" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
     domain_mode="${domain_mode:-ip}"
+    kavita_api_key=$(grep "^KAVITA_API_KEY=" "$env_file" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
+    kavita_api_key="${kavita_api_key:-}"
 
     # ── Determine enabled profiles ───────────────────────────────────────────
     local profiles_raw
@@ -255,24 +257,6 @@ GLANCE_EOF
 
           - type: custom-api
             cache: 5m
-            title: Kavita Latest
-            title-url: ${url_kavita}
-            method: POST
-            url: http://${host_ip}:${kavita_port}/api/Series/v2?pageNumber=1&pageSize=5
-            headers:
-              Authorization: "Bearer \${KAVITA_API_KEY}"
-              Content-Type: application/json
-            body: '{"statements":[],"combination":1,"sortOptions":{"sortField":5,"isAscending":false}}'
-            template: |
-              {{ range .JSON.Array "content" }}
-                <li>
-                  <div class="size-h4">{{ .String "name" }}</div>
-                  <div style="font-size: 0.9rem; opacity: 0.8;">{{ .String "libraryName" }}</div>
-                </li>
-              {{ end }}
-
-          - type: custom-api
-            cache: 5m
             title: Navidrome Stats
             title-url: ${url_navidrome}
             url: http://${host_ip}:4533/rest/getUser.view?u=admin&p=admin&v=1.16.1&c=glance&f=json
@@ -297,99 +281,180 @@ GLANCE_EOF
 GLANCE_EOF
     fi
 
-    # Monitoring profile: WUD widget (monitoring tools management)
-    if $has_monitoring; then
+    # Kavita widget — only included when KAVITA_API_KEY is configured
+    if $has_media && [[ -n "$kavita_api_key" ]]; then
+        # Write the widget header with interpolated bash variables
         cat >> "$output" << GLANCE_EOF
 
-          # ── Monitoring ─────────────────────────────────────────────────
+          # ── Kavita ─────────────────────────────────────────────────────
           - type: custom-api
-            title: What's Up Docker?
-            title-url: ${url_wud}
-            cache: 1h
-            url: http://wud:3000/api/containers/
-            method: GET
+            title: Kavita Latest
+            title-url: ${url_kavita}
+            frameless: true
+            cache: 5m
+            options:
+              base-url: "${url_kavita}"
+              api-key: "${kavita_api_key}"
+              mode: "recently-added"
+              library: "0"
+              small-column: false
+              show-thumbnail: false
+              thumbnail-aspect-ratio: "portrait"
             template: |
-              {{/* WUD Monitor */}}
-              {{ \$containers := .JSON.Array "" }}
-              {{ \$total := len \$containers }}
-              {{ \$updates := 0 }}
-              {{ \$running := 0 }}
-              {{ \$hasUpdates := false }}
+GLANCE_EOF
+        # Write the Go template separately (quoted heredoc prevents bash variable expansion)
+        cat >> "$output" << 'KAVITA_TEMPLATE_EOF'
+              {{/* Required config options */}}
+              {{ $baseURL := .Options.StringOr "base-url" "" }}
+              {{ $apiKey := .Options.StringOr "api-key" "" }}
+              {{ $mode := .Options.StringOr "mode" "recently-added" }}
 
-              {{ range \$containers }}
-                {{ if .Bool "updateAvailable" }}
-                  {{ \$updates = add \$updates 1 }}
-                {{ end }}
-                {{ if eq (.String "status") "running" }}
-                  {{ \$running = add \$running 1 }}
-                {{ end }}
+              {{/* Optional config options */}}
+              {{ $library := .Options.StringOr "library" "0" }}
+              {{ $isSmallColumn := .Options.BoolOr "small-column" false }}
+              {{ $thumbAspectRatio := .Options.StringOr "thumbnail-aspect-ratio" "" }}
+              {{ $showThumbnail := .Options.BoolOr "show-thumbnail" false }}
+              {{ $showProgressBar := .Options.BoolOr "progress-bar" true }}
+
+              {{/* Error message template */}}
+              {{ define "errorMsg" }}
+                <div class="widget-error-header">
+                  <div class="color-negative size-h3">ERROR</div>
+                  <svg class="widget-error-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"></path>
+                  </svg>
+                </div>
+                <p class="break-all">{{ . }}</p>
               {{ end }}
 
-              <div style="display: flex; justify-content: space-around; margin: 1rem 0;">
-                <div style="text-align: center;">
-                  <div style="font-size: 1.4rem;">{{ \$updates }}</div>
-                  <div style="font-size: 0.9rem; opacity: 0.8;">Updates</div>
-                </div>
-                <div style="text-align: center;">
-                  <div style="font-size: 1.4rem;">{{ \$total }}</div>
-                  <div style="font-size: 0.9rem; opacity: 0.8;">Total</div>
-                </div>
-                <div style="text-align: center;">
-                  <div style="font-size: 1.4rem;">{{ \$running }}</div>
-                  <div style="font-size: 0.9rem; opacity: 0.8;">Running</div>
-                </div>
-              </div>
+              {{/* Check required fields */}}
+              {{ if or (eq $baseURL "") (eq $apiKey "") (eq $mode "") }}
+                {{ template "errorMsg" "Some required options are not set." }}
+              {{ else }}
 
-              <ul class="list list-gap-10 collapsible-container" data-collapse-after="5">
-                {{ range \$containers }}
-                  {{ if .Bool "updateAvailable" }}
-                    {{ \$hasUpdates = true }}
-                    <li>
-                      <div class="size-h4">
-                        {{ if eq (.String "status") "running" }}
-                          <span class="color-positive">●</span>
-                        {{ else }}
-                          <span class="color-negative">●</span>
-                        {{ end }}
-                        <a href="${url_wud}" target="_blank" style="color: inherit; text-decoration: none;">{{ .String "name" }}</a>
-                      </div>
-                      <div style="display: flex; gap: 1rem; margin-top: 0.25rem; font-size: 0.9rem; opacity: 0.8;">
-                        {{ \$localValue := .String "updateKind.localValue" }}
-                        {{ if ge (len \$localValue) 7 }}
-                          {{ \$isSha256 := eq (slice \$localValue 0 7) "sha256:" }}
-                          {{ if \$isSha256 }}
-                            <span>{{ slice \$localValue 7 11 }}</span>
-                          {{ else }}
-                            <span>{{ \$localValue }}</span>
+                {{/* Authenticate with Kavita to get a session Bearer token */}}
+                {{ $authenticateCall := newRequest (print $baseURL "/api/Plugin/authenticate")
+                    | withParameter "apiKey" $apiKey
+                    | withParameter "pluginName" "glance"
+                    | withHeader "Accept" "application/json"
+                    | withStringBody ""
+                    | getResponse }}
+                {{ $token := concat "Bearer " ($authenticateCall.JSON.String "token") }}
+
+                {{ if eq $token "Bearer " }}
+                  {{ template "errorMsg" (printf "Error authenticating with Kavita. Check that the base URL and API key are correct.") }}
+                {{ else }}
+                  {{ $items := "" }}
+
+                  {{ if eq $mode "recently-added" }}
+                    {{ $recentlyAddedCall := newRequest (print $baseURL "/api/Series/recently-added-v2")
+                        | withParameter "pageNumber" "1"
+                        | withParameter "pageSize" "20"
+                        | withHeader "Authorization" $token
+                        | withHeader "Accept" "application/json"
+                        | withHeader "Content-Type" "application/json"
+                        | withStringBody "{}"
+                        | getResponse }}
+                    {{ $items = $recentlyAddedCall.JSON.Array "" }}
+
+                  {{ else if eq $mode "recently-updated" }}
+                    {{ $recentlyUpdatedCall := newRequest (print $baseURL "/api/Series/recently-updated-series")
+                        | withHeader "Authorization" $token
+                        | withHeader "Accept" "application/json"
+                        | withStringBody ""
+                        | getResponse }}
+                    {{ $items = $recentlyUpdatedCall.JSON.Array "" }}
+
+                  {{ else if eq $mode "on-deck" }}
+                    {{ $onDeckCall := newRequest (print $baseURL "/api/Series/on-deck")
+                        | withParameter "libraryId" $library
+                        | withHeader "Authorization" $token
+                        | withHeader "Accept" "application/json"
+                        | withStringBody ""
+                        | getResponse }}
+                    {{ $items = $onDeckCall.JSON.Array "" }}
+
+                  {{ else }}
+                    {{ template "errorMsg" "Unknown mode — expected 'recently-added', 'recently-updated', or 'on-deck'" }}
+                  {{ end }}
+
+                  {{ if eq (len $items) 0 }}
+                    <p>No items found — start reading something!</p>
+                  {{ else }}
+                    <div class="carousel-container show-right-cutoff">
+                      <div class="cards-horizontal carousel-items-container">
+                        {{ range $n, $item := $items }}
+                          {{ $libraryID := $item.String "libraryId" }}
+                          {{ $seriesID := $item.String "id" }}
+                          {{ $title := $item.String "name" }}
+                          {{ $progressPercent := "" }}
+
+                          {{ if eq $mode "recently-updated" }}
+                            {{ $title = $item.String "seriesName" }}
+                            {{ $seriesID = $item.String "seriesId" }}
+                          {{ else if eq $mode "on-deck" }}
+                            {{ $pagesRead := $item.Float "pagesRead" }}
+                            {{ $pages := $item.Float "pages" }}
+                            {{ $progress := div $pagesRead $pages }}
+                            {{ $progressPercent = printf "%f" (mul 100 $progress) }}
                           {{ end }}
-                        {{ else }}
-                          <span>{{ \$localValue }}</span>
-                        {{ end }}
-                        <div>→
-                          {{ \$tagValue := .String "updateKind.remoteValue" }}
-                          {{ if ge (len \$tagValue) 7 }}
-                            {{ \$isSha256 := eq (slice \$tagValue 0 7) "sha256:" }}
-                            {{ if \$isSha256 }}
-                              <span class="color-primary">{{ slice \$tagValue 7 11 }}</span>
-                            {{ else }}
-                              <span class="color-primary">{{ \$tagValue }}</span>
+
+                          {{ $linkURL := concat $baseURL "/library/" $libraryID "/series/" $seriesID }}
+                          {{ $thumbURL := concat $baseURL "/api/image/series-cover?seriesId=" $seriesID "&apiKey=" $apiKey }}
+
+                          <a class="card widget-content-frame" href="{{ $linkURL | safeURL }}">
+                            {{ if $showThumbnail }}
+                              <div style="position: relative;">
+                                <img src="{{ $thumbURL | safeURL }}"
+                                  alt="{{ $title }} thumbnail"
+                                  loading="lazy"
+                                  class="media-server-thumbnail shrink-0"
+                                  style="
+                                    object-fit: fill;
+                                    border-radius: var(--border-radius) var(--border-radius) 0 0;
+                                    width: 100%;
+                                    display: block;
+                                    {{ if eq $thumbAspectRatio "square" }}aspect-ratio: 1;
+                                    {{ else if eq $thumbAspectRatio "portrait" }}aspect-ratio: 2/3;
+                                    {{ else if eq $thumbAspectRatio "landscape" }}aspect-ratio: 16/9;
+                                    {{ else }}aspect-ratio: initial;
+                                    {{ end }}
+                                  "
+                                />
+                                {{ if and $showProgressBar (not (eq $progressPercent "")) }}
+                                  <div style="
+                                    position: absolute;
+                                    bottom: 8px;
+                                    left: 8px;
+                                    right: 8px;
+                                    height: 6px;
+                                    border-radius: var(--border-radius);
+                                    overflow: hidden;
+                                    background-color: rgba(255, 255, 255, 0.2);
+                                  ">
+                                    <div style="
+                                      width: {{ print $progressPercent "%" }};
+                                      height: 100%;
+                                      border-radius: var(--border-radius) 0 0 var(--border-radius);
+                                      background-color: var(--color-primary)
+                                    "></div>
+                                  </div>
+                                {{ end }}
+                              </div>
                             {{ end }}
-                          {{ else }}
-                            <span class="color-primary">{{ \$tagValue }}</span>
-                          {{ end }}
-                        </div>
+                            <div class="grow padding-inline-widget margin-top-10 margin-bottom-10">
+                              <ul class="flex flex-column justify-evenly margin-bottom-3 {{ if $isSmallColumn }}size-h6{{ end }}" style="height: 100%;">
+                                <li class="text-truncate">{{ $title }}</li>
+                              </ul>
+                            </div>
+                          </a>
+                        {{ end }}
                       </div>
-                    </li>
+                    </div>
                   {{ end }}
                 {{ end }}
-
-                {{ if not \$hasUpdates }}
-                  <li class="flex items-center justify-center">
-                    <span class="color-positive size-h4">All containers are up to date!</span>
-                  </li>
-                {{ end }}
-              </ul>
-GLANCE_EOF
+              {{ end }}
+KAVITA_TEMPLATE_EOF
     fi
 
     # Close the YAML document
