@@ -97,6 +97,7 @@ prompt_input() {
 
 prompt_password() {
     local prompt="$1"
+    local allow_empty="${2:-no}"  # pass "yes" to allow blank (triggers auto-generate)
     local password
     local confirm
     
@@ -105,6 +106,10 @@ prompt_password() {
         echo ""
         
         if [[ -z "$password" ]]; then
+            if [[ "$allow_empty" == "yes" ]]; then
+                echo ""
+                return 0
+            fi
             log_error "Password cannot be empty"
             continue
         fi
@@ -302,7 +307,7 @@ validate_port() {
 backup_file() {
     local file="$1"
     local timestamp=$(date +%Y%m%d-%H%M%S)
-    local backup_dir="${SCRIPT_DIR}/../_trash"
+    local backup_dir="${SCRIPT_DIR}/_trash"
     
     if [[ ! -f "$file" ]]; then
         return 0

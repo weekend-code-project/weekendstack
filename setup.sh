@@ -4,6 +4,12 @@
 
 set -e
 
+# If stdin is not an interactive terminal (e.g. run via curl | sudo bash),
+# reopen it from /dev/tty so that all interactive prompts work correctly.
+if [[ ! -t 0 ]] && [[ -e /dev/tty ]]; then
+    exec < /dev/tty
+fi
+
 # Script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export SCRIPT_DIR

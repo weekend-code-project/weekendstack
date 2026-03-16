@@ -379,7 +379,7 @@ generate_env_interactive() {
     admin_email=$(prompt_input "Admin email" "admin@example.com")
 
     echo ""
-    admin_password=$(prompt_password "Admin password (leave blank to auto-generate a secure one)")
+    admin_password=$(prompt_password "Admin password (leave blank to auto-generate a secure one)" "yes")
 
     if [[ -z "$admin_password" ]]; then
         log_info "Will use auto-generated random password (you'll see it in .env and SETUP_SUMMARY.md)"
