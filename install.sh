@@ -240,23 +240,20 @@ launch_setup() {
         die "setup.sh not found at ${setup_script}. The clone may have failed."
     fi
 
-    # Forward any flags that were passed to install.sh (e.g. --quick)
-    local setup_args=("$@")
-
     info "Launching setup wizard..."
     echo ""
 
+    cd "$INSTALL_DIR"
+
     if [[ "$CALLING_USER" == "root" ]]; then
-        cd "$INSTALL_DIR" && bash setup.sh "${setup_args[@]}"
+        # Already root — run directly
+        exec bash setup.sh "$@"
     else
-        # Run setup as the actual user — they need Docker access, interactive
-        # TTY, and correct $HOME for tool paths.
-        # Use 'su' with a login-style shell to get proper environment.
-        local args_str=""
-        if [[ ${#setup_args[@]} -gt 0 ]]; then
-            args_str=" $(printf '%q ' "${setup_args[@]}")"
-        fi
-        su -s /bin/bash -l "$CALLING_USER" -c "cd '$INSTALL_DIR' && bash setup.sh${args_str}"
+        # Drop privileges back to the calling user.
+        # Use 'sudo -u' with direct arg array — avoids shell quoting issues
+        # and stdin inheritance problems that affect 'su -c "..."' when
+        # install.sh is run via 'curl | sudo bash'.
+        exec sudo -u "$CALLING_USER" -H bash setup.sh "$@"
     fi
 }
 
