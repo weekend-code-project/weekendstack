@@ -103,11 +103,10 @@ prompt_password() {
     
     while true; do
         read -r -s -p "$(echo -e ${CYAN}?${NC}) $prompt: " password
-        echo ""
+        echo "" >&2  # advance terminal line; >&2 so it's not captured by $(...)
         
         if [[ -z "$password" ]]; then
             if [[ "$allow_empty" == "yes" ]]; then
-                echo ""
                 return 0
             fi
             log_error "Password cannot be empty"
@@ -115,7 +114,7 @@ prompt_password() {
         fi
         
         read -r -s -p "$(echo -e ${CYAN}?${NC}) Confirm password: " confirm
-        echo ""
+        echo "" >&2  # advance terminal line
         
         if [[ "$password" == "$confirm" ]]; then
             echo "$password"

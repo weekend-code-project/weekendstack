@@ -375,18 +375,20 @@ generate_env_interactive() {
     local admin_email="admin@example.com"
     local admin_password=""  # Will be auto-generated if left blank
 
-    echo ""
-    admin_email=$(prompt_input "Admin email" "admin@example.com")
-
-    echo ""
-    admin_password=$(prompt_password "Admin password (leave blank to auto-generate a secure one)" "yes")
-
-    if [[ -z "$admin_password" ]]; then
-        log_info "Will use auto-generated random password (you'll see it in .env and SETUP_SUMMARY.md)"
-    fi
-
-    if prompt_yes_no "Use a custom admin username? (default: admin)" "n"; then
+    if prompt_yes_no "Customize admin credentials?" "y"; then
+        echo ""
         admin_user=$(prompt_input "Admin username" "admin")
+
+        echo ""
+        admin_email=$(prompt_input "Admin email" "admin@example.com")
+
+        echo ""
+        admin_password=$(prompt_password "Admin password (leave blank to auto-generate a secure one)" "yes")
+
+        if [[ -z "$admin_password" ]]; then
+            echo ""
+            log_info "Will use auto-generated random password (you'll see it in .env and SETUP_SUMMARY.md)"
+        fi
     fi
     
     log_success "Admin credentials configured"
