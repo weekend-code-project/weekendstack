@@ -266,11 +266,16 @@ check_prerequisites() {
         export GPU_AVAILABLE=false
     fi
 
-    # Check jq (required for env template assembly)
+    # Check jq (required for env template assembly) — auto-install if missing
     if ! check_command jq; then
-        log_error "jq is not installed (required for environment generation)"
-        echo "Install with: sudo apt-get install -y jq"
-        errors=$((errors + 1))
+        log_info "jq not found — installing automatically..."
+        if sudo apt-get install -y -qq jq >/dev/null 2>&1; then
+            log_success "jq installed: $(jq --version)"
+        else
+            log_error "jq could not be installed automatically"
+            echo "Install manually with: sudo apt-get install -y jq"
+            errors=$((errors + 1))
+        fi
     else
         log_success "jq installed: $(jq --version)"
     fi
