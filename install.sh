@@ -252,7 +252,11 @@ launch_setup() {
         # Run setup as the actual user — they need Docker access, interactive
         # TTY, and correct $HOME for tool paths.
         # Use 'su' with a login-style shell to get proper environment.
-        su -s /bin/bash -l "$CALLING_USER" -c "cd '$INSTALL_DIR' && bash setup.sh $(printf '%q ' "${setup_args[@]}")"
+        local args_str=""
+        if [[ ${#setup_args[@]} -gt 0 ]]; then
+            args_str=" $(printf '%q ' "${setup_args[@]}")"
+        fi
+        su -s /bin/bash -l "$CALLING_USER" -c "cd '$INSTALL_DIR' && bash setup.sh${args_str}"
     fi
 }
 
