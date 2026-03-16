@@ -457,49 +457,11 @@ cf_pick_existing_tunnel() {
     return 1
 }
 
-# Delete old/unused tunnels to avoid token sprawl
-cf_cleanup_old_tunnels() {
-    local account_id="$1"
-    local keep_tunnel_id="$2"  # Don't delete this one
-    
-    local tunnels_json
-    tunnels_json=$(cf_list_tunnels "$account_id")
-    if [[ $? -ne 0 ]]; then
-        return 1
-    fi
-    
-    # Get non-deleted tunnels excluding the one to keep
-    local old_tunnels
-    old_tunnels=$(echo "$tunnels_json" | jq -r ".result[] | select(.deleted_at == null) | select(.id != \"$keep_tunnel_id\") | \"\(.id)|\(.name)\"" 2>/dev/null)
-    
-    if [[ -z "$old_tunnels" ]]; then
-        return 0
-    fi
-    
-    local count
-    count=$(echo "$old_tunnels" | wc -l)
-    
-    echo "" >&2
-    log_warn "Found $count other tunnel(s) that may be unused:"
-    while IFS='|' read -r tid tname; do
-        echo "    • $tname (${tid:0:8}...)" >&2
-    done <<< "$old_tunnels"
-    echo "" >&2
-    echo "  Old tunnels create stale API tokens in your Cloudflare account." >&2
-    echo "" >&2
-    
-    if prompt_yes_no "Delete unused tunnels?" "y"; then
-        while IFS='|' read -r tid tname; do
-            # Must clean connections first
-            cf_api_call DELETE "/accounts/$account_id/cfd_tunnel/$tid/connections" >/dev/null 2>&1
-            if cf_delete_tunnel "$account_id" "$tid" >/dev/null 2>&1; then
-                log_success "Deleted tunnel: $tname"
-            else
-                log_warn "Could not delete tunnel: $tname (may have active connections)"
-            fi
-        done <<< "$old_tunnels"
-    fi
-}
+# cf_cleanup_old_tunnels has been intentionally removed.
+# Auto-deleting tunnels is destructive — other tunnels in the same Cloudflare
+# account may belong to other machines and must never be touched by this script.
+# Manage tunnels manually at:
+#   https://dash.cloudflare.com -> Zero Trust -> Networks -> Tunnels
 
 # Full automated setup workflow
 cf_setup_tunnel_automated() {
@@ -567,8 +529,10 @@ cf_setup_tunnel_automated() {
         fi
     fi
     
-    # Offer to clean up old tunnels to prevent API token sprawl
-    cf_cleanup_old_tunnels "$account_id" "$tunnel_id"
+    # NOTE: We intentionally do NOT offer tunnel cleanup here.
+    # Other tunnels in the account may belong to other machines and must
+    # never be deleted automatically. Manage tunnels manually at:
+    # https://dash.cloudflare.com -> Zero Trust -> Networks -> Tunnels
     
     # Output tunnel info (include tunnel_name since user may have picked a different one,
     # and domain since it may have been inferred from the tunnel config)
@@ -583,5 +547,5 @@ export -f cf_get_tunnel_token cf_delete_tunnel
 export -f cf_create_dns_record cf_check_dns_record
 export -f cf_validate_token cf_save_tunnel_credentials
 export -f cf_infer_domain_from_tunnel
-export -f cf_pick_existing_tunnel cf_cleanup_old_tunnels
+export -f cf_pick_existing_tunnel
 export -f cf_setup_tunnel_automated
