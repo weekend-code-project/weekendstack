@@ -9,7 +9,6 @@ REQUIRED_BASE_DIRS=(
     "config"
     "data"
     "files"
-    "_trash"
 )
 
 # Configuration subdirectories
@@ -89,7 +88,7 @@ get_files_subdirs_for_profiles() {
 }
 
 create_base_directories() {
-    local stack_dir="${SCRIPT_DIR}/.."
+    local stack_dir="${SCRIPT_DIR}"
     
     log_step "Checking base directory structure..."
     
@@ -115,7 +114,7 @@ create_base_directories() {
 }
 
 create_config_directories() {
-    local stack_dir="${SCRIPT_DIR}/.."
+    local stack_dir="${SCRIPT_DIR}"
     
     log_step "Checking configuration directories..."
     
@@ -266,7 +265,7 @@ TRAEFIK_CONFIG
 }
 
 create_files_directories() {
-    local stack_dir="${SCRIPT_DIR}/.."
+    local stack_dir="${SCRIPT_DIR}"
     local profiles=("$@")
     
     log_step "Checking user files directories..."
@@ -325,7 +324,7 @@ create_files_directories() {
 }
 
 create_workspace_directory() {
-    local stack_dir="${SCRIPT_DIR}/.."
+    local stack_dir="${SCRIPT_DIR}"
     
     # Get WORKSPACE_DIR from .env
     if [[ ! -f "$stack_dir/.env" ]]; then
@@ -361,7 +360,7 @@ create_workspace_directory() {
 }
 
 create_ssh_directory() {
-    local stack_dir="${SCRIPT_DIR}/.."
+    local stack_dir="${SCRIPT_DIR}"
     
     # Get SSH_KEY_DIR from .env
     if [[ ! -f "$stack_dir/.env" ]]; then
@@ -433,7 +432,7 @@ generate_ssh_key() {
 }
 
 validate_directory_structure() {
-    local stack_dir="${SCRIPT_DIR}/.."
+    local stack_dir="${SCRIPT_DIR}"
     
     log_step "Validating directory structure..."
     
