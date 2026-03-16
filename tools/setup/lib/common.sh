@@ -131,9 +131,9 @@ prompt_select() {
     local options=("$@")
     local choice
     
-    echo -e "${CYAN}?${NC} $prompt"
+    echo -e "${CYAN}?${NC} $prompt" >&2
     for i in "${!options[@]}"; do
-        echo "  $((i+1))) ${options[$i]}"
+        echo "  $((i+1))) ${options[$i]}" >&2
     done
     
     while true; do
@@ -160,23 +160,23 @@ prompt_multiselect() {
         selected[$i]=0
     done
     
-    echo -e "${CYAN}?${NC} $prompt"
-    echo "  (Space to toggle, Enter when done, 'a' for all, 'n' for none)"
+    echo -e "${CYAN}?${NC} $prompt" >&2
+    echo "  (Space to toggle, Enter when done, 'a' for all, 'n' for none)" >&2
     
     local current=0
     while true; do
         # Display options
         for i in "${!options[@]}"; do
             if [[ $i -eq $current ]]; then
-                echo -ne "  ${CYAN}>${NC} "
+                echo -ne "  ${CYAN}>${NC} " >&2
             else
-                echo -ne "    "
+                echo -ne "    " >&2
             fi
             
             if [[ ${selected[$i]} -eq 1 ]]; then
-                echo -e "[${GREEN}✓${NC}] ${options[$i]}"
+                echo -e "[${GREEN}✓${NC}] ${options[$i]}" >&2
             else
-                echo -e "[ ] ${options[$i]}"
+                echo -e "[ ] ${options[$i]}" >&2
             fi
         done
         
@@ -215,7 +215,7 @@ prompt_multiselect() {
             '') # Enter - done
                 # Move cursor down past the options
                 for i in "${!options[@]}"; do
-                    echo ""
+                    echo "" >&2
                 done
                 break
                 ;;
@@ -223,7 +223,7 @@ prompt_multiselect() {
         
         # Move cursor back up
         for i in "${!options[@]}"; do
-            echo -ne "\033[1A\033[2K"
+            echo -ne "\033[1A\033[2K" >&2
         done
     done
     
