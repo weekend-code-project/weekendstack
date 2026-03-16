@@ -368,36 +368,25 @@ generate_env_interactive() {
     echo "Many services (NocoDB, Paperless, Postiz, etc.) support auto-provisioning"
     echo "with default credentials. These will be used during initial setup."
     echo ""
-    log_warn "IMPORTANT: These are default credentials. Change them after first login!"
-    echo ""
-    echo "You can either:"
-    echo "  • Set custom credentials now"
-    echo "  • Use defaults (username: admin, auto-generated password)"
+    log_warn "IMPORTANT: Change these after first login — they protect all your services!"
     echo ""
     
     local admin_user="admin"
     local admin_email="admin@example.com"
-    local admin_password=""  # Will be auto-generated
-    
-    if prompt_yes_no "Set custom admin credentials now?" "n"; then
-        admin_user=$(prompt_input "Admin username" "admin")
-        
-        echo ""
-        while true; do
-            admin_email=$(prompt_input "Admin email" "admin@example.com")
-            if validate_email "$admin_email" || [[ "$admin_email" == "admin@example.com" ]]; then
-                break
-            else
-                log_error "Invalid email format"
-            fi
-        done
-        
-        echo ""
-        admin_password=$(prompt_password "Admin password (or leave empty for auto-generated)")
-    fi
-    
+    local admin_password=""  # Will be auto-generated if left blank
+
+    echo ""
+    admin_email=$(prompt_input "Admin email" "admin@example.com")
+
+    echo ""
+    admin_password=$(prompt_password "Admin password (leave blank to auto-generate a secure one)")
+
     if [[ -z "$admin_password" ]]; then
-        log_info "Will use auto-generated random password (you'll see it in .env at the end)"
+        log_info "Will use auto-generated random password (you'll see it in .env and SETUP_SUMMARY.md)"
+    fi
+
+    if prompt_yes_no "Use a custom admin username? (default: admin)" "n"; then
+        admin_user=$(prompt_input "Admin username" "admin")
     fi
     
     log_success "Admin credentials configured"
