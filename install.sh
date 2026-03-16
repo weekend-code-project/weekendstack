@@ -91,7 +91,7 @@ install_system_deps() {
     apt-get update -qq
 
     local pkgs_needed=()
-    for pkg in curl git ca-certificates gnupg lsb-release; do
+    for pkg in curl git ca-certificates gnupg lsb-release jq; do
         if ! dpkg -s "$pkg" >/dev/null 2>&1; then
             pkgs_needed+=("$pkg")
         fi

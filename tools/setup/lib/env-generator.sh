@@ -528,7 +528,7 @@ generate_env_interactive() {
         local temp_template="${SCRIPT_DIR}/.env.tmp"
         if ! "${SCRIPT_DIR}/tools/env/scripts/assemble-env.sh" \
             --profiles "$profiles_csv" \
-            --output "$temp_template" >/dev/null 2>&1; then
+            --output "$temp_template" 2>&1 | grep -v '\[INFO\]\|\[WARN\]\|\[SECTION\]\|\[SUCCESS\]'; then
             log_error "Failed to assemble modular env template"
             rm -f "$temp_template"
             return 1
@@ -763,7 +763,7 @@ generate_env_quick() {
         local temp_template="${SCRIPT_DIR}/.env.tmp"
         if ! "${SCRIPT_DIR}/tools/env/scripts/assemble-env.sh" \
             --profiles "$profiles_csv" \
-            --output "$temp_template" >/dev/null 2>&1; then
+            --output "$temp_template" 2>&1 | grep -v '\[INFO\]\|\[WARN\]\|\[SECTION\]\|\[SUCCESS\]'; then
             log_error "Failed to assemble modular env template"
             return 1
         fi

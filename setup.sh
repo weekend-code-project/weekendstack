@@ -265,6 +265,15 @@ check_prerequisites() {
         log_info "No NVIDIA GPU detected (AI services will use CPU)"
         export GPU_AVAILABLE=false
     fi
+
+    # Check jq (required for env template assembly)
+    if ! check_command jq; then
+        log_error "jq is not installed (required for environment generation)"
+        echo "Install with: sudo apt-get install -y jq"
+        errors=$((errors + 1))
+    else
+        log_success "jq installed: $(jq --version)"
+    fi
     
     if ((errors > 0)); then
         log_error "Prerequisites check failed with $errors errors"
