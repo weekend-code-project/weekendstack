@@ -2,7 +2,24 @@
 
 A comprehensive self-hosted Docker stack for development, AI, productivity, media, home automation, and monitoring. Features **65+ services** organized into modular compose files with profile-based deployment.
 
-## ⚡ Quick Start (Automated Setup)
+## 🚀 One-Line Install (Fresh Machine)
+
+Run this on any Ubuntu or Debian-based machine. It installs Docker, clones the repo, and launches the interactive setup wizard — no manual prep needed.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/weekend-code-project/weekendstack/main/install.sh | sudo bash
+```
+
+> **Note:** `sudo` is required to install Docker and add your user to the `docker` group. The setup wizard itself runs as your normal user.
+
+Once setup finishes, open a browser and navigate to:
+- `http://YOUR_IP:8098` — Glance dashboard (links to all services)
+- `http://YOUR_IP:3000` — Uptime Kuma
+- See `SETUP_SUMMARY.md` for a full list of service URLs and credentials
+
+---
+
+## ⚡ Quick Start (Already Have Docker)
 
 **New users:** Use our interactive setup script for a guided installation:
 
@@ -25,6 +42,8 @@ This will:
 ```
 
 **For detailed instructions, see** [docs/setup-script-guide.md](docs/setup-script-guide.md)
+
+**Manual config reference:** Copy [.env.example](.env.example) → `.env` and edit to configure without the wizard.
 
 ---
 

@@ -6,7 +6,7 @@
 # Usage: make <target>
 # Example: make start
 
-.PHONY: help setup start stop restart status logs ps clean update backup restore \
+.PHONY: help install setup start stop restart status logs ps clean update backup restore \
         pull validate env health test profile-dev profile-ai profile-all \
         cloudflare-setup cert-setup docker-login prune shell config \
         deploy-coder-templates redeploy-coder-templates coder-templates \
@@ -36,6 +36,12 @@ help: ## Show this help message
 	@echo "  make start     - Start all enabled services"
 	@echo "  make status    - Check service status"
 	@echo "  make logs      - View logs (Ctrl+C to exit)"
+
+install: ## Download and run the one-liner bootstrap installer (fresh machine)
+	@echo "Run this on a fresh machine to install Docker, clone the repo, and launch setup:"
+	@echo ""
+	@echo "  curl -fsSL https://raw.githubusercontent.com/weekend-code-project/weekendstack/main/install.sh | sudo bash"
+	@echo ""
 
 setup: ## Run the interactive setup script
 	@./setup.sh

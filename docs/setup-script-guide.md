@@ -4,6 +4,7 @@ Complete guide to using the interactive setup script for automated WeekendStack 
 
 ## Table of Contents
 
+- [Remote Install (One-Liner)](#remote-install-one-liner)
 - [Overview](#overview)
 - [Prerequisites](#prerequisites)
 - [Quick Start](#quick-start)
@@ -16,6 +17,35 @@ Complete guide to using the interactive setup script for automated WeekendStack 
 - [Certificate Trust Setup](#certificate-trust-setup)
 - [Troubleshooting](#troubleshooting)
 - [Comparison with Manual Setup](#comparison-with-manual-setup)
+
+---
+
+## Remote Install (One-Liner)
+
+**On a fresh Ubuntu or Debian-based machine with no Docker installed**, use the one-liner bootstrap installer. It handles everything — package dependencies, Docker, repo clone, and launches the setup wizard automatically.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/weekend-code-project/weekendstack/main/install.sh | sudo bash
+```
+
+**What it does:**
+1. Verifies you're on a supported OS (Ubuntu / Debian)
+2. Installs `curl`, `git`, and other build dependencies via `apt`
+3. Installs Docker Engine via `get.docker.com` (skips if already installed)
+4. Adds your user to the `docker` group
+5. Clones the repo to `~/weekendstack` (or does `git pull` on re-runs)
+6. Runs `setup.sh` interactively as your normal user
+
+**Pass flags directly to `setup.sh`:**
+```bash
+# Download first (recommended), then run with flags
+curl -fsSL https://raw.githubusercontent.com/weekend-code-project/weekendstack/main/install.sh -o install.sh
+sudo bash install.sh --quick --skip-cloudflare
+```
+
+**Re-running is safe** — the installer is idempotent: existing Docker, the docker group membership, and a previously cloned repo are all detected and skipped gracefully.
+
+> **Note on docker group:**  After setup, log out and back in (or run `newgrp docker`) so the group membership takes effect without requiring `sudo` for every `docker` command.
 
 ---
 
