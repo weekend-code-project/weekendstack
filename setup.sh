@@ -1185,7 +1185,13 @@ start_services_with_profiles() {
 
     log_step "Starting services for profiles: ${profiles[*]}"
 
-    if docker compose $profile_args up -d --build; then
+    # Remove any stale containers from previous (partial) runs before bringing
+    # the stack up. --remove-orphans also cleans up containers for services
+    # that are no longer defined in the current compose configuration.
+    log_step "Removing any stale containers from previous runs..."
+    docker compose $profile_args down --remove-orphans 2>/dev/null || true
+
+    if docker compose $profile_args up -d --build --remove-orphans; then
         log_success "Services started successfully"
 
         echo ""
