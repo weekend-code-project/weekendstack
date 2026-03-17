@@ -248,7 +248,7 @@ select_profiles_interactive() {
         final_profiles=("${new_profiles[@]}")
     fi
 
-    local _ai_cancelled=false
+    # Show selection summary (all to stderr — stdout is captured by caller)
     {
         echo ""
         if [[ "$layer_mode" == "add" ]]; then
@@ -256,41 +256,38 @@ select_profiles_interactive() {
         else
             log_success "Selected profiles: ${final_profiles[*]}"
         fi
-
-        # Warn if AI profile is selected but system RAM is below 16GB
-        local _has_ai_in_final=false
-        for _fp in "${final_profiles[@]}"; do
-            if [[ "$_fp" == "ai" || "$_fp" == "all" ]]; then
-                _has_ai_in_final=true
-                break
-            fi
-        done
-        local _total_mem
-        _total_mem=$(free -g 2>/dev/null | awk '/^Mem:/{print $2}')
-        _total_mem="${_total_mem:-999}"
-        if $_has_ai_in_final && (( _total_mem < 16 )); then
-            echo ""
-            echo -e "\033[1;33m  ⚠ WARNING: AI profile selected but only ${_total_mem}GB RAM detected.\033[0m"
-            echo "  Ollama and AI model inference work best with 16GB or more."
-            echo "  On ${_total_mem}GB you can run small models (e.g. qwen2.5:0.5b, gemma:2b)."
-            echo "  Large models (7B+) will be very slow or fail to load."
-            echo ""
-            read -p "  Continue with AI profile anyway? [y/N]: " -r _ai_warn_yn </dev/tty
-            if [[ ! "$_ai_warn_yn" =~ ^[Yy]$ ]]; then
-                echo "Setup cancelled. Run ./setup.sh again and choose profiles without AI." >&2
-                _ai_cancelled=true
-            fi
-        fi
         echo ""
     } >&2
 
-    # Check cancellation flag AFTER the >&2 block so the sentinel goes to stdout
-    if $_ai_cancelled; then
-        echo "SETUP_CANCELLED"
-        return 0
+    # AI RAM warning — kept entirely outside the >&2 block so the SETUP_CANCELLED
+    # sentinel can reach stdout unambiguously.
+    local _has_ai=false
+    for _fp in "${final_profiles[@]}"; do
+        [[ "$_fp" == "ai" || "$_fp" == "all" ]] && _has_ai=true && break
+    done
+
+    if $_has_ai; then
+        local _total_mem
+        _total_mem=$(free -g 2>/dev/null | awk '/^Mem:/{print $2}')
+        _total_mem="${_total_mem:-999}"
+        if (( _total_mem < 16 )); then
+            echo "" >&2
+            echo -e "\033[1;33m  ⚠ WARNING: AI profile selected but only ${_total_mem}GB RAM detected.\033[0m" >&2
+            echo "  Ollama and AI model inference work best with 16GB or more." >&2
+            echo "  On ${_total_mem}GB you can run small models (e.g. qwen2.5:0.5b, gemma:2b)." >&2
+            echo "  Large models (7B+) will be very slow or fail to load." >&2
+            echo "" >&2
+            local _yn
+            read -r -p "  Continue with AI profile anyway? [y/N]: " _yn </dev/tty
+            if [[ ! "${_yn}" =~ ^[Yy]$ ]]; then
+                echo "  Setup cancelled. Run ./setup.sh again and choose profiles without AI." >&2
+                echo "SETUP_CANCELLED"   # → stdout → captured by caller
+                return 0
+            fi
+        fi
     fi
 
-    # Echo to stdout for capture by calling script
+    # Emit selected profiles to stdout for capture by caller
     echo "${final_profiles[@]}"
 }
 
