@@ -662,7 +662,9 @@ main_setup() {
     # Ask to continue after prerequisites
     if [[ "$SETUP_MODE" == "interactive" ]] && ! $DRY_RUN; then
         echo ""
-        if ! prompt_yes_no "Prerequisites check complete. Continue with setup" "y"; then
+        read -r -p "Prerequisites check complete. Continue with setup? [Y/n]: " _prereq_continue </dev/tty
+        _prereq_continue="${_prereq_continue:-y}"
+        if [[ ! "${_prereq_continue,,}" =~ ^y ]]; then
             log_error "Setup cancelled by user"
             exit 0
         fi
