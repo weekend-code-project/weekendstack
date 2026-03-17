@@ -533,24 +533,17 @@ deploy_coder_templates_interactive() {
     fi
 
     # ── Step 2: Authenticate ──────────────────────────────────────────────────
+    clear
+    log_header "Coder Authentication"
+    echo "  To deploy templates, you need a CLI session token from Coder."
     echo ""
-    echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo "  1. Sign in (first user becomes admin):"
+    echo "     ${coder_url}"
     echo ""
-    echo "  Step 1 — Log into Coder"
+    echo "  2. Get your session token:"
+    echo "     ${coder_url}/cli-auth"
     echo ""
-    echo "  Open this URL and sign in (first user becomes admin):"
-    echo -e "  ${BOLD}${coder_url}${NC}"
-    echo ""
-    echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo ""
-    echo "  Step 2 — Get your CLI session token"
-    echo ""
-    echo "  Open this URL while logged in:"
-    echo -e "  ${BOLD}${coder_url}/cli-auth${NC}"
-    echo ""
-    echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo ""
-    read -rp "  Press Enter once you have your session token ready..." </dev/tty
+    read -rp "  Press Enter when you have your token ready..." </dev/tty
     echo ""
 
     local token=""
