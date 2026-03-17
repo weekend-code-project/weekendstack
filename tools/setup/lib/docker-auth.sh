@@ -218,12 +218,27 @@ docker_login_hub() {
 
 docker_login_ghcr() {
     log_step "Checking GitHub Container Registry authentication..."
-    
-    if docker-credential-helpers-check ghcr.io 2>/dev/null; then
-        log_info "Already authenticated with GitHub Container Registry"
-        return 0
+
+    # Validate any stored GHCR credential — a bad/expired token causes "denied"
+    # on ALL ghcr.io pulls, even public images. Clear it if it's stale.
+    if grep -q '"ghcr.io"' "$HOME/.docker/config.json" 2>/dev/null; then
+        local _test_response
+        _test_response=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer $(cat "$HOME/.docker/config.json" | \
+                python3 -c "import sys,json,base64; \
+                    d=json.load(sys.stdin); \
+                    auth=d.get('auths',{}).get('ghcr.io',{}).get('auth',''); \
+                    print(base64.b64decode(auth).decode().split(':',1)[1] if auth else '')" 2>/dev/null)" \
+            "https://ghcr.io/v2/" 2>/dev/null)
+        if [[ "$_test_response" == "401" || "$_test_response" == "403" ]]; then
+            log_warn "Stored GHCR credential is expired or invalid — clearing it"
+            docker logout ghcr.io &>/dev/null || true
+        else
+            log_info "Already authenticated with GitHub Container Registry"
+            return 0
+        fi
     fi
-    
+
     if ! prompt_yes_no "Authenticate with GitHub Container Registry (ghcr.io)?" "n"; then
         return 0
     fi
