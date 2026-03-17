@@ -429,7 +429,7 @@ validate_directory_structure() {
         return 1
     fi
 
-    echo "  ✓ Validation: all required paths present"
+    log_success "Validation: all required paths present"
     return 0
 }
 

@@ -377,7 +377,7 @@ generate_env_interactive() {
         echo -e "${BOLD}  Additional AI Services${NC}"
         echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
         echo "Always included with the AI profile:"
-        echo "  ✓ SearXNG  - Privacy-focused search engine         (~1GB RAM)"
+        log_success "SearXNG  - Privacy-focused search engine         (~1GB RAM)"
         echo ""
         echo "Optional extras (space-separated for multiple, e.g. '2 3'):"
         echo "  1) None    - Skip optional extras"

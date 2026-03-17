@@ -415,20 +415,20 @@ check_docker_auth_status() {
     fi
     
     echo ""
-    echo "Authenticated registries:"
-    
+    echo "  Authenticated registries:"
+
     if grep -q "docker.io\|https://index.docker.io" "$config_file" 2>/dev/null; then
-        echo "  ✓ Docker Hub (docker.io)"
+        log_success "Docker Hub (docker.io)"
     fi
-    
+
     if grep -q "ghcr.io" "$config_file" 2>/dev/null; then
-        echo "  ✓ GitHub Container Registry (ghcr.io)"
+        log_success "GitHub Container Registry (ghcr.io)"
     fi
-    
+
     if grep -q "gcr.io" "$config_file" 2>/dev/null; then
-        echo "  ✓ Google Container Registry (gcr.io)"
+        log_success "Google Container Registry (gcr.io)"
     fi
-    
+
     echo ""
 }
 
