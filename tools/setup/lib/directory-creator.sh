@@ -204,11 +204,18 @@ _ensure_from_example() {
     if [[ ! -f "$file_path" ]]; then
         mkdir -p "$dir_path"
         if [[ -f "$example_path" ]]; then
-            cp "$example_path" "$file_path"
-            log_info "Created $(basename "$file_path") from .example template"
+            if cp "$example_path" "$file_path" 2>/dev/null; then
+                log_info "Created $(basename "$file_path") from .example template"
+            else
+                log_warn "Cannot write $(basename "$file_path") — permission denied"
+                log_warn "  Fix: sudo cp '$example_path' '$file_path'"
+            fi
         else
-            touch "$file_path"
-            log_info "Pre-created placeholder file (no .example found): $file_path"
+            if touch "$file_path" 2>/dev/null; then
+                log_info "Pre-created placeholder file (no .example found): $file_path"
+            else
+                log_warn "Cannot create placeholder file: $file_path — permission denied"
+            fi
         fi
     fi
 }
@@ -466,19 +473,28 @@ validate_directory_structure() {
 
 setup_all_directories() {
     local profiles=("$@")
-    
+
     log_header "Directory Setup"
-    
+
+    local _dir_errors=0
+
     create_base_directories
-    create_config_directories
+    create_config_directories || _dir_errors=$((_dir_errors + 1))
     create_files_directories "${profiles[@]}"
     create_workspace_directory
-    create_ssh_directory
-    
+
     echo ""
     validate_directory_structure
-    
-    log_success "Directory setup complete"
+
+    echo ""
+    if (( _dir_errors > 0 )); then
+        log_warn "Directory setup completed with $_dir_errors permission warning(s) above."
+        log_warn "Review the warnings and fix with 'sudo' as needed before starting services."
+    else
+        log_success "Directory setup complete — all paths are ready."
+    fi
+    echo ""
+    read -rp "  Press Enter to continue..." </dev/tty
 }
 
 # Export functions

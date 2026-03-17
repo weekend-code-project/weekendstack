@@ -378,11 +378,11 @@ generate_env_interactive() {
         echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
         echo "Always included with the AI profile:"
         echo "  ✓ SearXNG  - Privacy-focused search engine         (~1GB RAM)"
-        echo "  ✓ Whisper  - OpenAI Whisper speech-to-text API     (~4GB RAM)"
         echo ""
-        echo "Optional extras:"
+        echo "Optional extras (space-separated for multiple, e.g. '2 3'):"
         echo "  1) None    - Skip optional extras"
-        echo "  2) LocalAI - OpenAI-compatible local API server    (~4GB RAM)"
+        echo "  2) Whisper - OpenAI Whisper speech-to-text API     (~4GB RAM)"
+        echo "  3) LocalAI - OpenAI-compatible local API server    (~4GB RAM)"
         echo ""
 
         local ai_extra_input
@@ -393,7 +393,8 @@ generate_env_interactive() {
         for n in $ai_extra_input; do
             case "$n" in
                 1) ;;  # None — no extras
-                2) ai_extra_services+=("localai") ;;
+                2) ai_extra_services+=("whisper") ;;
+                3) ai_extra_services+=("localai") ;;
                 *) log_warn "Unknown additional service option: $n (skipped)" ;;
             esac
         done

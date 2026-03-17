@@ -758,6 +758,10 @@ main_setup() {
         log_error "Failed to create directory structure"
         exit 1
     fi
+
+    # 6b. SSH Key Setup (own step so the screen is clear and readable)
+    show_setup_progress "SSH Key Setup"
+    create_ssh_directory
     
     # 7. Create Docker networks
     # SKIPPED: Docker Compose creates networks automatically with proper labels

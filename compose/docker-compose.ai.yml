@@ -485,7 +485,7 @@ services:
       - ai-network
       - shared-network
     profiles:
-      - ai
+      - whisper
     ports:
       - "${WHISPER_PORT:-9002}:9000"
     environment:
