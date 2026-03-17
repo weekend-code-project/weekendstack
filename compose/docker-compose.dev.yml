@@ -362,11 +362,12 @@ services:
   registry-cache:
     image: registry:2
     container_name: coder-registry
-    restart: "no"
+    restart: unless-stopped
     networks:
       - coder-network
       - shared-network
     profiles:
+      - core
       - dev
       - dev-tools
       - setup-infrastructure
