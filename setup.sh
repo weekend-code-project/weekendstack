@@ -260,7 +260,8 @@ check_prerequisites() {
         if ((total_memory < 8)); then
             log_warn "Low memory: ${total_memory}GB (minimum 8GB, 16GB recommended)"
         elif ((total_memory < 16)); then
-            log_warn "Memory: ${total_memory}GB — recommend 16GB min, 32GB+ if using AI services"
+            log_warn "Memory: ${total_memory}GB — recommend 16GB min for all services"
+            echo -e "  \033[1;33m⚠\033[0m AI Memory: +16GB if using AI services (32GB+ total)" >&2
         else
             log_success "Memory: ${total_memory}GB available"
         fi
