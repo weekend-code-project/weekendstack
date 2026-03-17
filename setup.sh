@@ -260,7 +260,7 @@ check_prerequisites() {
         if ((total_memory < 8)); then
             log_warn "Memory: ${total_memory}GB — minimum is 8GB, 16GB recommended"
         elif ((total_memory < 16)); then
-            log_warn "Memory: ${total_memory}GB — 16GB recommended for all services"
+            log_warn "Memory: ${total_memory}GB — minimum is 8GB, 16GB recommended for best performance"
             log_warn "AI Memory: add 16GB more if using AI services (32GB+ total)"
         else
             log_success "Memory: ${total_memory}GB available"
