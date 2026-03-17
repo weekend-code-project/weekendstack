@@ -258,10 +258,10 @@ check_prerequisites() {
         local total_memory=$(free -g | awk '/^Mem:/{print $2}')
         export TOTAL_MEMORY_GB=$total_memory
         if ((total_memory < 8)); then
-            log_warn "Memory: ${total_memory}GB — minimum is 8GB, 16GB recommended"
+            log_warn "Low memory: ${total_memory}GB available (minimum: 8GB)"
         elif ((total_memory < 16)); then
-            log_warn "Memory: ${total_memory}GB — minimum is 8GB, 16GB recommended for best performance"
-            log_warn "AI Memory: add 16GB more if using AI services (32GB+ total)"
+            log_warn "Low memory: ${total_memory}GB available (recommended: 16GB+)"
+            log_warn "Low memory for AI: 32GB+ required to run AI services"
         else
             log_success "Memory: ${total_memory}GB available"
         fi
