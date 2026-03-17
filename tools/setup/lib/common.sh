@@ -67,7 +67,7 @@ prompt_yes_no() {
         prompt="$prompt [y/N]: "
     fi
     
-    read -r -p "$(echo -e ${CYAN}?${NC}) $prompt" response
+    read -r -p "$(echo -e ${CYAN}?${NC}) $prompt" response </dev/tty
     response=${response,,} # to lowercase
     
     if [[ -z "$response" ]]; then
@@ -88,7 +88,7 @@ prompt_input() {
         prompt="$prompt: "
     fi
     
-    read -r -p "$(echo -e ${CYAN}?${NC}) $prompt" response
+    read -r -p "$(echo -e ${CYAN}?${NC}) $prompt" response </dev/tty
     
     if [[ -z "$response" && -n "$default" ]]; then
         echo "$default"
@@ -104,7 +104,7 @@ prompt_password() {
     local confirm
     
     while true; do
-        read -r -s -p "$(echo -e ${CYAN}?${NC}) $prompt: " password
+        read -r -s -p "$(echo -e ${CYAN}?${NC}) $prompt: " password </dev/tty
         echo "" >&2  # advance terminal line; >&2 so it's not captured by $(...)
         
         if [[ -z "$password" ]]; then
@@ -115,7 +115,7 @@ prompt_password() {
             continue
         fi
         
-        read -r -s -p "$(echo -e ${CYAN}?${NC}) Confirm password: " confirm
+        read -r -s -p "$(echo -e ${CYAN}?${NC}) Confirm password: " confirm </dev/tty
         echo "" >&2  # advance terminal line
         
         if [[ "$password" == "$confirm" ]]; then
@@ -139,7 +139,7 @@ prompt_select() {
     done
     
     while true; do
-        read -r -p "$(echo -e ${CYAN}→${NC}) Select [1-${#options[@]}]: " choice
+        read -r -p "$(echo -e ${CYAN}→${NC}) Select [1-${#options[@]}]: " choice </dev/tty
         
         if [[ "$choice" =~ ^[0-9]+$ ]] && ((choice >= 1 && choice <= ${#options[@]})); then
             echo "$((choice-1))"
@@ -183,7 +183,7 @@ prompt_multiselect() {
         done
         
         # Read input
-        read -rsn1 key
+        read -rsn1 key </dev/tty
         
         case "$key" in
             $'\x20') # Space - toggle
@@ -194,7 +194,7 @@ prompt_multiselect() {
                 fi
                 ;;
             $'\x1b') # Escape sequence
-                read -rsn2 key
+                read -rsn2 key </dev/tty
                 case "$key" in
                     '[A') # Up arrow
                         ((current > 0)) && ((current--))
