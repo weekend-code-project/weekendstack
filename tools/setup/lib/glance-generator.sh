@@ -12,7 +12,7 @@
 # Rules:
 #   - Single page only ("Home", slug: home)  — no separate External page
 #   - Monitor widget entries filtered by enabled profile
-#   - Speedtest in monitor widget (core, always), no separate custom-api widget
+#   - Speedtest in monitor widget (core, always) + custom-api stats widget (↓/↑/ping)
 #   - Monitoring tools in monitor widget (monitoring section, gated by monitoring profile)
 #   - Small column: server-stats (always), then profile-gated widgets
 #   - Navigation url: fields always use /go/<service> (link-router handles context)
@@ -223,6 +223,34 @@ GLANCE_EOF
             servers:
               - type: local
                 name: Docker VM
+
+          - type: custom-api
+            cache: 5m
+            title: Internet Speed
+            title-url: ${url_speedtest}
+            url: http://${host_ip}:8765/api/v1/results/latest
+            headers:
+              Authorization: "Bearer \${SPEEDTEST_TRACKER_API_TOKEN}"
+            template: |
+              {{ \$dl   := .JSON.Float "data.download" }}
+              {{ \$ul   := .JSON.Float "data.upload" }}
+              {{ \$ping := .JSON.Float "data.ping" }}
+              {{ \$ts   := .JSON.String "data.created_at" }}
+              <div style="display: flex; justify-content: space-around; margin: 1rem 0;">
+                <div style="text-align: center;">
+                  <div style="font-size: 1.4rem;">{{ printf "%.1f" \$dl }}</div>
+                  <div style="font-size: 0.9rem; opacity: 0.8;">↓ Mbps</div>
+                </div>
+                <div style="text-align: center;">
+                  <div style="font-size: 1.4rem;">{{ printf "%.1f" \$ul }}</div>
+                  <div style="font-size: 0.9rem; opacity: 0.8;">↑ Mbps</div>
+                </div>
+                <div style="text-align: center;">
+                  <div style="font-size: 1.4rem;">{{ printf "%.0f" \$ping }}</div>
+                  <div style="font-size: 0.9rem; opacity: 0.8;">ms ping</div>
+                </div>
+              </div>
+              <div style="text-align: center; font-size: 0.8rem; opacity: 0.5;">{{ \$ts }}</div>
 GLANCE_EOF
 
     # Media profile widgets
