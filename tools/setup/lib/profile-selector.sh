@@ -276,8 +276,9 @@ select_profiles_interactive() {
             echo ""
             read -p "  Continue with AI profile anyway? [y/N]: " -r _ai_warn_yn </dev/tty
             if [[ ! "$_ai_warn_yn" =~ ^[Yy]$ ]]; then
-                echo "Installation cancelled. Re-run setup and choose profiles without AI." >&2
-                exit 0
+                echo "Setup cancelled. Re-run and choose profiles without AI." >&2
+                echo "SETUP_CANCELLED"
+                return 0
             fi
         fi
         echo ""

@@ -688,7 +688,13 @@ main_setup() {
         log_info "To make changes to services, run ./setup.sh again"
         exit 0
     fi
-    
+
+    if [[ "${selected_profiles[0]}" == "SETUP_CANCELLED" ]]; then
+        echo ""
+        log_info "Setup cancelled. Run ./setup.sh to start again."
+        exit 0
+    fi
+
     if [[ ${#selected_profiles[@]} -eq 0 ]]; then
         log_error "Profile selection returned empty — cannot continue"
         exit 1
