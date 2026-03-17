@@ -288,17 +288,20 @@ select_profiles_interactive() {
 }
 
 select_profiles_quick() {
-    log_header "Quick Profile Selection"
-    
-    echo "Available quick deployment options:"
-    echo "  1) Foundation    - Core only (recommended starter)"
-    echo "  2) Developer     - Core + Dev + AI services"
-    echo "  3) Productivity  - Core + Productivity + Media"
-    echo "  4) Complete      - All services"
-    echo "  5) Custom        - Choose specific profiles"
-    echo "  (Cloudflare Tunnel, local domain, and Pi-hole are configured in the Access wizard)"
-    echo ""
-    
+    # All display goes to stderr so stdout is clean for capture by the caller
+    {
+        log_header "Quick Profile Selection"
+
+        echo "Available quick deployment options:"
+        echo "  1) Foundation    - Core only (recommended starter)"
+        echo "  2) Developer     - Core + Dev + AI services"
+        echo "  3) Productivity  - Core + Productivity + Media"
+        echo "  4) Complete      - All services"
+        echo "  5) Custom        - Choose specific profiles"
+        echo "  (Cloudflare Tunnel, local domain, and Pi-hole are configured in the Access wizard)"
+        echo ""
+    } >&2
+
     local choice
     # In quick mode, DRY_RUN mode, or if stdin is not a terminal, use default Foundation
     if [[ "${SETUP_MODE:-interactive}" == "quick" ]] || [[ "${DRY_RUN:-false}" == "true" ]] || ! [[ -t 0 ]]; then
@@ -307,9 +310,9 @@ select_profiles_quick() {
     else
         choice=$(prompt_select "Select deployment type:" "Foundation" "Developer" "Productivity" "Complete" "Custom")
     fi
-    
+
     local selected_profiles=()
-    
+
     case $choice in
         0) # Foundation
             selected_profiles=("core")
@@ -327,8 +330,8 @@ select_profiles_quick() {
             selected_profiles=($(select_profiles_interactive))
             ;;
     esac
-    
-    log_success "Selected profiles: ${selected_profiles[*]}"
+
+    log_success "Selected profiles: ${selected_profiles[*]}" >&2
     echo "${selected_profiles[@]}"
 }
 

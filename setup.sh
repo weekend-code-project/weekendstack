@@ -689,6 +689,11 @@ main_setup() {
         exit 0
     fi
     
+    if [[ ${#selected_profiles[@]} -eq 0 ]]; then
+        log_error "Profile selection returned empty — cannot continue"
+        exit 1
+    fi
+
     export SELECTED_PROFILES=("${selected_profiles[@]}")
     
     # Clear screen after selection

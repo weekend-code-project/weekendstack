@@ -605,12 +605,13 @@ generate_env_interactive() {
             profiles_csv="${profiles_csv},${git_service}"
         fi
         log_info "Generating .env from modular templates for profiles: $profiles_csv"
-        
+
         # Assemble templates to temporary file
         local temp_template="${SCRIPT_DIR}/.env.tmp"
-        if ! "${SCRIPT_DIR}/tools/env/scripts/assemble-env.sh" \
+        "${SCRIPT_DIR}/tools/env/scripts/assemble-env.sh" \
             --profiles "$profiles_csv" \
-            --output "$temp_template" 2>&1 | grep -v '\[INFO\]\|\[WARN\]\|\[SECTION\]\|\[SUCCESS\]'; then
+            --output "$temp_template" 2>&1 | grep -v '\[INFO\]\|\[WARN\]\|\[SECTION\]\|\[SUCCESS\]'
+        if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
             log_error "Failed to assemble modular env template"
             rm -f "$temp_template"
             return 1
@@ -848,11 +849,12 @@ generate_env_quick() {
         # Use modular templates - assemble to temporary file
         local profiles_csv=$(IFS=, ; echo "${selected_profiles[*]}")
         log_info "Creating template for profiles: $profiles_csv"
-        
+
         local temp_template="${SCRIPT_DIR}/.env.tmp"
-        if ! "${SCRIPT_DIR}/tools/env/scripts/assemble-env.sh" \
+        "${SCRIPT_DIR}/tools/env/scripts/assemble-env.sh" \
             --profiles "$profiles_csv" \
-            --output "$temp_template" 2>&1 | grep -v '\[INFO\]\|\[WARN\]\|\[SECTION\]\|\[SUCCESS\]'; then
+            --output "$temp_template" 2>&1 | grep -v '\[INFO\]\|\[WARN\]\|\[SECTION\]\|\[SUCCESS\]'
+        if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
             log_error "Failed to assemble modular env template"
             return 1
         fi
