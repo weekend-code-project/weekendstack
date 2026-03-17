@@ -274,7 +274,7 @@ check_prerequisites() {
         log_success "NVIDIA GPU detected"
         export GPU_AVAILABLE=true
     else
-        log_info "No NVIDIA GPU detected (AI services will use CPU)"
+        log_warn "No NVIDIA GPU detected (AI services will use CPU)"
         export GPU_AVAILABLE=false
     fi
 
@@ -662,7 +662,7 @@ main_setup() {
     # Ask to continue after prerequisites
     if [[ "$SETUP_MODE" == "interactive" ]] && ! $DRY_RUN; then
         echo ""
-        if ! prompt_yes_no "Prerequisites check complete. Continue with setup?" "y"; then
+        if ! prompt_yes_no "Prerequisites check complete. Continue with setup" "y"; then
             log_error "Setup cancelled by user"
             exit 0
         fi
