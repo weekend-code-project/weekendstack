@@ -200,11 +200,9 @@ parse_args() {
 check_prerequisites() {
     clear
     echo ""
-    echo -e "${CYAN}╔══════════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║                                                                  ║${NC}"
-    echo -e "${CYAN}║${NC}        ${BOLD}WeekendStack Interactive Setup Script v$VERSION${NC}         ${CYAN}║${NC}"
-    echo -e "${CYAN}║                                                                  ║${NC}"
-    echo -e "${CYAN}╚══════════════════════════════════════════════════════════════════╝${NC}"
+    echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${BOLD}${CYAN}  WeekendStack Interactive Setup Script v$VERSION${NC}"
+    echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo ""
     log_header "Prerequisites Check"
     
@@ -536,21 +534,23 @@ deploy_coder_templates_interactive() {
 
     # ── Step 2: Authenticate ──────────────────────────────────────────────────
     echo ""
-    echo "─────────────────────────────────────────────────────────────────"
+    echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo ""
     echo "  Step 1 — Log into Coder"
     echo ""
     echo "  Open this URL and sign in (first user becomes admin):"
     echo -e "  ${BOLD}${coder_url}${NC}"
     echo ""
-    echo "─────────────────────────────────────────────────────────────────"
+    echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo ""
     echo "  Step 2 — Get your CLI session token"
     echo ""
     echo "  Open this URL while logged in:"
     echo -e "  ${BOLD}${coder_url}/cli-auth${NC}"
     echo ""
-    echo "─────────────────────────────────────────────────────────────────"
+    echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    read -rp "  Press Enter once you have your session token ready..." </dev/tty
     echo ""
 
     local token=""
@@ -638,16 +638,15 @@ main_setup() {
     # Export configuration flags
     export FORCE_RECONFIGURE
     
-    local total_steps=13
     local current_step=0
-    
+
     # Helper to show progress
     show_setup_progress() {
         current_step=$((current_step + 1))
         clear
         echo ""
         echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-        echo -e "${BOLD}${CYAN}  Setup Progress: Step $current_step of $total_steps - $1${NC}"
+        echo -e "${BOLD}${CYAN}  Phase $current_step — $1${NC}"
         echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
         echo ""
     }

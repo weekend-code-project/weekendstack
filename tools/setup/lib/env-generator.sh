@@ -187,10 +187,8 @@ generate_env_interactive() {
     echo "  Example: weekendcodeproject.dev → https://service.weekendcodeproject.dev"
     echo "  Skip this for a LAN-only or IP-only setup."
     echo ""
-    read -p "  Set up Cloudflare Tunnel? [y/N]: " -r _cf_yn </dev/tty
-    echo ""
-
-    if [[ "$_cf_yn" =~ ^[Yy]$ ]]; then
+    local _cf_yn_bool
+    if prompt_yes_no "Set up Cloudflare Tunnel?" "n"; then
         # Just track intent — token, tunnel selection, and domain inference happen
         # in the Cloudflare wizard step (after image pulls, before service start).
         domain_mode="cloudflare"
@@ -199,7 +197,7 @@ generate_env_interactive() {
         base_domain="localhost"
         log_info "Skipping Cloudflare Tunnel"
     fi
-    
+
     echo ""
     # --- Question 2: Local domain (e.g. .lab) for LAN access ---
     echo -e "${BOLD}Local domain for LAN access (e.g. .lab)?${NC}"
@@ -207,21 +205,20 @@ generate_env_interactive() {
     echo "  Example: lab → https://glance.lab, https://nocodb.lab (LAN only)"
     echo "  Skip this for pure IP or tunnel-only setups."
     echo ""
-    read -p "  Set up a local domain? [y/N]: " -r _lab_yn </dev/tty
-    echo ""
+    if prompt_yes_no "Set up a local domain?" "n"; then
     
-    if [[ "$_lab_yn" =~ ^[Yy]$ ]]; then
         read -p "  Local domain suffix (press Enter for 'lab'): " -r lab_domain_input </dev/tty
         lab_domain_input="${lab_domain_input// /}"
         lab_domain="${lab_domain_input:-lab}"
         log_success "Local domain set: .${lab_domain}"
-        
+
         echo ""
         echo -e "${BOLD}DNS for local domain?${NC}"
         echo "  1) Install Pi-hole  — handles DNS + optional ad blocking (recommended)"
         echo "  2) Manual DNS       — you add records to your own DNS server/router"
         echo ""
-        read -p "  DNS option [1/2, default 1]: " -r _dns_choice </dev/tty
+        local _dns_choice
+        read -r -p "  Select [1]: " _dns_choice </dev/tty
         echo ""
         if [[ "${_dns_choice:-1}" == "2" ]]; then
             use_pihole=false
@@ -273,14 +270,14 @@ generate_env_interactive() {
         
         echo "You selected the development profile which includes git hosting."
         echo ""
-        echo "Choose which git service to install:"
+        echo "Select which git service to install:"
         echo ""
         echo "  1) None   - Skip git service (Coder IDE only)"
-        echo "  2) Gitea  - Lightweight, fast self-hosted git (default)"
+        echo "  2) Gitea  - Lightweight, fast self-hosted git (recommended)"
         echo ""
-        
+
         local git_choice
-        read -r -p "  Choice [1-2, default 2 = Gitea]: " git_choice </dev/tty
+        read -r -p "  Select [2]: " git_choice </dev/tty
         git_choice="${git_choice:-2}"
         
         case "$git_choice" in
@@ -332,23 +329,23 @@ generate_env_interactive() {
         fi
         echo ""
 
-        # ════════════════════════════════════════════════════════════════
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         # Part 1 — Chat Frontend
-        # ════════════════════════════════════════════════════════════════
-        echo -e "\033[1m── Chat Frontend ─────────────────────────────────────────────\033[0m"
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo -e "${BOLD}  Chat Frontend${NC}"
+        echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
         echo "Ollama (LLM backend, ~4GB RAM) is always installed."
-        echo "Choose which chat UI(s) to add:"
+        echo "Select which chat UI(s) to add (space-separated for multiple, e.g. '2 3'):"
         echo ""
         echo "  1) None        - No chat UI (Ollama API + SearXNG only)"
         echo "  2) Open WebUI  - Clean, polished UI for local models   (~2GB RAM)  [recommended]"
         echo "  3) LibreChat   - Multi-provider: OpenAI, Anthropic, Ollama, and more (~1.5GB RAM)"
         echo "  4) AnythingLLM - Document Q&A with RAG and vector DB   (~2GB RAM)"
         echo ""
-        echo "Enter numbers space-separated (e.g. '2 3'), press Enter for Open WebUI:"
-        echo ""
 
         local ai_frontend_input
-        read -p "Chat frontend [Enter=2 (Open WebUI)]: " -r ai_frontend_input </dev/tty
+        read -r -p "  Select [2]: " ai_frontend_input </dev/tty
         ai_frontend_input="${ai_frontend_input:-2}"
 
         if [[ "$ai_frontend_input" == "1" ]]; then
@@ -373,27 +370,30 @@ generate_env_interactive() {
 
         echo ""
 
-        # ════════════════════════════════════════════════════════════════
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         # Part 2 — Additional AI Backend Services
-        # ════════════════════════════════════════════════════════════════
-        echo -e "\033[1m── Additional AI Services ────────────────────────────────────\033[0m"
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo -e "${BOLD}  Additional AI Services${NC}"
+        echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
         echo "Always included with the AI profile:"
         echo "  ✓ SearXNG  - Privacy-focused search engine         (~1GB RAM)"
         echo "  ✓ Whisper  - OpenAI Whisper speech-to-text API     (~4GB RAM)"
         echo ""
         echo "Optional extras:"
-        echo "  1) LocalAI - OpenAI-compatible local API server    (~4GB RAM)"
-        echo ""
-        echo "Enter numbers to add, or press Enter to skip:"
+        echo "  1) None    - Skip optional extras"
+        echo "  2) LocalAI - OpenAI-compatible local API server    (~4GB RAM)"
         echo ""
 
         local ai_extra_input
-        read -p "Additional services [Enter=none]: " -r ai_extra_input </dev/tty
+        read -r -p "  Select [1]: " ai_extra_input </dev/tty
+        ai_extra_input="${ai_extra_input:-1}"
 
         local -a ai_extra_services=()
         for n in $ai_extra_input; do
             case "$n" in
-                1) ai_extra_services+=("localai") ;;
+                1) ;;  # None — no extras
+                2) ai_extra_services+=("localai") ;;
                 *) log_warn "Unknown additional service option: $n (skipped)" ;;
             esac
         done
@@ -403,29 +403,33 @@ generate_env_interactive() {
 
         echo ""
 
-        # ════════════════════════════════════════════════════════════════
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         # Part 3 — GPU-Accelerated Services (only if GPU detected)
-        # ════════════════════════════════════════════════════════════════
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         if [[ "${GPU_AVAILABLE:-false}" == "true" ]]; then
-            echo -e "\033[1m── GPU-Accelerated Services ──────────────────────────────────\033[0m"
+            echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+            echo -e "${BOLD}  GPU-Accelerated Services${NC}"
+            echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
             echo "Your NVIDIA GPU can accelerate the following services:"
             echo ""
-            echo "  1) GPU Ollama   - GPU-accelerated LLM inference (replaces CPU version)"
-            echo "  2) WhisperX     - Advanced STT with speaker diarization (~8GB VRAM)"
-            echo "  3) PrivateGPT   - Private offline document Q&A          (~4GB VRAM)"
+            echo "  1) None       - No GPU acceleration (use CPU Ollama)"
+            echo "  2) GPU Ollama - GPU-accelerated LLM inference, recommended (~4GB VRAM)"
+            echo "  3) WhisperX   - Advanced STT with speaker diarization      (~8GB VRAM)"
+            echo "  4) PrivateGPT - Private offline document Q&A               (~4GB VRAM)"
             echo ""
-            echo "Enter numbers to enable (e.g. '1 2 3'), or press Enter for GPU Ollama only:"
+            echo "Select numbers to enable, space-separated (e.g. '2 3'). Press Enter for None:"
             echo ""
 
             local ai_gpu_input
-            read -p "GPU services [Enter=1 (GPU Ollama)]: " -r ai_gpu_input </dev/tty
+            read -r -p "  Select [1]: " ai_gpu_input </dev/tty
             ai_gpu_input="${ai_gpu_input:-1}"
 
             for n in $ai_gpu_input; do
                 case "$n" in
-                    1) ai_gpu_services+=("gpu-ollama")   ; use_gpu=true ;;
-                    2) ai_gpu_services+=("whisperx")     ; use_gpu=true ;;
-                    3) ai_gpu_services+=("privategpt")   ; use_gpu=true ;;
+                    1) ;;  # None — CPU Ollama only
+                    2) ai_gpu_services+=("gpu-ollama")   ; use_gpu=true ;;
+                    3) ai_gpu_services+=("whisperx")     ; use_gpu=true ;;
+                    4) ai_gpu_services+=("privategpt")   ; use_gpu=true ;;
                     *) log_warn "Unknown GPU service option: $n (skipped)" ;;
                 esac
             done
@@ -792,6 +796,8 @@ generate_env_interactive() {
         echo -e "${BOLD}  Password: $generated_password${NC}"
         echo ""
         log_warn "Change this password after your first login to each service!"
+        echo ""
+        read -rp "  Press Enter to continue..." </dev/tty
     fi
 }
 

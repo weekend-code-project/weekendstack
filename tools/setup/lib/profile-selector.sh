@@ -291,12 +291,12 @@ select_profiles_quick() {
     log_header "Quick Profile Selection"
     
     echo "Available quick deployment options:"
-echo "  1) Foundation    - Core only (recommended starter)"
-        echo "  2) Developer     - Core + Dev + AI services"
-        echo "  3) Productivity  - Core + Productivity + Media"
-        echo "  4) Complete      - All services"
-        echo "  5) Custom        - Choose specific profiles"
-        echo "  (Cloudflare Tunnel, local domain, and Pi-hole are configured in the Access wizard)"
+    echo "  1) Foundation    - Core only (recommended starter)"
+    echo "  2) Developer     - Core + Dev + AI services"
+    echo "  3) Productivity  - Core + Productivity + Media"
+    echo "  4) Complete      - All services"
+    echo "  5) Custom        - Choose specific profiles"
+    echo "  (Cloudflare Tunnel, local domain, and Pi-hole are configured in the Access wizard)"
     echo ""
     
     local choice
