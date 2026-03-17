@@ -65,7 +65,7 @@ update_env_profiles_only() {
     update_env_var "COMPOSE_PROFILES" "$profiles_string" "$env_file"
     
     # Update metadata
-    local timestamp=$(date +"%Y-%m-%d %H:%M:%S")
+    local timestamp=$(date +"%Y-%m-%dT%H:%M:%S")
     update_env_var "SETUP_DATE" "$timestamp" "$env_file"
     update_env_var "SELECTED_PROFILES" "$profiles_string" "$env_file"
     
@@ -809,7 +809,7 @@ add_setup_metadata() {
     local selected_profiles=("$@")
     
     # Add setup metadata to .env file
-    local timestamp=$(date +"%Y-%m-%d %H:%M:%S")
+    local timestamp=$(date +"%Y-%m-%dT%H:%M:%S")
     local profiles_string="${selected_profiles[*]}"
     profiles_string="${profiles_string// /,}"
     
