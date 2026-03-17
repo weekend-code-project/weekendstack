@@ -394,6 +394,37 @@ setup_coder_github_ssh_key() {
     echo ""
 }
 
+# Trigger the first speedtest immediately after setup so the Glance widget
+# has data without waiting for the first scheduled run (default: hourly).
+# Uses 'artisan schedule:run' which invokes the CheckForScheduledSpeedtests
+# callback — no API token or credentials required.
+provision_speedtest_initial_run() {
+    local max_wait=60  # seconds to wait for container to be healthy
+    local waited=0
+
+    # Only run if speedtest-tracker is in the deployed profiles
+    if ! docker ps --format '{{.Names}}' 2>/dev/null | grep -q '^speedtest-tracker$'; then
+        return 0
+    fi
+
+    log_step "Running initial speedtest..."
+
+    # Wait for the container to be fully ready
+    while (( waited < max_wait )); do
+        if docker exec speedtest-tracker php /app/www/artisan about --only=environment 2>/dev/null | grep -q 'Production'; then
+            break
+        fi
+        sleep 3
+        (( waited += 3 )) || true
+    done
+
+    if docker exec speedtest-tracker php /app/www/artisan schedule:run 2>/dev/null | grep -q 'Running'; then
+        log_success "Speedtest queued — results visible in Glance within ~60s"
+    else
+        log_warn "Could not trigger initial speedtest — it will run on its scheduled interval"
+    fi
+}
+
 # Prompt for the Kavita API key used by the Glance widget.
 # Called after services are started (so Kavita is accessible).
 # Saves KAVITA_API_KEY to .env; glance-generator skips the widget when the key is empty.
@@ -941,6 +972,9 @@ main_setup() {
             fi
         fi
         start_services_with_profiles "${selected_profiles[@]}"
+
+        # Trigger the first speedtest so the Glance widget has data immediately
+        provision_speedtest_initial_run
 
         # Deploy Coder templates if dev profile was selected (or 'all')
         if [[ " ${selected_profiles[*]} " =~ " dev " ]] || [[ " ${selected_profiles[*]} " =~ " all " ]]; then
