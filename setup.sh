@@ -253,14 +253,19 @@ check_prerequisites() {
         log_success "Disk space: ${available_disk}GB available"
     fi
     
-    # Check memory (need at least 8GB)
+    # Check memory (16GB recommended for the full stack, especially AI services)
     if check_command free; then
         local total_memory=$(free -g | awk '/^Mem:/{print $2}')
+        export TOTAL_MEMORY_GB=$total_memory
         if ((total_memory < 8)); then
-            log_warn "Low memory: ${total_memory}GB (recommended: 8GB+)"
+            log_warn "Low memory: ${total_memory}GB (minimum 8GB, 16GB recommended)"
+        elif ((total_memory < 16)); then
+            log_warn "Memory: ${total_memory}GB — 16GB+ recommended if you plan to use AI services"
         else
             log_success "Memory: ${total_memory}GB available"
         fi
+    else
+        export TOTAL_MEMORY_GB=999
     fi
     
     # Check for GPU (informational)

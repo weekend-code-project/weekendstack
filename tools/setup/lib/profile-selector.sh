@@ -13,8 +13,19 @@ declare -A PROFILES=(
     ["monitoring"]="Uptime and update monitoring (Uptime Kuma, WUD)"
     ["productivity"]="Business apps (Vaultwarden, Paperless, NocoDB, N8N)"
     ["dev"]="Development tools (Coder, Gitea)"
-    ["ai"]="AI & LLM services (Ollama, Open WebUI, LocalAI)"
+    ["ai"]="AI & LLM services (Ollama, Open WebUI, SearXNG)"
     ["media"]="Media management (Kavita, Navidrome, Immich)"
+)
+
+# RAM requirements per profile (approximate, for display only)
+declare -A PROFILE_RAM=(
+    ["all"]="32GB+ RAM"
+    ["core"]="~1GB RAM"
+    ["monitoring"]="~1GB RAM"
+    ["productivity"]="~12GB RAM"
+    ["dev"]="~5GB RAM"
+    ["ai"]="~9GB RAM base (16GB+ strongly recommended)"
+    ["media"]="~7GB RAM"
 )
 
 # Core profile is always included (required for basic functionality)
@@ -183,7 +194,12 @@ select_profiles_interactive() {
         echo ""
         for i in $(seq 1 ${#PROFILE_ORDER[@]}); do
             local profile="${PROFILE_ORDER[$((i-1))]}"
-            printf "  %d) %-12s - %s\n" "$i" "$profile" "${PROFILES[$profile]}"
+            local ram_hint="${PROFILE_RAM[$profile]:-}"
+            if [[ -n "$ram_hint" ]]; then
+                printf "  %d) %-12s - %-52s (%s)\n" "$i" "$profile" "${PROFILES[$profile]}" "$ram_hint"
+            else
+                printf "  %d) %-12s - %s\n" "$i" "$profile" "${PROFILES[$profile]}"
+            fi
         done
         echo ""
         echo "Enter profile numbers (space-separated) or press Enter for 'all':"
@@ -238,6 +254,31 @@ select_profiles_interactive() {
             log_success "Combined profiles: ${final_profiles[*]}"
         else
             log_success "Selected profiles: ${final_profiles[*]}"
+        fi
+
+        # Warn if AI profile is selected but system RAM is below 16GB
+        local _has_ai_in_final=false
+        for _fp in "${final_profiles[@]}"; do
+            if [[ "$_fp" == "ai" || "$_fp" == "all" ]]; then
+                _has_ai_in_final=true
+                break
+            fi
+        done
+        local _total_mem
+        _total_mem=$(free -g 2>/dev/null | awk '/^Mem:/{print $2}')
+        _total_mem="${_total_mem:-999}"
+        if $_has_ai_in_final && (( _total_mem < 16 )); then
+            echo ""
+            echo -e "\033[1;33m  ⚠ WARNING: AI profile selected but only ${_total_mem}GB RAM detected.\033[0m"
+            echo "  Ollama and AI model inference work best with 16GB or more."
+            echo "  On ${_total_mem}GB you can run small models (e.g. qwen2.5:0.5b, gemma:2b)."
+            echo "  Large models (7B+) will be very slow or fail to load."
+            echo ""
+            read -p "  Continue with AI profile anyway? [y/N]: " -r _ai_warn_yn </dev/tty
+            if [[ ! "$_ai_warn_yn" =~ ^[Yy]$ ]]; then
+                echo "Installation cancelled. Re-run setup and choose profiles without AI." >&2
+                exit 0
+            fi
         fi
         echo ""
     } >&2

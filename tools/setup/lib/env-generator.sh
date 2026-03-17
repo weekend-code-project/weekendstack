@@ -301,60 +301,152 @@ generate_env_interactive() {
     # STEP: AI Chat Frontend Selection (only if ai profile selected)
     # ========================================================================
     local -a ai_frontends=()
+    local -a ai_extra_services=()
+    local -a ai_gpu_services=()
     local use_gpu=false
     
     if $has_ai; then
         _step=$((_step + 1))
         clear
         show_progress $_step $total_steps "AI Services Configuration"
-        
-        # GPU detection
+
+        # ── RAM warning ────────────────────────────────────────────────────
+        local _ai_total_mem
+        _ai_total_mem=$(free -g 2>/dev/null | awk '/^Mem:/{print $2}')
+        _ai_total_mem="${_ai_total_mem:-${TOTAL_MEMORY_GB:-999}}"
+        if (( _ai_total_mem < 16 )); then
+            echo ""
+            echo -e "\033[1;33m  ⚠ WARNING: Only ${_ai_total_mem}GB RAM detected.\033[0m"
+            echo "  AI services (Ollama + models) work best with 16GB or more."
+            echo "  With ${_ai_total_mem}GB you can run small models (e.g. qwen2.5:0.5b, gemma:2b)."
+            echo "  Large models (7B+) will be very slow or may fail to load."
+            echo ""
+        fi
+
+        # ── GPU detection ────────────────────────────────────────────────
         if [[ "${GPU_AVAILABLE:-false}" == "true" ]]; then
-            log_success "NVIDIA GPU detected — Ollama will use GPU acceleration"
-            use_gpu=true
+            log_success "NVIDIA GPU detected — GPU-accelerated inference is available"
+            use_gpu=false  # confirmed below when user picks GPU services
         else
-            log_info "No GPU detected — Ollama will run on CPU"
+            log_info "No GPU detected — Ollama will run on CPU (slower inference)"
         fi
         echo ""
-        
-        echo "You selected AI services. Ollama (LLM backend) and SearXNG (search) are"
-        echo "always installed. Choose which chat frontend(s) to add:"
+
+        # ════════════════════════════════════════════════════════════════
+        # Part 1 — Chat Frontend
+        # ════════════════════════════════════════════════════════════════
+        echo -e "\033[1m── Chat Frontend ─────────────────────────────────────────────\033[0m"
+        echo "Ollama (LLM backend, ~4GB RAM) is always installed."
+        echo "Choose which chat UI(s) to add:"
         echo ""
-        echo "  1) None           - Skip chat frontends (Ollama API only)"
-        echo "  2) Open WebUI     - Clean, polished interface for local models (recommended)"
-        echo "  3) LibreChat      - Multi-provider (OpenAI, Anthropic, Ollama, and more)"
-        echo "  4) AnythingLLM    - Document Q&A with RAG and vector DB"
-        echo "  5) LocalAI        - OpenAI-compatible API server for local models"
+        echo "  1) None        - No chat UI (Ollama API + SearXNG only)"
+        echo "  2) Open WebUI  - Clean, polished UI for local models   (~2GB RAM)  [recommended]"
+        echo "  3) LibreChat   - Multi-provider: OpenAI, Anthropic, Ollama, and more (~1.5GB RAM)"
+        echo "  4) AnythingLLM - Document Q&A with RAG and vector DB   (~2GB RAM)"
         echo ""
-        echo "Enter numbers space-separated (e.g. '2 3'), press Enter for all, or '1' for none:"
+        echo "Enter numbers space-separated (e.g. '2 3'), press Enter for Open WebUI:"
         echo ""
-        
+
         local ai_frontend_input
-        read -p "AI frontend selection [Enter=all]: " -r ai_frontend_input </dev/tty
-        
-        if [[ -z "$ai_frontend_input" ]]; then
-            ai_frontends=("open-webui" "librechat" "anythingllm" "localai")
-            log_info "Installing all AI frontends: Open WebUI, LibreChat, AnythingLLM, LocalAI"
-        elif [[ "$ai_frontend_input" == "1" ]]; then
+        read -p "Chat frontend [Enter=2 (Open WebUI)]: " -r ai_frontend_input </dev/tty
+        ai_frontend_input="${ai_frontend_input:-2}"
+
+        if [[ "$ai_frontend_input" == "1" ]]; then
             ai_frontends=()
             log_info "No chat frontend selected — Ollama API only"
         else
             for n in $ai_frontend_input; do
                 case "$n" in
+                    1) ;;  # explicit none — ignore any trailing numbers
                     2) ai_frontends+=("open-webui") ;;
                     3) ai_frontends+=("librechat") ;;
                     4) ai_frontends+=("anythingllm") ;;
-                    5) ai_frontends+=("localai") ;;
-                    *) log_warn "Unknown AI frontend option: $n (skipped)" ;;
+                    *) log_warn "Unknown frontend option: $n (skipped)" ;;
                 esac
             done
             if [[ ${#ai_frontends[@]} -gt 0 ]]; then
-                log_success "Selected AI frontends: ${ai_frontends[*]}"
+                log_success "Selected AI frontend(s): ${ai_frontends[*]}"
             else
                 log_info "No valid frontend selected — Ollama API only"
             fi
         fi
-        
+
+        echo ""
+
+        # ════════════════════════════════════════════════════════════════
+        # Part 2 — Additional AI Backend Services
+        # ════════════════════════════════════════════════════════════════
+        echo -e "\033[1m── Additional AI Services ────────────────────────────────────\033[0m"
+        echo "Always included with the AI profile:"
+        echo "  ✓ SearXNG  - Privacy-focused search engine         (~1GB RAM)"
+        echo "  ✓ Whisper  - OpenAI Whisper speech-to-text API     (~4GB RAM)"
+        echo ""
+        echo "Optional extras:"
+        echo "  1) LocalAI - OpenAI-compatible local API server    (~4GB RAM)"
+        echo ""
+        echo "Enter numbers to add, or press Enter to skip:"
+        echo ""
+
+        local ai_extra_input
+        read -p "Additional services [Enter=none]: " -r ai_extra_input </dev/tty
+
+        local -a ai_extra_services=()
+        for n in $ai_extra_input; do
+            case "$n" in
+                1) ai_extra_services+=("localai") ;;
+                *) log_warn "Unknown additional service option: $n (skipped)" ;;
+            esac
+        done
+        if [[ ${#ai_extra_services[@]} -gt 0 ]]; then
+            log_success "Additional AI services: ${ai_extra_services[*]}"
+        fi
+
+        echo ""
+
+        # ════════════════════════════════════════════════════════════════
+        # Part 3 — GPU-Accelerated Services
+        # ════════════════════════════════════════════════════════════════
+        echo -e "\033[1m── GPU-Accelerated Services ──────────────────────────────────\033[0m"
+        if [[ "${GPU_AVAILABLE:-false}" == "true" ]]; then
+            echo "Your NVIDIA GPU can accelerate the following services:"
+        else
+            echo -e "\033[1;33m  ⚠ The following services REQUIRE an NVIDIA GPU.\033[0m"
+            echo "  They will not function without one."
+            echo "  You may still select them now if you plan to add a GPU later."
+        fi
+        echo ""
+        echo "  1) GPU Ollama   - GPU-accelerated LLM inference (replaces CPU version)"
+        echo "  2) WhisperX     - Advanced STT with speaker diarization (~8GB VRAM)  [GPU required]"
+        echo "  3) PrivateGPT   - Private offline document Q&A          (~4GB VRAM)  [GPU required]"
+        echo ""
+        if [[ "${GPU_AVAILABLE:-false}" == "true" ]]; then
+            echo "Enter numbers to enable (e.g. '1 2 3'), or press Enter for GPU Ollama only (1):"
+            local _gpu_default="1"
+        else
+            echo "Enter numbers to enable (e.g. '1 2 3'), or press Enter to skip all GPU services:"
+            local _gpu_default=""
+        fi
+        echo ""
+
+        local ai_gpu_input
+        read -p "GPU services [Enter=${_gpu_default:-(none)}]: " -r ai_gpu_input </dev/tty
+        ai_gpu_input="${ai_gpu_input:-$_gpu_default}"
+
+        local -a ai_gpu_services=()
+        for n in $ai_gpu_input; do
+            case "$n" in
+                1) ai_gpu_services+=("gpu-ollama")   ; use_gpu=true ;;
+                2) ai_gpu_services+=("whisperx")     ; use_gpu=true ;;
+                3) ai_gpu_services+=("privategpt")   ; use_gpu=true ;;
+                *) log_warn "Unknown GPU service option: $n (skipped)" ;;
+            esac
+        done
+        if $use_gpu; then
+            log_success "GPU profile enabled: ${ai_gpu_services[*]}"
+        else
+            log_info "No GPU services selected"
+        fi
+
         log_success "AI service configuration complete"
     fi
     
@@ -486,8 +578,11 @@ generate_env_interactive() {
         else
             echo "  AI frontends:     none (Ollama API only)"
         fi
+        if [[ ${#ai_extra_services[@]} -gt 0 ]]; then
+            echo "  AI extras:        ${ai_extra_services[*]}"
+        fi
         if $use_gpu; then
-            echo "  GPU:              enabled (nvidia)"
+            echo "  GPU services:     ${ai_gpu_services[*]:-gpu}"
         fi
     fi
     echo ""
@@ -638,13 +733,18 @@ generate_env_interactive() {
     log_step "Generating compose profile list..."
     local profiles_csv=$(IFS=, ; echo "${selected_profiles[*]}")
     
-    # Append sub-profile choices (git service, AI frontends)
+    # Append sub-profile choices (git service, AI frontends, AI extras)
     if $has_dev && [[ "$git_service" != "none" ]]; then
         profiles_csv="${profiles_csv},${git_service}"
     fi
     if $has_ai && [[ ${#ai_frontends[@]} -gt 0 ]]; then
         for fe in "${ai_frontends[@]}"; do
             profiles_csv="${profiles_csv},${fe}"
+        done
+    fi
+    if $has_ai && [[ ${#ai_extra_services[@]} -gt 0 ]]; then
+        for es in "${ai_extra_services[@]}"; do
+            profiles_csv="${profiles_csv},${es}"
         done
     fi
     if $has_ai && $use_gpu; then
