@@ -356,11 +356,15 @@ setup_coder_github_ssh_key() {
         log_success "GitHub CLI installed"
     fi
 
-    # Authenticate with GitHub (device flow — opens browser)
+    # Authenticate with GitHub (device flow)
     echo ""
     log_info "Authenticating with GitHub..."
-    echo -e "  ${YELLOW}A browser window will open (or copy the code shown below).${NC}"
-    echo -e "  ${YELLOW}Log in as the GitHub user who owns your private repos.${NC}"
+    echo "  A one-time code will appear below. Open this URL in your browser"
+    echo "  and enter the code to authorise:"
+    echo ""
+    echo "    https://github.com/login/device"
+    echo ""
+    echo "  Log in as the GitHub user who owns your private repos."
     echo ""
     if ! gh auth login --git-protocol ssh --web 2>&1; then
         log_warn "GitHub auth failed. Add the key manually at: https://github.com/settings/ssh/new"
