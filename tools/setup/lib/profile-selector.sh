@@ -247,7 +247,8 @@ select_profiles_interactive() {
     else
         final_profiles=("${new_profiles[@]}")
     fi
-    
+
+    local _ai_cancelled=false
     {
         echo ""
         if [[ "$layer_mode" == "add" ]]; then
@@ -276,14 +277,19 @@ select_profiles_interactive() {
             echo ""
             read -p "  Continue with AI profile anyway? [y/N]: " -r _ai_warn_yn </dev/tty
             if [[ ! "$_ai_warn_yn" =~ ^[Yy]$ ]]; then
-                echo "Setup cancelled. Re-run and choose profiles without AI." >&2
-                echo "SETUP_CANCELLED"
-                return 0
+                echo "Setup cancelled. Run ./setup.sh again and choose profiles without AI." >&2
+                _ai_cancelled=true
             fi
         fi
         echo ""
     } >&2
-    
+
+    # Check cancellation flag AFTER the >&2 block so the sentinel goes to stdout
+    if $_ai_cancelled; then
+        echo "SETUP_CANCELLED"
+        return 0
+    fi
+
     # Echo to stdout for capture by calling script
     echo "${final_profiles[@]}"
 }
