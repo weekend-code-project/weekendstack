@@ -304,7 +304,7 @@ generate_env_interactive() {
     local -a ai_extra_services=()
     local -a ai_gpu_services=()
     local use_gpu=false
-    
+
     if $has_ai; then
         _step=$((_step + 1))
         clear
@@ -404,47 +404,38 @@ generate_env_interactive() {
         echo ""
 
         # ════════════════════════════════════════════════════════════════
-        # Part 3 — GPU-Accelerated Services
+        # Part 3 — GPU-Accelerated Services (only if GPU detected)
         # ════════════════════════════════════════════════════════════════
-        echo -e "\033[1m── GPU-Accelerated Services ──────────────────────────────────\033[0m"
         if [[ "${GPU_AVAILABLE:-false}" == "true" ]]; then
+            echo -e "\033[1m── GPU-Accelerated Services ──────────────────────────────────\033[0m"
             echo "Your NVIDIA GPU can accelerate the following services:"
-        else
-            echo -e "\033[1;33m  ⚠ The following services REQUIRE an NVIDIA GPU.\033[0m"
-            echo "  They will not function without one."
-            echo "  You may still select them now if you plan to add a GPU later."
-        fi
-        echo ""
-        echo "  1) GPU Ollama   - GPU-accelerated LLM inference (replaces CPU version)"
-        echo "  2) WhisperX     - Advanced STT with speaker diarization (~8GB VRAM)  [GPU required]"
-        echo "  3) PrivateGPT   - Private offline document Q&A          (~4GB VRAM)  [GPU required]"
-        echo ""
-        if [[ "${GPU_AVAILABLE:-false}" == "true" ]]; then
-            echo "Enter numbers to enable (e.g. '1 2 3'), or press Enter for GPU Ollama only (1):"
-            local _gpu_default="1"
-        else
-            echo "Enter numbers to enable (e.g. '1 2 3'), or press Enter to skip all GPU services:"
-            local _gpu_default=""
-        fi
-        echo ""
+            echo ""
+            echo "  1) GPU Ollama   - GPU-accelerated LLM inference (replaces CPU version)"
+            echo "  2) WhisperX     - Advanced STT with speaker diarization (~8GB VRAM)"
+            echo "  3) PrivateGPT   - Private offline document Q&A          (~4GB VRAM)"
+            echo ""
+            echo "Enter numbers to enable (e.g. '1 2 3'), or press Enter for GPU Ollama only:"
+            echo ""
 
-        local ai_gpu_input
-        read -p "GPU services [Enter=${_gpu_default:-(none)}]: " -r ai_gpu_input </dev/tty
-        ai_gpu_input="${ai_gpu_input:-$_gpu_default}"
+            local ai_gpu_input
+            read -p "GPU services [Enter=1 (GPU Ollama)]: " -r ai_gpu_input </dev/tty
+            ai_gpu_input="${ai_gpu_input:-1}"
 
-        local -a ai_gpu_services=()
-        for n in $ai_gpu_input; do
-            case "$n" in
-                1) ai_gpu_services+=("gpu-ollama")   ; use_gpu=true ;;
-                2) ai_gpu_services+=("whisperx")     ; use_gpu=true ;;
-                3) ai_gpu_services+=("privategpt")   ; use_gpu=true ;;
-                *) log_warn "Unknown GPU service option: $n (skipped)" ;;
-            esac
-        done
-        if $use_gpu; then
-            log_success "GPU profile enabled: ${ai_gpu_services[*]}"
+            for n in $ai_gpu_input; do
+                case "$n" in
+                    1) ai_gpu_services+=("gpu-ollama")   ; use_gpu=true ;;
+                    2) ai_gpu_services+=("whisperx")     ; use_gpu=true ;;
+                    3) ai_gpu_services+=("privategpt")   ; use_gpu=true ;;
+                    *) log_warn "Unknown GPU service option: $n (skipped)" ;;
+                esac
+            done
+            if $use_gpu; then
+                log_success "GPU profile enabled: ${ai_gpu_services[*]}"
+            else
+                log_info "No GPU services selected"
+            fi
         else
-            log_info "No GPU services selected"
+            log_info "No GPU detected — GPU-accelerated services skipped"
         fi
 
         log_success "AI service configuration complete"
