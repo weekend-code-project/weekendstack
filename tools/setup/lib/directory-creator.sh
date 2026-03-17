@@ -103,7 +103,7 @@ create_base_directories() {
         fi
     done
 
-    echo "  Base directories: $created created, $exists existing"
+    echo "  • Base directories: $created created, $exists existing"
 }
 
 create_config_directories() {
@@ -122,7 +122,7 @@ create_config_directories() {
         fi
     done
 
-    echo "  Configuration directories: $created created, $exists existing"
+    echo "  • Configuration directories: $created created, $exists existing"
 
     # Special permissions for certain directories
     local traefik_auth_dir="$stack_dir/config/traefik/auth"
@@ -280,7 +280,7 @@ create_files_directories() {
         fi
     done
 
-    echo "  User data directories: $created created, $exists existing"
+    echo "  • User data directories: $created created, $exists existing"
 
     # Set ownership to PUID:PGID from .env
     if [[ -f "$stack_dir/.env" ]]; then
@@ -315,9 +315,9 @@ create_workspace_directory() {
             log_warn "Cannot create workspace directory: $workspace_dir (may need sudo or parent doesn't exist)"
             return 1
         }
-        echo "  Workspace: $workspace_dir (created)"
+        echo "  • Workspace: $workspace_dir (created)"
     else
-        echo "  Workspace: $workspace_dir"
+        echo "  • Workspace: $workspace_dir"
     fi
 
     # Set ownership
@@ -429,7 +429,7 @@ validate_directory_structure() {
         return 1
     fi
 
-    echo "  Validation: all required paths present"
+    echo "  ✓ Validation: all required paths present"
     return 0
 }
 
