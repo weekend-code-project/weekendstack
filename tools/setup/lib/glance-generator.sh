@@ -64,6 +64,7 @@ generate_glance_config() {
 
     local has_networking; _glance_has_infra_profile "networking" && has_networking=true || has_networking=false
     local has_pihole;     _glance_has_infra_profile "pihole"     && has_pihole=true     || has_pihole=false
+    local has_whisper;    _glance_has_infra_profile "whisper"    && has_whisper=true    || has_whisper=false
     local has_monitoring; _glance_has_profile "monitoring" && has_monitoring=true || has_monitoring=false
     local has_ai;         _glance_has_profile "ai"         && has_ai=true         || has_ai=false
     local has_media;      _glance_has_profile "media"      && has_media=true      || has_media=false
@@ -203,6 +204,12 @@ GLANCE_EOF
                 url: ${url_ollama}
                 check-url: http://${host_ip}:11434/api/tags
                 icon: si:ollama
+GLANCE_EOF
+    fi
+
+    # Whisper (optional, own profile)
+    if $has_whisper; then
+        cat >> "$output" << GLANCE_EOF
               - title: Whisper
                 url: ${url_whisper}
                 check-url: http://${host_ip}:9002
@@ -236,6 +243,9 @@ GLANCE_EOF
               {{ \$ul   := .JSON.Float "data.upload" }}
               {{ \$ping := .JSON.Float "data.ping" }}
               {{ \$ts   := .JSON.String "data.created_at" }}
+              {{ if eq \$ts "" }}
+              <div style="text-align:center; opacity:0.6; padding:1rem;">No results yet — first test runs on schedule</div>
+              {{ else }}
               <div style="display: flex; justify-content: space-around; margin: 1rem 0;">
                 <div style="text-align: center;">
                   <div style="font-size: 1.4rem;">{{ printf "%.1f" \$dl }}</div>
@@ -251,6 +261,7 @@ GLANCE_EOF
                 </div>
               </div>
               <div style="text-align: center; font-size: 0.8rem; opacity: 0.5;">{{ \$ts }}</div>
+              {{ end }}
 GLANCE_EOF
 
     # Media profile widgets

@@ -394,6 +394,43 @@ setup_coder_github_ssh_key() {
     echo ""
 }
 
+# Mint a Speedtest Tracker API token via artisan and save it to .env.
+# Requires the speedtest-tracker container to be running.
+provision_speedtest_api_token() {
+    local env_file="$SCRIPT_DIR/.env"
+
+    # Skip if already set
+    local existing
+    existing=$(grep "^SPEEDTEST_TRACKER_API_TOKEN=" "$env_file" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
+    if [[ -n "$existing" ]]; then
+        return 0
+    fi
+
+    if ! docker ps --filter "name=speedtest-tracker" --format "{{.Names}}" 2>/dev/null | grep -q "speedtest-tracker"; then
+        return 0
+    fi
+
+    log_step "Provisioning Speedtest Tracker API token..."
+
+    local token
+    token=$(docker exec speedtest-tracker php artisan tinker \
+        --execute="echo \App\Models\User::first()?->createToken('glance')?->plainTextToken;" \
+        2>/dev/null | grep -v "^>" | grep -v "^$" | tail -1)
+
+    if [[ -n "$token" && "$token" != "null" ]]; then
+        if grep -q "^SPEEDTEST_TRACKER_API_TOKEN=" "$env_file"; then
+            sed -i "s|^SPEEDTEST_TRACKER_API_TOKEN=.*|SPEEDTEST_TRACKER_API_TOKEN=$token|" "$env_file"
+        else
+            echo "SPEEDTEST_TRACKER_API_TOKEN=$token" >> "$env_file"
+        fi
+        log_success "Speedtest API token saved to .env"
+        # Restart glance so it picks up the new token
+        docker restart glance 2>/dev/null || true
+    else
+        log_warn "Could not mint Speedtest API token — Glance widget will show 'no data' until first login"
+    fi
+}
+
 # Prompt for the Kavita API key used by the Glance widget.
 # Called after services are started (so Kavita is accessible).
 # Saves KAVITA_API_KEY to .env; glance-generator skips the widget when the key is empty.
@@ -941,6 +978,9 @@ main_setup() {
             fi
         fi
         start_services_with_profiles "${selected_profiles[@]}"
+
+        # Mint speedtest API token and save to .env so Glance widget can authenticate
+        provision_speedtest_api_token
 
         # Deploy Coder templates if dev profile was selected (or 'all')
         if [[ " ${selected_profiles[*]} " =~ " dev " ]] || [[ " ${selected_profiles[*]} " =~ " all " ]]; then
