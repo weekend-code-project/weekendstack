@@ -13,19 +13,19 @@ BOLD='\033[1m'
 
 # Logging functions — ALL write to stderr so they don't corrupt $() captures
 log_info() {
-    echo -e "${BLUE}ℹ${NC} $*" >&2
+    echo -e "  ${BLUE}ℹ${NC} $*" >&2
 }
 
 log_success() {
-    echo -e "${GREEN}✓${NC} $*" >&2
+    echo -e "  ${GREEN}✓${NC} $*" >&2
 }
 
 log_warn() {
-    echo -e "${YELLOW}⚠${NC} $*" >&2
+    echo -e "  ${YELLOW}⚠${NC} $*" >&2
 }
 
 log_error() {
-    echo -e "${RED}✗${NC} $*" >&2
+    echo -e "  ${RED}✗${NC} $*" >&2
 }
 
 log_header() {
@@ -37,7 +37,7 @@ log_header() {
 }
 
 log_step() {
-    echo -e "${CYAN}→${NC} $*" >&2
+    echo -e "  ${CYAN}→${NC} $*" >&2
 }
 
 # Progress indicator

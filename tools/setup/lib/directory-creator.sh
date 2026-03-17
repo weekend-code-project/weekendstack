@@ -187,8 +187,8 @@ _ensure_from_example() {
         if [[ -f "$example_path" ]]; then
             if ! cp "$example_path" "$file_path" 2>/dev/null; then
                 log_warn "$(basename "$file_path"): could not be created — permission denied"
-                log_warn "  Setup will continue, but this file must exist before starting services."
-                log_warn "  Fix: sudo cp '$example_path' '$file_path'"
+                echo "      Setup will continue, but this file must exist before starting services." >&2
+                echo "      Fix: sudo cp '$example_path' '$file_path'" >&2
             fi
         else
             touch "$file_path" 2>/dev/null || \
