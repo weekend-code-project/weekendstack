@@ -38,6 +38,8 @@ start_registry_cache() {
     # Check if already running
     if is_cache_running; then
         log_info "Registry cache already running"
+        # Still ensure the Docker mirror is configured (may have been lost after restart)
+        configure_docker_mirror
         return 0
     fi
     
@@ -125,10 +127,13 @@ configure_docker_mirror() {
     local daemon_config="/etc/docker/daemon.json"
     
     # Check if we have permission to modify daemon config
+    # Direct write access not needed if passwordless sudo is available
     if [[ ! -w "$daemon_config" ]] && [[ ! -w "$(dirname "$daemon_config")" ]]; then
-        log_info "Running without daemon config modification (works fine via explicit config)"
-        log_info "Registry cache will still work for all image pulls"
-        return 0
+        if ! sudo -n true 2>/dev/null; then
+            log_warn "Cannot configure Docker mirror (no write access to /etc/docker/ and sudo unavailable)"
+            log_warn "Docker Hub pulls will go directly to the registry"
+            return 0
+        fi
     fi
     
     # Backup existing config
