@@ -278,8 +278,8 @@ select_profiles_interactive() {
             echo "  Large models (7B+) will be very slow or fail to load." >&2
             echo "" >&2
             local _yn
-            read -r -p "  Continue with AI profile anyway? [y/N]: " _yn </dev/tty
-            if [[ ! "${_yn}" =~ ^[Yy]$ ]]; then
+            read -r -p "  Continue with AI profile anyway? [Y/n]: " _yn </dev/tty
+            if [[ "${_yn}" =~ ^[Nn]$ ]]; then
                 echo "  Setup cancelled. Run ./setup.sh again and choose profiles without AI." >&2
                 echo "SETUP_CANCELLED"   # → stdout → captured by caller
                 return 0
