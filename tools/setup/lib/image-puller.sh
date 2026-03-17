@@ -29,29 +29,22 @@ show_pull_plan() {
     
     clear
     log_header "Image Pull Plan"
-    
-    echo "╔════════════════════════════════════════════════════════════════╗"
-    echo "║                    DOCKER IMAGE PULL SUMMARY                   ║"
-    echo "╠════════════════════════════════════════════════════════════════╣"
-    echo "║                                                                ║"
-    printf "║  Total Unique Images to Pull: %-32s ║\n" "$unique_count"
-    echo "║                                                                ║"
-    echo "║  Images by Registry:                                           ║"
-    printf "║    • Docker Hub (rate limited):   %-28s ║\n" "$dockerhub_count images"
-    printf "║    • GitHub Container Registry:   %-28s ║\n" "$ghcr_count images"
-    printf "║    • LinuxServer.io:              %-28s ║\n" "$lscr_count images"
-    printf "║    • Other registries:            %-28s ║\n" "$((${data[GCR_COUNT]:-0} + ${data[QUAY_COUNT]:-0} + ${data[OTHER_COUNT]:-0})) images"
-    echo "║                                                                ║"
-    
-    if [[ $shared_count -gt 0 ]]; then
-        echo "║  Optimization:                                                 ║"
-        printf "║    • %d shared images will only be pulled once              ║\n" "$shared_count"
-        echo "║      (postgres, redis, alpine used across services)           ║"
-        echo "║                                                                ║"
-    fi
-    
-    echo "╚════════════════════════════════════════════════════════════════╝"
+
+    local other_count=$(( ${data[GCR_COUNT]:-0} + ${data[QUAY_COUNT]:-0} + ${data[OTHER_COUNT]:-0} ))
+
+    log_info "Total images to pull: $unique_count"
     echo ""
+    echo "  By registry:"
+    echo "  • Docker Hub (rate limited):   $dockerhub_count images"
+    echo "  • GitHub Container Registry:   $ghcr_count images"
+    echo "  • LinuxServer.io:              $lscr_count images"
+    echo "  • Other registries:            $other_count images"
+    echo ""
+
+    if [[ $shared_count -gt 0 ]]; then
+        log_info "$shared_count shared images (postgres, redis, alpine) will only be pulled once"
+        echo ""
+    fi
     
     if [[ "$SETUP_MODE" == "interactive" ]]; then
         echo "This process may take several minutes depending on your connection."

@@ -399,7 +399,7 @@ display_summary_to_console() {
     
     if [[ -n "$running_services" ]]; then
         printf "  %-25s %s\n" "SERVICE" "PORT"
-        printf "  %-25s %s\n" "-------" "----"
+        echo ""
         while IFS= read -r service; do
             # Get base service name (remove stack prefix if present)
             local base_name=$(echo "$service" | sed 's/^[^-]*-//' | sed 's/-1$//')
