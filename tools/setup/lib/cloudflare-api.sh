@@ -437,7 +437,8 @@ cf_pick_existing_tunnel() {
     local i=1
     local ids=() names=()
     while IFS='|' read -r tid tname; do
-        echo "  $i. $tname (ID: ${tid:0:8}...)" >&2
+        echo "  $i. $tname" >&2
+        echo "     ID: ${tid:0:8}..." >&2
         ids+=("$tid")
         names+=("$tname")
         i=$((i + 1))
@@ -446,7 +447,7 @@ cf_pick_existing_tunnel() {
     echo "" >&2
 
     local choice
-    read -r -p "  Select tunnel [1]: " choice </dev/tty
+    read -r -p "  Select [0-$((i-1))]: " choice </dev/tty
     choice=${choice:-1}
 
     if [[ "$choice" == "0" ]]; then
