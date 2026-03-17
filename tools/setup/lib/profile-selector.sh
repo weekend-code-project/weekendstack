@@ -8,24 +8,24 @@ source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 # Traefik/Pi-hole/Tunnel sub-profiles are auto-added by setup based on
 # the Access Configuration wizard answers.
 declare -A PROFILES=(
-    ["all"]="All services"
-    ["core"]="Foundation (Glance, Speedtest)"
-    ["monitoring"]="Uptime and update monitoring (Uptime Kuma, WUD)"
-    ["productivity"]="Business apps (Vaultwarden, Paperless, NocoDB, N8N)"
-    ["dev"]="Development tools (Coder, Gitea)"
-    ["ai"]="AI & LLM services (Ollama, Open WebUI, SearXNG)"
-    ["media"]="Media management (Kavita, Navidrome, Immich)"
+    ["all"]="Everything"
+    ["core"]="Dashboard & speedtest"
+    ["monitoring"]="Uptime & update monitoring"
+    ["productivity"]="Business & productivity apps"
+    ["dev"]="Development tools"
+    ["ai"]="AI & LLM services"
+    ["media"]="Media management"
 )
 
 # RAM requirements per profile (approximate, for display only)
 declare -A PROFILE_RAM=(
-    ["all"]="32GB+ RAM"
-    ["core"]="~1GB RAM"
-    ["monitoring"]="~1GB RAM"
-    ["productivity"]="~12GB RAM"
-    ["dev"]="~5GB RAM"
-    ["ai"]="~9GB RAM base (16GB+ strongly recommended)"
-    ["media"]="~7GB RAM"
+    ["all"]="32GB+"
+    ["core"]="~1GB"
+    ["monitoring"]="~1GB"
+    ["productivity"]="~12GB"
+    ["dev"]="~5GB"
+    ["ai"]="~9GB"
+    ["media"]="~7GB"
 )
 
 # Core profile is always included (required for basic functionality)
@@ -196,7 +196,7 @@ select_profiles_interactive() {
             local profile="${PROFILE_ORDER[$((i-1))]}"
             local ram_hint="${PROFILE_RAM[$profile]:-}"
             if [[ -n "$ram_hint" ]]; then
-                printf "  %d) %-12s - %-52s (%s)\n" "$i" "$profile" "${PROFILES[$profile]}" "$ram_hint"
+                printf "  %d) %-14s - %-34s (%s)\n" "$i" "$profile" "${PROFILES[$profile]}" "$ram_hint"
             else
                 printf "  %d) %-12s - %s\n" "$i" "$profile" "${PROFILES[$profile]}"
             fi
