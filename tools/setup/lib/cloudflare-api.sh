@@ -420,16 +420,18 @@ cf_pick_existing_tunnel() {
     local tunnel_list
     tunnel_list=$(echo "$tunnels_json" | jq -r '.result[] | select(.deleted_at == null) | "\(.id)|\(.name)"' 2>/dev/null)
     
+    echo "" >&2
+
     if [[ -z "$tunnel_list" ]]; then
-        log_info "No existing tunnels found in this account"
-        return 1
+        log_info "No existing tunnels found in this account — will create a new one." >&2
+        echo ""   # empty string = signal "create new"
+        return 0
     fi
-    
+
     local count
     count=$(echo "$tunnel_list" | wc -l)
-    
-    echo "" >&2
-    log_info "Found $count existing tunnel(s) in your account:"
+
+    log_info "Found $count existing tunnel(s) in your account:" >&2
     echo "" >&2
 
     local i=1
@@ -440,12 +442,17 @@ cf_pick_existing_tunnel() {
         names+=("$tname")
         i=$((i + 1))
     done <<< "$tunnel_list"
+    echo "  0. Create a new tunnel" >&2
     echo "" >&2
 
     local choice
-    echo -n "Select tunnel [1]: " >&2
-    read -r choice </dev/tty
+    read -r -p "  Select tunnel [1]: " choice </dev/tty
     choice=${choice:-1}
+
+    if [[ "$choice" == "0" ]]; then
+        echo ""   # empty string = signal "create new"
+        return 0
+    fi
 
     if [[ "$choice" -ge 1 ]] && [[ "$choice" -lt "$i" ]] 2>/dev/null; then
         local idx=$((choice - 1))
@@ -482,12 +489,18 @@ cf_setup_tunnel_automated() {
         return 1
     fi
     
-    # Check for existing tunnels — offer to reuse before creating new
+    # Check for existing tunnels — offer to reuse or create new
     local tunnel_id
     local picked
+    local _pick_rc
     picked=$(cf_pick_existing_tunnel "$account_id" "$tunnel_name")
-    
-    if [[ $? -eq 0 && -n "$picked" ]]; then
+    _pick_rc=$?
+
+    if [[ $_pick_rc -ne 0 ]]; then
+        log_error "Failed to retrieve tunnel list from Cloudflare"
+        return 1
+    elif [[ -n "$picked" ]]; then
+        # User selected an existing tunnel
         tunnel_id=$(echo "$picked" | cut -d'|' -f1)
         tunnel_name=$(echo "$picked" | cut -d'|' -f2)
         log_success "Using tunnel: $tunnel_name (ID: $tunnel_id)"
@@ -502,8 +515,27 @@ cf_setup_tunnel_automated() {
             fi
         fi
     else
-        log_error "No tunnel selected. Create a tunnel first at https://one.dash.cloudflare.com/ (Networks → Tunnels)."
-        return 1
+        # Empty picked = create new tunnel
+        echo "" >&2
+        local new_name
+        read -r -p "  New tunnel name [${tunnel_name}]: " new_name </dev/tty
+        [[ -n "$new_name" ]] && tunnel_name="$new_name"
+
+        log_step "Creating tunnel: $tunnel_name..."
+        local create_response
+        create_response=$(cf_create_tunnel "$account_id" "$tunnel_name")
+        if [[ $? -ne 0 ]]; then
+            log_error "Failed to create tunnel"
+            return 1
+        fi
+
+        tunnel_id=$(echo "$create_response" | jq -r '.result.id // empty')
+        if [[ -z "$tunnel_id" ]]; then
+            log_error "Could not get tunnel ID from create response"
+            return 1
+        fi
+
+        log_success "Created tunnel: $tunnel_name (ID: $tunnel_id)"
     fi
     
     # Export account ID so update_env_cloudflare can fetch the tunnel token
