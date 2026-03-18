@@ -56,7 +56,8 @@ show_usage() {
     echo "      • Remove data/ directory (application state)"
     echo "      • Remove files/ directory (your documents/photos)"
     echo "      • Remove config/ directory (certificates/settings)"
-    echo "      • Remove ALL Docker images (re-download required)"
+    echo "      • Prune Docker builder cache"
+    echo "      • Keep: Docker images (no re-download needed)"
     echo ""
     echo -e "    ${RED}Level 3${NC} - Complete Cleanup (nuclear)"
     echo "      • Everything from Level 2"
@@ -80,7 +81,7 @@ show_usage() {
     echo "NOTES:"
     echo "    • .env is always backed up to _trash/ before removal"
     echo "    • Level 1 deletes databases but keeps tagged images, files/, config/, data/"
-    echo "    • Level 2 deletes everything including Docker images (ensures disk space for re-setup)"
+    echo "    • Level 2 deletes everything except Docker images (re-setup without re-downloading)"
     echo "    • Level 3 deletes absolutely everything"
     echo "    • Use ./setup.sh to reinstall after cleanup"
     echo ""
@@ -141,14 +142,13 @@ show_cleanup_level_menu() {
     echo "   • Prune dangling/leftover build images"
     echo -e "   ${GREEN}✓ Keep:${NC} Tagged images, data/, files/, config/"
     echo ""
-    echo -e "${YELLOW}2)${NC} ${BOLD}Full Reset${NC} (re-staging - removes all data and images)"
+    echo -e "${YELLOW}2)${NC} ${BOLD}Full Reset${NC} (re-staging - removes all data, keeps images)"
     echo "   • Everything from Level 1"
     echo "   • Remove data/ directory (application state)"
     echo "   • Remove files/ directory (your documents/photos)"
     echo "   • Remove config/ directory (certificates/settings)"
     echo "   • Prune Docker builder cache"
-    echo "   • Remove ALL Docker images (re-download required)"
-    echo -e "   ${YELLOW}Note:${NC} Images removed to ensure disk space for re-setup"
+    echo -e "   ${GREEN}✓ Keep:${NC} Images (no re-download needed)"
     echo ""
     echo -e "${RED}3)${NC} ${BOLD}Complete Cleanup${NC} (nuclear - removes everything)"
     echo "   • Everything from Level 2"
@@ -221,16 +221,18 @@ show_confirmation() {
         2)
             echo -e "${BOLD}${YELLOW}Level 2 - Full Reset${NC} (re-staging)"
             echo ""
-            echo -e "${RED}${BOLD}⚠️  WARNING: This will DELETE databases, files, config, and images! ⚠️${NC}"
+            echo -e "${RED}${BOLD}⚠️  WARNING: This will DELETE databases, files, and config! ⚠️${NC}"
             echo ""
             echo "This will:"
             echo -e "  ${RED}✗${NC} Everything from Level 1"
             echo -e "  ${RED}✗${NC} Remove data/ directory (application state)"
             echo -e "  ${RED}✗${NC} Remove files/ directory (YOUR documents/photos/media)"
             echo -e "  ${RED}✗${NC} Remove config/ directory (certificates/settings)"
-            echo -e "  ${RED}✗${NC} Remove ALL Docker images"
             echo ""
-            echo -e "${YELLOW}Note:${NC} Images are removed so re-setup has sufficient disk space"
+            echo "This will keep:"
+            echo -e "  ${GREEN}✓${NC} Docker images (no re-download needed)"
+            echo ""
+            echo -e "${YELLOW}Note:${NC} Images are kept - quick re-setup possible"
             ;;
         3)
             echo -e "${BOLD}${RED}Level 3 - Complete Cleanup${NC} (nuclear)"
@@ -582,6 +584,10 @@ EOF
         echo "- ✓ config/ directory (certificates/settings)" >> "$summary_file"
         echo "- ✓ Tagged Docker images (dangling images pruned)" >> "$summary_file"
     fi
+
+    if [[ "$level" -eq 2 ]]; then
+        echo "- ✓ Docker images (no re-download needed)" >> "$summary_file"
+    fi
     
     echo "- ✓ Docker Compose files" >> "$summary_file"
     echo "- ✓ Documentation (docs/)" >> "$summary_file"
@@ -702,20 +708,13 @@ execute_cleanup() {
         remove_files_and_config
         if [[ "$level" -ge 3 ]]; then _sa=$(get_disk_free); _space_rows+=("$(printf '%-44s %s → %s' 'files/ & config/ removed' "$_sb" "$_sa")"); fi
 
-        # Builder prune — level 2 and above
-        log_header "Pruning Docker Builder Cache"
-        [[ "$level" -ge 3 ]] && _sb=$(get_disk_free)
-        docker builder prune -af 2>&1 | grep -E 'Total reclaimed|^deleted:' | tail -3 || true
-        log_success "Builder cache pruned"
-        if [[ "$level" -ge 3 ]]; then _sa=$(get_disk_free); _space_rows+=("$(printf '%-44s %s → %s' 'Docker builder cache pruned' "$_sb" "$_sa")"); fi
-
-        # Level 2: prune ALL images — containers are gone, so everything is unused.
-        # This is essential: keeping images after a full install (~120GB) leaves no
-        # room on disk to re-run setup, causing build failures.
+        # Level 2: builder prune only — images are kept for faster re-setup
         if [[ "$level" -eq 2 ]]; then
-            log_header "Removing All Docker Images"
-            docker image prune -af 2>&1 | grep -E 'Total reclaimed|^deleted:' | tail -3 || true
-            log_success "All images removed (re-download required on next setup)"
+            log_header "Pruning Docker Builder Cache"
+            [[ "$level" -ge 3 ]] && _sb=$(get_disk_free)
+            docker builder prune -af 2>&1 | grep -E 'Total reclaimed|^deleted:' | tail -3 || true
+            log_success "Builder cache pruned"
+            if [[ "$level" -ge 3 ]]; then _sa=$(get_disk_free); _space_rows+=("$(printf '%-44s %s → %s' 'Docker builder cache pruned' "$_sb" "$_sa")"); fi
         fi
     fi
 
