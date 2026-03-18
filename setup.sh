@@ -405,7 +405,7 @@ setup_coder_github_ssh_key() {
 # Uses 'artisan schedule:run' which invokes the CheckForScheduledSpeedtests
 # callback — no API token or credentials required.
 provision_speedtest_initial_run() {
-    local max_wait=120  # seconds to wait for container to be healthy
+    local max_wait=30  # seconds to wait for container to be ready
     local waited=0
 
     # Only run if speedtest-tracker is in the deployed profiles
@@ -413,37 +413,29 @@ provision_speedtest_initial_run() {
         return 0
     fi
 
-    log_step "Triggering initial speedtest (this may take 30-60 seconds)..."
-
-    # Wait for the container to be fully ready
+    # Wait for container to be ready
     while (( waited < max_wait )); do
-        if docker exec speedtest-tracker test -f /config/www/database/database.sqlite 2>/dev/null; then
+        if curl -s http://localhost:8765 >/dev/null 2>&1; then
             break
         fi
         sleep 2
         (( waited += 2 )) || true
     done
 
-    # Give Laravel a moment to fully initialize
-    sleep 5
-
-    # Try multiple methods to trigger a speedtest
-    local triggered=false
-    
-    # Method 1: Try the speedtest:run command (most reliable)
-    if docker exec speedtest-tracker php /app/www/artisan app:run-speedtest 2>/dev/null; then
-        triggered=true
-        log_success "Initial speedtest started — results will appear in Glance within ~60 seconds"
-    elif docker exec speedtest-tracker php /app/www/artisan speedtest:run 2>/dev/null; then
-        triggered=true
-        log_success "Initial speedtest started — results will appear in Glance within ~60 seconds"
-    # Method 2: Force the scheduled task to run
-    elif docker exec speedtest-tracker php /app/www/artisan schedule:run --force 2>/dev/null | grep -q 'Running'; then
-        triggered=true
-        log_success "Initial speedtest queued — results will appear in Glance within ~60 seconds"
+    # Check if the app needs initial setup (shows "Getting Started" page)
+    if curl -sL http://localhost:8765 2>&1 | grep -q "Getting Started"; then
+        log_info "Speedtest Tracker requires initial setup through the web interface"
+        log_info "Visit http://${HOST_IP}:8765 to complete setup and run your first test"
+        return 0
     fi
+
+    # If app is already configured, try to trigger a test
+    log_step "Triggering initial speedtest (this may take 30-60 seconds)..."
     
-    if ! $triggered; then
+    # The only reliable way is through the scheduler
+    if docker exec speedtest-tracker php /app/www/artisan schedule:run 2>/dev/null | grep -q "Running"; then
+        log_success "Speedtest triggered — results will appear in Glance within ~60 seconds"
+    else
         log_info "Speedtest will run automatically on its schedule (${SPEEDTEST_SCHEDULE:-0 2 * * *})"
         log_info "Or trigger manually via the web UI at http://${HOST_IP}:8765"
     fi
