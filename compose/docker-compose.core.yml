@@ -144,7 +144,8 @@ services:
       APP_KEY: base64:02KsGT9QvDav6HUStRvjqDjUqFKa96RDS7SibKfZ1VI=
       APP_URL: ${SPEEDTEST_APP_URL:-http://${HOST_IP}:${SPEEDTEST_PORT:-8765}}
       SPEEDTEST_SCHEDULE: ${SPEEDTEST_SCHEDULE:-0 2 * * *}
-      # Admin credentials — only applied on first run (DB init)
+      # Admin credentials — UNRELIABLE: These env vars don't consistently seed the admin user
+      # Complete initial setup via web UI: http://${HOST_IP}:8765
       APP_ADMIN_EMAIL: ${DEFAULT_ADMIN_EMAIL:-admin@example.com}
       APP_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-password}
     volumes:
