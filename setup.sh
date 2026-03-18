@@ -367,12 +367,9 @@ setup_coder_github_ssh_key() {
     echo ""
     log_info "Authenticating with GitHub..."
     echo ""
-    echo "  Steps:"
-    echo "    1. A browser window will open to https://github.com/login/device"
-    echo "    2. Copy and paste the authorization code that appears"
-    echo "    3. Log in as the GitHub user who owns your private repos"
-    echo ""
-    read -rp "  Press Enter when you are ready to continue..."
+    echo "  GitHub will show you a one-time code and URL."
+    echo "  Copy the code, open the URL, paste the code, and authorize."
+    echo "  The process will complete automatically once you're done."
     echo ""
     
     if ! gh auth login --git-protocol ssh --web 2>&1; then
