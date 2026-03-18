@@ -48,14 +48,15 @@ show_usage() {
     echo "      • Remove .env, docker-compose.custom.yml, SETUP_SUMMARY.md"
     echo "      • Remove all Docker volumes (deletes databases)"
     echo "      • Remove all Docker networks"
-    echo "      • Keep: Docker images, data/, files/, config/"
+    echo "      • Prune dangling/leftover build images
+      • Keep: Tagged images, data/, files/, config/"
     echo ""
     echo -e "    ${YELLOW}Level 2${NC} - Full Reset (re-staging)"
     echo "      • Everything from Level 1"
     echo "      • Remove data/ directory (application state)"
     echo "      • Remove files/ directory (your documents/photos)"
     echo "      • Remove config/ directory (certificates/settings)"
-    echo "      • Keep: Docker images (no re-download needed)"
+    echo "      • Remove ALL Docker images (re-download required)"
     echo ""
     echo -e "    ${RED}Level 3${NC} - Complete Cleanup (nuclear)"
     echo "      • Everything from Level 2"
@@ -78,8 +79,8 @@ show_usage() {
     echo ""
     echo "NOTES:"
     echo "    • .env is always backed up to _trash/ before removal"
-    echo "    • Level 1 deletes databases but keeps files/, config/, data/"
-    echo "    • Level 2 deletes everything except Docker images"
+    echo "    • Level 1 deletes databases but keeps tagged images, files/, config/, data/"
+    echo "    • Level 2 deletes everything including Docker images (ensures disk space for re-setup)"
     echo "    • Level 3 deletes absolutely everything"
     echo "    • Use ./setup.sh to reinstall after cleanup"
     echo ""
@@ -137,15 +138,17 @@ show_cleanup_level_menu() {
     echo "   • Remove .env, docker-compose.custom.yml, SETUP_SUMMARY.md"
     echo "   • Remove all Docker volumes (deletes databases)"
     echo "   • Remove all Docker networks"
-    echo -e "   ${GREEN}✓ Keep:${NC} Images, data/, files/, config/"
+    echo "   • Prune dangling/leftover build images"
+    echo -e "   ${GREEN}✓ Keep:${NC} Tagged images, data/, files/, config/"
     echo ""
-    echo -e "${YELLOW}2)${NC} ${BOLD}Full Reset${NC} (re-staging - removes all data)"
+    echo -e "${YELLOW}2)${NC} ${BOLD}Full Reset${NC} (re-staging - removes all data and images)"
     echo "   • Everything from Level 1"
     echo "   • Remove data/ directory (application state)"
     echo "   • Remove files/ directory (your documents/photos)"
     echo "   • Remove config/ directory (certificates/settings)"
     echo "   • Prune Docker builder cache"
-    echo -e "   ${GREEN}✓ Keep:${NC} Images (no re-download needed)"
+    echo "   • Remove ALL Docker images (re-download required)"
+    echo -e "   ${YELLOW}Note:${NC} Images removed to ensure disk space for re-setup"
     echo ""
     echo -e "${RED}3)${NC} ${BOLD}Complete Cleanup${NC} (nuclear - removes everything)"
     echo "   • Everything from Level 2"
@@ -210,7 +213,7 @@ show_confirmation() {
             echo -e "  ${RED}✗${NC} Remove ALL Docker networks"
             echo ""
             echo "This will keep:"
-            echo -e "  ${GREEN}✓${NC} Docker images (no re-download needed)"
+            echo -e "  ${GREEN}✓${NC} Tagged Docker images (build artifacts pruned)"
             echo -e "  ${GREEN}✓${NC} Application data (data/)"
             echo -e "  ${GREEN}✓${NC} User files (files/)"
             echo -e "  ${GREEN}✓${NC} Configuration (config/)"
@@ -218,18 +221,16 @@ show_confirmation() {
         2)
             echo -e "${BOLD}${YELLOW}Level 2 - Full Reset${NC} (re-staging)"
             echo ""
-            echo -e "${RED}${BOLD}⚠️  WARNING: This will DELETE databases, files, and config! ⚠️${NC}"
+            echo -e "${RED}${BOLD}⚠️  WARNING: This will DELETE databases, files, config, and images! ⚠️${NC}"
             echo ""
             echo "This will:"
             echo -e "  ${RED}✗${NC} Everything from Level 1"
             echo -e "  ${RED}✗${NC} Remove data/ directory (application state)"
             echo -e "  ${RED}✗${NC} Remove files/ directory (YOUR documents/photos/media)"
             echo -e "  ${RED}✗${NC} Remove config/ directory (certificates/settings)"
+            echo -e "  ${RED}✗${NC} Remove ALL Docker images"
             echo ""
-            echo "This will keep:"
-            echo -e "  ${GREEN}✓${NC} Docker images (no re-download needed)"
-            echo ""
-            echo -e "${YELLOW}Note:${NC} Images are kept - quick re-setup possible"
+            echo -e "${YELLOW}Note:${NC} Images are removed so re-setup has sufficient disk space"
             ;;
         3)
             echo -e "${BOLD}${RED}Level 3 - Complete Cleanup${NC} (nuclear)"
@@ -563,8 +564,10 @@ EOF
         echo "- ✓ config/ directory (certificates/settings deleted)" >> "$summary_file"
     fi
     
-    if [[ "$level" -ge 3 ]]; then
+    if [[ "$level" -ge 2 ]]; then
         echo "- ✓ All Docker images" >> "$summary_file"
+    elif [[ "$level" -ge 3 ]]; then
+        echo "- ✓ All Docker images (deep prune)" >> "$summary_file"
     fi
     
     cat >> "$summary_file" << EOF
@@ -577,10 +580,7 @@ EOF
         echo "- ✓ Application data (data/)" >> "$summary_file"
         echo "- ✓ files/ directory (your documents/photos)" >> "$summary_file"
         echo "- ✓ config/ directory (certificates/settings)" >> "$summary_file"
-    fi
-    
-    if [[ "$level" -lt 3 ]]; then
-        echo "- ✓ Docker images (no re-download needed)" >> "$summary_file"
+        echo "- ✓ Tagged Docker images (dangling images pruned)" >> "$summary_file"
     fi
     
     echo "- ✓ Docker Compose files" >> "$summary_file"
@@ -672,6 +672,26 @@ execute_cleanup() {
 
     remove_networks
 
+    # Level 1: prune dangling/build-leftover images and warn if images are eating disk
+    if [[ "$level" -eq 1 ]]; then
+        log_header "Pruning Dangling Images"
+        docker image prune -f 2>&1 | grep -E 'Total reclaimed|deleted:' | tail -3 || true
+        log_success "Dangling images pruned"
+        # Warn if tagged images are consuming a large fraction of the disk
+        local _img_bytes _disk_bytes _img_gb _disk_gb
+        _img_bytes=$(docker system df --format '{{.Size}}' 2>/dev/null | head -1 | sed 's/[^0-9.]//g' || echo 0)
+        _disk_gb=$(df -BG / | awk 'NR==2 {gsub("G","",$2); print $2}')
+        _free_gb=$(df -BG / | awk 'NR==2 {gsub("G","",$4); print $4}')
+        if [[ "$_free_gb" -lt 10 ]] 2>/dev/null; then
+            echo ""
+            log_warn "Only ${_free_gb}GB free after cleanup."
+            log_warn "Docker images are consuming most of your ${_disk_gb}GB disk."
+            log_warn "Re-running setup.sh may fail. To free image space, run:"
+            log_warn "  docker image prune -af"
+            log_warn "Or re-run uninstall and choose Level 2 or 3."
+        fi
+    fi
+
     # Level 2+: data directory, user files, config, builder cache
     if [[ "$level" -ge 2 ]]; then
         [[ "$level" -ge 3 ]] && _sb=$(get_disk_free)
@@ -688,6 +708,15 @@ execute_cleanup() {
         docker builder prune -af 2>&1 | grep -E 'Total reclaimed|^deleted:' | tail -3 || true
         log_success "Builder cache pruned"
         if [[ "$level" -ge 3 ]]; then _sa=$(get_disk_free); _space_rows+=("$(printf '%-44s %s → %s' 'Docker builder cache pruned' "$_sb" "$_sa")"); fi
+
+        # Level 2: prune ALL images — containers are gone, so everything is unused.
+        # This is essential: keeping images after a full install (~120GB) leaves no
+        # room on disk to re-run setup, causing build failures.
+        if [[ "$level" -eq 2 ]]; then
+            log_header "Removing All Docker Images"
+            docker image prune -af 2>&1 | grep -E 'Total reclaimed|^deleted:' | tail -3 || true
+            log_success "All images removed (re-download required on next setup)"
+        fi
     fi
 
     # Level 3: images + deep prune

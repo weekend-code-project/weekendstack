@@ -243,9 +243,16 @@ check_prerequisites() {
         echo "Add user to docker group: sudo usermod -aG docker \$USER"
     fi
     
-    # Check disk space (need at least 50GB)
+    # Check disk space (need at least 50GB; <5GB is a hard stop)
     local available_disk=$(df -BG . | awk 'NR==2 {print $4}' | sed 's/G//')
-    if ((available_disk < 50)); then
+    if ((available_disk < 5)); then
+        log_error "Critically low disk space: ${available_disk}GB available."
+        log_error "Setup cannot proceed — Docker builds will fail with 'No space left on device'."
+        log_error "Free space first by removing unused Docker images:"
+        log_error "  docker image prune -af"
+        log_error "Or run: sudo ./uninstall.sh --level 2 --non-interactive (then re-run setup)"
+        exit 1
+    elif ((available_disk < 50)); then
         log_warn "Low disk space: ${available_disk}GB available (recommended: 50GB+)"
     else
         log_success "Disk space: ${available_disk}GB available"
