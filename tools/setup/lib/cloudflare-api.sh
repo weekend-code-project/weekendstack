@@ -434,7 +434,10 @@ cf_pick_existing_tunnel() {
     log_info "Found $count existing tunnel(s) in your account:" >&2
     echo "" >&2
 
-    local i=1
+    echo "  1. Create a new tunnel" >&2
+    echo "" >&2
+
+    local i=2
     local ids=() names=()
     while IFS='|' read -r tid tname; do
         echo "  $i. $tname" >&2
@@ -443,20 +446,19 @@ cf_pick_existing_tunnel() {
         names+=("$tname")
         i=$((i + 1))
     done <<< "$tunnel_list"
-    echo "  0. Create a new tunnel" >&2
     echo "" >&2
 
     local choice
-    read -r -p "  Select [0-$((i-1))]: " choice </dev/tty
+    read -r -p "  Select [1-$((i-1))]: " choice </dev/tty
     choice=${choice:-1}
 
-    if [[ "$choice" == "0" ]]; then
+    if [[ "$choice" == "1" ]]; then
         echo ""   # empty string = signal "create new"
         return 0
     fi
 
-    if [[ "$choice" -ge 1 ]] && [[ "$choice" -lt "$i" ]] 2>/dev/null; then
-        local idx=$((choice - 1))
+    if [[ "$choice" -ge 2 ]] && [[ "$choice" -lt "$i" ]] 2>/dev/null; then
+        local idx=$((choice - 2))
         echo "${ids[$idx]}|${names[$idx]}"
         return 0
     fi
