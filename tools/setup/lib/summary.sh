@@ -361,90 +361,129 @@ add_external_service_urls() {
 display_summary_to_console() {
     local stack_dir="${SCRIPT_DIR}"
     local lab_domain=$(grep "^LAB_DOMAIN=" "$stack_dir/.env" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ' || echo "lab")
+    local base_domain=$(grep "^BASE_DOMAIN=" "$stack_dir/.env" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ' || echo "localhost")
     local host_ip=$(grep "^HOST_IP=" "$stack_dir/.env" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
-    local selected_profiles=$(grep "^SELECTED_PROFILES=" "$stack_dir/.env" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+    local tunnel_enabled=$(grep "^CLOUDFLARE_TUNNEL_ENABLED=" "$stack_dir/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' ' || echo "false")
     
-    # Check if networking profile is selected
-    local has_networking=false
-    if [[ "$selected_profiles" =~ networking ]] || [[ "$selected_profiles" =~ all ]]; then
-        has_networking=true
-    fi
+    # Define service subdomain mappings  
+    declare -A service_subdomains=(
+        # Core
+        ["glance"]="home"
+        ["speedtest-tracker"]="speedtest"
+        # Networking
+        ["traefik"]="traefik"
+        ["pihole"]="pihole"
+        # Dev
+        ["coder"]="coder"
+        ["gitea"]="gitea"
+        ["registry"]="registry"
+        ["it-tools"]="it-tools"
+        # AI
+        ["ollama"]="ollama"
+        ["open-webui"]="openwebui"
+        ["searxng"]="searxng"
+        ["localai"]="localai"
+        ["anythingllm"]="anythingllm"
+        ["whisper"]="whisper"
+        ["whisperx"]="whisperx"
+        ["librechat"]="librechat"
+        ["privategpt"]="privategpt"
+        # Productivity
+        ["nocodb"]="nocodb"
+        ["n8n"]="n8n"
+        ["paperless-ngx"]="paperless"
+        ["activepieces"]="activepieces"
+        ["postiz"]="postiz"
+        ["focalboard"]="focalboard"
+        ["trilium"]="trilium"
+        ["vikunja"]="vikunja"
+        ["excalidraw"]="excalidraw"
+        ["docmost"]="docmost"
+        ["filebrowser"]="filebrowser"
+        ["hoarder"]="hoarder"
+        ["bytestash"]="bytestash"
+        ["resourcespace"]="resourcespace"
+        # Media
+        ["immich"]="immich"
+        ["kavita"]="kavita"
+        ["navidrome"]="navidrome"
+        # Monitoring
+        ["wud"]="wud"
+        ["uptime-kuma"]="uptime-kuma"
+    )
     
-    local domain_mode=$(grep "^DOMAIN_MODE=" "$stack_dir/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
-    local has_local_domain=false
-    [[ "$domain_mode" == "pihole" || "$domain_mode" == "both" ]] && has_local_domain=true
+    # Get running services (exclude databases and support services)
+    local running_services=$(docker compose ps --format "{{.Service}}" 2>/dev/null | grep -v -E 'database|db|postgres|redis|init|socat|guacd|error-pages|cloudflare-tunnel' | sort -u || true)
     
     clear
     echo ""
     log_header "Setup Complete!"
     
     echo ""
-    echo -e "${BOLD}Services:${NC}"
+    echo -e "${BOLD}Quick Start:${NC}"
+    echo "  Open your dashboard: $(if [[ "$tunnel_enabled" == "true" ]]; then echo "https://home.${base_domain}"; else echo "http://${host_ip}:8080"; fi)"
     echo ""
     
-    # Define service port mappings
-    declare -A service_ports=(
-        ["glance"]="8080"
-        ["coder"]="7080"
-        ["traefik"]="8081"
-        ["pihole"]="8091"
-        ["gitea"]="3006"
-        ["gitlab"]="8929"
-        ["guacamole"]="8090"
-        ["speedtest-tracker"]="8765"
-    )
-    
-    # Get running services (exclude databases and support services)
-    local running_services=$(docker compose ps --format "{{.Name}}" 2>/dev/null | grep -v -E 'database|db|postgres|redis|init|socat|guacd|error-pages|cloudflare-tunnel|registry' || true)
+    echo -e "${BOLD}Services Running:${NC}"
+    echo ""
     
     if [[ -n "$running_services" ]]; then
-        printf "  %-25s %s\n" "SERVICE" "PORT"
-        echo ""
+        printf "  %-25s %s\n" "SERVICE" "ACCESS URL"
+        printf "  %-25s %s\n" "$(printf '%.0s─' {1..25})" "$(printf '%.0s─' {1..50})"
+        
         while IFS= read -r service; do
-            # Get base service name (remove stack prefix if present)
-            local base_name=$(echo "$service" | sed 's/^[^-]*-//' | sed 's/-1$//')
+            local subdomain="${service_subdomains[$service]:-$service}"
+            local url=""
             
-            # Check if we have port mapping for this service
-            if [[ -n "${service_ports[$base_name]}" ]]; then
-                printf "  %-25s %s\n" "$base_name" "${service_ports[$base_name]}"
+            if [[ "$tunnel_enabled" == "true" ]]; then
+                # External tunnel URL
+                url="https://${subdomain}.${base_domain}"
+            else
+                # Local IP access
+                url="http://${host_ip}:* (check docker ps)"
             fi
+            
+            printf "  %-25s %s\n" "$service" "$url"
         done <<< "$running_services"
+    else
+        echo "  No services running yet. Start them with: docker compose up -d"
     fi
     
     echo ""
-    echo -e "${BOLD}Access:${NC}"
-    echo "  Base IP: $host_ip"
-    echo ""
-    echo "  Examples:"
-    echo "    Direct IP:   http://$host_ip:8080 (glance)"
-    echo "    Direct IP:   http://$host_ip:7080 (coder)"
+    echo -e "${BOLD}Access Methods:${NC}"
     
-    if $has_local_domain; then
+    if [[ "$tunnel_enabled" == "true" ]]; then
+        echo "  Using Cloudflare Tunnel (external access enabled)"
+        echo "  Base Domain: ${base_domain}"
         echo ""
-        echo "  With Pi-hole DNS configured:"
-        echo "    Dashboard:   https://$lab_domain"
-        echo "    Services:    https://coder.$lab_domain"
-        echo "    Admin:       https://pihole.$lab_domain"
+        echo "  Example URLs:"
+        echo "    • Dashboard:   https://home.${base_domain}"
+        echo "    • Coder:       https://coder.${base_domain}"
+        echo "    • Traefik:     https://traefik.${base_domain}"
+    else
+        echo "  Local IP Access: ${host_ip}"
+        echo ""
+        echo "  Common services:"
+        echo "    • Dashboard:   http://${host_ip}:8080"
+        echo "    • Coder:       http://${host_ip}:7080"
+        echo "    • Traefik:     http://${host_ip}:8081"
+        echo "    • Pi-hole:     http://${host_ip}:8091"
+        echo ""
+        echo "  With .${lab_domain} DNS (requires Pi-hole setup):"
+        echo "    • Dashboard:   https://home.${lab_domain}"
+        echo "    • Any service: https://<service>.${lab_domain}"
     fi
     
     echo ""
-    
-    if $has_local_domain; then
-        echo -e "${BOLD}DNS Configuration:${NC}"
-        echo "  Set your device/router DNS to: $host_ip"
-        echo "  This enables .${lab_domain} domain access for all services"
-        echo ""
-    fi
-    
     echo -e "${BOLD}Documentation:${NC}"
-    echo "  • Setup summary: SETUP_SUMMARY.md"
-    echo "  • Service guides: docs/"
+    echo "  • Complete summary: SETUP_SUMMARY.md"
+    echo "  • Service guides:   docs/"
     echo ""
     
     echo -e "${BOLD}Important:${NC}"
-    echo "  • Change default passwords after first login!"
-    echo "  • Focalboard: first account created becomes admin — sign up with your email/password"
-    echo "  • Uptime Kuma: add Docker host in Settings → Docker Hosts → Socket: /var/run/docker.sock"
+    echo "  • CHANGE DEFAULT PASSWORDS after first login!"
+    echo "  • First account created becomes admin for most services"
+    echo "  • Uptime Kuma: add Docker host → Socket: /var/run/docker.sock"
     echo ""
     
     log_success "Your WeekendStack is ready to use!"

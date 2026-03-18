@@ -41,8 +41,15 @@ services:
     ports:
       - "${IMMICH_PORT:-2283}:2283"
     volumes:
-      # NFS-backed upload storage (Docker-managed)
-      - immich-nfs-uploads:/usr/src/app/upload
+      # Default: Local bind mount for photo/video uploads
+      - type: bind
+        source: ${IMMICH_UPLOAD_PATH:-../files/immich/upload}
+        target: /usr/src/app/upload
+        bind:
+          create_host_path: true
+      # Advanced: NFS mount for photo/video storage (requires NFS_PHOTOS_PATH in .env)
+      # Uncomment the line below and comment out the bind mount above to use NFS
+      # - immich-nfs-uploads:/usr/src/app/upload
       - /etc/localtime:/etc/localtime:ro
     environment:
       DB_HOSTNAME: immich-db

@@ -366,13 +366,15 @@ setup_coder_github_ssh_key() {
     # Authenticate with GitHub (device flow)
     echo ""
     log_info "Authenticating with GitHub..."
-    echo "  A one-time code will appear below. Open this URL in your browser"
-    echo "  and enter the code to authorise:"
     echo ""
-    echo "    https://github.com/login/device"
+    echo "  Steps:"
+    echo "    1. A browser window will open to https://github.com/login/device"
+    echo "    2. Copy and paste the authorization code that appears"
+    echo "    3. Log in as the GitHub user who owns your private repos"
     echo ""
-    echo "  Log in as the GitHub user who owns your private repos."
+    read -rp "  Press Enter when you are ready to continue..."
     echo ""
+    
     if ! gh auth login --git-protocol ssh --web 2>&1; then
         log_warn "GitHub auth failed. Add the key manually at: https://github.com/settings/ssh/new"
         return 0
@@ -406,7 +408,7 @@ setup_coder_github_ssh_key() {
 # Uses 'artisan schedule:run' which invokes the CheckForScheduledSpeedtests
 # callback — no API token or credentials required.
 provision_speedtest_initial_run() {
-    local max_wait=60  # seconds to wait for container to be healthy
+    local max_wait=120  # seconds to wait for container to be healthy
     local waited=0
 
     # Only run if speedtest-tracker is in the deployed profiles
@@ -414,21 +416,39 @@ provision_speedtest_initial_run() {
         return 0
     fi
 
-    log_step "Running initial speedtest..."
+    log_step "Triggering initial speedtest (this may take 30-60 seconds)..."
 
     # Wait for the container to be fully ready
     while (( waited < max_wait )); do
-        if docker exec speedtest-tracker php /app/www/artisan about --only=environment 2>/dev/null | grep -q 'Production'; then
+        if docker exec speedtest-tracker test -f /config/www/database/database.sqlite 2>/dev/null; then
             break
         fi
-        sleep 3
-        (( waited += 3 )) || true
+        sleep 2
+        (( waited += 2 )) || true
     done
 
-    if docker exec speedtest-tracker php /app/www/artisan schedule:run 2>/dev/null | grep -q 'Running'; then
-        log_success "Speedtest queued — results visible in Glance within ~60s"
-    else
-        log_warn "Could not trigger initial speedtest — it will run on its scheduled interval"
+    # Give Laravel a moment to fully initialize
+    sleep 5
+
+    # Try multiple methods to trigger a speedtest
+    local triggered=false
+    
+    # Method 1: Try the speedtest:run command (most reliable)
+    if docker exec speedtest-tracker php /app/www/artisan app:run-speedtest 2>/dev/null; then
+        triggered=true
+        log_success "Initial speedtest started — results will appear in Glance within ~60 seconds"
+    elif docker exec speedtest-tracker php /app/www/artisan speedtest:run 2>/dev/null; then
+        triggered=true
+        log_success "Initial speedtest started — results will appear in Glance within ~60 seconds"
+    # Method 2: Force the scheduled task to run
+    elif docker exec speedtest-tracker php /app/www/artisan schedule:run --force 2>/dev/null | grep -q 'Running'; then
+        triggered=true
+        log_success "Initial speedtest queued — results will appear in Glance within ~60 seconds"
+    fi
+    
+    if ! $triggered; then
+        log_info "Speedtest will run automatically on its schedule (${SPEEDTEST_SCHEDULE:-0 2 * * *})"
+        log_info "Or trigger manually via the web UI at http://${HOST_IP}:8765"
     fi
 }
 
@@ -585,8 +605,6 @@ deploy_coder_templates_interactive() {
     echo "  2. Get your session token:"
     echo "     ${coder_url}/cli-auth"
     echo ""
-    read -rp "  Press Enter when you have your token ready..." </dev/tty
-    echo ""
 
     local token=""
     # Use existing token silently if it passes validation
@@ -604,35 +622,34 @@ deploy_coder_templates_interactive() {
     fi
 
     if [[ -z "$token" ]]; then
-        while true; do
-            read -rp "  Paste your Coder session token: " token
-            if [[ -z "$token" ]]; then
-                log_warn "Token cannot be empty. Try again."
-                continue
-            fi
-            # Validate token
-            local user_info
-            user_info=$(curl -sf --max-time 5 \
-                -H "Coder-Session-Token: $token" \
-                "$coder_url/api/v2/users/me" 2>/dev/null || true)
-            if [[ -n "$user_info" ]] && echo "$user_info" | grep -q '"username"'; then
-                local uname
-                uname=$(echo "$user_info" | grep -o '"username":"[^"]*"' | cut -d'"' -f4)
-                log_success "Authenticated as: $uname"
-                break
-            else
-                log_warn "Token invalid or Coder not reachable. Try again."
-                token=""
-            fi
-        done
-
-        # Save token to .env
-        if grep -q "^CODER_SESSION_TOKEN=" "$SCRIPT_DIR/.env" 2>/dev/null; then
-            sed -i "s|^CODER_SESSION_TOKEN=.*|CODER_SESSION_TOKEN=$token|" "$SCRIPT_DIR/.env"
-        else
-            echo "CODER_SESSION_TOKEN=$token" >> "$SCRIPT_DIR/.env"
+        read -rp "  Paste your Coder session token (or press Enter to skip): " token
+        
+        if [[ -z "$token" ]]; then
+            log_warn "No token provided. Skipping Coder template installation."
+            return 0
         fi
-        export CODER_SESSION_TOKEN="$token"
+        
+        # Validate token
+        local user_info
+        user_info=$(curl -sf --max-time 5 \
+            -H "Coder-Session-Token: $token" \
+            "$coder_url/api/v2/users/me" 2>/dev/null || true)
+        if [[ -n "$user_info" ]] && echo "$user_info" | grep -q '"username"'; then
+            local uname
+            uname=$(echo "$user_info" | grep -o '"username":"[^"]*"' | cut -d'"' -f4)
+            log_success "Authenticated as: $uname"
+            
+            # Save token to .env
+            if grep -q "^CODER_SESSION_TOKEN=" "$SCRIPT_DIR/.env" 2>/dev/null; then
+                sed -i "s|^CODER_SESSION_TOKEN=.*|CODER_SESSION_TOKEN=$token|" "$SCRIPT_DIR/.env"
+            else
+                echo "CODER_SESSION_TOKEN=$token" >> "$SCRIPT_DIR/.env"
+            fi
+            export CODER_SESSION_TOKEN="$token"
+        else
+            log_warn "Token invalid or Coder not reachable. Skipping template installation."
+            return 0
+        fi
     fi
 
     # ── Step 3: Deploy templates, showing live progress ───────────────────────
