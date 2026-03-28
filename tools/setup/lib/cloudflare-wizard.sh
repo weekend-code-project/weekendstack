@@ -430,22 +430,35 @@ setup_tunnel_with_api() {
     fi
     export CLOUDFLARE_DOMAIN="$domain"
 
+    if [[ -z "$tunnel_id" || -z "$account_id" ]]; then
+        log_error "Automated tunnel setup returned incomplete Cloudflare metadata"
+        return 1
+    fi
+
     # User may have picked an existing tunnel with a different name
     if [[ -n "$resolved_name" ]]; then
         tunnel_name="$resolved_name"
+    fi
+
+    # Persist the account ID before any follow-up steps. The tunnel creation
+    # result came back through command substitution, so exports from
+    # cf_setup_tunnel_automated are not visible here.
+    export CLOUDFLARE_ACCOUNT_ID="$account_id"
+    if grep -q "^CLOUDFLARE_ACCOUNT_ID=" "$stack_dir/.env"; then
+        sed -i "s/^CLOUDFLARE_ACCOUNT_ID=.*/CLOUDFLARE_ACCOUNT_ID=$account_id/" "$stack_dir/.env"
+    else
+        echo "CLOUDFLARE_ACCOUNT_ID=$account_id" >> "$stack_dir/.env"
     fi
     
     # Create config.yml
     create_tunnel_config "$tunnel_name" "$tunnel_id" "$domain"
     
-    # Update .env with all Cloudflare settings
-    update_env_cloudflare "$tunnel_name" "$tunnel_id" "$domain"
-    
-    # Save account ID
-    if grep -q "^CLOUDFLARE_ACCOUNT_ID=" "$stack_dir/.env"; then
-        sed -i "s/^CLOUDFLARE_ACCOUNT_ID=.*/CLOUDFLARE_ACCOUNT_ID=$account_id/" "$stack_dir/.env"
-    else
-        echo "CLOUDFLARE_ACCOUNT_ID=$account_id" >> "$stack_dir/.env"
+    # Update .env with all Cloudflare settings, including the connector token.
+    if ! update_env_cloudflare "$tunnel_name" "$tunnel_id" "$domain"; then
+        log_error "Cloudflare Tunnel setup is incomplete"
+        log_info "The connector token could not be saved, so the tunnel cannot start yet."
+        log_info "Check the API token permissions, then rerun: ./setup.sh --cloudflare-only"
+        return 1
     fi
     
     echo ""
@@ -687,9 +700,11 @@ EOF
     if [[ -z "$account_id" ]]; then
         account_id=$(grep "^CLOUDFLARE_ACCOUNT_ID=" "$env_file" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
     fi
-    
-    if [[ -n "$account_id" ]]; then
-        local tunnel_token
+
+    local tunnel_token
+    tunnel_token=$(grep "^CLOUDFLARE_TUNNEL_TOKEN=" "$env_file" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+
+    if [[ -z "$tunnel_token" && -n "$account_id" ]]; then
         local max_token_attempts=3
         local attempt=1
         while [[ $attempt -le $max_token_attempts ]]; do
@@ -702,43 +717,48 @@ EOF
             sleep 3
             attempt=$((attempt + 1))
         done
+    elif [[ -z "$tunnel_token" ]]; then
+        log_error "Cloudflare account ID is missing; cannot fetch the connector token."
+        log_info "Rerun the Cloudflare wizard with: ./setup.sh --cloudflare-only"
+        sed -i "s|^CLOUDFLARE_TUNNEL_ENABLED=.*|CLOUDFLARE_TUNNEL_ENABLED=false|" "$env_file" 2>/dev/null || true
+        return 1
+    fi
 
-        if [[ -n "$tunnel_token" ]]; then
-            if grep -q "^CLOUDFLARE_TUNNEL_TOKEN=" "$env_file"; then
-                sed -i "s|^CLOUDFLARE_TUNNEL_TOKEN=.*|CLOUDFLARE_TUNNEL_TOKEN=$tunnel_token|" "$env_file"
-            else
-                echo "CLOUDFLARE_TUNNEL_TOKEN=$tunnel_token" >> "$env_file"
-            fi
-            log_success "Saved tunnel token to .env"
-            # Add 'external' to COMPOSE_PROFILES so the tunnel container starts
-            local _cur_profiles
-            _cur_profiles=$(grep "^COMPOSE_PROFILES=" "$env_file" 2>/dev/null | cut -d'=' -f2)
-            if [[ -n "$_cur_profiles" && "$_cur_profiles" != *"external"* ]]; then
-                sed -i "s|^COMPOSE_PROFILES=.*|COMPOSE_PROFILES=${_cur_profiles},external|" "$env_file"
-                log_info "Added 'external' profile to COMPOSE_PROFILES"
-            elif [[ -z "$_cur_profiles" ]]; then
-                echo "COMPOSE_PROFILES=external" >> "$env_file"
-                log_info "Added 'external' profile to COMPOSE_PROFILES"
-            fi
-            # Ensure DOMAIN_MODE is set to cloudflare (or left as 'both' if already both)
-            local _cur_mode
-            _cur_mode=$(grep "^DOMAIN_MODE=" "$env_file" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
-            if [[ -z "$_cur_mode" ]]; then
-                echo "DOMAIN_MODE=cloudflare" >> "$env_file"
-                log_info "Set DOMAIN_MODE=cloudflare"
-            elif [[ "$_cur_mode" != "cloudflare" && "$_cur_mode" != "both" ]]; then
-                sed -i "s|^DOMAIN_MODE=.*|DOMAIN_MODE=cloudflare|" "$env_file"
-                log_info "Set DOMAIN_MODE=cloudflare"
-            fi
+    if [[ -n "$tunnel_token" ]]; then
+        if grep -q "^CLOUDFLARE_TUNNEL_TOKEN=" "$env_file"; then
+            sed -i "s|^CLOUDFLARE_TUNNEL_TOKEN=.*|CLOUDFLARE_TUNNEL_TOKEN=$tunnel_token|" "$env_file"
         else
-            log_error "Could not retrieve tunnel connector token after $max_token_attempts attempts"
-            log_warn "Tunnel is created but the connector token is missing."
-            log_warn "The cloudflare-tunnel container will not start until a token is available."
-            log_info "To fix this later, run: ./setup.sh --cloudflare-only"
-            # Explicitly mark tunnel as disabled so setup.sh gives a clear message
-            sed -i "s|^CLOUDFLARE_TUNNEL_ENABLED=.*|CLOUDFLARE_TUNNEL_ENABLED=false|" "$env_file" 2>/dev/null || true
-            return 1
+            echo "CLOUDFLARE_TUNNEL_TOKEN=$tunnel_token" >> "$env_file"
         fi
+        log_success "Saved tunnel token to .env"
+        # Add 'external' to COMPOSE_PROFILES so the tunnel container starts
+        local _cur_profiles
+        _cur_profiles=$(grep "^COMPOSE_PROFILES=" "$env_file" 2>/dev/null | cut -d'=' -f2)
+        if [[ -n "$_cur_profiles" && "$_cur_profiles" != *"external"* ]]; then
+            sed -i "s|^COMPOSE_PROFILES=.*|COMPOSE_PROFILES=${_cur_profiles},external|" "$env_file"
+            log_info "Added 'external' profile to COMPOSE_PROFILES"
+        elif [[ -z "$_cur_profiles" ]]; then
+            echo "COMPOSE_PROFILES=external" >> "$env_file"
+            log_info "Added 'external' profile to COMPOSE_PROFILES"
+        fi
+        # Ensure DOMAIN_MODE is set to cloudflare (or left as 'both' if already both)
+        local _cur_mode
+        _cur_mode=$(grep "^DOMAIN_MODE=" "$env_file" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
+        if [[ -z "$_cur_mode" ]]; then
+            echo "DOMAIN_MODE=cloudflare" >> "$env_file"
+            log_info "Set DOMAIN_MODE=cloudflare"
+        elif [[ "$_cur_mode" != "cloudflare" && "$_cur_mode" != "both" ]]; then
+            sed -i "s|^DOMAIN_MODE=.*|DOMAIN_MODE=cloudflare|" "$env_file"
+            log_info "Set DOMAIN_MODE=cloudflare"
+        fi
+    else
+        log_error "Could not retrieve tunnel connector token after $max_token_attempts attempts"
+        log_warn "Tunnel is created but the connector token is missing."
+        log_warn "The cloudflare-tunnel container will not start until a token is available."
+        log_info "To fix this later, run: ./setup.sh --cloudflare-only"
+        # Explicitly mark tunnel as disabled so setup.sh gives a clear message
+        sed -i "s|^CLOUDFLARE_TUNNEL_ENABLED=.*|CLOUDFLARE_TUNNEL_ENABLED=false|" "$env_file" 2>/dev/null || true
+        return 1
     fi
 }
 
