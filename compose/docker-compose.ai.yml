@@ -21,8 +21,12 @@ services:
     container_name: ollama
     restart: unless-stopped
     networks:
-      - ai-network
-      - shared-network
+      ai-network:
+        aliases:
+          - ollama
+      shared-network:
+        aliases:
+          - ollama
     profiles:
       - gpu
     ports:
@@ -105,10 +109,14 @@ services:
     container_name: ollama
     restart: unless-stopped
     networks:
-      - ai-network
-      - shared-network
+      ai-network:
+        aliases:
+          - ollama
+      shared-network:
+        aliases:
+          - ollama
     profiles:
-      - searxng
+      - ollama-cpu
     ports:
       - "${OLLAMA_PORT:-11434}:11434"
     environment:
@@ -192,11 +200,9 @@ services:
         source: ${DATA_BASE_DIR:-../data}/open-webui
         target: /app/backend/data
     environment:
-      - OLLAMA_BASE_URL=${OLLAMA_HOST:-http://host.docker.internal:11434}
+      - OLLAMA_BASE_URL=${OLLAMA_HOST:-http://ollama:11434}
       - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY:-secret-key-change-me}
       - WEBUI_NAME=AI Chat - ${COMPUTER_NAME}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     deploy:
       resources:
         limits:
@@ -423,8 +429,6 @@ services:
       - JWT_SECRET=${ANYTHINGLLM_JWT_SECRET:-change-this-secret-key-for-production}
       - AUTH_TOKEN=${DEFAULT_TRAEFIK_AUTH_PASS:-CHANGEME1234}
       - DISABLE_TELEMETRY=true
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     volumes:
       - type: volume
         source: anythingllm-data
@@ -619,7 +623,7 @@ services:
       - ALLOW_REGISTRATION=${LIBRECHAT_ALLOW_REGISTRATION:-true}
       - ALLOW_SOCIAL_LOGIN=false
       - ENDPOINTS=${LIBRECHAT_ENDPOINTS:-openAI,ollama}
-      - OLLAMA_BASE_URL=${OLLAMA_HOST:-http://host.docker.internal:11434}
+      - OLLAMA_BASE_URL=${OLLAMA_HOST:-http://ollama:11434}
       # JWT secrets (required)
       - JWT_SECRET=${LIBRECHAT_JWT_SECRET:-librechat-jwt-secret-change-me-in-production}
       - JWT_REFRESH_SECRET=${LIBRECHAT_JWT_REFRESH_SECRET:-librechat-refresh-secret-change-me}
@@ -629,8 +633,6 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     volumes:
       - type: volume
         source: librechat-data
@@ -716,9 +718,7 @@ services:
       - PGPT_PROFILES=${PRIVATEGPT_PROFILES:-local}
       - PGPT_EMBED_MODE=${PRIVATEGPT_EMBED_MODE:-huggingface}
       - PGPT_LLM_MODE=${PRIVATEGPT_LLM_MODE:-ollama}
-      - PGPT_OLLAMA_API_BASE=${OLLAMA_HOST:-http://host.docker.internal:11434}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - PGPT_OLLAMA_API_BASE=${OLLAMA_HOST:-http://ollama:11434}
     volumes:
       - type: volume
         source: privategpt-data

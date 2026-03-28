@@ -714,8 +714,12 @@ generate_env_interactive() {
             profiles_csv="${profiles_csv},${es}"
         done
     fi
-    if $has_ai && $use_gpu; then
-        profiles_csv="${profiles_csv},gpu"
+    if $has_ai; then
+        if $use_gpu; then
+            profiles_csv="${profiles_csv},gpu"
+        else
+            profiles_csv="${profiles_csv},ollama-cpu"
+        fi
     fi
     
     # Auto-append access sub-profiles derived from the Access Configuration wizard.
