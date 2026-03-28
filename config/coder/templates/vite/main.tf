@@ -770,7 +770,7 @@ resource "docker_container" "workspace" {
 
   host {
     host = "host.docker.internal"
-    ip   = "host-gateway"
+    ip   = var.host_ip
   }
 
   stdin_open = true

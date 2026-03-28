@@ -165,28 +165,6 @@ CRED_HELPER
       exit 0
     fi
 
-    # ── Pre-clone: ensure ~/.ssh/known_hosts exists for all common providers ──
-    # This prevents "Host key verification failed" on the first clone attempt,
-    # which would otherwise race against the ssh-server module.
-    mkdir -p "$HOME/.ssh"
-    chmod 700 "$HOME/.ssh"
-    touch "$HOME/.ssh/known_hosts"
-    chmod 644 "$HOME/.ssh/known_hosts"
-    echo "[GIT] Scanning host keys for common Git providers..."
-    for _gh in github.com gitlab.com bitbucket.org; do
-      if ! grep -q "$_gh" "$HOME/.ssh/known_hosts" 2>/dev/null; then
-        ssh-keyscan -H "$_gh" >> "$HOME/.ssh/known_hosts" 2>/dev/null || true
-      fi
-    done
-    # Also scan the specific SSH domain in the repo URL (e.g. self-hosted Gitea)
-    _ssh_domain=$(echo "$REPO_URL" | sed -n 's/git@\([^:]*\):.*/\1/p')
-    if [ -n "$_ssh_domain" ] && ! grep -q "$_ssh_domain" "$HOME/.ssh/known_hosts" 2>/dev/null; then
-      echo "[GIT] Scanning host key for $_ssh_domain..."
-      ssh-keyscan -H "$_ssh_domain" >> "$HOME/.ssh/known_hosts" 2>/dev/null || \
-        echo "[GIT] WARNING: Could not scan host key for $_ssh_domain"
-    fi
-    unset _gh _ssh_domain
-
     if [ -d "$WORKSPACE_DIR/.git" ]; then
       echo "[GIT] Repository already cloned at $WORKSPACE_DIR"
       BRANCH=$(cd "$WORKSPACE_DIR" && git branch --show-current 2>/dev/null || echo "unknown")
@@ -215,6 +193,35 @@ CRED_HELPER
       REPO_URL=$(echo "$REPO_URL" | sed 's|git@github.com:\(.*\)|https://github.com/\1|')
       echo "[GIT] GitHub OAuth active — cloning via HTTPS: $REPO_URL"
     fi
+
+    # ── Pre-clone: only scan the SSH host we actually need ──
+    # HTTPS clones do not need known_hosts, and broad scans can hang startup on
+    # networks that block port 22 for unrelated providers.
+    mkdir -p "$HOME/.ssh"
+    chmod 700 "$HOME/.ssh"
+    touch "$HOME/.ssh/known_hosts"
+    chmod 644 "$HOME/.ssh/known_hosts"
+
+    _ssh_domain=""
+    if echo "$REPO_URL" | grep -q "^git@"; then
+      _ssh_domain=$(echo "$REPO_URL" | sed -n 's/git@\([^:]*\):.*/\1/p')
+    elif echo "$REPO_URL" | grep -q "^ssh://"; then
+      _ssh_domain=$(echo "$REPO_URL" | sed -n 's#ssh://[^@]*@\([^/:]*\).*#\1#p')
+      if [ -z "$_ssh_domain" ]; then
+        _ssh_domain=$(echo "$REPO_URL" | sed -n 's#ssh://\([^/:]*\).*#\1#p')
+      fi
+    fi
+
+    if [ -n "$_ssh_domain" ]; then
+      if ! grep -q "$_ssh_domain" "$HOME/.ssh/known_hosts" 2>/dev/null; then
+        echo "[GIT] Scanning host key for $_ssh_domain..."
+        ssh-keyscan -T 5 -H "$_ssh_domain" >> "$HOME/.ssh/known_hosts" 2>/dev/null || \
+          echo "[GIT] WARNING: Could not scan host key for $_ssh_domain"
+      fi
+    else
+      echo "[GIT] HTTPS clone detected; skipping SSH host key scan"
+    fi
+    unset _ssh_domain
 
     echo "[GIT] Cloning: $REPO_URL"
 

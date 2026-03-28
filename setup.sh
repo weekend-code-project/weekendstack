@@ -302,6 +302,98 @@ check_prerequisites() {
 }
 
 # Add Coder's SSH public key to GitHub so workspace git clones work
+github_cli_device_login() {
+    if gh auth status --hostname github.com >/dev/null 2>&1; then
+        log_info "GitHub CLI is already authenticated"
+        return 0
+    fi
+
+    python3 <<'PY'
+import os
+import pty
+import re
+import select
+import sys
+
+
+def clean(text: str) -> str:
+    return re.sub(r"\x1b\[[0-9;]*[A-Za-z]", "", text)
+
+
+env = os.environ.copy()
+env["GH_BROWSER"] = "/bin/true"
+cmd = ["gh", "auth", "login", "--git-protocol", "ssh", "--skip-ssh-key", "--web"]
+
+pid, fd = pty.fork()
+if pid == 0:
+    os.execvpe(cmd[0], cmd, env)
+
+buffer = ""
+printed_code = False
+printed_url = False
+
+while True:
+    rlist, _, _ = select.select([fd], [], [], 0.2)
+    if fd not in rlist:
+        try:
+            finished, status = os.waitpid(pid, os.WNOHANG)
+        except ChildProcessError:
+            break
+        if finished:
+            rc = os.waitstatus_to_exitcode(status)
+            break
+        continue
+
+    try:
+        chunk = os.read(fd, 4096)
+    except OSError:
+        break
+
+    if not chunk:
+        break
+
+    buffer += clean(chunk.decode("utf-8", "ignore"))
+
+    if not printed_code:
+        match = re.search(r"First copy your one-time code:\s*([A-Z0-9-]+)", buffer)
+        if match:
+            print(f"  1 First copy your one-time code: {match.group(1)}")
+            printed_code = True
+
+    if not printed_url:
+        match = re.search(r"Press Enter to open (https://[^\s]+) in your browser", buffer)
+        if match:
+            print(f"  2 open {match.group(1)} in your browser and paste the code")
+            print("")
+            print("  Waiting for GitHub authorization to complete...")
+            os.write(fd, b"\r")
+            printed_url = True
+
+try:
+    _, status = os.waitpid(pid, 0)
+    rc = os.waitstatus_to_exitcode(status)
+except ChildProcessError:
+    rc = 0
+
+if rc != 0:
+    filtered = []
+    for line in buffer.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if "Press Enter to open " in stripped:
+            continue
+        if "Failed opening a web browser" in stripped:
+            continue
+        if "Please try entering the URL in your browser manually" in stripped:
+            continue
+        filtered.append(stripped)
+    if filtered:
+        print("\n".join(filtered[-8:]), file=sys.stderr)
+    sys.exit(rc)
+PY
+}
+
 setup_coder_github_ssh_key() {
     # Load env so we have CODER_SESSION_TOKEN and CODER_ACCESS_URL
     local env_file="$SCRIPT_DIR/.env"
@@ -327,7 +419,7 @@ setup_coder_github_ssh_key() {
     echo -e "  Add it to GitHub once and every workspace clone will work automatically."
     echo ""
 
-    if ! prompt_yes_no "Add this key to GitHub now (uses the GitHub CLI)?" "y"; then
+    if ! prompt_yes_no "Add this key to GitHub now?" "y"; then
         echo ""
         echo -e "  You can add it manually at: ${CYAN}https://github.com/settings/ssh/new${NC}"
         echo ""
@@ -357,12 +449,12 @@ setup_coder_github_ssh_key() {
     echo ""
     log_info "Authenticating with GitHub..."
     echo ""
-    echo "  GitHub will show you a one-time code and URL."
-    echo "  Copy the code, open the URL, paste the code, and authorize."
-    echo "  The process will complete automatically once you're done."
+    echo "  This VM cannot open a browser for you."
+    echo "  GitHub will show a one-time code below."
+    echo "  Open the device URL in your browser, paste the code, and authorize."
     echo ""
-    
-    if ! gh auth login --git-protocol ssh --web 2>&1; then
+
+    if ! github_cli_device_login; then
         log_warn "GitHub auth failed. Add the key manually at: https://github.com/settings/ssh/new"
         return 0
     fi
@@ -376,7 +468,7 @@ setup_coder_github_ssh_key() {
     local hostname_short install_date key_title
     hostname_short=$(hostname -s 2>/dev/null || echo "server")
     install_date=$(date +%Y-%m-%d)
-    key_title="Coder @ ${hostname_short} (${install_date})"
+    key_title=$(prompt_input "Title for your SSH key" "Coder @ ${hostname_short} (${install_date})")
 
     echo ""
     log_info "Adding Coder SSH key to GitHub as: \"$key_title\""
@@ -599,7 +691,7 @@ deploy_coder_templates_interactive() {
     fi
 
     # ── Step 3: Deploy templates, showing live progress ───────────────────────
-    screen_title "Coder Template Deployment" "Pushing the selected templates into the running Coder instance."
+    screen_title "Coder Template Deployment" "Pushing WeekendStack templates into the running Coder instance."
     if deploy_coder_templates_batch "$templates_dir" "$push_script" "$token" "$coder_url"; then
         echo "" >&2
         log_success "All $CODER_TEMPLATE_BATCH_SUCCESS_COUNT templates installed successfully"
