@@ -434,7 +434,13 @@ generate_env_interactive() {
         admin_user=$(prompt_input "Admin username" "admin")
 
         echo ""
-        admin_email=$(prompt_input "Admin email" "admin@example.com")
+        while true; do
+            admin_email=$(prompt_input "Admin email" "admin@example.com")
+            if validate_email "$admin_email"; then
+                break
+            fi
+            log_error "Invalid email address. Please enter a valid email."
+        done
 
         echo ""
         admin_password=$(prompt_password "Admin password (leave blank to auto-generate a secure one)" "yes")
