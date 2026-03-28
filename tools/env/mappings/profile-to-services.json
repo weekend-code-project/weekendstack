@@ -16,13 +16,15 @@
   "ai": [
     "ollama",
     "open-webui",
-    "searxng",
     "anythingllm",
     "librechat",
     "localai",
     "whisper",
     "whisperx",
     "privategpt"
+  ],
+  "searxng": [
+    "searxng"
   ],
   "dev": [
     "coder",

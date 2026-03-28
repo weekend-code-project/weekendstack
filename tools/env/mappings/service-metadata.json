@@ -75,7 +75,7 @@
     "display_name": "SearXNG",
     "description": "Privacy-respecting metasearch engine",
     "template": "ai/searxng.env.example",
-    "profile": "ai"
+    "profile": "searxng"
   },
   "anythingllm": {
     "display_name": "AnythingLLM",

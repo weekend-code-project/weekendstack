@@ -314,7 +314,7 @@ generate_env_interactive() {
         screen_section "Chat Frontend" "Ollama (LLM backend, ~4GB RAM) is always installed."
         echo "Select which chat UI(s) to add (space-separated for multiple, e.g. '2 3'):"
         echo ""
-        echo "  1) None        - No chat UI (Ollama API + SearXNG only)"
+        echo "  1) None        - No chat UI (Ollama API only)"
         echo "  2) Open WebUI  - Clean, polished UI for local models   (~2GB RAM)  [recommended]"
         echo "  3) LibreChat   - Multi-provider: OpenAI, Anthropic, Ollama, and more (~1.5GB RAM)"
         echo "  4) AnythingLLM - Document Q&A with RAG and vector DB   (~2GB RAM)"
@@ -344,31 +344,24 @@ generate_env_interactive() {
             fi
         fi
 
-        echo ""
-
-        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        # Part 2 — Additional AI Backend Services
-        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        screen_section "Additional AI Services" "Optional AI services that extend the base Ollama + SearXNG setup."
-        echo "Always included with the AI profile:"
-        log_success "SearXNG  - Privacy-focused search engine         (~1GB RAM)"
-        echo ""
+        screen_title "AI Services Configuration" "Optional AI Services"
         echo "Optional extras (space-separated for multiple, e.g. '2 3'):"
         echo "  1) None    - Skip optional extras"
-        echo "  2) Whisper - OpenAI Whisper speech-to-text API     (~4GB RAM)"
-        echo "  3) LocalAI - OpenAI-compatible local API server    (~4GB RAM)"
+        echo "  2) SearXNG - Privacy-focused search engine         (~1GB RAM)"
+        echo "  3) Whisper - OpenAI Whisper speech-to-text API     (~4GB RAM)"
+        echo "  4) LocalAI - OpenAI-compatible local API server    (~4GB RAM)"
         echo ""
 
         local ai_extra_input
         read -r -p "  Select [1]: " ai_extra_input </dev/tty
         ai_extra_input="${ai_extra_input:-1}"
 
-        local -a ai_extra_services=()
         for n in $ai_extra_input; do
             case "$n" in
                 1) ;;  # None — no extras
-                2) ai_extra_services+=("whisper") ;;
-                3) ai_extra_services+=("localai") ;;
+                2) ai_extra_services+=("searxng") ;;
+                3) ai_extra_services+=("whisper") ;;
+                4) ai_extra_services+=("localai") ;;
                 *) log_warn "Unknown additional service option: $n (skipped)" ;;
             esac
         done
@@ -382,7 +375,9 @@ generate_env_interactive() {
         # Part 3 — GPU-Accelerated Services (only if GPU detected)
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         if [[ "${GPU_AVAILABLE:-false}" == "true" ]]; then
-            screen_section "GPU-Accelerated Services" "Enable NVIDIA-backed workloads for faster inference and speech processing."
+            screen_title "AI Services Configuration" "GPU-Accelerated Services"
+            echo "Enable NVIDIA-backed workloads for faster inference and speech processing."
+            echo ""
             echo "Your NVIDIA GPU can accelerate the following services:"
             echo ""
             echo "  1) None       - No GPU acceleration (use CPU Ollama)"

@@ -363,7 +363,22 @@ get_services_for_profiles() {
                 services+=("cloudflare-tunnel")
                 ;;
             ai)
-                services+=("ollama" "open-webui" "searxng" "anythingllm" "librechat" "localai" "stable-diffusion" "diffrhythm")  # note: localai is an opt-in sub-profile now
+                services+=("ollama" "open-webui" "anythingllm" "librechat" "stable-diffusion" "diffrhythm")
+                ;;
+            searxng)
+                services+=("searxng")
+                ;;
+            localai)
+                services+=("localai")
+                ;;
+            whisper)
+                services+=("whisper")
+                ;;
+            whisperx)
+                services+=("whisperx")
+                ;;
+            privategpt)
+                services+=("privategpt")
                 ;;
             dev)
                 services+=("coder" "gitea" "guacamole" "registry")
@@ -409,6 +424,18 @@ estimate_resources() {
             ai)
                 estimated_memory=$((estimated_memory + 16))
                 estimated_disk=$((estimated_disk + 40))
+                ;;
+            searxng)
+                estimated_memory=$((estimated_memory + 1))
+                estimated_disk=$((estimated_disk + 2))
+                ;;
+            localai|whisper|privategpt)
+                estimated_memory=$((estimated_memory + 4))
+                estimated_disk=$((estimated_disk + 8))
+                ;;
+            whisperx)
+                estimated_memory=$((estimated_memory + 8))
+                estimated_disk=$((estimated_disk + 8))
                 ;;
             dev)
                 estimated_memory=$((estimated_memory + 8))

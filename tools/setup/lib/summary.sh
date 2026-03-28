@@ -274,6 +274,8 @@ add_service_urls() {
     local base_domain="$3"
     shift 3
     local profiles=("$@")
+    local profiles_list=" ${profiles[*]} "
+    local has_ai_services=false
     
     # Core services
     echo "**Core Services:**" >> "$summary_file"
@@ -281,6 +283,10 @@ add_service_urls() {
     echo "- [Vaultwarden](https://vault.$lab_domain) - Password manager" >> "$summary_file"
     echo "- [Link Router](https://go.$lab_domain) - Go links service" >> "$summary_file"
     echo "" >> "$summary_file"
+
+    if [[ "$profiles_list" == *" all "* || "$profiles_list" == *" ai "* || "$profiles_list" == *" open-webui "* || "$profiles_list" == *" librechat "* || "$profiles_list" == *" anythingllm "* || "$profiles_list" == *" localai "* || "$profiles_list" == *" whisper "* || "$profiles_list" == *" whisperx "* || "$profiles_list" == *" privategpt "* || "$profiles_list" == *" searxng "* ]]; then
+        has_ai_services=true
+    fi
     
     # Check each profile
     for profile in "${profiles[@]}"; do
@@ -297,16 +303,6 @@ add_service_urls() {
             all|pihole)
                 echo "**DNS & Ad Blocking:**" >> "$summary_file"
                 echo "- [Pi-hole Admin](http://pihole.$lab_domain/admin) - DNS and ad blocking" >> "$summary_file"
-                echo "" >> "$summary_file"
-                ;;
-        esac
-        
-        case "$profile" in
-            all|ai)
-                echo "**AI Services:**" >> "$summary_file"
-                echo "- [Open WebUI](https://open-webui.$lab_domain) - Chat with AI models" >> "$summary_file"
-                echo "- [LibreChat](https://librechat.$lab_domain) - Multi-model AI chat" >> "$summary_file"
-                echo "- [SearXNG](https://searxng.$lab_domain) - Privacy-focused search" >> "$summary_file"
                 echo "" >> "$summary_file"
                 ;;
         esac
@@ -340,6 +336,27 @@ add_service_urls() {
                 ;;
         esac
     done
+
+    if $has_ai_services; then
+        echo "**AI Services:**" >> "$summary_file"
+        echo "- [Ollama](https://ollama.$lab_domain) - Local LLM runtime" >> "$summary_file"
+        if [[ "$profiles_list" == *" all "* || "$profiles_list" == *" open-webui "* ]]; then
+            echo "- [Open WebUI](https://open-webui.$lab_domain) - Chat with AI models" >> "$summary_file"
+        fi
+        if [[ "$profiles_list" == *" all "* || "$profiles_list" == *" librechat "* ]]; then
+            echo "- [LibreChat](https://librechat.$lab_domain) - Multi-model AI chat" >> "$summary_file"
+        fi
+        if [[ "$profiles_list" == *" all "* || "$profiles_list" == *" anythingllm "* ]]; then
+            echo "- [AnythingLLM](https://anythingllm.$lab_domain) - Document Q&A workspace" >> "$summary_file"
+        fi
+        if [[ "$profiles_list" == *" all "* || "$profiles_list" == *" searxng "* ]]; then
+            echo "- [SearXNG](https://searxng.$lab_domain) - Privacy-focused search" >> "$summary_file"
+        fi
+        if [[ "$profiles_list" == *" all "* || "$profiles_list" == *" localai "* ]]; then
+            echo "- [LocalAI](https://localai.$lab_domain) - OpenAI-compatible local API" >> "$summary_file"
+        fi
+        echo "" >> "$summary_file"
+    fi
 }
 
 add_external_service_urls() {
