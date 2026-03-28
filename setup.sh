@@ -5,8 +5,9 @@
 set -e
 
 # If stdin is not an interactive terminal (e.g. run via curl | sudo bash),
-# reopen it from /dev/tty so that all interactive prompts work correctly.
-if [[ ! -t 0 ]] && [[ -e /dev/tty ]]; then
+# reopen it from /dev/tty so that interactive prompts still work. In non-TTY
+# automation paths like `--validate`, /dev/tty may exist but not be attached.
+if [[ ! -t 0 ]] && [[ -e /dev/tty ]] && (: </dev/tty) 2>/dev/null; then
     exec < /dev/tty
 fi
 
@@ -219,12 +220,12 @@ check_prerequisites() {
     fi
     
     # Check Docker Compose
-    if ! check_command docker compose version; then
+    if ! docker compose version >/dev/null 2>&1; then
         log_error "Docker Compose V2 is not available"
-        echo "Ensure Docker Compose V2 is installed (docker compose)"
+        echo "Install with: sudo apt-get install -y docker-compose-v2"
         errors=$((errors + 1))
     else
-        local compose_version=$(docker compose version --short)
+        local compose_version=$(docker compose version --short 2>/dev/null || docker compose version | awk '{print $NF; exit}')
         log_success "Docker Compose installed: v$compose_version"
     fi
     

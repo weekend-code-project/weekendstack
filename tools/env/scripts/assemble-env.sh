@@ -199,9 +199,8 @@ SETUP_DATE=
 SELECTED_PROFILES=$profiles_list
 
 # Default Profile Selection
-# Using 'custom' profile which includes all services from: $profiles_list
-# See docker-compose.custom.yml for generated profile mappings
-COMPOSE_PROFILES=custom
+# Compose automatically activates these profiles when running `docker compose up`.
+COMPOSE_PROFILES=$profiles_list
 
 EOF
 }

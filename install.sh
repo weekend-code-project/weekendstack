@@ -113,30 +113,52 @@ install_docker() {
         local docker_version
         docker_version=$(docker --version 2>/dev/null | grep -oP '\d+\.\d+' | head -n1)
         success "Docker already installed (v${docker_version})"
+    else
+        info "Docker not found — installing via get.docker.com..."
+        local tmp_script
+        tmp_script=$(mktemp /tmp/get-docker-XXXXXX.sh)
+        if ! curl -fsSL https://get.docker.com -o "$tmp_script"; then
+            rm -f "$tmp_script"
+            die "Failed to download Docker install script from get.docker.com"
+        fi
+        sh "$tmp_script"
+        rm -f "$tmp_script"
+
+        if ! command -v docker >/dev/null 2>&1; then
+            die "Docker installation failed. Install manually: https://docs.docker.com/get-docker/"
+        fi
+
+        success "Docker installed successfully"
+    fi
+
+    # Enable and start Docker service even when Docker was already present.
+    if command -v systemctl >/dev/null 2>&1; then
+        systemctl enable docker --quiet 2>/dev/null || true
+        systemctl start docker --quiet 2>/dev/null || true
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# Docker Compose V2 install (Ubuntu/Debian package)
+# ---------------------------------------------------------------------------
+ensure_docker_compose() {
+    if docker compose version >/dev/null 2>&1; then
+        local compose_version
+        compose_version=$(docker compose version --short 2>/dev/null || docker compose version | awk '{print $NF; exit}')
+        success "Docker Compose V2 already installed (${compose_version})"
         return 0
     fi
 
-    info "Docker not found — installing via get.docker.com..."
-    local tmp_script
-    tmp_script=$(mktemp /tmp/get-docker-XXXXXX.sh)
-    if ! curl -fsSL https://get.docker.com -o "$tmp_script"; then
-        rm -f "$tmp_script"
-        die "Failed to download Docker install script from get.docker.com"
-    fi
-    sh "$tmp_script"
-    rm -f "$tmp_script"
+    info "Docker Compose V2 not found — installing docker-compose-v2..."
+    DEBIAN_FRONTEND=noninteractive apt-get install -y -qq docker-compose-v2
 
-    if ! command -v docker >/dev/null 2>&1; then
-        die "Docker installation failed. Install manually: https://docs.docker.com/get-docker/"
+    if ! docker compose version >/dev/null 2>&1; then
+        die "Docker Compose V2 installation failed. Install manually: sudo apt-get install docker-compose-v2"
     fi
 
-    success "Docker installed successfully"
-
-    # Enable and start Docker service
-    if command -v systemctl >/dev/null 2>&1; then
-        systemctl enable docker --quiet 2>/dev/null || true
-        systemctl start docker  --quiet 2>/dev/null || true
-    fi
+    local compose_version
+    compose_version=$(docker compose version --short 2>/dev/null || docker compose version | awk '{print $NF; exit}')
+    success "Docker Compose V2 installed (${compose_version})"
 }
 
 # ---------------------------------------------------------------------------
@@ -272,6 +294,7 @@ main() {
     resolve_user
     install_system_deps
     install_docker
+    ensure_docker_compose
     add_user_to_docker_group
     clone_or_update_repo
     make_executable

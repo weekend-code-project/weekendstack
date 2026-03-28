@@ -9,10 +9,23 @@ REGISTRY_CACHE_SERVICE="registry-cache"
 REGISTRY_CACHE_PORT="${REGISTRY_PORT:-5000}"
 REGISTRY_CACHE_URL="http://localhost:${REGISTRY_CACHE_PORT}"
 DAEMON_CONFIG_BACKUP="/tmp/docker-daemon.json.backup"
+DAEMON_CONFIG_CREATED_MARKER="/tmp/docker-daemon.json.created-by-weekendstack"
+
+daemon_config_is_cache_only() {
+    local config_path="$1"
+
+    sudo jq -e --arg mirror "$REGISTRY_CACHE_URL" '
+        ((keys | sort) == ["registry-mirrors"]) and
+        (
+            (.["registry-mirrors"] == [$mirror]) or
+            (.["registry-mirrors"] == [($mirror + "/")])
+        )
+    ' "$config_path" >/dev/null 2>&1
+}
 
 # Check if registry cache is running
 is_cache_running() {
-    docker ps --filter "name=${REGISTRY_CACHE_SERVICE}" --format "{{.Names}}" 2>/dev/null | grep -q "^${REGISTRY_CACHE_SERVICE}$"
+    docker compose ps -q "$REGISTRY_CACHE_SERVICE" 2>/dev/null | grep -q .
 }
 
 # Check if registry cache is healthy
@@ -136,12 +149,20 @@ configure_docker_mirror() {
         fi
     fi
     
-    # Backup existing config
+    # Backup existing config or remember that we created daemon.json from scratch.
     if [[ -f "$daemon_config" ]]; then
-        sudo cp "$daemon_config" "$DAEMON_CONFIG_BACKUP" 2>/dev/null || {
-            log_warn "Cannot backup daemon config (continuing without mirror configuration)"
-            return 0
-        }
+        if daemon_config_is_cache_only "$daemon_config"; then
+            sudo rm -f "$DAEMON_CONFIG_BACKUP" 2>/dev/null || true
+            : > "$DAEMON_CONFIG_CREATED_MARKER"
+        else
+            rm -f "$DAEMON_CONFIG_CREATED_MARKER"
+            sudo cp "$daemon_config" "$DAEMON_CONFIG_BACKUP" 2>/dev/null || {
+                log_warn "Cannot backup daemon config (continuing without mirror configuration)"
+                return 0
+            }
+        fi
+    else
+        : > "$DAEMON_CONFIG_CREATED_MARKER"
     fi
     
     log_step "Configuring Docker to use registry cache as mirror..."
@@ -180,20 +201,61 @@ configure_docker_mirror() {
 # Restore original Docker daemon configuration
 restore_docker_config() {
     local daemon_config="/etc/docker/daemon.json"
+    local temp_config="/tmp/daemon.json.restore.tmp"
     
-    if [[ ! -f "$DAEMON_CONFIG_BACKUP" ]]; then
+    log_step "Restoring Docker daemon configuration..."
+
+    if [[ -f "$DAEMON_CONFIG_BACKUP" ]] && [[ -f "$daemon_config" ]] && \
+       daemon_config_is_cache_only "$DAEMON_CONFIG_BACKUP" && daemon_config_is_cache_only "$daemon_config"; then
+        sudo rm -f "$DAEMON_CONFIG_BACKUP" 2>/dev/null || true
+        : > "$DAEMON_CONFIG_CREATED_MARKER"
+    fi
+
+    if [[ -f "$DAEMON_CONFIG_BACKUP" ]]; then
+        sudo mv "$DAEMON_CONFIG_BACKUP" "$daemon_config" 2>/dev/null || {
+            log_warn "Cannot restore daemon config"
+            return 1
+        }
+        rm -f "$DAEMON_CONFIG_CREATED_MARKER"
+    elif [[ -f "$DAEMON_CONFIG_CREATED_MARKER" ]]; then
+        sudo rm -f "$daemon_config" 2>/dev/null || {
+            log_warn "Cannot remove daemon config created for registry mirror"
+            return 1
+        }
+        rm -f "$DAEMON_CONFIG_CREATED_MARKER"
+    elif [[ -f "$daemon_config" ]]; then
+        # Migration path for older runs that created daemon.json but did not
+        # leave a backup/marker. Remove only the WeekendStack registry mirror.
+        sudo jq --arg mirror "$REGISTRY_CACHE_URL" '
+            .["registry-mirrors"] =
+                ((.["registry-mirrors"] // [])
+                | map(select(. != $mirror and . != ($mirror + "/"))))
+            | if (.["registry-mirrors"] | length) == 0 then del(.["registry-mirrors"]) else . end
+        ' "$daemon_config" > "$temp_config" 2>/dev/null || {
+            rm -f "$temp_config"
+            log_warn "Cannot clean registry mirror from daemon config"
+            return 1
+        }
+
+        if sudo jq -e 'keys | length == 0' "$temp_config" >/dev/null 2>&1; then
+            sudo rm -f "$daemon_config" "$temp_config" 2>/dev/null || {
+                log_warn "Cannot remove empty daemon config"
+                return 1
+            }
+        else
+            sudo mv "$temp_config" "$daemon_config" 2>/dev/null || {
+                rm -f "$temp_config"
+                log_warn "Cannot update daemon config while removing registry mirror"
+                return 1
+            }
+        fi
+    else
         return 0
     fi
     
-    log_step "Restoring Docker daemon configuration..."
-    
-    sudo mv "$DAEMON_CONFIG_BACKUP" "$daemon_config" 2>/dev/null || {
-        log_warn "Cannot restore daemon config"
-        return 1
-    }
-    
-    # Reload Docker daemon
-    sudo systemctl reload docker 2>/dev/null || sudo pkill -SIGHUP dockerd 2>/dev/null
+    # Restart Docker so runtime mirror state is fully cleared after removing
+    # daemon.json entries. A reload leaves stale mirrors visible in `docker info`.
+    sudo systemctl restart docker 2>/dev/null || sudo systemctl reload docker 2>/dev/null || sudo pkill -SIGHUP dockerd 2>/dev/null
     
     sleep 2
     log_success "Docker configuration restored"
@@ -263,6 +325,7 @@ export -f is_cache_running
 export -f is_cache_healthy
 export -f start_registry_cache
 export -f stop_registry_cache
+export -f daemon_config_is_cache_only
 export -f configure_docker_mirror
 export -f restore_docker_config
 export -f get_cache_stats

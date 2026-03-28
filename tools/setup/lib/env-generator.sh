@@ -813,8 +813,9 @@ add_setup_metadata() {
     local profiles_string="${selected_profiles[*]}"
     profiles_string="${profiles_string// /,}"
     
-    # Check if metadata section exists
-    if ! grep -q "# Setup Metadata" "$env_file"; then
+    # The assembled templates already define these keys, so key presence is the
+    # reliable indicator. The old comment-based check duplicated metadata.
+    if ! grep -q "^SETUP_COMPLETED=" "$env_file"; then
         cat >> "$env_file" << EOF
 
 # =============================================================================
@@ -893,16 +894,18 @@ generate_env_quick() {
     
     # Add metadata
     add_setup_metadata "$env_file" "${selected_profiles[@]}"
+    update_env_var "COMPOSE_PROFILES" "$profiles_string" "$env_file"
+    update_env_var "SELECTED_PROFILES" "$profiles_string" "$env_file"
     
-    # Generate custom docker-compose profile
+    # Generate the legacy custom docker-compose profile as an auxiliary artifact.
+    # The active profile list now comes from COMPOSE_PROFILES, which avoids
+    # service redefinition conflicts in Compose includes.
     log_step "Generating custom docker-compose profile..."
     if "${SCRIPT_DIR}/tools/env/scripts/generate-custom-profile.sh" \
         --profiles "$profiles_string" >/dev/null 2>&1; then
         log_success "Custom profile generated"
     else
-        log_warn "Custom profile generation failed (will fall back to manual --profile flags)"
-        # Fallback to original profile list if custom generation fails
-        update_env_var "COMPOSE_PROFILES" "$profiles_string" "$env_file"
+        log_warn "Custom profile generation failed (continuing with COMPOSE_PROFILES=${profiles_string})"
     fi
     
     log_success "Quick environment setup complete"
