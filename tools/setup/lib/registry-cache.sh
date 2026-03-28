@@ -11,6 +11,16 @@ REGISTRY_CACHE_URL="http://localhost:${REGISTRY_CACHE_PORT}"
 DAEMON_CONFIG_BACKUP="/tmp/docker-daemon.json.backup"
 DAEMON_CONFIG_CREATED_MARKER="/tmp/docker-daemon.json.created-by-weekendstack"
 
+registry_cache_dir() {
+    local lib_dir repo_root data_dir
+
+    lib_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    repo_root="${SCRIPT_DIR:-$(cd "$lib_dir/../../.." && pwd)}"
+    data_dir="${DATA_BASE_DIR:-$repo_root/data}"
+
+    echo "${REGISTRY_DATA_DIR:-$data_dir/registry-cache}"
+}
+
 daemon_config_is_cache_only() {
     local config_path="$1"
 
@@ -44,6 +54,54 @@ is_cache_healthy() {
     return 1
 }
 
+docker_mirror_configured() {
+    local daemon_config="/etc/docker/daemon.json"
+
+    if docker info 2>/dev/null | awk '/Registry Mirrors:/,/Live Restore Enabled:/' | \
+       grep -q "http://localhost:${REGISTRY_CACHE_PORT}/\?"; then
+        return 0
+    fi
+
+    if [[ -f "$daemon_config" ]] && daemon_config_is_cache_only "$daemon_config"; then
+        return 0
+    fi
+
+    return 1
+}
+
+prepare_registry_cache_for_startup() {
+    local needs_cache=false
+
+    if docker_mirror_configured; then
+        needs_cache=true
+    fi
+
+    if docker compose config 2>/dev/null | grep -q '^[[:space:]]*build:'; then
+        needs_cache=true
+    fi
+
+    if [[ "$needs_cache" != "true" ]]; then
+        return 0
+    fi
+
+    if is_cache_running && is_cache_healthy; then
+        return 0
+    fi
+
+    log_step "Ensuring registry cache is available before starting services..."
+
+    if start_registry_cache; then
+        return 0
+    fi
+
+    if docker_mirror_configured; then
+        log_warn "Registry cache could not be started; restoring Docker mirror configuration so pulls fall back to Docker Hub"
+        restore_docker_config || true
+    fi
+
+    return 0
+}
+
 # Start registry cache service
 start_registry_cache() {
     log_header "Starting Registry Cache"
@@ -62,7 +120,8 @@ start_registry_cache() {
     echo ""
     
     # Ensure required directories exist
-    local cache_dir="${DATA_BASE_DIR:-$SCRIPT_DIR/data}/registry-cache"
+    local cache_dir
+    cache_dir="$(registry_cache_dir)"
     mkdir -p "$cache_dir"
     
     # Set environment variable for the service
@@ -268,7 +327,8 @@ get_cache_stats() {
         return 1
     fi
     
-    local cache_dir="${DATA_BASE_DIR:-$SCRIPT_DIR/data}/registry-cache"
+    local cache_dir
+    cache_dir="$(registry_cache_dir)"
     
     if [[ -d "$cache_dir" ]]; then
         local cache_size=$(du -sh "$cache_dir" 2>/dev/null | cut -f1)
@@ -310,7 +370,8 @@ clear_cache() {
         docker compose stop "$REGISTRY_CACHE_SERVICE" >/dev/null 2>&1
     fi
     
-    local cache_dir="${DATA_BASE_DIR:-$SCRIPT_DIR/data}/registry-cache"
+    local cache_dir
+    cache_dir="$(registry_cache_dir)"
     
     if [[ -d "$cache_dir" ]]; then
         rm -rf "$cache_dir"
@@ -323,6 +384,9 @@ clear_cache() {
 # Export functions
 export -f is_cache_running
 export -f is_cache_healthy
+export -f registry_cache_dir
+export -f docker_mirror_configured
+export -f prepare_registry_cache_for_startup
 export -f start_registry_cache
 export -f stop_registry_cache
 export -f daemon_config_is_cache_only

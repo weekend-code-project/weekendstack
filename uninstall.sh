@@ -19,6 +19,7 @@ NC='\033[0m' # No Color
 # Load common functions
 if [[ -f "$SCRIPT_DIR/tools/setup/lib/common.sh" ]]; then
     source "$SCRIPT_DIR/tools/setup/lib/common.sh"
+    [[ -f "$SCRIPT_DIR/tools/setup/lib/registry-cache.sh" ]] && source "$SCRIPT_DIR/tools/setup/lib/registry-cache.sh"
 else
     # Minimal functions if library not available
     log_error() { echo -e "${RED}ERROR: $*${NC}" >&2; }
@@ -74,9 +75,9 @@ show_usage() {
     echo "      • Everything from Level 1"
     echo "      • Remove data/ directory (application state)"
     echo "      • Remove files/ directory (your documents/photos)"
-    echo "      • Remove config/ directory (certificates/settings)"
+    echo "      • Remove generated config artifacts (certificates/settings)"
     echo "      • Prune Docker builder cache"
-    echo "      • Keep: Docker images (no re-download needed)"
+    echo "      • Keep: Docker images and registry cache data"
     echo ""
     echo -e "    ${RED}Level 3${NC} - Complete Cleanup (nuclear)"
     echo "      • Everything from Level 2"
@@ -109,6 +110,8 @@ show_usage() {
 # Parse arguments
 CLEANUP_LEVEL=""
 NON_INTERACTIVE=false
+REGISTRY_CACHE_PRESERVE_TMP=""
+REGISTRY_CACHE_WAS_PRESERVED=false
 
 parse_args() {
     while [[ $# -gt 0 ]]; do
@@ -158,9 +161,9 @@ show_cleanup_level_menu() {
     echo "   • Everything from Level 1"
     echo "   • Remove data/ directory (application state)"
     echo "   • Remove files/ directory (your documents/photos)"
-    echo "   • Remove config/ directory (certificates/settings)"
+    echo "   • Remove generated config artifacts (certificates/settings)"
     echo "   • Prune Docker builder cache"
-    echo -e "   ${GREEN}✓ Keep:${NC} Images (no re-download needed)"
+    echo -e "   ${GREEN}✓ Keep:${NC} Images and registry cache data"
     echo ""
     echo -e "${RED}3)${NC} ${BOLD}Complete Cleanup${NC} (nuclear - removes everything)"
     echo "   • Everything from Level 2"
@@ -232,10 +235,11 @@ show_confirmation() {
             echo -e "  ${RED}✗${NC} Everything from Level 1"
             echo -e "  ${RED}✗${NC} Remove data/ directory (application state)"
             echo -e "  ${RED}✗${NC} Remove files/ directory (YOUR documents/photos/media)"
-            echo -e "  ${RED}✗${NC} Remove config/ directory (certificates/settings)"
+            echo -e "  ${RED}✗${NC} Remove generated config artifacts (certificates/settings)"
             echo ""
             echo "This will keep:"
             echo -e "  ${GREEN}✓${NC} Docker images (no re-download needed)"
+            echo -e "  ${GREEN}✓${NC} Registry cache data"
             echo ""
             echo -e "${YELLOW}Note:${NC} Images are kept - quick re-setup possible"
             ;;
@@ -278,14 +282,34 @@ get_disk_free() {
     df -h / | awk 'NR==2 { print $4 }'
 }
 
+load_env_if_present() {
+    if [[ -f "$SCRIPT_DIR/.env" ]]; then
+        set -a
+        source "$SCRIPT_DIR/.env"
+        set +a
+    fi
+}
+
 backup_env() {
     if [[ -f "$SCRIPT_DIR/.env" ]]; then
         local timestamp=$(date +%Y%m%d-%H%M%S)
         local backup_dir="$SCRIPT_DIR/_trash"
-        mkdir -p "$backup_dir"
-        
-        cp "$SCRIPT_DIR/.env" "$backup_dir/.env.backup.$timestamp"
-        log_success "Backed up .env to: _trash/.env.backup.$timestamp"
+        local backup_file="$backup_dir/.env.backup.$timestamp"
+        local fallback_dir="/tmp/weekendstack-uninstall-backups"
+
+        mkdir -p "$backup_dir" 2>/dev/null || true
+        if [[ -d "$backup_dir" ]] && [[ ! -w "$backup_dir" ]]; then
+            sudo chown "$(id -u):$(id -g)" "$backup_dir" 2>/dev/null || true
+        fi
+
+        if [[ ! -d "$backup_dir" ]] || [[ ! -w "$backup_dir" ]]; then
+            backup_dir="$fallback_dir"
+            backup_file="$backup_dir/.env.backup.$timestamp"
+            mkdir -p "$backup_dir"
+        fi
+
+        cp "$SCRIPT_DIR/.env" "$backup_file"
+        log_success "Backed up .env to: $backup_file"
     else
         log_info "No .env file to backup"
     fi
@@ -458,6 +482,41 @@ remove_data_directory() {
     _cleanup_phantom_dirs
 }
 
+preserve_registry_cache_data() {
+    local data_dir="${DATA_BASE_DIR:-$SCRIPT_DIR/data}"
+    local cache_dir="${REGISTRY_DATA_DIR:-$data_dir/registry-cache}"
+
+    if [[ ! -e "$cache_dir" ]]; then
+        return 0
+    fi
+
+    case "$cache_dir" in
+        "$data_dir"/*)
+            REGISTRY_CACHE_PRESERVE_TMP="/tmp/weekendstack-registry-cache-preserve-$$"
+            rm -rf "$REGISTRY_CACHE_PRESERVE_TMP"
+            mv "$cache_dir" "$REGISTRY_CACHE_PRESERVE_TMP"
+            REGISTRY_CACHE_WAS_PRESERVED=true
+            log_info "Preserved registry cache data before removing data/"
+            ;;
+        *)
+            log_info "Registry cache data is outside data/ and will be left in place"
+            ;;
+    esac
+}
+
+restore_preserved_registry_cache_data() {
+    if [[ "$REGISTRY_CACHE_WAS_PRESERVED" != "true" ]] || [[ ! -e "$REGISTRY_CACHE_PRESERVE_TMP" ]]; then
+        return 0
+    fi
+
+    local data_dir="${DATA_BASE_DIR:-$SCRIPT_DIR/data}"
+    local cache_dir="${REGISTRY_DATA_DIR:-$data_dir/registry-cache}"
+
+    mkdir -p "$(dirname "$cache_dir")"
+    mv "$REGISTRY_CACHE_PRESERVE_TMP" "$cache_dir"
+    log_success "Restored preserved registry cache data"
+}
+
 # Remove Docker-created phantom directories at paths that must be files.
 # These block the next docker compose up if left behind as directories.
 _cleanup_phantom_dirs() {
@@ -568,12 +627,10 @@ EOF
     if [[ "$level" -ge 2 ]]; then
         echo "- ✓ data/ directory (application state deleted)" >> "$summary_file"
         echo "- ✓ files/ directory (user documents/photos deleted)" >> "$summary_file"
-        echo "- ✓ config/ directory (certificates/settings deleted)" >> "$summary_file"
+        echo "- ✓ generated config artifacts removed" >> "$summary_file"
     fi
     
-    if [[ "$level" -ge 2 ]]; then
-        echo "- ✓ All Docker images" >> "$summary_file"
-    elif [[ "$level" -ge 3 ]]; then
+    if [[ "$level" -ge 3 ]]; then
         echo "- ✓ All Docker images (deep prune)" >> "$summary_file"
     fi
     
@@ -592,6 +649,9 @@ EOF
 
     if [[ "$level" -eq 2 ]]; then
         echo "- ✓ Docker images (no re-download needed)" >> "$summary_file"
+        if [[ "$REGISTRY_CACHE_WAS_PRESERVED" == "true" ]]; then
+            echo "- ✓ Registry cache data" >> "$summary_file"
+        fi
     fi
     
     echo "- ✓ Docker Compose files" >> "$summary_file"
@@ -669,11 +729,16 @@ execute_cleanup() {
 
     # Always backup .env if it exists
     backup_env
+    load_env_if_present
 
     # Level 1+: containers, setup files, volumes, networks
     [[ "$level" -ge 3 ]] && _sb=$(get_disk_free)
     stop_and_remove_containers
     if [[ "$level" -ge 3 ]]; then _sa=$(get_disk_free); _space_rows+=("$(printf '%-44s %s → %s' 'Containers removed' "$_sb" "$_sa")"); fi
+
+    if declare -F restore_docker_config >/dev/null 2>&1; then
+        restore_docker_config || true
+    fi
 
     remove_setup_files
 
@@ -705,9 +770,17 @@ execute_cleanup() {
 
     # Level 2+: data directory, user files, config, builder cache
     if [[ "$level" -ge 2 ]]; then
+        if [[ "$level" -eq 2 ]]; then
+            preserve_registry_cache_data
+        fi
+
         [[ "$level" -ge 3 ]] && _sb=$(get_disk_free)
         remove_data_directory
         if [[ "$level" -ge 3 ]]; then _sa=$(get_disk_free); _space_rows+=("$(printf '%-44s %s → %s' 'data/ directory removed' "$_sb" "$_sa")"); fi
+
+        if [[ "$level" -eq 2 ]]; then
+            restore_preserved_registry_cache_data
+        fi
 
         [[ "$level" -ge 3 ]] && _sb=$(get_disk_free)
         remove_files_and_config

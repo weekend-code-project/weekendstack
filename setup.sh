@@ -1184,6 +1184,11 @@ start_services_with_profiles() {
     # Remove any stale containers from previous (partial) runs before bringing
     # the stack up. --remove-orphans also cleans up containers for services
     # that are no longer defined in the current compose configuration.
+    prepare_registry_cache_for_startup
+    if ! docker buildx version >/dev/null 2>&1; then
+        export COMPOSE_BAKE=false
+    fi
+
     log_step "Removing any stale containers from previous runs..."
     docker compose $profile_args down --remove-orphans 2>/dev/null || true
 
@@ -1299,6 +1304,8 @@ start_services() {
     
     # Ensure cloudflare-tunnel is in custom profile if enabled
     ensure_cloudflare_in_custom_profile
+
+    prepare_registry_cache_for_startup
     
     if docker compose up -d; then
         log_success "Services started"
@@ -1334,6 +1341,8 @@ restart_services() {
     
     # Ensure cloudflare-tunnel is in custom profile if enabled
     ensure_cloudflare_in_custom_profile
+
+    prepare_registry_cache_for_startup
     
     # Use up -d instead of restart to also start any newly-enabled services
     if docker compose up -d --force-recreate; then
