@@ -24,8 +24,7 @@ _cf_verify_token() {
     #    Get account ID from .env or by querying the /accounts endpoint
     local account_id=""
     if [[ -f "${SCRIPT_DIR}/.env" ]]; then
-        account_id=$(grep "^CLOUDFLARE_ACCOUNT_ID=" "${SCRIPT_DIR}/.env" 2>/dev/null \
-            | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+        account_id=$(get_env_value "CLOUDFLARE_ACCOUNT_ID" "${SCRIPT_DIR}/.env" 2>/dev/null || true)
     fi
 
     if [[ -z "$account_id" ]]; then
@@ -63,7 +62,7 @@ check_cloudflare_config() {
     # Token-based setup: just need CLOUDFLARE_TUNNEL_TOKEN in .env
     if [[ -f "$env_file" ]]; then
         local token
-        token=$(grep "^CLOUDFLARE_TUNNEL_TOKEN=" "$env_file" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+        token=$(get_env_value "CLOUDFLARE_TUNNEL_TOKEN" "$env_file" 2>/dev/null || true)
         if [[ -n "$token" ]]; then
             return 0
         fi
@@ -92,14 +91,14 @@ setup_cloudflare_tunnel() {
     # No need for the full wizard — just fetch the token from the API.
     local _env_file="${SCRIPT_DIR}/.env"
     local _api_token _tunnel_id _existing_token
-    _api_token=$(grep "^CLOUDFLARE_API_TOKEN="  "$_env_file" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
-    _tunnel_id=$(grep "^CLOUDFLARE_TUNNEL_ID="  "$_env_file" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
-    _existing_token=$(grep "^CLOUDFLARE_TUNNEL_TOKEN=" "$_env_file" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+    _api_token=$(get_env_value "CLOUDFLARE_API_TOKEN" "$_env_file" 2>/dev/null || true)
+    _tunnel_id=$(get_env_value "CLOUDFLARE_TUNNEL_ID" "$_env_file" 2>/dev/null || true)
+    _existing_token=$(get_env_value "CLOUDFLARE_TUNNEL_TOKEN" "$_env_file" 2>/dev/null || true)
 
     if [[ -n "$_api_token" && -n "$_tunnel_id" && -z "$_existing_token" ]]; then
         log_step "API token and tunnel ID found — fetching connector token automatically..."
         local _account_id
-        _account_id=$(grep "^CLOUDFLARE_ACCOUNT_ID=" "$_env_file" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+        _account_id=$(get_env_value "CLOUDFLARE_ACCOUNT_ID" "$_env_file" 2>/dev/null || true)
         if [[ -z "$_account_id" ]]; then
             _account_id=$(curl -s "https://api.cloudflare.com/client/v4/accounts" \
                 -H "Authorization: Bearer $_api_token" | jq -r '.result[0].id // empty' 2>/dev/null)
@@ -149,7 +148,7 @@ setup_cloudflare_tunnel() {
 
     # If an API token is already set (collected during domain config), go straight to API setup
     local _api_token_check
-    _api_token_check=$(grep "^CLOUDFLARE_API_TOKEN=" "${SCRIPT_DIR}/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+    _api_token_check=$(get_env_value "CLOUDFLARE_API_TOKEN" "${SCRIPT_DIR}/.env" 2>/dev/null || true)
     if [[ -n "${CLOUDFLARE_API_TOKEN:-}" ]] || [[ -n "$_api_token_check" ]]; then
         log_info "Cloudflare API token detected — starting automated tunnel setup..."
         setup_tunnel_with_api
@@ -298,7 +297,7 @@ setup_tunnel_with_api() {
         api_token="$CLOUDFLARE_API_TOKEN"
         log_info "Using Cloudflare API token"
     elif [[ -f "$stack_dir/.env" ]]; then
-        api_token=$(grep "^CLOUDFLARE_API_TOKEN=" "$stack_dir/.env" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+        api_token=$(get_env_value "CLOUDFLARE_API_TOKEN" "$stack_dir/.env" 2>/dev/null || true)
         [[ -n "$api_token" ]] && log_info "Using existing API token from .env"
     fi
     
@@ -616,7 +615,7 @@ create_tunnel_config() {
     
     local account_id="${CLOUDFLARE_ACCOUNT_ID}"
     if [[ -z "$account_id" ]]; then
-        account_id=$(grep "^CLOUDFLARE_ACCOUNT_ID=" "$stack_dir/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+        account_id=$(get_env_value "CLOUDFLARE_ACCOUNT_ID" "$stack_dir/.env" 2>/dev/null || true)
     fi
     
     if [[ -z "$account_id" ]]; then
@@ -698,11 +697,11 @@ EOF
     # Save tunnel token for token-based run
     local account_id="${CLOUDFLARE_ACCOUNT_ID}"
     if [[ -z "$account_id" ]]; then
-        account_id=$(grep "^CLOUDFLARE_ACCOUNT_ID=" "$env_file" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+        account_id=$(get_env_value "CLOUDFLARE_ACCOUNT_ID" "$env_file" 2>/dev/null || true)
     fi
 
     local tunnel_token
-    tunnel_token=$(grep "^CLOUDFLARE_TUNNEL_TOKEN=" "$env_file" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+    tunnel_token=$(get_env_value "CLOUDFLARE_TUNNEL_TOKEN" "$env_file" 2>/dev/null || true)
 
     if [[ -z "$tunnel_token" && -n "$account_id" ]]; then
         local max_token_attempts=3

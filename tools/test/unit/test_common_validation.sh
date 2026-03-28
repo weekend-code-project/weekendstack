@@ -20,4 +20,16 @@ else
     test_fail "Expected not-an-email to be rejected"
 fi
 
+test_case "get_env_value preserves values containing trailing equals"
+create_temp_env
+cat > "$TEST_ENV" <<'EOF'
+CLOUDFLARE_TUNNEL_TOKEN=abc123==
+EOF
+
+if [[ "$(get_env_value "CLOUDFLARE_TUNNEL_TOKEN" "$TEST_ENV")" == "abc123==" ]]; then
+    test_pass
+else
+    test_fail "Expected get_env_value to preserve base64 padding"
+fi
+
 test_suite_end

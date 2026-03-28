@@ -887,7 +887,7 @@ main_setup() {
         # Add external profile if Cloudflare tunnel is enabled AND token is configured
         if grep -q "^CLOUDFLARE_TUNNEL_ENABLED=true" "$SCRIPT_DIR/.env" 2>/dev/null; then
             local cf_token
-            cf_token=$(grep "^CLOUDFLARE_TUNNEL_TOKEN=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' ')
+            cf_token=$(get_env_value "CLOUDFLARE_TUNNEL_TOKEN" "$SCRIPT_DIR/.env" 2>/dev/null || true)
             if [[ -n "$cf_token" ]]; then
                 if [[ ! " ${selected_profiles[*]} " =~ " external " ]]; then
                     selected_profiles+=("external")
@@ -973,7 +973,7 @@ ensure_cloudflare_in_custom_profile() {
     
     local cf_enabled cf_token_val
     cf_enabled=$(grep "^CLOUDFLARE_TUNNEL_ENABLED=true" "$SCRIPT_DIR/.env" 2>/dev/null || true)
-    cf_token_val=$(grep "^CLOUDFLARE_TUNNEL_TOKEN=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' ')
+    cf_token_val=$(get_env_value "CLOUDFLARE_TUNNEL_TOKEN" "$SCRIPT_DIR/.env" 2>/dev/null || true)
     
     if [[ -n "$cf_enabled" && -n "$cf_token_val" ]] && \
        ! grep -q "cloudflare-tunnel:" "$SCRIPT_DIR/docker-compose.custom.yml"; then
@@ -1101,7 +1101,7 @@ preflight_fix_mounts() {
     if type update_env_var &>/dev/null && [[ -f "$SCRIPT_DIR/.env" ]]; then
         local _tunnel_enabled _tunnel_token
         _tunnel_enabled=$(grep "^CLOUDFLARE_TUNNEL_ENABLED=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
-        _tunnel_token=$(grep "^CLOUDFLARE_TUNNEL_TOKEN=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' ')
+        _tunnel_token=$(get_env_value "CLOUDFLARE_TUNNEL_TOKEN" "$SCRIPT_DIR/.env" 2>/dev/null || true)
         if [[ "$_tunnel_enabled" == "true" && -n "$_tunnel_token" ]]; then
             update_env_var "FORCE_LINK_MODE" "external" "$SCRIPT_DIR/.env"
             log_info "Tunnel active — FORCE_LINK_MODE=external (all /go/ links via tunnel)"

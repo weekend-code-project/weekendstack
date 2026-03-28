@@ -196,7 +196,7 @@ EOF
     if [[ -f "$env_file" ]]; then
         local cf_enabled cf_token
         cf_enabled=$(grep "^CLOUDFLARE_TUNNEL_ENABLED=true" "$env_file" 2>/dev/null || true)
-        cf_token=$(grep "^CLOUDFLARE_TUNNEL_TOKEN=" "$env_file" 2>/dev/null | cut -d'=' -f2 | tr -d ' ')
+        cf_token=$(grep "^CLOUDFLARE_TUNNEL_TOKEN=" "$env_file" 2>/dev/null | cut -d'=' -f2- | tr -d ' ')
         if [[ -n "$cf_enabled" && -n "$cf_token" ]]; then
             # Only append if not already in the services list (e.g. from networking profile)
             if ! printf '%s\n' "${services[@]}" | grep -qx "cloudflare-tunnel"; then

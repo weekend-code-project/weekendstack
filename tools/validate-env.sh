@@ -229,10 +229,10 @@ echo ""
 # ============================================================================
 echo -e "${BLUE}🌐 Checking Cloudflare Tunnel configuration...${NC}"
 
-CF_ENABLED=$(grep "^CLOUDFLARE_TUNNEL_ENABLED=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
-CF_TUNNEL_ID=$(grep "^CLOUDFLARE_TUNNEL_ID=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
-CF_API_TOKEN=$(grep "^CLOUDFLARE_API_TOKEN=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
-CF_CONFIG_FILE=$(grep "^CLOUDFLARE_CONFIG_FILE=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+CF_ENABLED=$(grep "^CLOUDFLARE_TUNNEL_ENABLED=" .env | cut -d'=' -f2- | sed 's/[[:space:]]#.*//' | tr -d ' ')
+CF_TUNNEL_ID=$(grep "^CLOUDFLARE_TUNNEL_ID=" .env | cut -d'=' -f2- | sed 's/[[:space:]]#.*//' | tr -d ' ')
+CF_API_TOKEN=$(grep "^CLOUDFLARE_API_TOKEN=" .env | cut -d'=' -f2- | sed 's/[[:space:]]#.*//' | tr -d ' ')
+CF_CONFIG_FILE=$(grep "^CLOUDFLARE_CONFIG_FILE=" .env | cut -d'=' -f2- | sed 's/[[:space:]]#.*//' | tr -d ' ')
 
 if [[ "$CF_ENABLED" == "true" ]]; then
     # Check tunnel ID is set
