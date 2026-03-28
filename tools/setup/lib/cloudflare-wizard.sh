@@ -389,8 +389,7 @@ setup_tunnel_with_api() {
     # Export for API library
     export CLOUDFLARE_API_TOKEN="$api_token"
     
-    echo ""
-    log_header "Creating Cloudflare Tunnel via API"
+    screen_title "Creating Cloudflare Tunnel via API"
     
     # Run automated setup (domain may be empty — cf_setup_tunnel_automated will
     # attempt to infer it from the selected tunnel's ingress configuration)
