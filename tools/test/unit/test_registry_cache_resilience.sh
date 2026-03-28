@@ -27,7 +27,8 @@ test_case "registry cache helper can detect mirror state and prepare startup"
 if grep -q '^docker_mirror_configured()' "$PROJECT_ROOT/tools/setup/lib/registry-cache.sh" && \
    grep -q '^prepare_registry_cache_for_startup()' "$PROJECT_ROOT/tools/setup/lib/registry-cache.sh" && \
    grep -q 'REGISTRY_DATA_DIR' "$PROJECT_ROOT/tools/setup/lib/registry-cache.sh" && \
-   grep -q '^load_registry_proxy_credentials()' "$PROJECT_ROOT/tools/setup/lib/registry-cache.sh"; then
+   grep -q '^load_registry_proxy_credentials()' "$PROJECT_ROOT/tools/setup/lib/registry-cache.sh" && \
+   grep -q '^registry_cache_proxy_auth_matches()' "$PROJECT_ROOT/tools/setup/lib/registry-cache.sh"; then
     test_pass
 else
     test_fail "Expected registry-cache helpers for mirror detection, startup preparation, shared cache path resolution, and Docker Hub proxy auth"

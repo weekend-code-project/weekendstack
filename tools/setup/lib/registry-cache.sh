@@ -24,10 +24,7 @@ registry_cache_dir() {
 load_registry_proxy_credentials() {
     local docker_config="${HOME}/.docker/config.json"
     local creds username password
-
-    if [[ -n "${REGISTRY_PROXY_USERNAME:-}" && -n "${REGISTRY_PROXY_PASSWORD:-}" ]]; then
-        return 0
-    fi
+    unset REGISTRY_PROXY_USERNAME REGISTRY_PROXY_PASSWORD
 
     if [[ ! -f "$docker_config" ]] || ! command -v python3 >/dev/null 2>&1; then
         return 1
@@ -86,6 +83,21 @@ PY
     export REGISTRY_PROXY_USERNAME="$username"
     export REGISTRY_PROXY_PASSWORD="$password"
     return 0
+}
+
+registry_cache_proxy_auth_matches() {
+    local container_id current_env current_user current_pass
+
+    container_id="$(docker compose ps -q "$REGISTRY_CACHE_SERVICE" 2>/dev/null | head -n1)"
+    if [[ -z "$container_id" ]]; then
+        return 1
+    fi
+
+    current_env="$(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$container_id" 2>/dev/null)"
+    current_user="$(printf '%s\n' "$current_env" | grep '^REGISTRY_PROXY_USERNAME=' | cut -d= -f2-)"
+    current_pass="$(printf '%s\n' "$current_env" | grep '^REGISTRY_PROXY_PASSWORD=' | cut -d= -f2-)"
+
+    [[ "$current_user" == "${REGISTRY_PROXY_USERNAME:-}" && "$current_pass" == "${REGISTRY_PROXY_PASSWORD:-}" ]]
 }
 
 daemon_config_is_cache_only() {
@@ -172,25 +184,12 @@ prepare_registry_cache_for_startup() {
 # Start registry cache service
 start_registry_cache() {
     log_header "Starting Registry Cache"
-    
-    # Check if already running
-    if is_cache_running; then
-        log_info "Registry cache already running"
-        # Still ensure the Docker mirror is configured (may have been lost after restart)
-        configure_docker_mirror
-        return 0
-    fi
-    
-    log_step "Starting pull-through cache for Docker Hub images..."
-    echo "  This cache will significantly reduce rate limit issues"
-    echo "  and speed up repeated image pulls during setup."
-    echo ""
-    
+
     # Ensure required directories exist
     local cache_dir
     cache_dir="$(registry_cache_dir)"
     mkdir -p "$cache_dir"
-    
+
     if load_registry_proxy_credentials; then
         log_info "Using authenticated Docker Hub access for the registry cache"
     else
@@ -198,6 +197,24 @@ start_registry_cache() {
         log_info "Registry cache will use anonymous Docker Hub access"
     fi
 
+    # Check if already running
+    if is_cache_running; then
+        if registry_cache_proxy_auth_matches; then
+            log_info "Registry cache already running"
+            # Still ensure the Docker mirror is configured (may have been lost after restart)
+            configure_docker_mirror
+            return 0
+        fi
+
+        log_info "Recreating registry cache to apply updated Docker Hub authentication settings"
+        docker compose --profile setup-infrastructure rm -fs "$REGISTRY_CACHE_SERVICE" >/dev/null 2>&1 || true
+    fi
+
+    log_step "Starting pull-through cache for Docker Hub images..."
+    echo "  This cache will significantly reduce rate limit issues"
+    echo "  and speed up repeated image pulls during setup."
+    echo ""
+    
     # Set environment variable for the service
     export REGISTRY_DATA_DIR="$cache_dir"
     
@@ -460,6 +477,7 @@ export -f is_cache_running
 export -f is_cache_healthy
 export -f registry_cache_dir
 export -f load_registry_proxy_credentials
+export -f registry_cache_proxy_auth_matches
 export -f docker_mirror_configured
 export -f prepare_registry_cache_for_startup
 export -f start_registry_cache
