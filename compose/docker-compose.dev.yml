@@ -100,7 +100,9 @@ services:
     user: root
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "2375"]
+      # BusyBox resolves localhost to ::1 in this image, but socat is listening
+      # on IPv4 loopback only.
+      test: ["CMD", "nc", "-z", "127.0.0.1", "2375"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -491,8 +493,6 @@ services:
 volumes:
   coder-db-data:
   gitea-db-data:
-
-
 
 
 
