@@ -230,6 +230,45 @@ prompt_menu_choice() {
     done
 }
 
+prompt_number_choice() {
+    local prompt="$1"
+    local default="${2:-}"
+    local min="${3:-1}"
+    local max="$4"
+    local choice
+    local default_prompt
+
+    if [[ -z "$max" ]]; then
+        log_error "prompt_number_choice requires a max value"
+        return 1
+    fi
+
+    if [[ -n "$default" ]]; then
+        default_prompt="[$default]"
+    else
+        default_prompt="[$min-$max]"
+    fi
+
+    while true; do
+        if [[ -e /dev/tty ]] && (: </dev/tty) 2>/dev/null; then
+            read -r -p "$(echo -e ${CYAN}→${NC}) $prompt ${default_prompt}: " choice </dev/tty
+        else
+            choice="$default"
+        fi
+
+        if [[ -z "$choice" && -n "$default" ]]; then
+            choice="$default"
+        fi
+
+        if [[ "$choice" =~ ^[0-9]+$ ]] && ((choice >= min && choice <= max)); then
+            echo "$choice"
+            return 0
+        fi
+
+        log_error "Invalid selection. Please enter a number between $min and $max"
+    done
+}
+
 pause_for_enter() {
     local prompt="${1:-Press Enter to continue...}"
 
@@ -486,7 +525,7 @@ trap run_cleanup_handlers EXIT
 # Export functions
 export -f log_info log_success log_warn log_error log_header log_step
 export -f clear_screen screen_title screen_section
-export -f prompt_yes_no prompt_input prompt_password prompt_select prompt_multiselect prompt_menu_choice pause_for_enter
+export -f prompt_yes_no prompt_input prompt_password prompt_select prompt_multiselect prompt_menu_choice prompt_number_choice pause_for_enter
 export -f validate_ip validate_domain validate_email validate_path validate_port
 export -f backup_file detect_os detect_init_system check_command check_port_available
 export -f progress_bar set_error_trap error_handler

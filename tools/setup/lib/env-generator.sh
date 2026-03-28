@@ -199,12 +199,9 @@ generate_env_interactive() {
         echo ""
         echo -e "${BOLD}DNS for local domain?${NC}"
         echo "  1) Install Pi-hole  — handles DNS + optional ad blocking (recommended)"
-        echo "  2) Manual DNS       — you add records to your own DNS server/router"
-        echo ""
+        echo "  2) Use my existing DNS/router"
         local _dns_choice
-        _dns_choice=$(prompt_menu_choice "Choose how local DNS should be handled:" "1" \
-            "Install Pi-hole" \
-            "Use my existing DNS/router")
+        _dns_choice=$(prompt_number_choice "Select" "1" "1" "2")
         echo ""
         if [[ "$_dns_choice" == "2" ]]; then
             use_pihole=false
