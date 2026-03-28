@@ -30,6 +30,7 @@ config/cloudflare/*.pem
 config/cloudflare/config.yml
 
 # SSH keys and certificates
+config/ssh/
 *.key
 *.pem
 *.crt
