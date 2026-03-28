@@ -138,7 +138,10 @@ categorize_pull_phases() {
         elif [[ "$image" =~ ^ghcr\.io/ ]] || \
              [[ "$image" =~ ^lscr\.io/ ]] || \
              [[ "$image" =~ ^gcr\.io/ ]] || \
-             [[ "$image" =~ ^quay\.io/ ]]; then
+             [[ "$image" =~ ^quay\.io/ ]] || \
+             [[ "$image" =~ ^mcr\.microsoft\.com/ ]] || \
+             [[ "$image" =~ ^cgr\.dev/ ]] || \
+             [[ "$image" =~ ^public\.ecr\.aws/ ]]; then
             phase2_nonhub+=("$image")
         # Phase 3: Docker Hub images
         else

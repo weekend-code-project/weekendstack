@@ -31,7 +31,12 @@ run_tests() {
                 if [[ "$result" == "gcr" ]]; then
                     result=$(categorize_registry "quay.io/prometheus/prometheus:latest")
                     if [[ "$result" == "quay" ]]; then
-                        test_pass
+                        result=$(categorize_registry "mcr.microsoft.com/devcontainers/base:ubuntu-22.04")
+                        if [[ "$result" == "other" ]]; then
+                            test_pass
+                        else
+                            test_fail "MCR registry should be categorized as other: got '$result'"
+                        fi
                     else
                         test_fail "Quay registry not recognized: got '$result'"
                     fi
@@ -77,11 +82,11 @@ run_tests() {
     test_case "Build service base images are included in analysis"
     local build_images
     build_images=$(get_images_for_profiles "networking" "productivity")
-    if echo "$build_images" | grep -q '^python:3.12-alpine$' && \
-       echo "$build_images" | grep -q '^ubuntu:22.04$'; then
+    if echo "$build_images" | grep -q '^mcr.microsoft.com/devcontainers/python:1-3.12-bookworm$' && \
+       echo "$build_images" | grep -q '^mcr.microsoft.com/devcontainers/base:ubuntu-22.04$'; then
         test_pass
     else
-        test_fail "Expected build base images python:3.12-alpine and ubuntu:22.04 to be included"
+        test_fail "Expected MCR build base images for link-router and resourcespace to be included"
     fi
     
     # Test 4: Analyze compose images

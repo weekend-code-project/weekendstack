@@ -41,6 +41,9 @@ categorize_registry() {
         gcr.io/*)
             echo "gcr"
             ;;
+        mcr.microsoft.com/*|cgr.dev/*|public.ecr.aws/*)
+            echo "other"
+            ;;
         quay.io/*)
             echo "quay"
             ;;
