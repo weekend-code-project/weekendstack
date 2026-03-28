@@ -18,28 +18,46 @@ fi
 CODER_URL="${CODER_ACCESS_URL:-http://localhost:7080}"
 CODER_TOKEN="${CODER_SESSION_TOKEN:-}"
 
-# Color codes
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+COMMON_LIB="$WORKSPACE_ROOT/tools/setup/lib/common.sh"
+CODER_TEMPLATE_LIB="$WORKSPACE_ROOT/tools/setup/lib/coder-template-installer.sh"
 
-log_info() {
-    echo -e "${BLUE}ℹ${NC} $1"
-}
+if [[ -f "$COMMON_LIB" ]]; then
+    source "$COMMON_LIB"
+else
+    RED='\033[0;31m'
+    GREEN='\033[0;32m'
+    YELLOW='\033[1;33m'
+    BLUE='\033[0;34m'
+    NC='\033[0m'
 
-log_success() {
-    echo -e "${GREEN}✓${NC} $1"
-}
+    log_info() {
+        echo -e "${BLUE}ℹ${NC} $1"
+    }
 
-log_error() {
-    echo -e "${RED}✗${NC} $1"
-}
+    log_success() {
+        echo -e "${GREEN}✓${NC} $1"
+    }
 
-log_warn() {
-    echo -e "${YELLOW}⚠${NC} $1"
-}
+    log_error() {
+        echo -e "${RED}✗${NC} $1"
+    }
+
+    log_warn() {
+        echo -e "${YELLOW}⚠${NC} $1"
+    }
+
+    screen_title() {
+        clear 2>/dev/null || true
+        echo ""
+        echo "=== $1 ==="
+        [[ -n "${2:-}" ]] && echo "  $2"
+        echo ""
+    }
+fi
+
+if [[ -f "$CODER_TEMPLATE_LIB" ]]; then
+    source "$CODER_TEMPLATE_LIB"
+fi
 
 # Check if Coder token is configured
 check_token() {
@@ -136,10 +154,12 @@ test_auth() {
         return 1
     fi
     
-    local user_info=$(get_current_user 2>&1)
-    if [[ $? -eq 0 ]]; then
-        local username=$(echo "$user_info" | grep -o '"username":"[^"]*"' | cut -d'"' -f4)
-        local email=$(echo "$user_info" | grep -o '"email":"[^"]*"' | cut -d'"' -f4)
+    local user_info
+    if user_info=$(validate_coder_session_token "$CODER_TOKEN" "$CODER_URL" 2>&1); then
+        local username
+        local email
+        username=$(extract_coder_username "$user_info")
+        email=$(echo "$user_info" | grep -o '"email":"[^"]*"' | cut -d'"' -f4)
         log_success "Authenticated as: $username ($email)"
         return 0
     else
@@ -153,11 +173,7 @@ test_auth() {
 prompt_for_coder_setup() {
     local env_file="$WORKSPACE_ROOT/.env"
     
-    echo ""
-    echo "╔════════════════════════════════════════════════════════════════╗"
-    echo "║                   Coder Setup Required                         ║"
-    echo "╚════════════════════════════════════════════════════════════════╝"
-    echo ""
+    screen_title "Coder Authentication" "Get a valid session token from the running Coder instance before deploying templates."
     log_info "Coder is running at: $CODER_URL"
     echo ""
     echo "To generate your authentication token:"
@@ -182,20 +198,9 @@ prompt_for_coder_setup() {
     done
     
     # Save to .env
-    if grep -q "^CODER_SESSION_TOKEN=" "$env_file" 2>/dev/null; then
-        # Update existing line
-        if [[ "$OSTYPE" == "darwin"* ]]; then
-            sed -i '' "s|^CODER_SESSION_TOKEN=.*|CODER_SESSION_TOKEN=$token|" "$env_file"
-        else
-            sed -i "s|^CODER_SESSION_TOKEN=.*|CODER_SESSION_TOKEN=$token|" "$env_file"
-        fi
-    else
-        # Append new line
-        echo "CODER_SESSION_TOKEN=$token" >> "$env_file"
-    fi
+    store_coder_session_token "$token" "$env_file"
     
     # Reload .env
-    export CODER_SESSION_TOKEN="$token"
     CODER_TOKEN="$token"
     
     log_success "Token saved to .env"

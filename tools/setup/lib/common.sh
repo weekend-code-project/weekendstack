@@ -40,6 +40,42 @@ log_step() {
     echo -e "  ${CYAN}→${NC} $*" >&2
 }
 
+clear_screen() {
+    if [[ -e /dev/tty ]] && (: >/dev/tty) 2>/dev/null; then
+        clear >/dev/tty 2>/dev/null || true
+    elif [[ -t 1 ]]; then
+        clear 2>/dev/null || true
+    fi
+}
+
+screen_title() {
+    local title="$1"
+    local subtitle="${2:-}"
+    local clear_first="${3:-true}"
+
+    if [[ "$clear_first" == "true" ]]; then
+        clear_screen
+    fi
+
+    log_header "$title"
+
+    if [[ -n "$subtitle" ]]; then
+        echo "  $subtitle" >&2
+        echo "" >&2
+    fi
+}
+
+screen_section() {
+    local title="$1"
+    local body="${2:-}"
+
+    echo -e "${BOLD}$title${NC}" >&2
+    if [[ -n "$body" ]]; then
+        echo "  $body" >&2
+    fi
+    echo "" >&2
+}
+
 # Progress indicator
 show_spinner() {
     local pid=$1
@@ -148,6 +184,58 @@ prompt_select() {
             log_error "Invalid selection. Please enter a number between 1 and ${#options[@]}"
         fi
     done
+}
+
+prompt_menu_choice() {
+    local prompt="$1"
+    local default="${2:-}"
+    shift 2
+    local options=("$@")
+    local choice
+    local default_prompt
+
+    if [[ ${#options[@]} -eq 0 ]]; then
+        log_error "prompt_menu_choice requires at least one option"
+        return 1
+    fi
+
+    echo -e "${CYAN}?${NC} $prompt" >&2
+    for i in "${!options[@]}"; do
+        echo "  $((i + 1))) ${options[$i]}" >&2
+    done
+
+    if [[ -n "$default" ]]; then
+        default_prompt="[$default]"
+    else
+        default_prompt="[1-${#options[@]}]"
+    fi
+
+    while true; do
+        if [[ -e /dev/tty ]] && (: </dev/tty) 2>/dev/null; then
+            read -r -p "$(echo -e ${CYAN}→${NC}) Select ${default_prompt}: " choice </dev/tty
+        else
+            choice="$default"
+        fi
+
+        if [[ -z "$choice" && -n "$default" ]]; then
+            choice="$default"
+        fi
+
+        if [[ "$choice" =~ ^[0-9]+$ ]] && ((choice >= 1 && choice <= ${#options[@]})); then
+            echo "$choice"
+            return 0
+        fi
+
+        log_error "Invalid selection. Please enter a number between 1 and ${#options[@]}"
+    done
+}
+
+pause_for_enter() {
+    local prompt="${1:-Press Enter to continue...}"
+
+    if [[ -e /dev/tty ]] && (: </dev/tty) 2>/dev/null; then
+        read -r -p "  $prompt" _pause </dev/tty
+    fi
 }
 
 prompt_multiselect() {
@@ -397,7 +485,8 @@ trap run_cleanup_handlers EXIT
 
 # Export functions
 export -f log_info log_success log_warn log_error log_header log_step
-export -f prompt_yes_no prompt_input prompt_password prompt_select prompt_multiselect
+export -f clear_screen screen_title screen_section
+export -f prompt_yes_no prompt_input prompt_password prompt_select prompt_multiselect prompt_menu_choice pause_for_enter
 export -f validate_ip validate_domain validate_email validate_path validate_port
 export -f backup_file detect_os detect_init_system check_command check_port_available
 export -f progress_bar set_error_trap error_handler

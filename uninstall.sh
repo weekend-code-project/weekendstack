@@ -27,6 +27,25 @@ else
     log_success() { echo -e "${GREEN}SUCCESS: $*${NC}"; }
     log_header() { echo ""; echo -e "${CYAN}${BOLD}=== $* ===${NC}"; echo ""; }
     prompt_yes_no() { read -r -p "$1 [y/N]: " response; [[ "$response" =~ ^[Yy]$ ]]; }
+    clear_screen() { clear 2>/dev/null || true; }
+    screen_title() { clear_screen; log_header "$1"; [[ -n "${2:-}" ]] && echo "  $2"; echo ""; }
+    prompt_menu_choice() {
+        local _prompt="$1" _default="$2"
+        shift 2
+        local _options=("$@") _choice
+        echo "$_prompt"
+        for i in "${!_options[@]}"; do
+            echo "  $((i + 1))) ${_options[$i]}"
+        done
+        while true; do
+            read -r -p "Select [${_default}]: " _choice
+            _choice="${_choice:-$_default}"
+            if [[ "$_choice" =~ ^[0-9]+$ ]] && (( _choice >= 1 && _choice <= ${#_options[@]} )); then
+                echo "$_choice"
+                return 0
+            fi
+        done
+    }
 fi
 
 VERSION="2.0.0"
@@ -120,18 +139,11 @@ parse_args() {
 }
 
 show_cleanup_level_menu() {
-    clear
+    screen_title "WeekendStack Cleanup" "Choose how much state to remove before reinstalling."
     # Get real image disk usage for the Level 3 display
     local image_size
     image_size=$(docker system df 2>/dev/null | awk '/^Images/ { print $4 }' || echo "unknown")
 
-    echo ""
-    echo -e "${CYAN}╔════════════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║                                                                    ║${NC}"
-    echo -e "${CYAN}║${NC}          ${BOLD}WeekendStack Cleanup - Choose Level${NC}              ${CYAN}║${NC}"
-    echo -e "${CYAN}║                                                                    ║${NC}"
-    echo -e "${CYAN}╚════════════════════════════════════════════════════════════════════╝${NC}"
-    echo ""
     echo -e "${BOLD}Select cleanup level:${NC}"
     echo ""
     echo -e "${GREEN}1)${NC} ${BOLD}Quick Reset${NC} (soft reset - keeps images and user data)"
@@ -155,7 +167,7 @@ show_cleanup_level_menu() {
     echo -e "   • Remove all Docker images (currently ${BOLD}${image_size}${NC} on disk)"
     echo -e "   ${RED}✗ Nothing is kept${NC}"
     echo ""
-    echo -ne "Enter level [1-3] or 'q' to quit: "
+    echo "Enter level [1-3] or 'q' to quit."
 }
 
 prompt_for_level() {
@@ -165,7 +177,7 @@ prompt_for_level() {
     
     while true; do
         show_cleanup_level_menu
-        read -r choice
+        read -r -p "$(echo -e ${CYAN}→${NC}) Select [1-3]: " choice </dev/tty
         
         case "$choice" in
             1|2|3)
@@ -179,7 +191,7 @@ prompt_for_level() {
                 ;;
             *)
                 echo ""
-                log_error "Invalid choice. Please enter 1, 2, 3, or 'q'"
+                log_error "Invalid choice. Please enter 1, 2, 3, or q"
                 sleep 2
                 ;;
         esac
@@ -189,14 +201,7 @@ prompt_for_level() {
 show_confirmation() {
     local level="$1"
     
-    clear
-    echo ""
-    echo -e "${CYAN}╔════════════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║                                                                    ║${NC}"
-    echo -e "${CYAN}║${NC}                  ${BOLD}Cleanup Confirmation${NC}                        ${CYAN}║${NC}"
-    echo -e "${CYAN}║                                                                    ║${NC}"
-    echo -e "${CYAN}╚════════════════════════════════════════════════════════════════════╝${NC}"
-    echo ""
+    screen_title "Cleanup Confirmation" "Review what Level $level removes before typing UNINSTALL."
     
     case "$level" in
         1)
@@ -734,11 +739,7 @@ execute_cleanup() {
 
     # Print per-step space report for level 3
     if [[ "$level" -ge 3 && ${#_space_rows[@]} -gt 0 ]]; then
-        echo ""
-        echo -e "${CYAN}${BOLD}╔══════════════════════════════════════════════════════════════════╗${NC}"
-        echo -e "${CYAN}${BOLD}║            Disk Space Report (Free Space Per Step)               ║${NC}"
-        echo -e "${CYAN}${BOLD}╚══════════════════════════════════════════════════════════════════╝${NC}"
-        echo ""
+        log_header "Disk Space Report"
         printf '  %-44s %s\n' "Step" "Before → After (free)"
         printf '  %-44s %s\n' "────────────────────────────────────────────" "────────────────────────────"
         for row in "${_space_rows[@]}"; do

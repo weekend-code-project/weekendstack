@@ -6,15 +6,38 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+COMMON_LIB="$PROJECT_ROOT/tools/setup/lib/common.sh"
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-BOLD='\033[1m'
-NC='\033[0m'
+if [[ -f "$COMMON_LIB" ]]; then
+    source "$COMMON_LIB"
+else
+    RED='\033[0;31m'
+    GREEN='\033[0;32m'
+    YELLOW='\033[1;33m'
+    BLUE='\033[0;34m'
+    CYAN='\033[0;36m'
+    BOLD='\033[1m'
+    NC='\033[0m'
+
+    log_header() {
+        echo ""
+        echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo -e "${BOLD}${CYAN}  $1${NC}"
+        echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo ""
+    }
+
+    clear_screen() {
+        clear 2>/dev/null || true
+    }
+
+    screen_title() {
+        clear_screen
+        log_header "$1"
+        [[ -n "${2:-}" ]] && echo "$2"
+        echo ""
+    }
+fi
 
 TOTAL_TESTS=0
 TOTAL_PASSED=0
@@ -23,14 +46,6 @@ TOTAL_SKIPPED=0
 
 # Test result tracking
 declare -a FAILED_TESTS
-
-log_header() {
-    echo ""
-    echo -e "${BOLD}${CYAN}═══════════════════════════════════════${NC}"
-    echo -e "${BOLD}${CYAN}  $1${NC}"
-    echo -e "${BOLD}${CYAN}═══════════════════════════════════════${NC}"
-    echo ""
-}
 
 run_test_file() {
     local test_file="$1"
@@ -138,15 +153,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Main execution
-clear
-echo ""
-echo -e "${BOLD}${CYAN}╔═══════════════════════════════════════╗${NC}"
-echo -e "${BOLD}${CYAN}║    WeekendStack Test Suite            ║${NC}"
-echo -e "${BOLD}${CYAN}╚═══════════════════════════════════════╝${NC}"
-echo ""
-echo "Project: $PROJECT_ROOT"
-echo "Test Category: $CATEGORY"
-echo ""
+screen_title "WeekendStack Test Suite" "Project: $PROJECT_ROOT"$'\n'"Category: $CATEGORY"
 
 START_TIME=$(date +%s)
 FAILED_SUITES=0

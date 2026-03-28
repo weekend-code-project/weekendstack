@@ -88,7 +88,7 @@ prompt_layer_mode() {
     fi
     
     {
-        echo ""
+        screen_title "Setup Mode" "Choose whether this run adds to the current stack, replaces it, or only refreshes Coder templates." "false"
         if [[ -n "$display_profiles" ]]; then
             log_info "Current profiles: $display_profiles (+ core)"
         else
@@ -104,26 +104,23 @@ prompt_layer_mode() {
         echo ""
     } >&2
     
-    local valid_choices="1 or 2"
+    local mode_choice
     if [[ "$coder_running" == "true" ]]; then
-        valid_choices="1, 2, or 3"
+        mode_choice=$(prompt_menu_choice "Choose setup mode:" "1" \
+            "Add to existing profiles" \
+            "Replace current profile selection" \
+            "Only refresh Coder templates")
+    else
+        mode_choice=$(prompt_menu_choice "Choose setup mode:" "1" \
+            "Add to existing profiles" \
+            "Replace current profile selection")
     fi
-    
-    while true; do
-        read -p "Choose mode ($valid_choices): " -r mode_choice </dev/tty
-        if [[ "$mode_choice" == "1" ]]; then
-            echo "add"
-            return
-        elif [[ "$mode_choice" == "2" ]]; then
-            echo "replace"
-            return
-        elif [[ "$mode_choice" == "3" && "$coder_running" == "true" ]]; then
-            echo "templates-only"
-            return
-        else
-            echo "Invalid choice. Please enter $valid_choices." >&2
-        fi
-    done
+
+    case "$mode_choice" in
+        1) echo "add" ;;
+        2) echo "replace" ;;
+        3) echo "templates-only" ;;
+    esac
 }
 
 # Merge profiles (deduplicate)
@@ -180,7 +177,7 @@ select_profiles_interactive() {
     
     # Display to stderr so it shows on terminal (stdout is captured by command substitution)
     {
-        log_header "Service Profile Selection"
+        screen_title "Service Profile Selection" "Pick the service groups you want this setup run to manage." "false"
         
         if [[ "$layer_mode" == "add" ]]; then
             echo "Current profiles: ${existing_profiles[*]}"
@@ -294,7 +291,7 @@ select_profiles_interactive() {
 select_profiles_quick() {
     # All display goes to stderr so stdout is clean for capture by the caller
     {
-        log_header "Quick Profile Selection"
+        screen_title "Quick Profile Selection" "Choose a preset deployment shape or jump to the custom selector." "false"
 
         echo "Available quick deployment options:"
         echo "  1) Foundation    - Core only (recommended starter)"
@@ -477,7 +474,7 @@ check_system_resources() {
         if ! prompt_yes_no "Continue anyway?" "n"; then
             return 1
         fi
-        clear
+        clear_screen
     fi
     
     return 0

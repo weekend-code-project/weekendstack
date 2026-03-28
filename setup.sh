@@ -199,13 +199,7 @@ parse_args() {
 
 # Check prerequisites
 check_prerequisites() {
-    clear
-    echo ""
-    echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "${BOLD}${CYAN}  WeekendStack Interactive Setup Script v$VERSION${NC}"
-    echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo ""
-    log_header "Prerequisites Check"
+    screen_title "WeekendStack Interactive Setup Script v$VERSION" "Prerequisites Check"
     
     local errors=0
     
@@ -324,12 +318,7 @@ setup_coder_github_ssh_key() {
         | python3 -c "import json,sys; print(json.load(sys.stdin).get('public_key',''))" 2>/dev/null || true)
     if [[ -z "$ssh_key" ]]; then return 0; fi
 
-    clear
-    echo ""
-    echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "${BOLD}${CYAN}  GitHub SSH Key Setup${NC}"
-    echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo ""
+    screen_title "GitHub SSH Key Setup" "Add Coder's shared workspace SSH key to GitHub so repo clones work from every workspace."
     echo -e "  Coder workspaces use this SSH key to clone private GitHub repos:"
     echo ""
     echo -e "  ${BOLD}$ssh_key${NC}"
@@ -554,30 +543,16 @@ deploy_coder_templates_interactive() {
         return 1
     fi
 
-    clear
     local coder_url="${CODER_ACCESS_URL:-http://localhost:7080}"
+    local env_file="$SCRIPT_DIR/.env"
+    local templates_dir="$SCRIPT_DIR/config/coder/templates"
+    local push_script="$SCRIPT_DIR/config/coder/scripts/push-template.sh"
 
     # ── Step 1: Ask if user wants to install templates ────────────────────────
-    echo ""
-    log_header "Install Coder Templates"
-    echo ""
-    echo "Coder templates are pre-built workspace blueprints that let developers"
-    echo "spin up ready-to-code environments with one click. This stack includes:"
-    echo ""
-    # List templates from disk
-    local templates_dir="$SCRIPT_DIR/config/coder/templates"
-    if [[ -d "$templates_dir" ]]; then
-        for t in "$templates_dir"/*/; do
-            local tname
-            tname=$(basename "$t")
-            local desc=""
-            if [[ -f "$t/README.md" ]]; then
-                desc=$(head -3 "$t/README.md" | grep -v "^#" | grep -v "^$" | head -1)
-            fi
-            echo "  ○ ${tname}${desc:+  — $desc}"
-        done
-    fi
-    echo ""
+    screen_title "Coder Templates" "Install the workspace blueprints that ship with WeekendStack."
+    screen_section "What this installs" "These templates create ready-to-code Coder workspaces with the repo-specific defaults baked in."
+    show_coder_template_catalog "$templates_dir"
+    echo "" >&2
 
     if ! prompt_yes_no "Install Coder templates?" "y"; then
         log_info "Skipping template installation. Run 'make coder-templates' later."
@@ -585,34 +560,27 @@ deploy_coder_templates_interactive() {
     fi
 
     # ── Step 2: Authenticate ──────────────────────────────────────────────────
-    clear
-    log_header "Coder Authentication"
-    echo "  To deploy templates, you need a CLI session token from Coder."
-    echo ""
-    echo "  1. Sign in (first user becomes admin):"
-    echo "     ${coder_url}"
-    echo ""
-    echo "  2. Get your session token:"
-    echo "     ${coder_url}/cli-auth"
-    echo ""
+    screen_title "Coder Authentication" "Template deployment needs a valid session token from the running Coder instance."
+    echo "  1. Sign in or create the admin account:" >&2
+    echo "     ${coder_url}" >&2
+    echo "" >&2
+    echo "  2. Open the token page in your browser:" >&2
+    echo "     ${coder_url}/cli-auth" >&2
+    echo "" >&2
 
     local token=""
+    local user_info=""
     # Use existing token silently if it passes validation
     if [[ -n "${CODER_SESSION_TOKEN:-}" ]]; then
-        local user_info
-        user_info=$(curl -sf --max-time 5 \
-            -H "Coder-Session-Token: $CODER_SESSION_TOKEN" \
-            "$coder_url/api/v2/users/me" 2>/dev/null || true)
-        if [[ -n "$user_info" ]] && echo "$user_info" | grep -q '"username"'; then
+        user_info=$(validate_coder_session_token "$CODER_SESSION_TOKEN" "$coder_url" 2>/dev/null || true)
+        if [[ -n "$user_info" ]]; then
             token="$CODER_SESSION_TOKEN"
-            local uname
-            uname=$(echo "$user_info" | grep -o '"username":"[^"]*"' | cut -d'"' -f4)
-            log_success "Already authenticated as: $uname"
+            log_success "Already authenticated as: $(extract_coder_username "$user_info")"
         fi
     fi
 
     if [[ -z "$token" ]]; then
-        read -rp "  Paste your Coder session token (or press Enter to skip): " token
+        read -rp "  Paste your Coder session token (or press Enter to skip): " token </dev/tty
         
         if [[ -z "$token" ]]; then
             log_warn "No token provided. Skipping Coder template installation."
@@ -620,22 +588,10 @@ deploy_coder_templates_interactive() {
         fi
         
         # Validate token
-        local user_info
-        user_info=$(curl -sf --max-time 5 \
-            -H "Coder-Session-Token: $token" \
-            "$coder_url/api/v2/users/me" 2>/dev/null || true)
-        if [[ -n "$user_info" ]] && echo "$user_info" | grep -q '"username"'; then
-            local uname
-            uname=$(echo "$user_info" | grep -o '"username":"[^"]*"' | cut -d'"' -f4)
-            log_success "Authenticated as: $uname"
-            
-            # Save token to .env
-            if grep -q "^CODER_SESSION_TOKEN=" "$SCRIPT_DIR/.env" 2>/dev/null; then
-                sed -i "s|^CODER_SESSION_TOKEN=.*|CODER_SESSION_TOKEN=$token|" "$SCRIPT_DIR/.env"
-            else
-                echo "CODER_SESSION_TOKEN=$token" >> "$SCRIPT_DIR/.env"
-            fi
-            export CODER_SESSION_TOKEN="$token"
+        user_info=$(validate_coder_session_token "$token" "$coder_url" 2>/dev/null || true)
+        if [[ -n "$user_info" ]]; then
+            log_success "Authenticated as: $(extract_coder_username "$user_info")"
+            store_coder_session_token "$token" "$env_file"
         else
             log_warn "Token invalid or Coder not reachable. Skipping template installation."
             return 0
@@ -643,35 +599,14 @@ deploy_coder_templates_interactive() {
     fi
 
     # ── Step 3: Deploy templates, showing live progress ───────────────────────
-    echo ""
-    echo "  Deploying templates:"
-    echo ""
-
-    local templates_dir="$SCRIPT_DIR/config/coder/templates"
-    local push_script="$SCRIPT_DIR/config/coder/scripts/push-template.sh"
-    local ok=0 fail=0
-
-    for t in "$templates_dir"/*/; do
-        local tname
-        tname=$(basename "$t")
-        printf "  ○ %-20s" "$tname"
-        local log_out
-        log_out=$(CODER_SESSION_TOKEN="$token" CODER_ACCESS_URL="$coder_url" \
-            "$push_script" "$tname" 2>&1) && {
-            printf "\r  ● %s\n" "$tname"
-            ok=$((ok + 1))
-        } || {
-            printf "\r  ✗ %s (failed)\n" "$tname"
-            fail=$((fail + 1))
-        }
-    done
-
-    echo ""
-    if [[ $fail -eq 0 ]]; then
-        log_success "All $ok templates installed successfully"
+    screen_title "Coder Template Deployment" "Pushing the selected templates into the running Coder instance."
+    if deploy_coder_templates_batch "$templates_dir" "$push_script" "$token" "$coder_url"; then
+        echo "" >&2
+        log_success "All $CODER_TEMPLATE_BATCH_SUCCESS_COUNT templates installed successfully"
         date > "$marker_file"
     else
-        log_warn "$ok installed, $fail failed — run 'make coder-templates' to retry"
+        echo "" >&2
+        log_warn "$CODER_TEMPLATE_BATCH_SUCCESS_COUNT installed, $CODER_TEMPLATE_BATCH_FAILURE_COUNT failed — run 'make coder-templates' to retry"
     fi
 }
 
@@ -685,12 +620,7 @@ main_setup() {
     # Helper to show progress
     show_setup_progress() {
         current_step=$((current_step + 1))
-        clear
-        echo ""
-        echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-        echo -e "${BOLD}${CYAN}  Phase $current_step — $1${NC}"
-        echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-        echo ""
+        screen_title "Phase $current_step" "$1"
     }
     
     # 1. Check prerequisites
@@ -702,14 +632,10 @@ main_setup() {
     
     # Ask to continue after prerequisites
     if [[ "$SETUP_MODE" == "interactive" ]] && ! $DRY_RUN; then
-        echo ""
-        read -r -p "Prerequisites check complete. Continue with setup? [Y/n]: " _prereq_continue </dev/tty
-        _prereq_continue="${_prereq_continue:-y}"
-        if [[ ! "${_prereq_continue,,}" =~ ^y ]]; then
+        if ! prompt_yes_no "Prerequisites check complete. Continue with setup?" "y"; then
             log_error "Setup cancelled by user"
             exit 0
         fi
-        clear
     fi
     
     # 2. Select profiles
@@ -723,7 +649,6 @@ main_setup() {
     
     # Check if user wants templates-only mode
     if [[ "${selected_profiles[0]}" == "TEMPLATES_ONLY_MODE" ]]; then
-        clear
         deploy_coder_templates_interactive
         echo ""
         log_success "Template management complete!"
@@ -745,8 +670,6 @@ main_setup() {
     export SELECTED_PROFILES=("${selected_profiles[@]}")
     
     # Clear screen after selection
-    clear
-    
     # 3. Docker registry authentication
     # Note: Contextual authentication happens later (step 10.5) after analyzing image requirements
     
@@ -950,7 +873,7 @@ main_setup() {
     echo -e "${BOLD}${GREEN}Setup Complete!${NC}"
     echo ""
     if prompt_yes_no "Start WeekendStack services now?" "y"; then
-        clear
+        clear_screen
         # Re-source .env to pick up any changes made by cloudflare wizard, cert setup, etc.
         if [[ -f "$SCRIPT_DIR/.env" ]]; then
             set -a
@@ -1038,7 +961,7 @@ pull_images() {
         if ! prompt_yes_no "Continue anyway?" "y"; then
             exit 1
         fi
-        clear
+        clear_screen
     fi
 }
 

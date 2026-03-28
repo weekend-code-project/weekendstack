@@ -31,12 +31,7 @@ show_progress() {
     local current=$1
     local total=$2
     local section=$3
-    echo ""
-    echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "${BOLD}${CYAN}  Configuration Step $current of $total${NC}"
-    echo -e "${BOLD}${CYAN}  $section${NC}"
-    echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo ""
+    screen_title "Configuration Step $current of $total" "$section"
 }
 
 # Update profiles in existing .env without reconfiguring
@@ -49,14 +44,7 @@ update_env_profiles_only() {
         return 1
     fi
     
-    clear
-    log_header "Updating Service Profiles"
-    
-    echo "Existing configuration detected in .env"
-    echo ""
-    echo "Your current settings will be preserved."
-    echo "Only the selected service profiles will be updated."
-    echo ""
+    screen_title "Service Profiles" "Update the active service set while keeping the rest of the current .env unchanged."
     
     local profiles_string="${selected_profiles[*]}"
     profiles_string="${profiles_string// /,}"
@@ -77,6 +65,25 @@ update_env_profiles_only() {
 generate_env_interactive() {
     local env_file="${SCRIPT_DIR}/.env"
     local selected_profiles=("$@")
+    local has_dev=false
+    local has_ai=false
+
+    for profile in "${selected_profiles[@]}"; do
+        if [[ "$profile" == "dev" ]] || [[ "$profile" == "all" ]]; then
+            has_dev=true
+        fi
+        if [[ "$profile" == "ai" ]] || [[ "$profile" == "all" ]]; then
+            has_ai=true
+        fi
+    done
+
+    local total_steps=4  # System Settings + Access Configuration + Admin Credentials + File Storage
+    if $has_dev; then
+        ((total_steps++))
+    fi
+    if $has_ai; then
+        ((total_steps++))
+    fi
     
     # Check if .env exists and we should just update profiles
     if [[ -f "$env_file" ]] && [[ "${FORCE_RECONFIGURE:-false}" != "true" ]]; then
@@ -91,12 +98,12 @@ generate_env_interactive() {
         fi
         
         # User chose to reconfigure or update failed
-        clear
+        clear_screen
     fi
     
     # Backup existing .env if it exists
     if [[ -f "$env_file" ]]; then
-        clear
+        screen_title "Existing Configuration" "A .env file is already present for this stack."
         log_warn "Existing .env file found"
         if prompt_yes_no "Create backup before generating new .env?" "y"; then
             backup_file "$env_file"
@@ -106,7 +113,6 @@ generate_env_interactive() {
     # ========================================================================
     # STEP 1: System Settings
     # ========================================================================
-    clear
     show_progress 1 $total_steps "System Settings"
     
     echo "This section configures basic system identification and network settings."
@@ -147,27 +153,6 @@ generate_env_interactive() {
     
     log_success "System settings configured"
     
-    # Check which optional capability profiles are selected
-    local has_dev=false
-    local has_ai=false
-    for profile in "$@"; do
-        if [[ "$profile" == "dev" ]] || [[ "$profile" == "all" ]]; then
-            has_dev=true
-        fi
-        if [[ "$profile" == "ai" ]] || [[ "$profile" == "all" ]]; then
-            has_ai=true
-        fi
-    done
-    
-    # Calculate total steps (Access Configuration is always step 2)
-    local total_steps=4  # System Settings + Access Configuration + Admin Credentials + File Storage
-    if $has_dev; then
-        ((total_steps++))  # Add Git Service Selection
-    fi
-    if $has_ai; then
-        ((total_steps++))  # Add AI Frontend Selection
-    fi
-    
     local lab_domain=""
     local base_domain="localhost"
     local domain_mode="ip"
@@ -178,7 +163,6 @@ generate_env_interactive() {
     # STEP: Access Configuration (always shown — determines networking stack)
     # ========================================================================
     _step=$((_step + 1))
-    clear
     show_progress $_step $total_steps "Access Configuration"
     
     # --- Question 1: Cloudflare Tunnel (remote/external access) ---
@@ -218,9 +202,11 @@ generate_env_interactive() {
         echo "  2) Manual DNS       — you add records to your own DNS server/router"
         echo ""
         local _dns_choice
-        read -r -p "  Select [1]: " _dns_choice </dev/tty
+        _dns_choice=$(prompt_menu_choice "Choose how local DNS should be handled:" "1" \
+            "Install Pi-hole" \
+            "Use my existing DNS/router")
         echo ""
-        if [[ "${_dns_choice:-1}" == "2" ]]; then
+        if [[ "$_dns_choice" == "2" ]]; then
             use_pihole=false
             log_info "Manual DNS selected — add an A/wildcard record for *.${lab_domain} → ${host_ip}"
         else
@@ -265,7 +251,6 @@ generate_env_interactive() {
     
     if $has_dev; then
         _step=$((_step + 1))
-        clear
         show_progress $_step $total_steps "Git Service Selection"
         
         echo "You selected the development profile which includes git hosting."
@@ -277,8 +262,9 @@ generate_env_interactive() {
         echo ""
 
         local git_choice
-        read -r -p "  Select [2]: " git_choice </dev/tty
-        git_choice="${git_choice:-2}"
+        git_choice=$(prompt_menu_choice "Choose the git service for the dev profile:" "2" \
+            "None - Skip git service" \
+            "Gitea - Lightweight self-hosted git")
         
         case "$git_choice" in
             1)
@@ -304,7 +290,6 @@ generate_env_interactive() {
 
     if $has_ai; then
         _step=$((_step + 1))
-        clear
         show_progress $_step $total_steps "AI Services Configuration"
 
         # ── RAM warning ────────────────────────────────────────────────────
@@ -332,10 +317,7 @@ generate_env_interactive() {
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         # Part 1 — Chat Frontend
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-        echo -e "${BOLD}  Chat Frontend${NC}"
-        echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-        echo "Ollama (LLM backend, ~4GB RAM) is always installed."
+        screen_section "Chat Frontend" "Ollama (LLM backend, ~4GB RAM) is always installed."
         echo "Select which chat UI(s) to add (space-separated for multiple, e.g. '2 3'):"
         echo ""
         echo "  1) None        - No chat UI (Ollama API + SearXNG only)"
@@ -373,9 +355,7 @@ generate_env_interactive() {
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         # Part 2 — Additional AI Backend Services
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-        echo -e "${BOLD}  Additional AI Services${NC}"
-        echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        screen_section "Additional AI Services" "Optional AI services that extend the base Ollama + SearXNG setup."
         echo "Always included with the AI profile:"
         log_success "SearXNG  - Privacy-focused search engine         (~1GB RAM)"
         echo ""
@@ -408,9 +388,7 @@ generate_env_interactive() {
         # Part 3 — GPU-Accelerated Services (only if GPU detected)
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         if [[ "${GPU_AVAILABLE:-false}" == "true" ]]; then
-            echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-            echo -e "${BOLD}  GPU-Accelerated Services${NC}"
-            echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+            screen_section "GPU-Accelerated Services" "Enable NVIDIA-backed workloads for faster inference and speech processing."
             echo "Your NVIDIA GPU can accelerate the following services:"
             echo ""
             echo "  1) None       - No GPU acceleration (use CPU Ollama)"
@@ -450,7 +428,6 @@ generate_env_interactive() {
     # STEP: Admin Credentials (always shown)
     # ========================================================================
     _step=$((_step + 1))
-    clear
     show_progress $_step $total_steps "Default Admin Credentials"
     
     echo "Many services (NocoDB, Paperless, Postiz, etc.) support auto-provisioning"
@@ -485,7 +462,6 @@ generate_env_interactive() {
     # STEP: File Storage Paths
     # ========================================================================
     _step=$((_step + 1))
-    clear
     show_progress $_step $total_steps "File Storage Paths"
     
     echo "WeekendStack uses base directories for data storage:"
@@ -524,7 +500,6 @@ generate_env_interactive() {
     # ========================================================================
     # STEP 5: Review & Generate
     # ========================================================================
-    clear
     show_progress $total_steps $total_steps "Review & Generate Configuration"
     
     echo "Configuration summary:"
@@ -799,7 +774,7 @@ generate_env_interactive() {
         echo ""
         log_warn "Change this password after your first login to each service!"
         echo ""
-        read -rp "  Press Enter to continue..." </dev/tty
+        pause_for_enter
     fi
 }
 

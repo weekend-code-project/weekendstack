@@ -30,6 +30,8 @@ fi
 # API Configuration
 CODER_URL="${CODER_ACCESS_URL:-http://localhost:7080}"
 CODER_TOKEN="${CODER_SESSION_TOKEN:-}"
+COMMON_LIB="$WORKSPACE_ROOT/tools/setup/lib/common.sh"
+CODER_TEMPLATE_LIB="$WORKSPACE_ROOT/tools/setup/lib/coder-template-installer.sh"
 
 # Parse arguments
 FORCE_REDEPLOY="false"
@@ -81,6 +83,14 @@ log_error() {
     echo -e "${RED}✗${NC} $1"
 }
 
+if [[ -f "$COMMON_LIB" ]]; then
+    source "$COMMON_LIB"
+fi
+
+if [[ -f "$CODER_TEMPLATE_LIB" ]]; then
+    source "$CODER_TEMPLATE_LIB"
+fi
+
 # Check if already deployed (unless forced or interactive mode)
 if [[ -f "$MARKER_FILE" && "$FORCE_REDEPLOY" != "true" && "$INTERACTIVE_MODE" != "true" ]]; then
     log_info "Templates have already been deployed (marker file exists)"
@@ -103,9 +113,13 @@ if [[ "$FORCE_REDEPLOY" == "true" && -f "$MARKER_FILE" ]]; then
     rm -f "$MARKER_FILE"
 fi
 
-echo ""
-log_info "🚀 Starting Coder template deployment..."
-echo ""
+if declare -F screen_title >/dev/null 2>&1; then
+    screen_title "Coder Template Deployment" "Push the tracked WeekendStack templates into the running Coder instance."
+else
+    echo ""
+    log_info "🚀 Starting Coder template deployment..."
+    echo ""
+fi
 
 # Check if Coder container exists
 if ! docker ps -a --format '{{.Names}}' | grep -q '^coder$'; then
@@ -138,7 +152,14 @@ fi
 
 # Test authentication
 log_info "Testing Coder authentication..."
-if [[ -x "$CODER_API_SCRIPT" ]]; then
+if declare -F validate_coder_session_token >/dev/null 2>&1; then
+    if ! validate_coder_session_token "$CODER_TOKEN" "$CODER_URL" >/dev/null 2>&1; then
+        log_error "Authentication failed"
+        log_info "Please verify your CODER_SESSION_TOKEN in .env"
+        log_info "You can update it by running: $CODER_API_SCRIPT setup"
+        exit 1
+    fi
+elif [[ -x "$CODER_API_SCRIPT" ]]; then
     if ! "$CODER_API_SCRIPT" test 2>/dev/null; then
         log_error "Authentication failed"
         log_info "Please verify your CODER_SESSION_TOKEN in .env"
@@ -199,12 +220,18 @@ fi
 
 # Find all template directories (directories with main.tf files)
 all_templates=()
-while IFS= read -r template_dir; do
-    template_name=$(basename "$template_dir")
-    if [[ -f "$template_dir/main.tf" ]]; then
-        all_templates+=("$template_name")
-    fi
-done < <(find "$TEMPLATES_DIR" -mindepth 1 -maxdepth 1 -type d | sort)
+if declare -F list_coder_template_names >/dev/null 2>&1; then
+    while IFS= read -r template_name; do
+        [[ -n "$template_name" ]] && all_templates+=("$template_name")
+    done < <(list_coder_template_names "$TEMPLATES_DIR")
+else
+    while IFS= read -r template_dir; do
+        template_name=$(basename "$template_dir")
+        if [[ -f "$template_dir/main.tf" ]]; then
+            all_templates+=("$template_name")
+        fi
+    done < <(find "$TEMPLATES_DIR" -mindepth 1 -maxdepth 1 -type d | sort)
+fi
 
 if [[ ${#all_templates[@]} -eq 0 ]]; then
     log_warning "No templates found in $TEMPLATES_DIR"
@@ -233,17 +260,22 @@ echo ""
 
 # Interactive confirmation if in interactive mode
 if [[ "$INTERACTIVE_MODE" == "true" && "$SKIP_CONFIRM" != "true" ]]; then
-    read -p "Proceed with deployment? [Y/n]: " -r response
-    case "$response" in
-        [nN][oO]|[nN])
+    if declare -F prompt_yes_no >/dev/null 2>&1; then
+        if ! prompt_yes_no "Proceed with deployment?" "y"; then
             log_info "Deployment cancelled by user"
             exit 0
-            ;;
-        *)
-            log_info "Starting deployment..."
-            echo ""
-            ;;
-    esac
+        fi
+    else
+        read -p "Proceed with deployment? [Y/n]: " -r response
+        case "$response" in
+            [nN][oO]|[nN])
+                log_info "Deployment cancelled by user"
+                exit 0
+                ;;
+        esac
+    fi
+    log_info "Starting deployment..."
+    echo ""
 fi
 
 # Deploy each template
