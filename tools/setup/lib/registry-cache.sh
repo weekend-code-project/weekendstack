@@ -21,6 +21,73 @@ registry_cache_dir() {
     echo "${REGISTRY_DATA_DIR:-$data_dir/registry-cache}"
 }
 
+load_registry_proxy_credentials() {
+    local docker_config="${HOME}/.docker/config.json"
+    local creds username password
+
+    if [[ -n "${REGISTRY_PROXY_USERNAME:-}" && -n "${REGISTRY_PROXY_PASSWORD:-}" ]]; then
+        return 0
+    fi
+
+    if [[ ! -f "$docker_config" ]] || ! command -v python3 >/dev/null 2>&1; then
+        return 1
+    fi
+
+    creds="$(python3 - "$docker_config" <<'PY'
+import base64
+import json
+import sys
+
+config_path = sys.argv[1]
+try:
+    with open(config_path, "r", encoding="utf-8") as fh:
+        config = json.load(fh)
+except Exception:
+    sys.exit(1)
+
+auths = config.get("auths", {})
+for key in (
+    "https://index.docker.io/v1/",
+    "https://index.docker.io/v1",
+    "docker.io",
+    "registry-1.docker.io",
+):
+    entry = auths.get(key) or {}
+    auth = entry.get("auth")
+    if not auth:
+        continue
+    try:
+        decoded = base64.b64decode(auth).decode("utf-8")
+    except Exception:
+        continue
+    if ":" not in decoded:
+        continue
+    username, password = decoded.split(":", 1)
+    if username and password:
+        print(username)
+        print(password)
+        sys.exit(0)
+
+sys.exit(1)
+PY
+)"
+
+    if [[ -z "$creds" ]]; then
+        return 1
+    fi
+
+    username="$(printf '%s\n' "$creds" | sed -n '1p')"
+    password="$(printf '%s\n' "$creds" | sed -n '2p')"
+
+    if [[ -z "$username" || -z "$password" ]]; then
+        return 1
+    fi
+
+    export REGISTRY_PROXY_USERNAME="$username"
+    export REGISTRY_PROXY_PASSWORD="$password"
+    return 0
+}
+
 daemon_config_is_cache_only() {
     local config_path="$1"
 
@@ -124,6 +191,13 @@ start_registry_cache() {
     cache_dir="$(registry_cache_dir)"
     mkdir -p "$cache_dir"
     
+    if load_registry_proxy_credentials; then
+        log_info "Using authenticated Docker Hub access for the registry cache"
+    else
+        unset REGISTRY_PROXY_USERNAME REGISTRY_PROXY_PASSWORD
+        log_info "Registry cache will use anonymous Docker Hub access"
+    fi
+
     # Set environment variable for the service
     export REGISTRY_DATA_DIR="$cache_dir"
     
@@ -385,6 +459,7 @@ clear_cache() {
 export -f is_cache_running
 export -f is_cache_healthy
 export -f registry_cache_dir
+export -f load_registry_proxy_credentials
 export -f docker_mirror_configured
 export -f prepare_registry_cache_for_startup
 export -f start_registry_cache

@@ -819,6 +819,19 @@ main_setup() {
                 docker_login_hub || log_warn "Authentication failed or skipped"
             fi
         fi
+
+        if [[ $dockerhub_count -gt 0 ]] && is_rate_limited && ! has_docker_hub_auth; then
+            log_warn "Docker Hub anonymous rate limit is exhausted and no Docker Hub login is configured."
+            log_warn "Uncached build images will fail until you authenticate with Docker Hub or the limit resets."
+
+            if [[ "$SETUP_MODE" == "interactive" ]]; then
+                if ! prompt_yes_no "Continue anyway? This setup is likely to fail." "n"; then
+                    exit 1
+                fi
+            else
+                exit 1
+            fi
+        fi
         
         clear || true  # Non-fatal clear in case stdout is not a terminal
     fi
@@ -1184,13 +1197,13 @@ start_services_with_profiles() {
     # Remove any stale containers from previous (partial) runs before bringing
     # the stack up. --remove-orphans also cleans up containers for services
     # that are no longer defined in the current compose configuration.
+    log_step "Removing any stale containers from previous runs..."
+    docker compose $profile_args down --remove-orphans 2>/dev/null || true
+
     prepare_registry_cache_for_startup
     if ! docker buildx version >/dev/null 2>&1; then
         export COMPOSE_BAKE=false
     fi
-
-    log_step "Removing any stale containers from previous runs..."
-    docker compose $profile_args down --remove-orphans 2>/dev/null || true
 
     if docker compose $profile_args up -d --build --remove-orphans; then
         log_success "Services started successfully"

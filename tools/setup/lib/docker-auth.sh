@@ -91,6 +91,16 @@ is_rate_limited() {
     return 1
 }
 
+has_docker_hub_auth() {
+    local config_file="$HOME/.docker/config.json"
+
+    if [[ ! -f "$config_file" ]]; then
+        return 1
+    fi
+
+    grep -q '"https://index.docker.io/v1/"\|"https://index.docker.io/v1"\|"docker.io"\|"registry-1.docker.io"' "$config_file" 2>/dev/null
+}
+
 # Format rate limit status for display
 format_rate_limit_status() {
     local limit_data=$(check_docker_hub_limits)

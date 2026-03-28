@@ -378,6 +378,8 @@ services:
       - 8.8.8.8
     environment:
       REGISTRY_PROXY_REMOTEURL: https://registry-1.docker.io
+      REGISTRY_PROXY_USERNAME: ${REGISTRY_PROXY_USERNAME:-}
+      REGISTRY_PROXY_PASSWORD: ${REGISTRY_PROXY_PASSWORD:-}
       REGISTRY_STORAGE_DELETE_ENABLED: "true"
     ports:
       - "${REGISTRY_PORT:-5000}:5000"
@@ -493,6 +495,5 @@ services:
 volumes:
   coder-db-data:
   gitea-db-data:
-
 
 

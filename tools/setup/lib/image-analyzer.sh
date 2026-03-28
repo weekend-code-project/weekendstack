@@ -98,6 +98,139 @@ extract_builds_from_compose() {
         sort -u
 }
 
+extract_build_definitions_from_compose() {
+    local compose_file="$1"
+
+    if [[ ! -f "$compose_file" ]]; then
+        return 1
+    fi
+
+    awk '
+        function trim(value) {
+            sub(/^[[:space:]]+/, "", value)
+            sub(/[[:space:]]+$/, "", value)
+            return value
+        }
+        function strip_quotes(value) {
+            gsub(/^["'\'']|["'\'']$/, "", value)
+            return value
+        }
+        function emit_build() {
+            if (context != "") {
+                dockerfile_value = (dockerfile != "" ? dockerfile : "Dockerfile")
+                print context "|" dockerfile_value
+            }
+            context = ""
+            dockerfile = ""
+        }
+
+        /^[[:space:]]{2}[A-Za-z0-9_.-]+:/ {
+            if (in_build) {
+                emit_build()
+            }
+            in_build = 0
+            next
+        }
+
+        /^[[:space:]]{4}build:[[:space:]]*$/ {
+            if (in_build) {
+                emit_build()
+            }
+            in_build = 1
+            next
+        }
+
+        /^[[:space:]]{4}build:[[:space:]]*[^[:space:]].*$/ {
+            if (in_build) {
+                emit_build()
+            }
+            value = $0
+            sub(/^[[:space:]]{4}build:[[:space:]]*/, "", value)
+            value = strip_quotes(trim(value))
+            print value "|Dockerfile"
+            in_build = 0
+            next
+        }
+
+        in_build && /^[[:space:]]{6}context:/ {
+            value = $0
+            sub(/^[[:space:]]{6}context:[[:space:]]*/, "", value)
+            context = strip_quotes(trim(value))
+            next
+        }
+
+        in_build && /^[[:space:]]{6}dockerfile:/ {
+            value = $0
+            sub(/^[[:space:]]{6}dockerfile:[[:space:]]*/, "", value)
+            dockerfile = strip_quotes(trim(value))
+            next
+        }
+
+        in_build && /^[[:space:]]{4}[A-Za-z0-9_.-]+:/ {
+            emit_build()
+            in_build = 0
+            next
+        }
+
+        END {
+            if (in_build) {
+                emit_build()
+            }
+        }
+    ' "$compose_file" | sort -u
+}
+
+extract_base_images_from_dockerfile() {
+    local dockerfile="$1"
+
+    if [[ ! -f "$dockerfile" ]]; then
+        return 1
+    fi
+
+    awk '
+        BEGIN { IGNORECASE = 1 }
+        /^[[:space:]]*FROM[[:space:]]+/ {
+            line = $0
+            sub(/^[[:space:]]*FROM[[:space:]]+/, "", line)
+            sub(/[[:space:]]+AS[[:space:]].*$/, "", line)
+            if (line ~ /^--platform=/) {
+                sub(/^--platform=[^[:space:]]+[[:space:]]+/, "", line)
+            }
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
+            if (line != "" && line !~ /^\$/ && line !~ /^\$\{/) {
+                print line
+            }
+        }
+    ' "$dockerfile" | sort -u
+}
+
+extract_build_base_images_from_compose() {
+    local compose_file="$1"
+    local compose_dir build_info context dockerfile dockerfile_path context_dir
+
+    if [[ ! -f "$compose_file" ]]; then
+        return 1
+    fi
+
+    compose_dir="$(cd "$(dirname "$compose_file")" && pwd)"
+
+    while IFS='|' read -r context dockerfile; do
+        [[ -z "$context" ]] && continue
+
+        if ! context_dir="$(cd "$compose_dir" && cd "$context" 2>/dev/null && pwd)"; then
+            continue
+        fi
+
+        if [[ "$dockerfile" = /* ]]; then
+            dockerfile_path="$dockerfile"
+        else
+            dockerfile_path="$context_dir/$dockerfile"
+        fi
+
+        extract_base_images_from_dockerfile "$dockerfile_path" 2>/dev/null || true
+    done < <(extract_build_definitions_from_compose "$compose_file")
+}
+
 # Get all images for selected profiles
 get_images_for_profiles() {
     local profiles=("$@")
@@ -132,6 +265,10 @@ get_images_for_profiles() {
             while IFS= read -r image; do
                 [[ -n "$image" ]] && all_images+=("$image")
             done < <(extract_images_from_compose "$full_path")
+
+            while IFS= read -r image; do
+                [[ -n "$image" ]] && all_images+=("$image")
+            done < <(extract_build_base_images_from_compose "$full_path")
         fi
     done
     

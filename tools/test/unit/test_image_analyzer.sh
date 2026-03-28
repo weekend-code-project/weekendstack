@@ -72,6 +72,17 @@ run_tests() {
     else
         test_fail "No images found for dev profile"
     fi
+
+    # Test 3b: Build base images are included for build services
+    test_case "Build service base images are included in analysis"
+    local build_images
+    build_images=$(get_images_for_profiles "networking" "productivity")
+    if echo "$build_images" | grep -q '^python:3.12-alpine$' && \
+       echo "$build_images" | grep -q '^ubuntu:22.04$'; then
+        test_pass
+    else
+        test_fail "Expected build base images python:3.12-alpine and ubuntu:22.04 to be included"
+    fi
     
     # Test 4: Analyze compose images
     test_case "Analyze compose images for 'dev'"
