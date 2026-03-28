@@ -256,12 +256,9 @@ generate_env_interactive() {
         echo ""
         echo "  1) None   - Skip git service (Coder IDE only)"
         echo "  2) Gitea  - Lightweight, fast self-hosted git (recommended)"
-        echo ""
 
         local git_choice
-        git_choice=$(prompt_menu_choice "Choose the git service for the dev profile:" "2" \
-            "None - Skip git service" \
-            "Gitea - Lightweight self-hosted git")
+        git_choice=$(prompt_number_choice "Select" "2" "1" "2")
         
         case "$git_choice" in
             1)
