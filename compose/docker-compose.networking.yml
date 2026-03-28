@@ -437,20 +437,23 @@ services:
       pihole-dnsmasq-init:
         condition: service_completed_successfully
     ports:
-      # DNS ports - may conflict with systemd-resolved on Linux
-      # If conflict, run: sudo systemctl disable systemd-resolved
-      - "${PIHOLE_PORT_DNS:-53}:53/tcp"
-      - "${PIHOLE_PORT_DNS:-53}:53/udp"
+      # Bind DNS only on the configured LAN IP. This avoids conflicts with
+      # local stub resolvers such as systemd-resolved that listen on 127.0.0.x.
+      - "${HOST_IP}:${PIHOLE_PORT_DNS:-53}:53/tcp"
+      - "${HOST_IP}:${PIHOLE_PORT_DNS:-53}:53/udp"
       # Web interface (internal access only)
       - "${PIHOLE_PORT_WEB:-8088}:80/tcp"
     environment:
       TZ: ${TIMEZONE:-UTC}
-      WEBPASSWORD: ${PIHOLE_WEBPASSWORD}
-      PIHOLE_DNS_: ${PIHOLE_DNS1:-1.1.1.1};${PIHOLE_DNS2:-1.0.0.1}
       FTLCONF_webserver_api_password: ${PIHOLE_WEBPASSWORD}
-      DNSMASQ_LISTENING: all
-      # Disable DHCP - use router for DHCP
-      DHCP_ACTIVE: "false"
+      # Docker bridge deployments need ALL listening mode so queries forwarded
+      # through the published host IP are accepted.
+      FTLCONF_dns_listeningMode: 'ALL'
+      # Pi-hole v6 does not read /etc/dnsmasq.d by default.
+      FTLCONF_misc_etc_dnsmasq_d: 'true'
+      FTLCONF_dns_upstreams: |-
+        ${PIHOLE_DNS1:-1.1.1.1}
+        ${PIHOLE_DNS2:-1.0.0.1}
     volumes:
       - type: bind
         source: ../config/pihole/etc-pihole
