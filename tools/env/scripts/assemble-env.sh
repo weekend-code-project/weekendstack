@@ -199,7 +199,7 @@ SETUP_DATE=
 SELECTED_PROFILES=$profiles_list
 
 # Default Profile Selection
-# Compose automatically activates these profiles when running `docker compose up`.
+# Compose automatically activates these profiles when running docker compose up.
 COMPOSE_PROFILES=$profiles_list
 
 EOF

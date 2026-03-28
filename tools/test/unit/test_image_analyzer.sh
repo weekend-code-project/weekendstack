@@ -138,7 +138,10 @@ run_tests() {
     
     # Test 10: Profile compose map completeness
     test_case "Profile compose map completeness"
-    local all_profiles=("ai" "automation" "core" "dev" "media" "monitoring" "networking" "personal" "productivity")
+    local all_profiles=("ai" "automation" "core" "dev" "media" "monitoring" "networking" "productivity")
+    if [[ -f "$PROJECT_ROOT/compose/docker-compose.personal.yml" ]]; then
+        all_profiles+=("personal")
+    fi
     local missing_profiles=()
     
     for profile in "${all_profiles[@]}"; do

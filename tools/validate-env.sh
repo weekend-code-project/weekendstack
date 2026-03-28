@@ -90,7 +90,7 @@ WEAK_PATTERNS=(
 
 for pattern in "${WEAK_PATTERNS[@]}"; do
     if grep -E "^[A-Z_]*(PASSWORD|PASS|SECRET).*$pattern" .env >/dev/null 2>&1; then
-        echo -e "${RED}  ✗ Placeholder/weak password detected: $pattern${NC}"
+        echo -e "${RED}  ✗ Weak password detected: $pattern${NC}"
         ERRORS=$((ERRORS + 1))
     fi
 done

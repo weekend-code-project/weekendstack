@@ -14,18 +14,23 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Require template file as first argument
-if [[ -z "$1" ]]; then
-    echo "Error: Template file required"
-    echo "Usage: $0 <template_file> [output_file]"
-    echo ""
-    echo "Examples:"
-    echo "  $0 .env.tmp                     # Generate .env from .env.tmp"
-    echo "  $0 custom.template .env.custom  # Custom template and output"
-    exit 1
+# Default to the assembled temp template when present. If no temp template
+# is provided, always assemble a fresh full one so the documented no-arg flow
+# is deterministic and does not depend on leftover test or setup state.
+if [[ -n "${1:-}" ]]; then
+    ENV_EXAMPLE="$1"
+else
+    "${PROJECT_ROOT}/tools/env/scripts/assemble-env.sh" \
+        --profiles "all" \
+        --output "${PROJECT_ROOT}/.env.tmp" >/dev/null 2>&1
+
+    if [[ -f "${PROJECT_ROOT}/.env.tmp" ]]; then
+        ENV_EXAMPLE="${PROJECT_ROOT}/.env.tmp"
+    else
+        ENV_EXAMPLE="${PROJECT_ROOT}/.env.example"
+    fi
 fi
 
-ENV_EXAMPLE="$1"
 ENV_FILE="${2:-${PROJECT_ROOT}/.env}"
 
 # Colors for output
