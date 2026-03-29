@@ -88,4 +88,26 @@ else
     test_fail "Expected existing connector token to be preserved and external profile to be enabled"
 fi
 
+test_case "update_env_cloudflare defaults new installs to tunnel mode"
+cat > "$SCRIPT_DIR/.env" <<'EOF'
+BASE_DOMAIN=weekendcodeproject.dev
+DOMAIN_MODE=ip
+COMPOSE_PROFILES=all
+CLOUDFLARE_TUNNEL_ENABLED=true
+CLOUDFLARE_TUNNEL_NAME=weekendstack-tunnel
+CLOUDFLARE_TUNNEL_ID=tunnel-123
+CLOUDFLARE_TUNNEL_TOKEN=existing-token==
+EOF
+
+unset CLOUDFLARE_ACCOUNT_ID
+
+if update_env_cloudflare "weekendstack-tunnel" "tunnel-123" "weekendcodeproject.dev" >/dev/null 2>&1 && \
+   grep -q '^CLOUDFLARE_TUNNEL_TOKEN=existing-token==$' "$SCRIPT_DIR/.env" && \
+   grep -q '^COMPOSE_PROFILES=all,external$' "$SCRIPT_DIR/.env" && \
+   grep -q '^DOMAIN_MODE=tunnel$' "$SCRIPT_DIR/.env"; then
+    test_pass
+else
+    test_fail "Expected new installs to normalize DOMAIN_MODE to tunnel when Cloudflare is enabled"
+fi
+
 test_suite_end

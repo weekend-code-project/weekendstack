@@ -23,12 +23,17 @@
 _glance_gen_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 _ws_root="$(cd "$_glance_gen_dir/../../.." && pwd)"
 
+if [[ -f "$_glance_gen_dir/common.sh" ]]; then
+    # shellcheck source=./common.sh
+    source "$_glance_gen_dir/common.sh"
+fi
+
 generate_glance_config() {
     local output="${1:-$_ws_root/config/glance/glance.yml}"
     local env_file="${2:-$_ws_root/.env}"
 
     # ── Read config from .env ────────────────────────────────────────────────
-    local host_ip base_domain lab_domain kavita_port domain_mode kavita_api_key
+    local host_ip base_domain lab_domain kavita_port domain_mode kavita_api_key access_mode
     host_ip=$(grep "^HOST_IP=" "$env_file" 2>/dev/null | cut -d'=' -f2 | tr -d ' "') 
     host_ip="${host_ip:-192.168.2.50}"
     base_domain=$(grep "^BASE_DOMAIN=" "$env_file" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
@@ -39,6 +44,15 @@ generate_glance_config() {
     kavita_port="${kavita_port:-5002}"
     domain_mode=$(grep "^DOMAIN_MODE=" "$env_file" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
     domain_mode="${domain_mode:-ip}"
+    if type normalize_access_mode >/dev/null 2>&1; then
+        access_mode=$(normalize_access_mode "$domain_mode")
+    else
+        case "$domain_mode" in
+            tunnel|cloudflare|both) access_mode="tunnel" ;;
+            local|pihole) access_mode="local" ;;
+            *) access_mode="ip" ;;
+        esac
+    fi
     kavita_api_key=$(grep "^KAVITA_API_KEY=" "$env_file" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
     kavita_api_key="${kavita_api_key:-}"
 
@@ -70,17 +84,16 @@ generate_glance_config() {
     local has_media;      _glance_has_profile "media"      && has_media=true      || has_media=false
 
     # ── Navigation URL strategy ───────────────────────────────────────────────
-    # Use full absolute URLs so links work regardless of how glance is accessed
-    # (direct IP, lab domain, or Cloudflare tunnel).
-    # Priority: cloudflare/both → BASE_DOMAIN; pihole → LAB_DOMAIN; else → IP:PORT
+    # Use full absolute URLs that match the chosen setup access mode.
+    # Modes: tunnel → BASE_DOMAIN, local → LAB_DOMAIN, ip → HOST_IP:PORT
 
     local url_speedtest url_traefik url_pihole
     local url_uptimekuma url_wud
     local url_ollama url_whisper
     local url_immich url_kavita url_navidrome
 
-    if [[ "$domain_mode" == "cloudflare" || "$domain_mode" == "both" ]]; then
-        # Cloudflare tunnel — absolute HTTPS URLs (work from LAN and externally)
+    if [[ "$access_mode" == "tunnel" ]]; then
+        # Tunnel access — absolute HTTPS URLs
         url_speedtest="https://speedtest.${base_domain}"
         url_traefik="https://traefik.${base_domain}"
         url_pihole="https://pihole.${base_domain}"
@@ -91,8 +104,8 @@ generate_glance_config() {
         url_immich="https://immich.${base_domain}"
         url_kavita="https://kavita.${base_domain}"
         url_navidrome="https://navidrome.${base_domain}"
-    elif [[ "$domain_mode" == "pihole" ]]; then
-        # Local lab domain (LAN only, requires Pi-hole DNS)
+    elif [[ "$access_mode" == "local" ]]; then
+        # Local lab domain (LAN only, requires Pi-hole or manual local DNS)
         url_speedtest="https://speedtest.${lab_domain}"
         url_traefik="https://traefik.${lab_domain}"
         url_pihole="https://pihole.${lab_domain}"

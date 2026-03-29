@@ -176,4 +176,18 @@ else
 fi
 restore_file ".env"
 
+# Test 12: Access mode flow is a single top-level chooser
+test_case "env generator exposes a single tunnel local ip access chooser"
+ENV_GENERATOR_FILE="$PROJECT_ROOT/tools/setup/lib/env-generator.sh"
+
+if grep -q 'How should you access WeekendStack\?' "$ENV_GENERATOR_FILE" && \
+   grep -q '1) Tunnel' "$ENV_GENERATOR_FILE" && \
+   grep -q '2) Local Domain' "$ENV_GENERATOR_FILE" && \
+   grep -q '3) Local IP' "$ENV_GENERATOR_FILE" && \
+   grep -q 'DNS for local domain\?' "$ENV_GENERATOR_FILE"; then
+    test_pass
+else
+    test_fail "Expected env generator to provide a single access-mode chooser with a local-domain DNS follow-up"
+fi
+
 test_suite_end

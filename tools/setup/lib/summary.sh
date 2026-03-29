@@ -380,7 +380,9 @@ display_summary_to_console() {
     local lab_domain=$(grep "^LAB_DOMAIN=" "$stack_dir/.env" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ' || echo "lab")
     local base_domain=$(grep "^BASE_DOMAIN=" "$stack_dir/.env" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ' || echo "localhost")
     local host_ip=$(grep "^HOST_IP=" "$stack_dir/.env" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
-    local tunnel_enabled=$(grep "^CLOUDFLARE_TUNNEL_ENABLED=" "$stack_dir/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' ' || echo "false")
+    local domain_mode=$(grep "^DOMAIN_MODE=" "$stack_dir/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' ' || echo "ip")
+    local access_mode
+    access_mode=$(normalize_access_mode "$domain_mode")
     
     # Define service subdomain mappings  
     declare -A service_subdomains=(
@@ -438,7 +440,17 @@ display_summary_to_console() {
     
     echo ""
     echo -e "${BOLD}Quick Start:${NC}"
-    echo "  Open your dashboard: $(if [[ "$tunnel_enabled" == "true" ]]; then echo "https://home.${base_domain}"; else echo "http://${host_ip}:8080"; fi)"
+    case "$access_mode" in
+        tunnel)
+            echo "  Open your dashboard: https://home.${base_domain}"
+            ;;
+        local)
+            echo "  Open your dashboard: https://home.${lab_domain}"
+            ;;
+        *)
+            echo "  Open your dashboard: http://${host_ip}:8080"
+            ;;
+    esac
     echo ""
     
     echo -e "${BOLD}Services Running:${NC}"
@@ -452,13 +464,17 @@ display_summary_to_console() {
             local subdomain="${service_subdomains[$service]:-$service}"
             local url=""
             
-            if [[ "$tunnel_enabled" == "true" ]]; then
-                # External tunnel URL
-                url="https://${subdomain}.${base_domain}"
-            else
-                # Local IP access
-                url="http://${host_ip}:* (check docker ps)"
-            fi
+            case "$access_mode" in
+                tunnel)
+                    url="https://${subdomain}.${base_domain}"
+                    ;;
+                local)
+                    url="https://${subdomain}.${lab_domain}"
+                    ;;
+                *)
+                    url="http://${host_ip}:* (check docker ps)"
+                    ;;
+            esac
             
             printf "  %-25s %s\n" "$service" "$url"
         done <<< "$running_services"
@@ -469,27 +485,38 @@ display_summary_to_console() {
     echo ""
     echo -e "${BOLD}Access Methods:${NC}"
     
-    if [[ "$tunnel_enabled" == "true" ]]; then
-        echo "  Using Cloudflare Tunnel (external access enabled)"
-        echo "  Base Domain: ${base_domain}"
-        echo ""
-        echo "  Example URLs:"
-        echo "    • Dashboard:   https://home.${base_domain}"
-        echo "    • Coder:       https://coder.${base_domain}"
-        echo "    • Traefik:     https://traefik.${base_domain}"
-    else
-        echo "  Local IP Access: ${host_ip}"
-        echo ""
-        echo "  Common services:"
-        echo "    • Dashboard:   http://${host_ip}:8080"
-        echo "    • Coder:       http://${host_ip}:7080"
-        echo "    • Traefik:     http://${host_ip}:8081"
-        echo "    • Pi-hole:     http://${host_ip}:8091"
-        echo ""
-        echo "  With .${lab_domain} DNS (requires Pi-hole setup):"
-        echo "    • Dashboard:   https://home.${lab_domain}"
-        echo "    • Any service: https://<service>.${lab_domain}"
-    fi
+    case "$access_mode" in
+        tunnel)
+            echo "  Using Cloudflare Tunnel"
+            echo "  Base Domain: ${base_domain}"
+            echo ""
+            echo "  Example URLs:"
+            echo "    • Dashboard:   https://home.${base_domain}"
+            echo "    • Coder:       https://coder.${base_domain}"
+            echo "    • Traefik:     https://traefik.${base_domain}"
+            ;;
+        local)
+            echo "  Using local domain .${lab_domain}"
+            echo ""
+            echo "  Example URLs:"
+            echo "    • Dashboard:   https://home.${lab_domain}"
+            echo "    • Coder:       https://coder.${lab_domain}"
+            echo "    • Traefik:     https://traefik.${lab_domain}"
+            echo ""
+            echo "  DNS requirement:"
+            echo "    • Point clients at Pi-hole or add local DNS records for *.${lab_domain} -> ${host_ip}"
+            ;;
+        *)
+            echo "  Using direct local IP access"
+            echo "  Host IP: ${host_ip}"
+            echo ""
+            echo "  Common services:"
+            echo "    • Dashboard:   http://${host_ip}:8080"
+            echo "    • Coder:       http://${host_ip}:7080"
+            echo "    • Traefik:     http://${host_ip}:8081"
+            echo "    • Pi-hole:     http://${host_ip}:8088/admin"
+            ;;
+    esac
     
     echo ""
     echo -e "${BOLD}Documentation:${NC}"

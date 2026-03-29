@@ -156,6 +156,7 @@ generate_env_interactive() {
     local lab_domain=""
     local base_domain="localhost"
     local domain_mode="ip"
+    local local_dns_mode="none"
     local use_pihole=false
     local _step=1  # running step counter
     
@@ -165,78 +166,76 @@ generate_env_interactive() {
     _step=$((_step + 1))
     show_progress $_step $total_steps "Access Configuration"
     
-    # --- Question 1: Cloudflare Tunnel (remote/external access) ---
-    echo -e "${BOLD}Remote access via Cloudflare Tunnel?${NC}"
-    echo "  Exposes services publicly using a domain you own in Cloudflare."
-    echo "  Example: weekendcodeproject.dev → https://service.weekendcodeproject.dev"
-    echo "  Skip this for a LAN-only or IP-only setup."
+    echo -e "${BOLD}How should you access WeekendStack?${NC}"
+    echo "  1) Tunnel       - Public HTTPS URLs through Cloudflare Tunnel"
+    echo "  2) Local Domain - Friendly local HTTPS URLs like https://service.lab"
+    echo "  3) Local IP     - Direct http://${host_ip}:PORT access (no DNS)"
     echo ""
-    local _cf_yn_bool
-    if prompt_yes_no "Set up Cloudflare Tunnel?" "n"; then
-        # Just track intent — token, tunnel selection, and domain inference happen
-        # in the Cloudflare wizard step (after image pulls, before service start).
-        domain_mode="cloudflare"
-        log_info "Cloudflare Tunnel selected — token and tunnel setup will come later."
-    else
-        base_domain="localhost"
-        log_info "Skipping Cloudflare Tunnel"
-    fi
 
+    local access_choice
+    access_choice=$(prompt_number_choice "Select" "2" "1" "3")
     echo ""
-    # --- Question 2: Local domain (e.g. .lab) for LAN access ---
-    echo -e "${BOLD}Local domain for LAN access (e.g. .lab)?${NC}"
-    echo "  Gives services a friendly name on your local network using self-signed certs."
-    echo "  Example: lab → https://glance.lab, https://nocodb.lab (LAN only)"
-    echo "  Skip this for pure IP or tunnel-only setups."
-    echo ""
-    if prompt_yes_no "Set up a local domain?" "n"; then
-    
-        read -p "  Local domain suffix (press Enter for 'lab'): " -r lab_domain_input </dev/tty
-        lab_domain_input="${lab_domain_input// /}"
-        lab_domain="${lab_domain_input:-lab}"
-        log_success "Local domain set: .${lab_domain}"
 
-        echo ""
-        echo -e "${BOLD}DNS for local domain?${NC}"
-        echo "  1) Install Pi-hole  — handles DNS + optional ad blocking (recommended)"
-        echo "  2) Use my existing DNS/router"
-        local _dns_choice
-        _dns_choice=$(prompt_number_choice "Select" "1" "1" "2")
-        echo ""
-        if [[ "$_dns_choice" == "2" ]]; then
+    case "$access_choice" in
+        1)
+            domain_mode="tunnel"
+            base_domain="localhost"
+            lab_domain=""
             use_pihole=false
-            log_info "Manual DNS selected — add an A/wildcard record for *.${lab_domain} → ${host_ip}"
-        else
-            use_pihole=true
-            log_success "Pi-hole will be installed for local DNS"
-        fi
-    else
-        log_info "No local domain — services accessible by IP or tunnel only"
-    fi
-    
-    # --- Compute DOMAIN_MODE ---
-    # has_ext is true if cloudflare was selected (even before domain is known)
-    local has_ext=false has_local=false
-    [[ "$domain_mode" == "cloudflare" || "$base_domain" != "localhost" ]] && has_ext=true
-    [[ -n "$lab_domain" ]] && has_local=true
-    
-    if $has_ext && $has_local; then
-        domain_mode="both"
-    elif $has_ext; then
-        domain_mode="cloudflare"
-    elif $has_local; then
-        domain_mode="pihole"
-    else
-        domain_mode="ip"
-        lab_domain=""   # ensure no stale value
-    fi
-    
+            local_dns_mode="none"
+            log_info "Tunnel access selected — Cloudflare domain and token setup come later."
+            ;;
+        2)
+            domain_mode="local"
+
+            read -r -p "  Local domain suffix [lab]: " lab_domain_input </dev/tty
+            lab_domain_input="${lab_domain_input// /}"
+            lab_domain="${lab_domain_input:-lab}"
+            log_success "Local domain set: .${lab_domain}"
+
+            echo ""
+            echo -e "${BOLD}DNS for local domain?${NC}"
+            echo "  1) Install Pi-hole  — handles DNS + optional ad blocking (recommended)"
+            echo "  2) Use my existing DNS/router"
+            local _dns_choice
+            _dns_choice=$(prompt_number_choice "Select" "1" "1" "2")
+            echo ""
+
+            if [[ "$_dns_choice" == "2" ]]; then
+                use_pihole=false
+                local_dns_mode="manual"
+                log_info "Manual DNS selected — add a wildcard record for *.${lab_domain} → ${host_ip}"
+            else
+                use_pihole=true
+                local_dns_mode="pihole"
+                log_success "Pi-hole will be installed for local DNS"
+            fi
+            ;;
+        3|*)
+            domain_mode="ip"
+            base_domain="localhost"
+            lab_domain=""
+            use_pihole=false
+            local_dns_mode="none"
+            log_info "IP access selected — services will use ${host_ip}:PORT"
+            ;;
+    esac
+
     echo ""
-    case "$domain_mode" in
-        both)       log_success "Access mode: Cloudflare Tunnel + local .${lab_domain} domain" ;;
-        cloudflare) log_success "Access mode: Cloudflare Tunnel (domain configured in next step)" ;;
-        pihole)     log_success "Access mode: local .${lab_domain} domain" ;;
-        ip)         log_info    "Access mode: IP only — no reverse proxy will be installed" ;;
+    case "$(normalize_access_mode "$domain_mode")" in
+        tunnel)
+            log_success "Access mode: Tunnel"
+            ;;
+        local)
+            if [[ "$local_dns_mode" == "pihole" ]]; then
+                log_success "Access mode: Local domain (.${lab_domain} via Pi-hole)"
+            else
+                log_success "Access mode: Local domain (.${lab_domain} via your existing DNS/router)"
+            fi
+            ;;
+        ip)
+            log_info "Access mode: Local IP"
+            ;;
     esac
     
     log_success "Access configuration complete"
@@ -505,17 +504,33 @@ generate_env_interactive() {
     echo "  Timezone:         $timezone"
     echo "  User Permissions: UID=$puid GID=$pgid"
     echo ""
-    echo -e "${BOLD}Domains:${NC}"
-    echo "  Mode:             $domain_mode"
+    echo -e "${BOLD}Access:${NC}"
+    case "$(normalize_access_mode "$domain_mode")" in
+        tunnel)
+            echo "  Mode:             Tunnel"
+            ;;
+        local)
+            echo "  Mode:             Local domain"
+            ;;
+        *)
+            echo "  Mode:             Local IP"
+            ;;
+    esac
     if [[ -n "$lab_domain" ]]; then
         echo "  Local Domain:     .$lab_domain"
     else
-        echo "  Local Domain:     none (Pi-Hole DNS not configured)"
+        echo "  Local Domain:     none"
     fi
-    if [[ "$domain_mode" == "cloudflare" || "$domain_mode" == "both" ]]; then
+    if [[ "$(normalize_access_mode "$domain_mode")" == "local" ]]; then
+        case "$local_dns_mode" in
+            pihole) echo "  Local DNS:        Pi-hole" ;;
+            manual) echo "  Local DNS:        Existing DNS/router" ;;
+        esac
+    fi
+    if [[ "$(normalize_access_mode "$domain_mode")" == "tunnel" ]]; then
         echo "  External Domain:  (configured in Cloudflare wizard step)"
     else
-        echo "  External Access:  disabled (IP only)"
+        echo "  External Access:  disabled"
     fi
     echo ""
     echo -e "${BOLD}Admin Credentials:${NC}"
@@ -659,23 +674,30 @@ generate_env_interactive() {
     # Set git service selection (for dev profile)
     if $has_dev; then
         update_env_var "GIT_SERVICE" "$git_service" "$env_file"
-        # Set CODER_ACCESS_URL to the external domain if available, else local IP
-        if [[ "$base_domain" != "localhost" ]]; then
-            update_env_var "CODER_ACCESS_URL" "https://coder.${base_domain}" "$env_file"
-        else
-            update_env_var "CODER_ACCESS_URL" "http://${host_ip}:7080" "$env_file"
-        fi
+        case "$(normalize_access_mode "$domain_mode")" in
+            tunnel)
+                update_env_var "CODER_ACCESS_URL" "https://coder.${base_domain}" "$env_file"
+                ;;
+            local)
+                update_env_var "CODER_ACCESS_URL" "https://coder.${lab_domain}" "$env_file"
+                ;;
+            *)
+                update_env_var "CODER_ACCESS_URL" "http://${host_ip}:7080" "$env_file"
+                ;;
+        esac
     fi
 
     # Set Docmost APP_URL to the external HTTPS URL when Cloudflare is configured
     # (Docmost uses APP_URL for CORS/collab-token validation; must match browser URL)
-    if [[ "$base_domain" != "localhost" ]]; then
+    if has_tunnel_access_mode "$domain_mode" && [[ "$base_domain" != "localhost" ]]; then
         update_env_var "DOCMOST_APP_URL" "https://docmost.${base_domain}" "$env_file"
+    elif has_local_domain_access_mode "$domain_mode"; then
+        update_env_var "DOCMOST_APP_URL" "https://docmost.${lab_domain}" "$env_file"
     fi
 
     # Set external-facing app URLs for services that depend on absolute callback/public URLs.
     # Postiz OAuth and NocoDB auth links must match the browser URL when exposed via Cloudflare.
-    if [[ "$domain_mode" == "cloudflare" || "$domain_mode" == "both" ]]; then
+    if has_tunnel_access_mode "$domain_mode"; then
         update_env_var "POSTIZ_MAIN_URL" "https://postiz.${base_domain}" "$env_file"
         update_env_var "POSTIZ_FRONTEND_URL" "https://postiz.${base_domain}" "$env_file"
         update_env_var "POSTIZ_NEXT_PUBLIC_BACKEND_URL" "https://postiz.${base_domain}/api" "$env_file"
@@ -684,6 +706,14 @@ generate_env_interactive() {
         update_env_var "NOCODB_PUBLIC_URL" "https://nocodb.${base_domain}" "$env_file"
         # Speedtest APP_URL must match the public URL for correct redirects and login
         update_env_var "SPEEDTEST_APP_URL" "https://speedtest.${base_domain}" "$env_file"
+    elif has_local_domain_access_mode "$domain_mode"; then
+        update_env_var "POSTIZ_MAIN_URL" "https://postiz.${lab_domain}" "$env_file"
+        update_env_var "POSTIZ_FRONTEND_URL" "https://postiz.${lab_domain}" "$env_file"
+        update_env_var "POSTIZ_NEXT_PUBLIC_BACKEND_URL" "https://postiz.${lab_domain}/api" "$env_file"
+        update_env_var "POSTIZ_NEXTAUTH_URL" "https://postiz.${lab_domain}" "$env_file"
+        update_env_var "POSTIZ_BASE_URL" "https://postiz.${lab_domain}" "$env_file"
+        update_env_var "NOCODB_PUBLIC_URL" "https://nocodb.${lab_domain}" "$env_file"
+        update_env_var "SPEEDTEST_APP_URL" "https://speedtest.${lab_domain}" "$env_file"
     fi
     
     # Set registry cache configuration
@@ -727,13 +757,13 @@ generate_env_interactive() {
     #   networking  = Traefik + Link-Router + Cert-Generator + Error-Pages
     #   pihole      = Pi-hole + pihole-dnsmasq-init
     #   external    = Cloudflare Tunnel container
-    if [[ "$domain_mode" != "ip" ]]; then
+    if [[ "$(normalize_access_mode "$domain_mode")" != "ip" ]]; then
         profiles_csv="${profiles_csv},networking"
     fi
     if $use_pihole; then
         profiles_csv="${profiles_csv},pihole"
     fi
-    if [[ "$domain_mode" == "cloudflare" || "$domain_mode" == "both" ]]; then
+    if has_tunnel_access_mode "$domain_mode"; then
         profiles_csv="${profiles_csv},external"
     fi
     

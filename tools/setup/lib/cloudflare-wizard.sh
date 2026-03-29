@@ -126,9 +126,9 @@ setup_cloudflare_tunnel() {
                 local _fp_mode
                 _fp_mode=$(grep "^DOMAIN_MODE=" "$_env_file" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
                 if [[ -z "$_fp_mode" ]]; then
-                    echo "DOMAIN_MODE=cloudflare" >> "$_env_file"
-                elif [[ "$_fp_mode" != "cloudflare" && "$_fp_mode" != "both" ]]; then
-                    sed -i "s|^DOMAIN_MODE=.*|DOMAIN_MODE=cloudflare|" "$_env_file"
+                    echo "DOMAIN_MODE=tunnel" >> "$_env_file"
+                elif [[ "$_fp_mode" != "cloudflare" && "$_fp_mode" != "both" && "$_fp_mode" != "tunnel" ]]; then
+                    sed -i "s|^DOMAIN_MODE=.*|DOMAIN_MODE=tunnel|" "$_env_file"
                 fi
                 return 0
             else
@@ -740,15 +740,15 @@ EOF
             echo "COMPOSE_PROFILES=external" >> "$env_file"
             log_info "Added 'external' profile to COMPOSE_PROFILES"
         fi
-        # Ensure DOMAIN_MODE is set to cloudflare (or left as 'both' if already both)
+        # Ensure DOMAIN_MODE is set to tunnel (or left as 'both' for legacy installs)
         local _cur_mode
         _cur_mode=$(grep "^DOMAIN_MODE=" "$env_file" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
         if [[ -z "$_cur_mode" ]]; then
-            echo "DOMAIN_MODE=cloudflare" >> "$env_file"
-            log_info "Set DOMAIN_MODE=cloudflare"
-        elif [[ "$_cur_mode" != "cloudflare" && "$_cur_mode" != "both" ]]; then
-            sed -i "s|^DOMAIN_MODE=.*|DOMAIN_MODE=cloudflare|" "$env_file"
-            log_info "Set DOMAIN_MODE=cloudflare"
+            echo "DOMAIN_MODE=tunnel" >> "$env_file"
+            log_info "Set DOMAIN_MODE=tunnel"
+        elif [[ "$_cur_mode" != "cloudflare" && "$_cur_mode" != "both" && "$_cur_mode" != "tunnel" ]]; then
+            sed -i "s|^DOMAIN_MODE=.*|DOMAIN_MODE=tunnel|" "$env_file"
+            log_info "Set DOMAIN_MODE=tunnel"
         fi
     else
         log_error "Could not retrieve tunnel connector token after $max_token_attempts attempts"

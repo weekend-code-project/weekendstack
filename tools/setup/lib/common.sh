@@ -502,6 +502,51 @@ get_env_value() {
     printf '%s\n' "$raw_line"
 }
 
+normalize_access_mode() {
+    local raw_mode="${1:-}"
+
+    case "${raw_mode,,}" in
+        tunnel|cloudflare|both)
+            echo "tunnel"
+            ;;
+        local|pihole)
+            echo "local"
+            ;;
+        ip|"")
+            echo "ip"
+            ;;
+        *)
+            echo "ip"
+            ;;
+    esac
+}
+
+has_tunnel_access_mode() {
+    local raw_mode="${1:-}"
+
+    case "${raw_mode,,}" in
+        tunnel|cloudflare|both)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+has_local_domain_access_mode() {
+    local raw_mode="${1:-}"
+
+    case "${raw_mode,,}" in
+        local|pihole|both)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
 # Progress tracking
 progress_bar() {
     local current="$1"
@@ -550,5 +595,6 @@ export -f clear_screen screen_title screen_section
 export -f prompt_yes_no prompt_input prompt_password prompt_select prompt_multiselect prompt_menu_choice prompt_number_choice pause_for_enter
 export -f validate_ip validate_domain validate_email validate_path validate_port
 export -f backup_file detect_os detect_init_system check_command check_port_available get_env_value
+export -f normalize_access_mode has_tunnel_access_mode has_local_domain_access_mode
 export -f progress_bar set_error_trap error_handler
 export -f add_cleanup_handler run_cleanup_handlers

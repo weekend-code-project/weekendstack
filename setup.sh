@@ -478,22 +478,23 @@ get_coder_shared_git_ssh_key() {
 get_service_access_url() {
     local service="$1"
     local env_file="$SCRIPT_DIR/.env"
-    local domain_mode base_domain lab_domain host_ip
+    local domain_mode base_domain lab_domain host_ip access_mode
 
     domain_mode=$(grep "^DOMAIN_MODE=" "$env_file" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
     base_domain=$(grep "^BASE_DOMAIN=" "$env_file" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
     lab_domain=$(grep "^LAB_DOMAIN=" "$env_file" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
     host_ip=$(grep "^HOST_IP=" "$env_file" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
+    access_mode=$(normalize_access_mode "$domain_mode")
 
     lab_domain="${lab_domain:-lab}"
     host_ip="${host_ip:-localhost}"
 
-    if [[ "$domain_mode" == "cloudflare" || "$domain_mode" == "both" ]] && [[ -n "$base_domain" && "$base_domain" != "localhost" ]]; then
+    if [[ "$access_mode" == "tunnel" ]] && [[ -n "$base_domain" && "$base_domain" != "localhost" ]]; then
         echo "https://${service}.${base_domain}"
         return 0
     fi
 
-    if [[ "$domain_mode" == "pihole" || "$domain_mode" == "both" ]]; then
+    if [[ "$access_mode" == "local" ]]; then
         echo "https://${service}.${lab_domain}"
         return 0
     fi
@@ -747,17 +748,18 @@ provision_speedtest_initial_run() {
 # Saves KAVITA_API_KEY to .env; glance-generator skips the widget when the key is empty.
 setup_kavita_glance_widget() {
     # Build the Kavita URL the same way the rest of setup does
-    local domain_mode base_domain host_ip kavita_port lab_domain
+    local domain_mode base_domain host_ip kavita_port lab_domain access_mode
     domain_mode=$(grep "^DOMAIN_MODE=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
     base_domain=$(grep "^BASE_DOMAIN=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
     host_ip=$(grep "^HOST_IP=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
     kavita_port=$(grep "^KAVITA_PORT=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' "'); kavita_port="${kavita_port:-5002}"
     lab_domain=$(grep "^LAB_DOMAIN=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' "'); lab_domain="${lab_domain:-lab}"
+    access_mode=$(normalize_access_mode "$domain_mode")
 
     local kavita_url
-    if [[ "$domain_mode" == "cloudflare" || "$domain_mode" == "both" ]]; then
+    if [[ "$access_mode" == "tunnel" ]]; then
         kavita_url="https://kavita.${base_domain}"
-    elif [[ "$domain_mode" == "pihole" ]]; then
+    elif [[ "$access_mode" == "local" ]]; then
         kavita_url="https://kavita.${lab_domain}"
     else
         kavita_url="http://${host_ip}:${kavita_port}"
@@ -1070,12 +1072,10 @@ main_setup() {
     show_setup_progress "Cloudflare Tunnel Configuration"
     local _domain_mode
     _domain_mode=$(grep "^DOMAIN_MODE=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
-    local _base_domain
-    _base_domain=$(grep "^BASE_DOMAIN=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
     if ! $SKIP_CLOUDFLARE && [[ "$SETUP_MODE" == "interactive" ]] && \
-       [[ "$_domain_mode" =~ ^(cloudflare|both)$ ]]; then
+       has_tunnel_access_mode "$_domain_mode"; then
         setup_cloudflare_tunnel || log_warn "Cloudflare Tunnel setup skipped"
-    elif [[ "$_domain_mode" == "ip" || -z "$_domain_mode" ]]; then
+    elif [[ "$(normalize_access_mode "$_domain_mode")" != "tunnel" ]]; then
         log_info "No external domain configured — skipping Cloudflare Tunnel setup"
     else
         log_info "Skipping Cloudflare Tunnel setup (--skip-cloudflare or quick mode)"
@@ -1090,7 +1090,7 @@ main_setup() {
     show_setup_progress "Setting Up SSL Certificates"
     local _dm
     _dm=$(grep "^DOMAIN_MODE=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
-    if ! $SKIP_CERTS && [[ "$_dm" =~ ^(pihole|both)$ ]]; then
+    if ! $SKIP_CERTS && has_local_domain_access_mode "$_dm"; then
         setup_certificates || log_warn "Certificate setup incomplete (continuing anyway)"
     elif $SKIP_CERTS; then
         log_info "Skipping certificate setup (--skip-certs)"
@@ -1422,19 +1422,26 @@ preflight_fix_mounts() {
     fi
 
     # Set FORCE_LINK_MODE in .env to drive link-router URL routing.
-    # "external" = Cloudflare tunnel configured → all /go/ links route through tunnel.
-    # "ip"       = No tunnel → all /go/ links go directly to HOST_IP:PORT (no DNS needed).
+    # Match the selected setup access mode so /go/ links stay consistent with Glance.
     if type update_env_var &>/dev/null && [[ -f "$SCRIPT_DIR/.env" ]]; then
-        local _tunnel_enabled _tunnel_token
-        _tunnel_enabled=$(grep "^CLOUDFLARE_TUNNEL_ENABLED=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
-        _tunnel_token=$(get_env_value "CLOUDFLARE_TUNNEL_TOKEN" "$SCRIPT_DIR/.env" 2>/dev/null || true)
-        if [[ "$_tunnel_enabled" == "true" && -n "$_tunnel_token" ]]; then
-            update_env_var "FORCE_LINK_MODE" "external" "$SCRIPT_DIR/.env"
-            log_info "Tunnel active — FORCE_LINK_MODE=external (all /go/ links via tunnel)"
-        else
-            update_env_var "FORCE_LINK_MODE" "ip" "$SCRIPT_DIR/.env"
-            log_info "No tunnel — FORCE_LINK_MODE=ip (all /go/ links via HOST_IP:PORT)"
-        fi
+        local _domain_mode _access_mode
+        _domain_mode=$(grep "^DOMAIN_MODE=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
+        _access_mode=$(normalize_access_mode "$_domain_mode")
+
+        case "$_access_mode" in
+            tunnel)
+                update_env_var "FORCE_LINK_MODE" "external" "$SCRIPT_DIR/.env"
+                log_info "Access mode is Tunnel — FORCE_LINK_MODE=external"
+                ;;
+            local)
+                update_env_var "FORCE_LINK_MODE" "local" "$SCRIPT_DIR/.env"
+                log_info "Access mode is Local Domain — FORCE_LINK_MODE=local"
+                ;;
+            *)
+                update_env_var "FORCE_LINK_MODE" "ip" "$SCRIPT_DIR/.env"
+                log_info "Access mode is Local IP — FORCE_LINK_MODE=ip"
+                ;;
+        esac
     fi
 
     # Generate Glance dashboard config filtered by selected profiles.
