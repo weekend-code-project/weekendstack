@@ -610,7 +610,7 @@ setup_coder_gitea_ssh_key() {
     echo -e "  ${BOLD}$ssh_key${NC}" >&2
     echo "" >&2
     echo "  Add it in Gitea at:" >&2
-    echo "  ${CYAN}${settings_url}${NC}" >&2
+    echo -e "  ${CYAN}${settings_url}${NC}" >&2
     echo "" >&2
     local hostname_short
     hostname_short=$(hostname -s 2>/dev/null || echo "server")
@@ -635,23 +635,56 @@ setup_coder_git_provider_ssh_keys() {
     echo -e "  ${BOLD}$ssh_key${NC}" >&2
     echo "" >&2
 
-    local choice
-    choice=$(prompt_menu_choice "Choose where to add this key:" "2" \
-        "None    - I will do this later" \
-        "GitHub  - upload the key to your GitHub account" \
-        "Gitea   - show where to add the key in Gitea")
+    local provider_input provider
+    local do_github=false
+    local do_gitea=false
 
-    case "$choice" in
-        1)
-            log_info "Skipping Git provider SSH key setup"
-            ;;
-        2)
-            setup_coder_github_ssh_key "$ssh_key"
-            ;;
-        3)
-            setup_coder_gitea_ssh_key "$ssh_key"
-            ;;
-    esac
+    echo -e "${CYAN}?${NC} Choose where to add this key (space-separated for multiple, e.g. '2 3'):" >&2
+    echo "  1) None    - I will do this later" >&2
+    echo "  2) GitHub  - upload the key to your GitHub account" >&2
+    echo "  3) Gitea   - show where to add the key in Gitea" >&2
+
+    while true; do
+        read -r -p "→ Select [2]: " provider_input </dev/tty
+        provider_input="${provider_input:-2}"
+
+        do_github=false
+        do_gitea=false
+        local valid_selection=true
+
+        for provider in $provider_input; do
+            case "$provider" in
+                1)
+                    do_github=false
+                    do_gitea=false
+                    break
+                    ;;
+                2)
+                    do_github=true
+                    ;;
+                3)
+                    do_gitea=true
+                    ;;
+                *)
+                    valid_selection=false
+                    ;;
+            esac
+        done
+
+        if $valid_selection; then
+            break
+        fi
+
+        log_error "Invalid selection. Please enter one or more numbers between 1 and 3"
+    done
+
+    if ! $do_github && ! $do_gitea; then
+        log_info "Skipping Git provider SSH key setup"
+        return 0
+    fi
+
+    $do_github && setup_coder_github_ssh_key "$ssh_key"
+    $do_gitea && setup_coder_gitea_ssh_key "$ssh_key"
 }
 
 run_coder_git_ssh_setup_only() {

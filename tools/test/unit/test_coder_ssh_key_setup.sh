@@ -16,17 +16,17 @@ else
     test_fail "Expected setup.sh to request and refresh the admin:public_key scope for GitHub SSH key uploads"
 fi
 
-test_case "setup offers a None GitHub Gitea SSH key picker when Gitea is enabled"
-if grep -q 'Choose where to add this key:' "$SETUP_FILE" && \
+test_case "setup offers a multi-select None GitHub Gitea SSH key picker when Gitea is enabled"
+if grep -q "Choose where to add this key (space-separated for multiple, e.g. '2 3'):" "$SETUP_FILE" && \
    grep -q 'None    - I will do this later' "$SETUP_FILE" && \
    grep -q 'GitHub  - upload the key to your GitHub account' "$SETUP_FILE" && \
    grep -q 'Gitea   - show where to add the key in Gitea' "$SETUP_FILE" && \
-   ! grep -q 'Both    - configure GitHub and Gitea' "$SETUP_FILE" && \
+   grep -q 'for provider in \$provider_input; do' "$SETUP_FILE" && \
    grep -q '^setup_coder_gitea_ssh_key()' "$SETUP_FILE" && \
    grep -q '^setup_coder_git_provider_ssh_keys()' "$SETUP_FILE"; then
     test_pass
 else
-    test_fail "Expected setup.sh to provide None/GitHub/Gitea SSH key setup choices"
+    test_fail "Expected setup.sh to provide a multi-select None/GitHub/Gitea SSH key setup prompt"
 fi
 
 test_case "setup still routes the dev flow through the SSH key setup step"
