@@ -57,6 +57,10 @@ traefik-auth/
 
 # Pi-hole runtime state (contains DBs, tokens, hashes, etc.)
 config/pihole/etc-pihole/
+config/pihole/etc-dnsmasq.d/02-custom-lab.conf
+
+# Generated helper scripts copied from tracked .example templates
+config/filebrowser/init-filebrowser.sh
 
 # Let's Encrypt certificates
 letsencrypt/
