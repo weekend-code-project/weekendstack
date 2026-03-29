@@ -1033,6 +1033,8 @@ main_setup() {
             docker restart glance 2>/dev/null || true
         fi
 
+        prompt_for_post_install_cleanup
+
         display_summary_to_console
     else
         log_info "Services not started. Run './setup.sh --start' when ready."
