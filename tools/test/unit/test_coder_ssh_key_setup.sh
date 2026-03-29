@@ -16,13 +16,17 @@ else
     test_fail "Expected setup.sh to request and refresh the admin:public_key scope for GitHub SSH key uploads"
 fi
 
-test_case "setup offers a GitHub and Gitea SSH key picker when Gitea is enabled"
-if grep -q 'Add this key to GitHub, Gitea, or both\?' "$SETUP_FILE" && \
+test_case "setup offers a None GitHub Gitea SSH key picker when Gitea is enabled"
+if grep -q 'Choose where to add this key:' "$SETUP_FILE" && \
+   grep -q 'None    - I will do this later' "$SETUP_FILE" && \
+   grep -q 'GitHub  - upload the key to your GitHub account' "$SETUP_FILE" && \
+   grep -q 'Gitea   - show where to add the key in Gitea' "$SETUP_FILE" && \
+   ! grep -q 'Both    - configure GitHub and Gitea' "$SETUP_FILE" && \
    grep -q '^setup_coder_gitea_ssh_key()' "$SETUP_FILE" && \
    grep -q '^setup_coder_git_provider_ssh_keys()' "$SETUP_FILE"; then
     test_pass
 else
-    test_fail "Expected setup.sh to provide GitHub/Gitea/Both/Skip SSH key setup choices"
+    test_fail "Expected setup.sh to provide None/GitHub/Gitea SSH key setup choices"
 fi
 
 test_case "setup still routes the dev flow through the SSH key setup step"
@@ -30,6 +34,14 @@ if grep -q 'setup_coder_git_provider_ssh_keys' "$SETUP_FILE"; then
     test_pass
 else
     test_fail "Expected dev setup flow to invoke the provider-aware SSH key setup"
+fi
+
+test_case "setup exposes an ssh-key-only rerun flag"
+if grep -q -- '--ssh-key-only' "$SETUP_FILE" && \
+   grep -q '^run_coder_git_ssh_setup_only()' "$SETUP_FILE"; then
+    test_pass
+else
+    test_fail "Expected setup.sh to expose a --ssh-key-only shortcut for rerunning just the Git SSH key step"
 fi
 
 test_suite_end

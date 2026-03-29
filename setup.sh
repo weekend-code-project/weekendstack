@@ -58,6 +58,7 @@ OPTIONS:
     --rollback              Restore previous .env from backup
     --cloudflare-only       Run only the Cloudflare Tunnel setup wizard
     --certs-only            Run only certificate generation and CA installation
+    --ssh-key-only          Run only the Coder Git provider SSH-key setup step
     --docker-only           Run only Docker registry authentication
     --start                 Start the stack after setup
     --stop                  Stop all services
@@ -181,6 +182,14 @@ parse_args() {
                     set -a; source "$SCRIPT_DIR/.env"; set +a
                 fi
                 setup_certificates
+                exit $?
+                ;;
+            --ssh-key-only)
+                # Load .env if it exists
+                if [[ -f "$SCRIPT_DIR/.env" ]]; then
+                    set -a; source "$SCRIPT_DIR/.env"; set +a
+                fi
+                run_coder_git_ssh_setup_only
                 exit $?
                 ;;
             --docker-only)
@@ -598,7 +607,7 @@ setup_coder_gitea_ssh_key() {
     screen_title "Gitea SSH Key Setup" "Add Coder's shared workspace SSH key to your Gitea account so private repo clones work from every workspace."
     echo "  Coder workspaces use this SSH key for SSH-based git clones:" >&2
     echo "" >&2
-    echo "  ${BOLD}$ssh_key${NC}" >&2
+    echo -e "  ${BOLD}$ssh_key${NC}" >&2
     echo "" >&2
     echo "  Add it in Gitea at:" >&2
     echo "  ${CYAN}${settings_url}${NC}" >&2
@@ -623,31 +632,40 @@ setup_coder_git_provider_ssh_keys() {
     screen_title "Git SSH Key Setup" "Choose where to add Coder's shared workspace SSH key for workspace git clones."
     echo "  This key is shared by all workspaces on this Coder server:" >&2
     echo "" >&2
-    echo "  ${BOLD}$ssh_key${NC}" >&2
+    echo -e "  ${BOLD}$ssh_key${NC}" >&2
     echo "" >&2
 
     local choice
-    choice=$(prompt_menu_choice "Add this key to GitHub, Gitea, or both?" "1" \
+    choice=$(prompt_menu_choice "Choose where to add this key:" "2" \
+        "None    - I will do this later" \
         "GitHub  - upload the key to your GitHub account" \
-        "Gitea   - show where to add the key in Gitea" \
-        "Both    - configure GitHub and Gitea" \
-        "Skip    - I will add it later")
+        "Gitea   - show where to add the key in Gitea")
 
     case "$choice" in
         1)
-            setup_coder_github_ssh_key "$ssh_key"
-            ;;
-        2)
-            setup_coder_gitea_ssh_key "$ssh_key"
-            ;;
-        3)
-            setup_coder_github_ssh_key "$ssh_key"
-            setup_coder_gitea_ssh_key "$ssh_key"
-            ;;
-        4)
             log_info "Skipping Git provider SSH key setup"
             ;;
+        2)
+            setup_coder_github_ssh_key "$ssh_key"
+            ;;
+        3)
+            setup_coder_gitea_ssh_key "$ssh_key"
+            ;;
     esac
+}
+
+run_coder_git_ssh_setup_only() {
+    if [[ ! -f "$SCRIPT_DIR/.env" ]]; then
+        log_error ".env file not found. Run setup first."
+        return 1
+    fi
+
+    if ! docker ps --filter "name=^coder$" --format "{{.Names}}" 2>/dev/null | grep -q "^coder$"; then
+        log_error "Coder is not running. Start services first, then rerun with --ssh-key-only."
+        return 1
+    fi
+
+    setup_coder_git_provider_ssh_keys
 }
 
 # Trigger the first speedtest immediately after setup so the Glance widget
