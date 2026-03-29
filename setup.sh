@@ -301,14 +301,11 @@ check_prerequisites() {
     return 0
 }
 
-# Add Coder's SSH public key to GitHub so workspace git clones work
-github_cli_device_login() {
-    if gh auth status --hostname github.com >/dev/null 2>&1; then
-        log_info "GitHub CLI is already authenticated"
-        return 0
-    fi
+# Add Coder's SSH public key to Git providers so workspace git clones work
+github_cli_device_auth_flow() {
+    local auth_mode="${1:-login}"
 
-    python3 <<'PY'
+    GITHUB_AUTH_MODE="$auth_mode" python3 <<'PY'
 import os
 import pty
 import re
@@ -322,7 +319,22 @@ def clean(text: str) -> str:
 
 env = os.environ.copy()
 env["GH_BROWSER"] = "/bin/true"
-cmd = ["gh", "auth", "login", "--git-protocol", "ssh", "--skip-ssh-key", "--web"]
+auth_mode = env.get("GITHUB_AUTH_MODE", "login")
+
+if auth_mode == "refresh":
+    cmd = ["gh", "auth", "refresh", "-h", "github.com", "-s", "admin:public_key"]
+else:
+    cmd = [
+        "gh",
+        "auth",
+        "login",
+        "--git-protocol",
+        "ssh",
+        "--skip-ssh-key",
+        "--web",
+        "--scopes",
+        "admin:public_key",
+    ]
 
 pid, fd = pty.fork()
 if pid == 0:
@@ -361,13 +373,16 @@ while True:
             printed_code = True
 
     if not printed_url:
-        match = re.search(r"Press Enter to open (https://[^\s]+) in your browser", buffer)
+        match = re.search(r"(https://github\.com/login/device)", buffer)
         if match:
             print(f"  2 open {match.group(1)} in your browser and paste the code")
             print("")
             print("  Waiting for GitHub authorization to complete...")
-            os.write(fd, b"\r")
             printed_url = True
+
+    if "Press Enter to open " in buffer:
+        os.write(fd, b"\r")
+        buffer = buffer.replace("Press Enter to open ", "Opened ")
 
 try:
     _, status = os.waitpid(pid, 0)
@@ -394,21 +409,111 @@ if rc != 0:
 PY
 }
 
-setup_coder_github_ssh_key() {
-    # Load env so we have CODER_SESSION_TOKEN and CODER_ACCESS_URL
+github_cli_has_scope() {
+    local required_scope="$1"
+    gh auth status --hostname github.com 2>/dev/null | grep -q "Token scopes:.*${required_scope}"
+}
+
+ensure_github_cli_public_key_scope() {
+    if gh auth status --hostname github.com >/dev/null 2>&1; then
+        if github_cli_has_scope "admin:public_key"; then
+            log_info "GitHub CLI is already authenticated with SSH-key management access"
+            return 0
+        fi
+
+        log_warn "GitHub CLI is authenticated but missing the admin:public_key scope."
+        echo ""
+        echo "  GitHub will show a one-time code below so you can approve the extra scope." >&2
+        echo "" >&2
+        if github_cli_device_auth_flow "refresh" && github_cli_has_scope "admin:public_key"; then
+            log_success "GitHub CLI scope refreshed"
+            return 0
+        fi
+
+        log_warn "Could not grant admin:public_key to GitHub CLI"
+        return 1
+    fi
+
+    log_info "Authenticating with GitHub..."
+    echo ""
+    echo "  This VM cannot open a browser for you."
+    echo "  GitHub will show a one-time code below."
+    echo "  Open the device URL in your browser, paste the code, and authorize."
+    echo ""
+
+    if github_cli_device_auth_flow "login" && github_cli_has_scope "admin:public_key"; then
+        log_success "GitHub CLI authenticated"
+        return 0
+    fi
+
+    log_warn "GitHub authentication failed or is still missing admin:public_key"
+    return 1
+}
+
+get_coder_shared_git_ssh_key() {
     local env_file="$SCRIPT_DIR/.env"
-    if [[ ! -f "$env_file" ]]; then return 0; fi
+    [[ -f "$env_file" ]] || return 1
     local token access_url
     token=$(grep "^CODER_SESSION_TOKEN=" "$env_file" | cut -d'=' -f2 | tr -d ' ')
     access_url=$(grep "^CODER_ACCESS_URL=" "$env_file" | cut -d'=' -f2 | tr -d ' ')
-    if [[ -z "$token" || -z "$access_url" ]]; then return 0; fi
+    [[ -n "$token" && -n "$access_url" ]] || return 1
 
-    # Fetch the Coder SSH public key for this user
     local ssh_key
     ssh_key=$(curl -sf -H "Coder-Session-Token: $token" \
         "${access_url}/api/v2/users/me/gitsshkey" 2>/dev/null \
         | python3 -c "import json,sys; print(json.load(sys.stdin).get('public_key',''))" 2>/dev/null || true)
-    if [[ -z "$ssh_key" ]]; then return 0; fi
+    [[ -n "$ssh_key" ]] || return 1
+    printf '%s\n' "$ssh_key"
+}
+
+get_service_access_url() {
+    local service="$1"
+    local env_file="$SCRIPT_DIR/.env"
+    local domain_mode base_domain lab_domain host_ip
+
+    domain_mode=$(grep "^DOMAIN_MODE=" "$env_file" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
+    base_domain=$(grep "^BASE_DOMAIN=" "$env_file" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
+    lab_domain=$(grep "^LAB_DOMAIN=" "$env_file" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
+    host_ip=$(grep "^HOST_IP=" "$env_file" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
+
+    lab_domain="${lab_domain:-lab}"
+    host_ip="${host_ip:-localhost}"
+
+    if [[ "$domain_mode" == "cloudflare" || "$domain_mode" == "both" ]] && [[ -n "$base_domain" && "$base_domain" != "localhost" ]]; then
+        echo "https://${service}.${base_domain}"
+        return 0
+    fi
+
+    if [[ "$domain_mode" == "pihole" || "$domain_mode" == "both" ]]; then
+        echo "https://${service}.${lab_domain}"
+        return 0
+    fi
+
+    case "$service" in
+        gitea)
+            echo "http://${host_ip}:3000"
+            ;;
+        coder)
+            echo "http://${host_ip}:7080"
+            ;;
+        *)
+            echo "http://${host_ip}"
+            ;;
+    esac
+}
+
+is_gitea_enabled_in_setup() {
+    local compose_profiles
+    compose_profiles=$(get_env_value "COMPOSE_PROFILES" "$SCRIPT_DIR/.env" 2>/dev/null || true)
+    [[ ",${compose_profiles}," == *",gitea,"* ]]
+}
+
+setup_coder_github_ssh_key() {
+    local ssh_key="${1:-}"
+    if [[ -z "$ssh_key" ]]; then
+        ssh_key=$(get_coder_shared_git_ssh_key 2>/dev/null || true)
+    fi
+    [[ -n "$ssh_key" ]] || return 0
 
     screen_title "GitHub SSH Key Setup" "Add Coder's shared workspace SSH key to GitHub so repo clones work from every workspace."
     echo -e "  Coder workspaces use this SSH key to clone private GitHub repos:"
@@ -445,16 +550,7 @@ setup_coder_github_ssh_key() {
         log_success "GitHub CLI installed"
     fi
 
-    # Authenticate with GitHub (device flow)
-    echo ""
-    log_info "Authenticating with GitHub..."
-    echo ""
-    echo "  This VM cannot open a browser for you."
-    echo "  GitHub will show a one-time code below."
-    echo "  Open the device URL in your browser, paste the code, and authorize."
-    echo ""
-
-    if ! github_cli_device_login; then
+    if ! ensure_github_cli_public_key_scope; then
         log_warn "GitHub auth failed. Add the key manually at: https://github.com/settings/ssh/new"
         return 0
     fi
@@ -472,14 +568,86 @@ setup_coder_github_ssh_key() {
 
     echo ""
     log_info "Adding Coder SSH key to GitHub as: \"$key_title\""
-    if gh ssh-key add "$key_file" --title "$key_title" --type authentication 2>&1; then
+    local add_output
+    if add_output=$(gh ssh-key add "$key_file" --title "$key_title" --type authentication 2>&1); then
         log_success "SSH key added to GitHub! Workspace git clones will now work automatically."
     else
-        log_warn "Key may already exist on GitHub, or upload failed."
+        if grep -q "admin:public_key" <<< "$add_output"; then
+            log_warn "GitHub CLI still lacks the admin:public_key scope."
+            log_info "Run: gh auth refresh -h github.com -s admin:public_key"
+        else
+            log_warn "Key may already exist on GitHub, or upload failed."
+        fi
         echo -e "  You can verify at: ${CYAN}https://github.com/settings/keys${NC}"
     fi
     rm -f "$key_file"
     echo ""
+}
+
+setup_coder_gitea_ssh_key() {
+    local ssh_key="${1:-}"
+    if [[ -z "$ssh_key" ]]; then
+        ssh_key=$(get_coder_shared_git_ssh_key 2>/dev/null || true)
+    fi
+    [[ -n "$ssh_key" ]] || return 0
+
+    local gitea_url settings_url
+    gitea_url=$(get_service_access_url "gitea")
+    settings_url="${gitea_url%/}/user/settings/keys"
+
+    screen_title "Gitea SSH Key Setup" "Add Coder's shared workspace SSH key to your Gitea account so private repo clones work from every workspace."
+    echo "  Coder workspaces use this SSH key for SSH-based git clones:" >&2
+    echo "" >&2
+    echo "  ${BOLD}$ssh_key${NC}" >&2
+    echo "" >&2
+    echo "  Add it in Gitea at:" >&2
+    echo "  ${CYAN}${settings_url}${NC}" >&2
+    echo "" >&2
+    local hostname_short
+    hostname_short=$(hostname -s 2>/dev/null || echo "server")
+    echo "  Suggested title: Coder @ ${hostname_short}" >&2
+    echo "" >&2
+    pause_for_enter "Press Enter after you add the key in Gitea..."
+}
+
+setup_coder_git_provider_ssh_keys() {
+    local ssh_key
+    ssh_key=$(get_coder_shared_git_ssh_key 2>/dev/null || true)
+    [[ -n "$ssh_key" ]] || return 0
+
+    if ! is_gitea_enabled_in_setup; then
+        setup_coder_github_ssh_key "$ssh_key"
+        return 0
+    fi
+
+    screen_title "Git SSH Key Setup" "Choose where to add Coder's shared workspace SSH key for workspace git clones."
+    echo "  This key is shared by all workspaces on this Coder server:" >&2
+    echo "" >&2
+    echo "  ${BOLD}$ssh_key${NC}" >&2
+    echo "" >&2
+
+    local choice
+    choice=$(prompt_menu_choice "Add this key to GitHub, Gitea, or both?" "1" \
+        "GitHub  - upload the key to your GitHub account" \
+        "Gitea   - show where to add the key in Gitea" \
+        "Both    - configure GitHub and Gitea" \
+        "Skip    - I will add it later")
+
+    case "$choice" in
+        1)
+            setup_coder_github_ssh_key "$ssh_key"
+            ;;
+        2)
+            setup_coder_gitea_ssh_key "$ssh_key"
+            ;;
+        3)
+            setup_coder_github_ssh_key "$ssh_key"
+            setup_coder_gitea_ssh_key "$ssh_key"
+            ;;
+        4)
+            log_info "Skipping Git provider SSH key setup"
+            ;;
+    esac
 }
 
 # Trigger the first speedtest immediately after setup so the Glance widget
@@ -1021,7 +1189,7 @@ main_setup() {
         # Deploy Coder templates if dev profile was selected (or 'all')
         if [[ " ${selected_profiles[*]} " =~ " dev " ]] || [[ " ${selected_profiles[*]} " =~ " all " ]]; then
             deploy_coder_templates_interactive
-            setup_coder_github_ssh_key
+            setup_coder_git_provider_ssh_keys
         fi
 
         # Kavita Glance widget — runs after services are up so Kavita is accessible
