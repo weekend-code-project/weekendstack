@@ -95,25 +95,18 @@ prompt_layer_mode() {
             log_info "Current profiles: core only"
         fi
         echo ""
-        echo "Setup mode:"
-        echo "  1) Add to existing profiles (layer on more services)"
-        echo "  2) Replace with new selection"
-        if [[ "$coder_running" == "true" ]]; then
-            echo "  3) Just update Coder templates (skip full setup)"
-        fi
-        echo ""
     } >&2
     
     local mode_choice
     if [[ "$coder_running" == "true" ]]; then
         mode_choice=$(prompt_menu_choice "Choose setup mode:" "1" \
-            "Add to existing profiles" \
-            "Replace current profile selection" \
-            "Only refresh Coder templates")
+            "Add to existing profiles (layer on more services)" \
+            "Replace with new selection" \
+            "Just update Coder templates (skip full setup)")
     else
         mode_choice=$(prompt_menu_choice "Choose setup mode:" "1" \
-            "Add to existing profiles" \
-            "Replace current profile selection")
+            "Add to existing profiles (layer on more services)" \
+            "Replace with new selection")
     fi
 
     case "$mode_choice" in

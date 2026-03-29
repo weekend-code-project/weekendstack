@@ -60,4 +60,14 @@ else
     test_fail "profile-selector.sh has syntax errors"
 fi
 
+# Test 4: Setup mode prompt relies on one menu renderer
+test_case "Setup mode chooser does not duplicate its menu"
+if ! grep -q 'echo "Setup mode:"' "$PROJECT_ROOT/tools/setup/lib/profile-selector.sh" && \
+   grep -q 'Add to existing profiles (layer on more services)' "$PROJECT_ROOT/tools/setup/lib/profile-selector.sh" && \
+   grep -q 'Just update Coder templates (skip full setup)' "$PROJECT_ROOT/tools/setup/lib/profile-selector.sh"; then
+    test_pass
+else
+    test_fail "Expected setup mode screen to render through one menu without duplicated option text"
+fi
+
 test_suite_end
