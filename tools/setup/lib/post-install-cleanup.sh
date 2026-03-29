@@ -157,21 +157,21 @@ prompt_for_post_install_cleanup() {
     [[ "${SETUP_MODE:-interactive}" == "interactive" ]] || return 0
     check_command docker || return 0
 
-    local disk_usage disk_summary image_total reclaimable apt_cache journal_usage reclaimable_bytes
+    local disk_usage disk_summary image_total reclaimable apt_cache journal_usage reclaimable_bytes default_answer
     disk_usage=$(get_root_disk_usage_percent)
     image_total=$(get_docker_image_total_human)
     reclaimable=$(get_docker_image_reclaimable_human)
-
-    if ! should_offer_post_install_cleanup "$disk_usage" "$reclaimable"; then
-        return 0
-    fi
 
     disk_summary=$(get_root_disk_usage_summary)
     apt_cache=$(du -sh /var/cache/apt 2>/dev/null | awk '{print $1}')
     journal_usage=$(journalctl --disk-usage 2>/dev/null | sed -n 's/.*take up \([0-9.]\+[A-Za-z]\+\).*/\1/p')
     reclaimable_bytes=$(human_size_to_bytes "$reclaimable")
+    default_answer="n"
+    if should_offer_post_install_cleanup "$disk_usage" "$reclaimable"; then
+        default_answer="y"
+    fi
 
-    screen_title "Disk Cleanup" "WeekendStack is up. You can reclaim unused disk space now without touching running services."
+    screen_title "Disk Cleanup" "WeekendStack is up. You can optionally reclaim disk space now without touching running services."
     echo "  Root disk usage: ${disk_summary:-unknown}" >&2
     echo "  Docker images on disk: ${image_total:-unknown}" >&2
     echo "  Unused Docker images reclaimable now: ${reclaimable:-0B}" >&2
@@ -187,12 +187,12 @@ prompt_for_post_install_cleanup() {
     echo "" >&2
 
     if (( reclaimable_bytes >= 1000000000 )); then
-        if ! prompt_yes_no "Reclaim space now?" "y"; then
+        if ! prompt_yes_no "Reclaim space now?" "$default_answer"; then
             log_info "Keeping unused images and caches on disk"
             return 0
         fi
     else
-        if ! prompt_yes_no "Run light cleanup anyway?" "n"; then
+        if ! prompt_yes_no "Run cleanup anyway?" "$default_answer"; then
             log_info "Keeping current caches on disk"
             return 0
         fi

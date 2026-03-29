@@ -51,4 +51,13 @@ else
     test_fail "Expected setup.sh to offer post-install cleanup before showing the final summary"
 fi
 
+test_case "cleanup helper always prompts and only changes the default answer"
+if grep -q 'default_answer="n"' "$PROJECT_ROOT/tools/setup/lib/post-install-cleanup.sh" && \
+   grep -q 'default_answer="y"' "$PROJECT_ROOT/tools/setup/lib/post-install-cleanup.sh" && \
+   ! grep -q 'if ! should_offer_post_install_cleanup .*return 0' "$PROJECT_ROOT/tools/setup/lib/post-install-cleanup.sh"; then
+    test_pass
+else
+    test_fail "Expected prompt_for_post_install_cleanup to always show the prompt and only vary the default answer"
+fi
+
 test_suite_end
