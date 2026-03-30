@@ -20,6 +20,34 @@ else
     test_fail "Expected not-an-email to be rejected"
 fi
 
+test_case "validate_shared_admin_password accepts a service-safe custom password"
+if validate_shared_admin_password "WeekendStack42"; then
+    test_pass
+else
+    test_fail "Expected WeekendStack42 to pass shared admin password validation"
+fi
+
+test_case "validate_shared_admin_password rejects short passwords"
+if ! validate_shared_admin_password "Short123" && [[ "$SHARED_ADMIN_PASSWORD_ERROR" == *"at least 12 characters"* ]]; then
+    test_pass
+else
+    test_fail "Expected short passwords to be rejected with a minimum-length error"
+fi
+
+test_case "validate_shared_admin_password rejects unsupported characters"
+if ! validate_shared_admin_password "WeekendStack42#" && [[ "$SHARED_ADMIN_PASSWORD_ERROR" == *"unsupported characters"* ]]; then
+    test_pass
+else
+    test_fail "Expected # to be rejected for shared admin passwords"
+fi
+
+test_case "validate_shared_admin_password allows an empty password when auto-generate is enabled"
+if validate_shared_admin_password "" "yes"; then
+    test_pass
+else
+    test_fail "Expected blank shared admin password to be allowed for auto-generation"
+fi
+
 test_case "get_env_value preserves values containing trailing equals"
 create_temp_env
 cat > "$TEST_ENV" <<'EOF'

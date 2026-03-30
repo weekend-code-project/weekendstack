@@ -402,6 +402,78 @@ validate_email() {
     [[ $email =~ $regex ]]
 }
 
+shared_admin_password_rules_text() {
+    cat <<'EOF'
+Use at least 12 characters with an uppercase letter, a lowercase letter, and a number.
+Only use letters, numbers, and these symbols: . _ - @ % + = : !
+Avoid spaces and characters that break .env parsing such as #, quotes, backslashes, backticks, or $.
+Leave it blank to auto-generate a stronger password instead.
+EOF
+}
+
+validate_shared_admin_password() {
+    local password="$1"
+    local allow_empty="${2:-false}"
+    local normalized
+    local unique_count
+
+    SHARED_ADMIN_PASSWORD_ERROR=""
+
+    if [[ -z "$password" ]]; then
+        if [[ "$allow_empty" == "true" || "$allow_empty" == "yes" ]]; then
+            return 0
+        fi
+        SHARED_ADMIN_PASSWORD_ERROR="cannot be empty."
+        return 1
+    fi
+
+    if [[ ${#password} -lt 12 ]]; then
+        SHARED_ADMIN_PASSWORD_ERROR="must be at least 12 characters."
+        return 1
+    fi
+
+    if [[ "$password" =~ [[:space:]] ]]; then
+        SHARED_ADMIN_PASSWORD_ERROR="cannot contain spaces."
+        return 1
+    fi
+
+    if [[ ! "$password" =~ ^[A-Za-z0-9._@%+=:!-]+$ ]]; then
+        SHARED_ADMIN_PASSWORD_ERROR="contains unsupported characters. Use letters, numbers, and only these symbols: . _ - @ % + = : !"
+        return 1
+    fi
+
+    if [[ ! "$password" =~ [a-z] ]]; then
+        SHARED_ADMIN_PASSWORD_ERROR="must include at least one lowercase letter."
+        return 1
+    fi
+
+    if [[ ! "$password" =~ [A-Z] ]]; then
+        SHARED_ADMIN_PASSWORD_ERROR="must include at least one uppercase letter."
+        return 1
+    fi
+
+    if [[ ! "$password" =~ [0-9] ]]; then
+        SHARED_ADMIN_PASSWORD_ERROR="must include at least one number."
+        return 1
+    fi
+
+    normalized=$(printf '%s' "$password" | tr '[:upper:]' '[:lower:]')
+    case "$normalized" in
+        password|password123|password1234|admin|admin123|administrator|changeme|welcome|welcome123|test|test123|qwerty123|weekendstack)
+            SHARED_ADMIN_PASSWORD_ERROR="is too weak. Choose a less predictable password or leave it blank to auto-generate one."
+            return 1
+            ;;
+    esac
+
+    unique_count=$(printf '%s' "$password" | fold -w1 | sort -u | wc -l | tr -d ' ')
+    if [[ -n "$unique_count" ]] && (( unique_count < 6 )); then
+        SHARED_ADMIN_PASSWORD_ERROR="needs more character variety to avoid weak repeated patterns."
+        return 1
+    fi
+
+    return 0
+}
+
 validate_path() {
     local path="$1"
     local must_exist="${2:-false}"

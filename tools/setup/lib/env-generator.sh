@@ -442,6 +442,11 @@ generate_env_interactive() {
         done
 
         echo ""
+        echo "Custom password requirements:"
+        while IFS= read -r rule_line; do
+            echo "  $rule_line"
+        done < <(shared_admin_password_rules_text)
+        echo ""
         while true; do
             admin_password=$(prompt_password "Admin password (leave blank to auto-generate a secure one)" "yes")
 
@@ -449,8 +454,8 @@ generate_env_interactive() {
                 break
             fi
 
-            if [[ ${#admin_password} -lt 12 ]]; then
-                log_error "Admin password must be at least 12 characters so all supported services can be bootstrapped automatically."
+            if ! validate_shared_admin_password "$admin_password"; then
+                log_error "Admin password $SHARED_ADMIN_PASSWORD_ERROR"
                 continue
             fi
 

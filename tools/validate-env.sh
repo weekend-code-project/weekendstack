@@ -30,6 +30,10 @@ NC='\033[0m'
 ERRORS=0
 WARNINGS=0
 STRICT_MODE=false
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# Shared setup validation helpers
+source "$SCRIPT_DIR/tools/setup/lib/common.sh"
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -211,8 +215,8 @@ while IFS= read -r line; do
 done < .env
 
 DEFAULT_ADMIN_PASS=$(grep "^DEFAULT_ADMIN_PASSWORD=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
-if [ -n "$DEFAULT_ADMIN_PASS" ] && [ ${#DEFAULT_ADMIN_PASS} -lt 12 ]; then
-    echo -e "${RED}  ✗ DEFAULT_ADMIN_PASSWORD must be at least 12 characters for shared admin bootstrap${NC}"
+if [ -n "$DEFAULT_ADMIN_PASS" ] && ! validate_shared_admin_password "$DEFAULT_ADMIN_PASS"; then
+    echo -e "${RED}  ✗ DEFAULT_ADMIN_PASSWORD ${SHARED_ADMIN_PASSWORD_ERROR}${NC}"
     ERRORS=$((ERRORS + 1))
 fi
 if [ ${#DEFAULT_ADMIN_PASS} -lt 32 ]; then

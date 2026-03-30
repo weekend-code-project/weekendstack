@@ -40,12 +40,13 @@ else
     test_fail "Expected setup to ensure init-filebrowser.sh is executable before starting File Browser"
 fi
 
-test_case "setup enforces a 12-character shared admin password"
-if grep -q 'Admin password must be at least 12 characters' "$ENV_GENERATOR" && \
-   grep -q 'DEFAULT_ADMIN_PASSWORD must be at least 12 characters for shared admin bootstrap' "$VALIDATE_ENV"; then
+test_case "setup and validate-env use the shared admin password validator"
+if grep -q 'shared_admin_password_rules_text' "$PROJECT_ROOT/tools/setup/lib/common.sh" && \
+   grep -q 'validate_shared_admin_password "$admin_password"' "$ENV_GENERATOR" && \
+   grep -q 'validate_shared_admin_password "$DEFAULT_ADMIN_PASS"' "$VALIDATE_ENV"; then
     test_pass
 else
-    test_fail "Expected setup and validate-env to reject short shared admin passwords"
+    test_fail "Expected setup and validate-env to share one admin password validation policy"
 fi
 
 test_suite_end
