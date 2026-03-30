@@ -475,6 +475,35 @@ get_coder_shared_git_ssh_key() {
     printf '%s\n' "$ssh_key"
 }
 
+show_coder_git_ssh_key_unavailable() {
+    local env_file="$SCRIPT_DIR/.env"
+    local token access_url
+
+    if [[ -f "$env_file" ]]; then
+        token=$(grep "^CODER_SESSION_TOKEN=" "$env_file" | cut -d'=' -f2 | tr -d ' ')
+        access_url=$(grep "^CODER_ACCESS_URL=" "$env_file" | cut -d'=' -f2 | tr -d ' ')
+    fi
+
+    screen_title "Git SSH Key Setup Pending" "Coder's shared workspace SSH key could not be fetched yet, so Git provider setup was skipped."
+
+    if [[ ! -f "$env_file" ]]; then
+        echo "  Setup has not created .env yet." >&2
+    elif [[ -z "$access_url" ]]; then
+        echo "  Coder access URL is missing from .env." >&2
+    elif [[ -z "$token" ]]; then
+        echo "  Coder session token is missing from .env." >&2
+        echo "  The installer cannot fetch the shared workspace SSH key without it." >&2
+    else
+        echo "  The installer could not fetch the shared workspace SSH key from Coder." >&2
+        echo "  The saved Coder session token may be expired, or Coder may not be ready yet." >&2
+    fi
+
+    echo "" >&2
+    echo "  Rerun this step after Coder is reachable with:" >&2
+    echo "  ./setup.sh --ssh-key-only" >&2
+    echo "" >&2
+}
+
 get_service_access_url() {
     local service="$1"
     local env_file="$SCRIPT_DIR/.env"
@@ -621,9 +650,14 @@ setup_coder_gitea_ssh_key() {
 }
 
 setup_coder_git_provider_ssh_keys() {
+    local strict_mode="${1:-false}"
     local ssh_key
     ssh_key=$(get_coder_shared_git_ssh_key 2>/dev/null || true)
-    [[ -n "$ssh_key" ]] || return 0
+    if [[ -z "$ssh_key" ]]; then
+        show_coder_git_ssh_key_unavailable
+        [[ "$strict_mode" == "true" ]] && return 1
+        return 0
+    fi
 
     if ! is_gitea_enabled_in_setup; then
         setup_coder_github_ssh_key "$ssh_key"
@@ -699,7 +733,7 @@ run_coder_git_ssh_setup_only() {
         return 1
     fi
 
-    setup_coder_git_provider_ssh_keys
+    setup_coder_git_provider_ssh_keys "true"
 }
 
 # Trigger the first speedtest immediately after setup so the Glance widget

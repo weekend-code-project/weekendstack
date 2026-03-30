@@ -242,6 +242,40 @@ $auth_block
 EOF
 }
 
+gitea_admin_exec() {
+    docker exec -u git gitea /usr/local/bin/gitea "$@" --config /data/gitea/conf/app.ini
+}
+
+ensure_gitea_installed() {
+    local install_log="/tmp/weekendstack-gitea-install.log"
+
+    if ! docker exec gitea test -f /data/gitea/conf/app.ini 2>/dev/null; then
+        log_warn "Gitea config was not created yet"
+        return 1
+    fi
+
+    if ! docker exec gitea sh -c "grep -q '^INSTALL_LOCK = true$' /data/gitea/conf/app.ini" 2>/dev/null; then
+        log_info "Gitea is still in first-run install mode; locking setup and restarting it"
+        if ! docker exec gitea sh -c "sed -i 's/^INSTALL_LOCK = false$/INSTALL_LOCK = true/' /data/gitea/conf/app.ini"; then
+            log_warn "Failed to update Gitea install lock"
+            return 1
+        fi
+        docker restart gitea >/dev/null 2>&1 || true
+    fi
+
+    local attempt
+    for attempt in $(seq 1 30); do
+        if gitea_admin_exec admin user list --admin >/dev/null 2>"$install_log"; then
+            return 0
+        fi
+        sleep 2
+    done
+
+    log_warn "Gitea is not ready for admin bootstrap"
+    cat "$install_log" >&2 || true
+    return 1
+}
+
 bootstrap_gitea_admin() {
     local env_file="${1:-${SCRIPT_DIR}/.env}"
 
@@ -255,12 +289,14 @@ bootstrap_gitea_admin() {
     admin_email=$(grep "^DEFAULT_ADMIN_EMAIL=" "$env_file" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
     admin_pass=$(grep "^DEFAULT_ADMIN_PASSWORD=" "$env_file" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
 
-    if docker exec -u git gitea gitea admin user list --admin 2>/dev/null | grep -Eq "(^|[[:space:]])${admin_user}([[:space:]]|$)"; then
+    ensure_gitea_installed || return 1
+
+    if gitea_admin_exec admin user list --admin 2>/dev/null | grep -Eq "(^|[[:space:]])${admin_user}([[:space:]]|$)"; then
         log_info "Gitea admin already exists: ${admin_user}"
         return 0
     fi
 
-    if docker exec -u git gitea gitea admin user create \
+    if gitea_admin_exec admin user create \
         --admin \
         --username "$admin_user" \
         --password "$admin_pass" \
@@ -304,4 +340,4 @@ export -f auth_policy_file auth_policy_profile_map_file auth_policy_service_meta
 export -f auth_policy_get_field auth_policy_service_display_name auth_policy_resolve_services
 export -f auth_policy_bucket_for_service auth_policy_seeded_services auth_policy_manual_services auth_policy_not_applicable_services
 export -f auth_policy_apply_seed_env_defaults auth_policy_access_mode_from_env generate_traefik_service_middlewares
-export -f bootstrap_gitea_admin run_auth_bootstrap_tasks
+export -f gitea_admin_exec ensure_gitea_installed bootstrap_gitea_admin run_auth_bootstrap_tasks
