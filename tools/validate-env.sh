@@ -211,6 +211,10 @@ while IFS= read -r line; do
 done < .env
 
 DEFAULT_ADMIN_PASS=$(grep "^DEFAULT_ADMIN_PASSWORD=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+if [ -n "$DEFAULT_ADMIN_PASS" ] && [ ${#DEFAULT_ADMIN_PASS} -lt 12 ]; then
+    echo -e "${RED}  ✗ DEFAULT_ADMIN_PASSWORD must be at least 12 characters for shared admin bootstrap${NC}"
+    ERRORS=$((ERRORS + 1))
+fi
 if [ ${#DEFAULT_ADMIN_PASS} -lt 32 ]; then
     echo -e "${YELLOW}  ⚠ Consider using longer passwords (32+ chars)${NC}"
 fi

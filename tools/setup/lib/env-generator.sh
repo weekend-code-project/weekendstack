@@ -418,7 +418,7 @@ generate_env_interactive() {
     _step=$((_step + 1))
     show_progress $_step $total_steps "Default Admin Credentials"
     
-    echo "Many services (NocoDB, Paperless, Postiz, etc.) support auto-provisioning"
+    echo "Many services (Coder, Gitea, Open WebUI, Paperless, File Browser, etc.) support auto-provisioning"
     echo "with default credentials. These will be used during initial setup."
     echo ""
     log_warn "IMPORTANT: Change these after first login — they protect all your services!"
@@ -442,7 +442,20 @@ generate_env_interactive() {
         done
 
         echo ""
-        admin_password=$(prompt_password "Admin password (leave blank to auto-generate a secure one)" "yes")
+        while true; do
+            admin_password=$(prompt_password "Admin password (leave blank to auto-generate a secure one)" "yes")
+
+            if [[ -z "$admin_password" ]]; then
+                break
+            fi
+
+            if [[ ${#admin_password} -lt 12 ]]; then
+                log_error "Admin password must be at least 12 characters so all supported services can be bootstrapped automatically."
+                continue
+            fi
+
+            break
+        done
 
         if [[ -z "$admin_password" ]]; then
             echo ""

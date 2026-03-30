@@ -181,13 +181,14 @@
     "verification_mode": "none"
   },
   "coder": {
-    "auth_strategy": "manual",
-    "support_tier": "manual",
+    "auth_strategy": "cli_init",
+    "support_tier": "official",
     "supports_disable_signup": false,
-    "uses_default_admin_user": false,
-    "uses_default_admin_email": false,
-    "uses_default_admin_password": false,
-    "verification_mode": "manual"
+    "uses_default_admin_user": true,
+    "uses_default_admin_email": true,
+    "uses_default_admin_password": true,
+    "verification_mode": "cli",
+    "bootstrap_handler": "bootstrap_coder_admin"
   },
   "gitea": {
     "auth_strategy": "cli_init",
@@ -279,7 +280,7 @@
   "paperless-ngx": {
     "auth_strategy": "env",
     "support_tier": "official",
-    "supports_disable_signup": false,
+    "supports_disable_signup": true,
     "uses_default_admin_user": true,
     "uses_default_admin_email": true,
     "uses_default_admin_password": true,
@@ -293,6 +294,9 @@
       },
       "PAPERLESS_ADMIN_EMAIL": {
         "literal": "${DEFAULT_ADMIN_EMAIL}"
+      },
+      "PAPERLESS_ACCOUNT_ALLOW_SIGNUPS": {
+        "literal": "false"
       }
     }
   },
@@ -380,15 +384,11 @@
     "auth_strategy": "cli_init",
     "support_tier": "official",
     "supports_disable_signup": false,
-    "uses_default_admin_user": false,
+    "uses_default_admin_user": true,
     "uses_default_admin_email": false,
     "uses_default_admin_password": true,
     "verification_mode": "cli",
-    "seed_env": {
-      "DEFAULT_ADMIN_PASSWORD": {
-        "literal": "${DEFAULT_ADMIN_PASSWORD}"
-      }
-    }
+    "bootstrap_handler": "bootstrap_filebrowser_admin"
   },
   "hoarder": {
     "auth_strategy": "manual",

@@ -45,6 +45,7 @@ if grep -q '^NOCODB_ADMIN_EMAIL=jesse@example.com$' "$TEST_ENV" && \
    grep -q '^WEBUI_ADMIN_PASSWORD=pass$' "$TEST_ENV" && \
    grep -q '^WEBUI_ADMIN_NAME=jesse$' "$TEST_ENV" && \
    grep -q '^ENABLE_SIGNUP=False$' "$TEST_ENV" && \
+   grep -q '^PAPERLESS_ACCOUNT_ALLOW_SIGNUPS=false$' "$TEST_ENV" && \
    grep -q '^GITEA_DISABLE_REGISTRATION=true$' "$TEST_ENV"; then
     test_pass
 else

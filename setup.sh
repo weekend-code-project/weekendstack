@@ -1382,6 +1382,10 @@ preflight_fix_mounts() {
         fi
     done
 
+    if [[ -f "$SCRIPT_DIR/config/filebrowser/init-filebrowser.sh" ]]; then
+        chmod +x "$SCRIPT_DIR/config/filebrowser/init-filebrowser.sh" 2>/dev/null || true
+    fi
+
     # Traefik config.yml needs a valid static config, not just a touch placeholder.
     if type _ensure_traefik_static_config &>/dev/null; then
         _ensure_traefik_static_config "$SCRIPT_DIR/config/traefik/config.yml"

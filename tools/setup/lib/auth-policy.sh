@@ -242,6 +242,88 @@ $auth_block
 EOF
 }
 
+bootstrap_coder_admin() {
+    local env_file="${1:-${SCRIPT_DIR}/.env}"
+
+    if ! docker compose ps --services --filter status=running 2>/dev/null | grep -qx "coder"; then
+        log_info "Coder not running; skipping admin bootstrap"
+        return 0
+    fi
+
+    local admin_user admin_email admin_pass
+    admin_user=$(grep "^DEFAULT_ADMIN_USER=" "$env_file" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+    admin_email=$(grep "^DEFAULT_ADMIN_EMAIL=" "$env_file" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+    admin_pass=$(grep "^DEFAULT_ADMIN_PASSWORD=" "$env_file" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+
+    if docker exec \
+        -e CODER_USERNAME="$admin_user" \
+        -e CODER_EMAIL="$admin_email" \
+        -e CODER_PASSWORD="$admin_pass" \
+        coder sh -lc '
+            PG=$(printenv CODER_PG_CONNECTION_URL)
+            if [ -z "$PG" ]; then
+                echo "CODER_PG_CONNECTION_URL is not set" >&2
+                exit 1
+            fi
+            /opt/coder server create-admin-user \
+                --postgres-url "$PG" \
+                --username "$CODER_USERNAME" \
+                --email "$CODER_EMAIL" \
+                --password "$CODER_PASSWORD"
+        ' >/tmp/weekendstack-coder-bootstrap.log 2>&1; then
+        log_success "Bootstrapped Coder admin user: ${admin_user}"
+    elif grep -qi "duplicate key value violates unique constraint" /tmp/weekendstack-coder-bootstrap.log 2>/dev/null || \
+         grep -qi "already exists" /tmp/weekendstack-coder-bootstrap.log 2>/dev/null; then
+        log_info "Coder admin already exists: ${admin_user}"
+    else
+        log_warn "Failed to bootstrap Coder admin user"
+        cat /tmp/weekendstack-coder-bootstrap.log >&2 || true
+        return 1
+    fi
+}
+
+bootstrap_filebrowser_admin() {
+    local env_file="${1:-${SCRIPT_DIR}/.env}"
+
+    if ! docker compose ps --services --filter status=running 2>/dev/null | grep -qx "filebrowser"; then
+        log_info "File Browser not running; skipping admin bootstrap"
+        return 0
+    fi
+
+    local admin_user admin_pass
+    admin_user=$(grep "^DEFAULT_ADMIN_USER=" "$env_file" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+    admin_pass=$(grep "^DEFAULT_ADMIN_PASSWORD=" "$env_file" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+
+    if docker exec \
+        -e FILEBROWSER_ADMIN_USER="$admin_user" \
+        -e FILEBROWSER_ADMIN_PASSWORD="$admin_pass" \
+        filebrowser sh -lc '
+            DB="${FB_DATABASE:-/config/filebrowser.db}"
+            mkdir -p "$(dirname "$DB")"
+            filebrowser config init -d "$DB" >/dev/null 2>&1 || true
+
+            if filebrowser users ls -d "$DB" 2>/dev/null | grep -Eq "(^|[[:space:]])${FILEBROWSER_ADMIN_USER}([[:space:]]|$)"; then
+                filebrowser users update "$FILEBROWSER_ADMIN_USER" --password "$FILEBROWSER_ADMIN_PASSWORD" --perm.admin -d "$DB"
+            elif [ "$FILEBROWSER_ADMIN_USER" != "admin" ] && \
+                 filebrowser users ls -d "$DB" 2>/dev/null | grep -Eq "(^|[[:space:]])admin([[:space:]]|$)"; then
+                filebrowser users update admin --username "$FILEBROWSER_ADMIN_USER" --password "$FILEBROWSER_ADMIN_PASSWORD" --perm.admin -d "$DB"
+            else
+                filebrowser users add "$FILEBROWSER_ADMIN_USER" "$FILEBROWSER_ADMIN_PASSWORD" --perm.admin -d "$DB"
+            fi
+        ' >/tmp/weekendstack-filebrowser-bootstrap.log 2>&1; then
+        log_success "Bootstrapped File Browser admin user: ${admin_user}"
+    elif grep -qi "password is too short" /tmp/weekendstack-filebrowser-bootstrap.log 2>/dev/null; then
+        log_warn "Failed to bootstrap File Browser admin user"
+        log_warn "DEFAULT_ADMIN_PASSWORD must be at least 12 characters for File Browser"
+        cat /tmp/weekendstack-filebrowser-bootstrap.log >&2 || true
+        return 1
+    else
+        log_warn "Failed to bootstrap File Browser admin user"
+        cat /tmp/weekendstack-filebrowser-bootstrap.log >&2 || true
+        return 1
+    fi
+}
+
 gitea_admin_exec() {
     docker exec -u git gitea /usr/local/bin/gitea "$@" --config /data/gitea/conf/app.ini
 }
@@ -323,7 +405,7 @@ run_auth_bootstrap_tasks() {
         [[ -z "$handler" ]] && continue
 
         case "$handler" in
-            bootstrap_gitea_admin)
+            bootstrap_coder_admin|bootstrap_filebrowser_admin|bootstrap_gitea_admin)
                 "$handler" "$env_file" || status=1
                 ;;
             *)
@@ -340,4 +422,5 @@ export -f auth_policy_file auth_policy_profile_map_file auth_policy_service_meta
 export -f auth_policy_get_field auth_policy_service_display_name auth_policy_resolve_services
 export -f auth_policy_bucket_for_service auth_policy_seeded_services auth_policy_manual_services auth_policy_not_applicable_services
 export -f auth_policy_apply_seed_env_defaults auth_policy_access_mode_from_env generate_traefik_service_middlewares
+export -f bootstrap_coder_admin bootstrap_filebrowser_admin
 export -f gitea_admin_exec ensure_gitea_installed bootstrap_gitea_admin run_auth_bootstrap_tasks

@@ -52,8 +52,11 @@ test_case "documented seeded services have seed env definitions"
 if jq -e '
     .["nocodb"].seed_env.NOCODB_ADMIN_EMAIL.literal == "${DEFAULT_ADMIN_EMAIL}"
     and .["paperless-ngx"].seed_env.PAPERLESS_ADMIN_USER.literal == "${DEFAULT_ADMIN_USER}"
+    and .["paperless-ngx"].seed_env.PAPERLESS_ACCOUNT_ALLOW_SIGNUPS.literal == "false"
     and .["open-webui"].seed_env.WEBUI_ADMIN_EMAIL.literal == "${DEFAULT_ADMIN_EMAIL}"
     and .["gitea"].seed_env.GITEA_DISABLE_REGISTRATION.literal == "true"
+    and .["coder"].bootstrap_handler == "bootstrap_coder_admin"
+    and .["filebrowser"].bootstrap_handler == "bootstrap_filebrowser_admin"
 ' "$POLICY_FILE" >/dev/null; then
     test_pass
 else
