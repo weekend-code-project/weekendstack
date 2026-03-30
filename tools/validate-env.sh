@@ -219,6 +219,16 @@ if [ -n "$DEFAULT_ADMIN_PASS" ] && ! validate_shared_admin_password "$DEFAULT_AD
     echo -e "${RED}  ✗ DEFAULT_ADMIN_PASSWORD ${SHARED_ADMIN_PASSWORD_ERROR}${NC}"
     ERRORS=$((ERRORS + 1))
 fi
+DEFAULT_ADMIN_USER=$(grep "^DEFAULT_ADMIN_USER=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+COMPOSE_PROFILES_VALUE=$(grep "^COMPOSE_PROFILES=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+gitea_enabled=false
+if [[ ",${COMPOSE_PROFILES_VALUE}," == *",all,"* ]] || [[ ",${COMPOSE_PROFILES_VALUE}," == *",gitea,"* ]]; then
+    gitea_enabled=true
+fi
+if [ -n "$DEFAULT_ADMIN_USER" ] && ! validate_shared_admin_username "$DEFAULT_ADMIN_USER" "$gitea_enabled"; then
+    echo -e "${RED}  ✗ DEFAULT_ADMIN_USER ${SHARED_ADMIN_USERNAME_ERROR}${NC}"
+    ERRORS=$((ERRORS + 1))
+fi
 if [ ${#DEFAULT_ADMIN_PASS} -lt 32 ]; then
     echo -e "${YELLOW}  ⚠ Consider using longer passwords (32+ chars)${NC}"
 fi

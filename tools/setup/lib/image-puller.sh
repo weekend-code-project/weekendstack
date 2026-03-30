@@ -27,7 +27,7 @@ show_pull_plan() {
     local lscr_count="${data[LSCR_COUNT]:-0}"
     local shared_count="${data[SHARED_COUNT]:-0}"
     
-    clear
+    clear_screen
     log_header "Image Pull Plan"
 
     local other_count=$(( ${data[GCR_COUNT]:-0} + ${data[QUAY_COUNT]:-0} + ${data[OTHER_COUNT]:-0} ))
@@ -54,7 +54,7 @@ show_pull_plan() {
             echo "(Continuing automatically - stdin unavailable)"
             sleep 2
         }
-        clear
+        clear_screen
     fi
 }
 

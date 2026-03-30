@@ -310,6 +310,13 @@ bootstrap_filebrowser_admin() {
             else
                 filebrowser users add "$FILEBROWSER_ADMIN_USER" "$FILEBROWSER_ADMIN_PASSWORD" --perm.admin -d "$DB"
             fi
+
+            if [ -f "$DB" ]; then
+                chown abc:users "$DB" >/dev/null 2>&1 || true
+                chmod 664 "$DB" >/dev/null 2>&1 || true
+            fi
+            [ -d /config ] && chown abc:users /config >/dev/null 2>&1 || true
+            [ -f /config/settings.json ] && chown abc:users /config/settings.json >/dev/null 2>&1 || true
         ' >/tmp/weekendstack-filebrowser-bootstrap.log 2>&1; then
         log_success "Bootstrapped File Browser admin user: ${admin_user}"
     elif grep -qi "password is too short" /tmp/weekendstack-filebrowser-bootstrap.log 2>/dev/null; then
@@ -370,6 +377,12 @@ bootstrap_gitea_admin() {
     admin_user=$(grep "^DEFAULT_ADMIN_USER=" "$env_file" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
     admin_email=$(grep "^DEFAULT_ADMIN_EMAIL=" "$env_file" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
     admin_pass=$(grep "^DEFAULT_ADMIN_PASSWORD=" "$env_file" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+
+    if ! validate_shared_admin_username "$admin_user" "true"; then
+        log_warn "Failed to bootstrap Gitea admin user"
+        log_warn "DEFAULT_ADMIN_USER ${SHARED_ADMIN_USERNAME_ERROR}"
+        return 1
+    fi
 
     ensure_gitea_installed || return 1
 

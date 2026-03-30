@@ -32,6 +32,14 @@ else
     test_fail "Expected File Browser to receive DEFAULT_ADMIN_USER and use /config/filebrowser.db for admin bootstrap"
 fi
 
+test_case "File Browser bootstrap repairs runtime ownership after admin setup"
+if grep -q 'chown "\$RUNTIME_OWNER" "\$DB"' "$FILEBROWSER_INIT" && \
+   grep -q 'chown abc:users "\$DB"' "$AUTH_POLICY_FILE"; then
+    test_pass
+else
+    test_fail "Expected File Browser bootstrap to hand the database back to the abc runtime user"
+fi
+
 test_case "File Browser bootstrap script is made executable before startup"
 if grep -q 'chmod +x "$stack_dir/config/filebrowser/init-filebrowser.sh"' "$DIRECTORY_CREATOR" && \
    grep -q 'chmod +x "$SCRIPT_DIR/config/filebrowser/init-filebrowser.sh"' "$SETUP_FILE"; then
@@ -47,6 +55,14 @@ if grep -q 'shared_admin_password_rules_text' "$PROJECT_ROOT/tools/setup/lib/com
     test_pass
 else
     test_fail "Expected setup and validate-env to share one admin password validation policy"
+fi
+
+test_case "Gitea bootstrap validates the shared admin username before create"
+if grep -q 'validate_shared_admin_username "$admin_user" "true"' "$AUTH_POLICY_FILE" && \
+   grep -q 'Admin username' "$ENV_GENERATOR"; then
+    test_pass
+else
+    test_fail "Expected Gitea bootstrap to reject invalid shared admin usernames before trying to create the user"
 fi
 
 test_suite_end

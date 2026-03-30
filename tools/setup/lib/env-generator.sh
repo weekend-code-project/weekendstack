@@ -424,13 +424,29 @@ generate_env_interactive() {
     log_warn "IMPORTANT: Change these after first login — they protect all your services!"
     echo ""
     
-    local admin_user="admin"
+    local admin_user="weekendstack"
     local admin_email="admin@example.com"
     local admin_password=""  # Will be auto-generated if left blank
+    local enforce_gitea_username_rules=false
+
+    if [[ " ${selected_profiles[*]} " == *" all "* ]] || [[ "${git_service:-}" == "gitea" ]]; then
+        enforce_gitea_username_rules=true
+    fi
 
     if prompt_yes_no "Customize admin credentials?" "y"; then
         echo ""
-        admin_user=$(prompt_input "Admin username" "admin")
+        echo "Shared username requirements:"
+        while IFS= read -r rule_line; do
+            echo "  $rule_line"
+        done < <(shared_admin_username_rules_text)
+        echo ""
+        while true; do
+            admin_user=$(prompt_input "Admin username" "weekendstack")
+            if validate_shared_admin_username "$admin_user" "$enforce_gitea_username_rules"; then
+                break
+            fi
+            log_error "Invalid admin username. DEFAULT_ADMIN_USER ${SHARED_ADMIN_USERNAME_ERROR}"
+        done
 
         echo ""
         while true; do

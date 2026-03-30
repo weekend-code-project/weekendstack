@@ -1435,7 +1435,7 @@ preflight_fix_mounts() {
     local admin_user admin_pass
     admin_user=$(grep "^DEFAULT_ADMIN_USER=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
     admin_pass=$(grep "^DEFAULT_ADMIN_PASSWORD=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
-    admin_user=${admin_user:-admin}
+    admin_user=${admin_user:-weekendstack}
     admin_pass=${admin_pass:-changeme}
 
     # Check if any htpasswd file already has the right user; regenerate if not.
@@ -1673,34 +1673,29 @@ rollback_configuration() {
 
 # Start services
 start_services() {
-    log_header "Starting Services"
-    
-    # Re-source .env for latest config
-    if [[ -f "$SCRIPT_DIR/.env" ]]; then
-        set -a
-        source "$SCRIPT_DIR/.env"
-        set +a
-    fi
-    
-    # Ensure cloudflare-tunnel is in custom profile if enabled
-    ensure_cloudflare_in_custom_profile
+    local -a profiles=()
 
-    prepare_registry_cache_for_startup
-    
-    if docker compose up -d; then
-        log_success "Services started"
-        docker compose ps
-    else
-        log_error "Failed to start services"
+    if [[ -f "$SCRIPT_DIR/.env" ]]; then
+        local env_compose_profiles
+        env_compose_profiles=$(grep "^COMPOSE_PROFILES=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2- | tr -d '"')
+        if [[ -n "$env_compose_profiles" ]]; then
+            IFS=',' read -ra profiles <<< "$env_compose_profiles"
+        fi
+    fi
+
+    if [[ ${#profiles[@]} -eq 0 ]]; then
+        log_error "No COMPOSE_PROFILES found in .env. Run ./setup.sh first."
         return 1
     fi
+
+    start_services_with_profiles "${profiles[@]}"
 }
 
 # Stop services
 stop_services() {
     log_header "Stopping Services"
     
-    if docker compose down; then
+    if docker compose down --remove-orphans; then
         log_success "Services stopped"
     else
         log_error "Failed to stop services"
@@ -1710,28 +1705,8 @@ stop_services() {
 
 # Restart services
 restart_services() {
-    log_header "Restarting Services"
-    
-    # Re-source .env for latest config
-    if [[ -f "$SCRIPT_DIR/.env" ]]; then
-        set -a
-        source "$SCRIPT_DIR/.env"
-        set +a
-    fi
-    
-    # Ensure cloudflare-tunnel is in custom profile if enabled
-    ensure_cloudflare_in_custom_profile
-
-    prepare_registry_cache_for_startup
-    
-    # Use up -d instead of restart to also start any newly-enabled services
-    if docker compose up -d --force-recreate; then
-        log_success "Services restarted"
-        docker compose ps
-    else
-        log_error "Failed to restart services"
-        return 1
-    fi
+    stop_services || return 1
+    start_services
 }
 
 # Main entry point

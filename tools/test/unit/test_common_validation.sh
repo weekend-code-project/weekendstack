@@ -20,6 +20,27 @@ else
     test_fail "Expected not-an-email to be rejected"
 fi
 
+test_case "validate_shared_admin_username accepts a cross-service safe username"
+if validate_shared_admin_username "weekendstack" "true"; then
+    test_pass
+else
+    test_fail "Expected weekendstack to pass shared admin username validation"
+fi
+
+test_case "validate_shared_admin_username rejects Gitea reserved admin"
+if ! validate_shared_admin_username "admin" "true" && [[ "$SHARED_ADMIN_USERNAME_ERROR" == *"Gitea reserves"* ]]; then
+    test_pass
+else
+    test_fail "Expected admin to be rejected when Gitea is enabled"
+fi
+
+test_case "validate_shared_admin_username rejects unsupported characters"
+if ! validate_shared_admin_username "Jesse.Freeman" && [[ "$SHARED_ADMIN_USERNAME_ERROR" == *"lowercase letters"* ]]; then
+    test_pass
+else
+    test_fail "Expected mixed-case or dotted usernames to be rejected by the shared username validator"
+fi
+
 test_case "validate_shared_admin_password accepts a service-safe custom password"
 if validate_shared_admin_password "WeekendStack42"; then
     test_pass

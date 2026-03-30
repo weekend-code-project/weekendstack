@@ -402,6 +402,43 @@ validate_email() {
     [[ $email =~ $regex ]]
 }
 
+shared_admin_username_rules_text() {
+    cat <<'EOF'
+Use 3-32 characters, start with a lowercase letter, and use only lowercase letters, numbers, hyphens, or underscores.
+If Gitea is enabled, avoid reserved names like admin.
+EOF
+}
+
+validate_shared_admin_username() {
+    local username="$1"
+    local gitea_enabled="${2:-false}"
+    local normalized_username
+
+    SHARED_ADMIN_USERNAME_ERROR=""
+
+    if [[ -z "$username" ]]; then
+        SHARED_ADMIN_USERNAME_ERROR="cannot be empty."
+        return 1
+    fi
+
+    if [[ ! "$username" =~ ^[a-z][a-z0-9_-]{2,31}$ ]]; then
+        SHARED_ADMIN_USERNAME_ERROR="must be 3-32 characters, start with a lowercase letter, and only use lowercase letters, numbers, hyphens, or underscores."
+        return 1
+    fi
+
+    if [[ "$gitea_enabled" == "true" || "$gitea_enabled" == "yes" ]]; then
+        normalized_username=$(printf '%s' "$username" | tr '[:upper:]' '[:lower:]')
+        case "$normalized_username" in
+            admin|administrator)
+                SHARED_ADMIN_USERNAME_ERROR="cannot be '${username}' when Gitea is enabled because Gitea reserves that username."
+                return 1
+                ;;
+        esac
+    fi
+
+    return 0
+}
+
 shared_admin_password_rules_text() {
     cat <<'EOF'
 Use at least 12 characters with an uppercase letter, a lowercase letter, and a number.

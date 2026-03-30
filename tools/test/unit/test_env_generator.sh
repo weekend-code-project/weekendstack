@@ -2,6 +2,7 @@
 # Unit tests for env generation
 
 source "$(dirname "${BASH_SOURCE[0]}")/../test_helpers.sh"
+source "$PROJECT_ROOT/tools/setup/lib/common.sh"
 
 test_suite_start "Environment Generator"
 
@@ -147,7 +148,22 @@ else
 fi
 restore_file ".env"
 
-# Test 10: No duplicate variable definitions in .env.example
+# Test 10: Generated shared admin password matches setup validation rules
+test_case "Generated DEFAULT_ADMIN_PASSWORD is valid for shared admin bootstrap"
+cd "$PROJECT_ROOT"
+backup_file ".env"
+
+./tools/env-template-gen.sh >/dev/null 2>&1
+admin_pass=$(grep "^DEFAULT_ADMIN_PASSWORD=" .env | cut -d'=' -f2)
+
+if [ -n "$admin_pass" ] && validate_shared_admin_password "$admin_pass"; then
+    test_pass
+else
+    test_fail "Generated DEFAULT_ADMIN_PASSWORD is not valid for shared admin bootstrap: $admin_pass"
+fi
+restore_file ".env"
+
+# Test 11: No duplicate variable definitions in .env.example
 test_case "No duplicate variables in .env.example"
 cd "$PROJECT_ROOT"
 
@@ -160,7 +176,7 @@ else
     test_fail "Found duplicate variables: $duplicates"
 fi
 
-# Test 11: Generated .env has no duplicate variable definitions
+# Test 12: Generated .env has no duplicate variable definitions
 test_case "Generated .env has no duplicate variables"
 cd "$PROJECT_ROOT"
 backup_file ".env"
@@ -176,7 +192,7 @@ else
 fi
 restore_file ".env"
 
-# Test 12: Access mode flow is a single top-level chooser
+# Test 13: Access mode flow is a single top-level chooser
 test_case "env generator exposes a single tunnel local ip access chooser"
 ENV_GENERATOR_FILE="$PROJECT_ROOT/tools/setup/lib/env-generator.sh"
 

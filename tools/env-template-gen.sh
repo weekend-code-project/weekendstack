@@ -14,6 +14,9 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+# Shared validation helpers
+source "$PROJECT_ROOT/tools/setup/lib/common.sh"
+
 # Default to the assembled temp template when present. If no temp template
 # is provided, always assemble a fresh full one so the documented no-arg flow
 # is deterministic and does not depend on leftover test or setup state.
@@ -43,6 +46,37 @@ log_success() { echo -e "${GREEN}✓${NC} $1"; }
 log_error() { echo -e "${RED}✗${NC} $1" >&2; }
 log_info() { echo -e "${YELLOW}→${NC} $1"; }
 
+random_chars() {
+    local charset="$1"
+    local length="$2"
+    LC_ALL=C tr -dc "$charset" < /dev/urandom | head -c "$length"
+}
+
+generate_shared_admin_password() {
+    local candidate
+    local attempts=0
+
+    while (( attempts < 20 )); do
+        candidate="$(
+            printf '%s%s%s%s' \
+                "$(random_chars 'A-Z' 1)" \
+                "$(random_chars 'a-z' 1)" \
+                "$(random_chars '0-9' 1)" \
+                "$(random_chars 'A-Za-z0-9._@%+=:!-' 21)"
+        )"
+
+        if validate_shared_admin_password "$candidate"; then
+            printf '%s\n' "$candidate"
+            return 0
+        fi
+
+        attempts=$((attempts + 1))
+    done
+
+    log_error "Failed to generate a valid shared admin password"
+    exit 1
+}
+
 # Check if template exists
 if [[ ! -f "$ENV_EXAMPLE" ]]; then
     echo "Error: Template file not found: $ENV_EXAMPLE"
@@ -56,9 +90,12 @@ cp "$ENV_EXAMPLE" "$ENV_FILE"
 
 # Function to generate random value based on comment
 generate_value() {
-    local comment="$1"
-    
-    if [[ "$comment" =~ "openssl rand -hex 64" ]]; then
+    local var_name="$1"
+    local comment="$2"
+
+    if [[ "$var_name" == "DEFAULT_ADMIN_PASSWORD" ]] || [[ "$comment" =~ "shared-admin-password" ]]; then
+        generate_shared_admin_password
+    elif [[ "$comment" =~ "openssl rand -hex 64" ]]; then
         openssl rand -hex 64
     elif [[ "$comment" =~ "openssl rand -hex 32" ]]; then
         openssl rand -hex 32
@@ -85,10 +122,10 @@ while IFS= read -r line; do
     
     # Extract variable name, current value, and generation instruction
     var_name=$(echo "$line" | cut -d'=' -f1)
-    comment=$(echo "$line" | grep -oP '#.*$')
+    comment=$(printf '%s\n' "$line" | sed 's/^[^#]*//')
     
     # Generate random value
-    random_value=$(generate_value "$comment")
+    random_value=$(generate_value "$var_name" "$comment")
     
     # Replace in .env file
     sed -i "s|^${var_name}=.*|${var_name}=${random_value}|" "$ENV_FILE"

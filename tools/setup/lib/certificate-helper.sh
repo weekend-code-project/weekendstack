@@ -5,7 +5,7 @@
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 generate_certificates() {
-    local stack_dir="${SCRIPT_DIR}/.."
+    local stack_dir="${SCRIPT_DIR}"
     
     log_header "Local HTTPS Certificate Generation"
     
@@ -57,7 +57,7 @@ generate_certificates() {
 }
 
 install_ca_certificate() {
-    local stack_dir="${SCRIPT_DIR}/.."
+    local stack_dir="${SCRIPT_DIR}"
     local ca_cert="$stack_dir/config/traefik/certs/ca-cert.pem"
     
     if [[ ! -f "$ca_cert" ]]; then
@@ -268,7 +268,7 @@ install_ca_manual() {
 }
 
 verify_certificate_trust() {
-    local stack_dir="${SCRIPT_DIR}/.."
+    local stack_dir="${SCRIPT_DIR}"
     
     if [[ ! -f "$stack_dir/.env" ]]; then
         return 0

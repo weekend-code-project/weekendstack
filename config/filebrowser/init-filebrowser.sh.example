@@ -8,6 +8,14 @@ ADMIN_USER="${DEFAULT_ADMIN_USER:-admin}"
 ADMIN_PASS="${DEFAULT_ADMIN_PASSWORD:-}"
 DB="${FB_DATABASE:-/config/filebrowser.db}"
 FB="filebrowser"
+RUNTIME_OWNER="${FB_RUNTIME_OWNER:-abc:users}"
+
+repair_permissions() {
+    chown "$RUNTIME_OWNER" "$(dirname "$DB")" 2>/dev/null || true
+    [ -f "$DB" ] && chown "$RUNTIME_OWNER" "$DB" 2>/dev/null || true
+    [ -f /config/settings.json ] && chown "$RUNTIME_OWNER" /config/settings.json 2>/dev/null || true
+    [ -f "$DB" ] && chmod 664 "$DB" 2>/dev/null || true
+}
 
 if [ -z "$ADMIN_PASS" ]; then
     echo "[filebrowser-init] DEFAULT_ADMIN_PASSWORD not set — skipping admin password update"
@@ -28,3 +36,5 @@ else
     $FB users add "$ADMIN_USER" "$ADMIN_PASS" --perm.admin -d "$DB" 2>/dev/null || \
     echo "[filebrowser-init] Could not update admin user"
 fi
+
+repair_permissions
