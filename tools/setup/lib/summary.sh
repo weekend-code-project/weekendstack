@@ -8,49 +8,6 @@ if [[ -f "$(dirname "${BASH_SOURCE[0]}")/auth-policy.sh" ]]; then
     source "$(dirname "${BASH_SOURCE[0]}")/auth-policy.sh"
 fi
 
-append_auth_policy_group_markdown() {
-    local summary_file="$1"
-    local title="$2"
-    local bucket="$3"
-    shift 3
-    local -a profiles=("$@")
-    local -a services=()
-    local service display_name
-
-    case "$bucket" in
-        seeded)
-            while IFS= read -r service; do
-                [[ -n "$service" ]] && services+=("$service")
-            done < <(auth_policy_seeded_services "${profiles[@]}")
-            ;;
-        password_only)
-            while IFS= read -r service; do
-                [[ -n "$service" ]] && services+=("$service")
-            done < <(auth_policy_password_only_services "${profiles[@]}")
-            ;;
-        manual)
-            while IFS= read -r service; do
-                [[ -n "$service" ]] && services+=("$service")
-            done < <(auth_policy_manual_services "${profiles[@]}")
-            ;;
-        *)
-            while IFS= read -r service; do
-                [[ -n "$service" ]] && services+=("$service")
-            done < <(auth_policy_not_applicable_services "${profiles[@]}")
-            ;;
-    esac
-
-    [[ ${#services[@]} -eq 0 ]] && return 0
-
-    echo "### ${title}" >> "$summary_file"
-    echo "" >> "$summary_file"
-    for service in "${services[@]}"; do
-        display_name=$(auth_policy_service_display_name "$service")
-        echo "- **${display_name}**" >> "$summary_file"
-    done
-    echo "" >> "$summary_file"
-}
-
 generate_setup_summary() {
     local stack_dir="${SCRIPT_DIR}"
     local profiles=("$@")
@@ -62,9 +19,8 @@ generate_setup_summary() {
     local lab_domain=$(grep "^LAB_DOMAIN=" "$stack_dir/.env" | cut -d'=' -f2- | sed 's/#.*//' | tr -d ' ' || echo "lab")
     local base_domain=$(grep "^BASE_DOMAIN=" "$stack_dir/.env" | cut -d'=' -f2- | sed 's/#.*//' | tr -d ' ' || echo "localhost")
     local host_ip=$(grep "^HOST_IP=" "$stack_dir/.env" | cut -d'=' -f2- | sed 's/#.*//' | tr -d ' ' || echo "192.168.1.100")
-    local admin_user=$(grep "^DEFAULT_ADMIN_USER=" "$stack_dir/.env" | cut -d'=' -f2- | sed 's/#.*//' | tr -d ' ' || echo "weekendstack")
-    local admin_email=$(grep "^DEFAULT_ADMIN_EMAIL=" "$stack_dir/.env" | cut -d'=' -f2- | sed 's/#.*//' | tr -d ' ' || echo "admin@example.com")
-    local admin_password=$(grep "^DEFAULT_ADMIN_PASSWORD=" "$stack_dir/.env" | cut -d'=' -f2- | sed 's/#.*//' | tr -d ' ' || echo "<check .env file>")
+    local traefik_auth_user=$(grep "^DEFAULT_TRAEFIK_AUTH_USER=" "$stack_dir/.env" | cut -d'=' -f2- | sed 's/#.*//' | tr -d ' ' || echo "admin")
+    local traefik_auth_password=$(grep "^DEFAULT_TRAEFIK_AUTH_PASS=" "$stack_dir/.env" | cut -d'=' -f2- | sed 's/#.*//' | tr -d ' ' || echo "<check .env file>")
     local access_mode
     access_mode=$(auth_policy_access_mode_from_env "$stack_dir/.env")
     local profiles_raw
@@ -101,20 +57,12 @@ EOF
 
 ---
 
-## Default Credentials
-
-WeekendStack uses one shared default admin identity where a service supports deterministic bootstrap:
-
-- **Username:** \`$admin_user\`
-- **Email:** \`$admin_email\`
-- **Password:** \`$admin_password\`
-
-Some services only reuse the shared password and still have their own username or access flow.
+## Access Authentication
 
 ⚠️ **IMPORTANT SECURITY NOTICE:**
-1. Change default passwords immediately after first login
-2. Review which services were seeded, password-only, or manual before assuming shared credentials apply
-3. Review and update all credentials in production environments
+1. WeekendStack no longer seeds default app accounts automatically
+2. Most services will need their first account created inside the app
+3. Only tunnel-exposed routes use the Traefik basic-auth popup below
 
 ---
 
@@ -167,14 +115,26 @@ Create development environments using the templates in \`config/coder/v2/templat
 
 EOF
 
-    append_auth_policy_group_markdown "$summary_file" "Seeded Automatically (Username + Password)" "seeded" "${summary_profiles[@]}"
-    append_auth_policy_group_markdown "$summary_file" "Shared Password Only" "password_only" "${summary_profiles[@]}"
-    append_auth_policy_group_markdown "$summary_file" "Manual First Admin Still Required" "manual" "${summary_profiles[@]}"
-    append_auth_policy_group_markdown "$summary_file" "Not Applicable / App-Native Auth" "not_applicable" "${summary_profiles[@]}"
+    if [[ "$access_mode" == "tunnel" ]]; then
+        cat >> "$summary_file" << EOF
+### External Tunnel Auth
 
-    cat >> "$summary_file" << EOF
+- **Username:** \`$traefik_auth_user\`
+- **Password:** \`$traefik_auth_password\`
+
+This is only for the Traefik auth popup on selected external routes.
+It is not a default account for the apps themselves.
 
 EOF
+    else
+        cat >> "$summary_file" << EOF
+### Local Access
+
+No extra Traefik auth is configured for local-only access.
+Create app accounts manually inside each service as needed.
+
+EOF
+    fi
 
     # Add Cloudflare section if enabled
     if grep -q "CLOUDFLARE_TUNNEL_ENABLED=true" "$stack_dir/.env" 2>/dev/null; then

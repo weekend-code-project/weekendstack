@@ -75,11 +75,7 @@ services:
       NC_PUBLIC_URL: ${NOCODB_PUBLIC_URL:-http://nocodb.lab}
       NC_DISABLE_TELE: true
       NC_REDIS_URL: ""
-      
-      # Admin Configuration
-      NC_ADMIN_EMAIL: ${NOCODB_ADMIN_EMAIL:-admin@example.com}
-      NC_ADMIN_PASSWORD: ${NOCODB_ADMIN_PASSWORD}
-      
+
     volumes:
       - type: bind
         source: ${DATA_BASE_DIR:-../data}/nocodb
@@ -409,11 +405,6 @@ services:
       PAPERLESS_TIME_ZONE: ${TIMEZONE:-UTC}
       PAPERLESS_OCR_LANGUAGE: eng
       
-      # Admin User Configuration
-      PAPERLESS_ADMIN_USER: ${PAPERLESS_ADMIN_USER}
-      PAPERLESS_ADMIN_PASSWORD: ${PAPERLESS_ADMIN_PASSWORD}
-      PAPERLESS_ADMIN_MAIL: ${PAPERLESS_ADMIN_EMAIL:-admin@example.com}
-      
       # Document Processing
       PAPERLESS_CONSUMER_POLLING: 10
       PAPERLESS_CONSUMER_DELETE_DUPLICATES: true
@@ -742,10 +733,6 @@ services:
       # Storage Configuration
       STORAGE_PROVIDER: local
       UPLOAD_DIRECTORY: /app/public/uploads
-      
-      # Admin Configuration
-      ADMIN_EMAIL: ${POSTIZ_ADMIN_EMAIL}
-      ADMIN_PASSWORD: ${POSTIZ_ADMIN_PASSWORD}
       
       # Environment
       NODE_ENV: production
@@ -1202,8 +1189,6 @@ services:
       PUID: ${PUID:-1000}
       PGID: ${PGID:-1000}
       TZ: ${TIMEZONE:-UTC}
-      DEFAULT_ADMIN_USER: ${DEFAULT_ADMIN_USER}
-      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD}
       FB_DATABASE: /config/filebrowser.db
     volumes:
       # Persist File Browser config/DB outside of the browsable root.
@@ -1216,11 +1201,6 @@ services:
         target: /srv
         bind:
           create_host_path: true
-      # Initialization script to set admin password (runs via s6 custom-init)
-      - type: bind
-        source: ../config/filebrowser/init-filebrowser.sh
-        target: /custom-cont-init.d/99-set-password.sh
-        read_only: true
     restart: unless-stopped
     deploy:
       resources:
@@ -1501,11 +1481,6 @@ services:
       RESOURCESPACE_DB_NAME: ${RESOURCESPACE_DBNAME:-resourcespace}
       RESOURCESPACE_DB_USER: ${RESOURCESPACE_DBUSER:-resourcespace}
       RESOURCESPACE_DB_PASS: ${RESOURCESPACE_DBPASS:-resourcespace_password_2024}
-      RESOURCESPACE_ADMIN_USERNAME: ${RESOURCESPACE_ADMIN_USERNAME:-admin}
-      RESOURCESPACE_ADMIN_PASSWORD: ${RESOURCESPACE_ADMIN_PASSWORD:-}
-      RESOURCESPACE_ADMIN_EMAIL: ${RESOURCESPACE_ADMIN_EMAIL:-}
-      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-}
-      DEFAULT_ADMIN_EMAIL: ${DEFAULT_ADMIN_EMAIL:-}
       
     volumes:
       - type: volume

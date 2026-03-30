@@ -1432,37 +1432,42 @@ preflight_fix_mounts() {
     # header middleware so local users are not prompted for extra auth.
     local auth_dir="$SCRIPT_DIR/config/traefik/auth"
     mkdir -p "$auth_dir"
-    local admin_user admin_pass
-    admin_user=$(grep "^DEFAULT_ADMIN_USER=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
-    admin_pass=$(grep "^DEFAULT_ADMIN_PASSWORD=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
-    admin_user=${admin_user:-weekendstack}
-    admin_pass=${admin_pass:-changeme}
+    local access_mode
+    access_mode="$(auth_policy_access_mode_from_env "$SCRIPT_DIR/.env")"
+    local tunnel_auth_user tunnel_auth_pass
+    tunnel_auth_user=$(grep "^DEFAULT_TRAEFIK_AUTH_USER=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+    tunnel_auth_pass=$(grep "^DEFAULT_TRAEFIK_AUTH_PASS=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+    tunnel_auth_user=${tunnel_auth_user:-admin}
+    tunnel_auth_pass=${tunnel_auth_pass:-changeme}
 
     # Check if any htpasswd file already has the right user; regenerate if not.
     # Always regenerate so password changes from setup are reflected.
     local needs_regen=true
     local htpasswd_file="$auth_dir/htpasswd-admin"
 
-    if $needs_regen; then
+    if [[ "$access_mode" == "tunnel" ]] && $needs_regen; then
         if command -v htpasswd >/dev/null 2>&1; then
-            htpasswd -nbB "$admin_user" "$admin_pass" > "$htpasswd_file"
+            htpasswd -nbB "$tunnel_auth_user" "$tunnel_auth_pass" > "$htpasswd_file"
         elif docker info >/dev/null 2>&1; then
-            docker run --rm httpd:2-alpine htpasswd -nbB "$admin_user" "$admin_pass" \
+            docker run --rm httpd:2-alpine htpasswd -nbB "$tunnel_auth_user" "$tunnel_auth_pass" \
                 > "$htpasswd_file" 2>/dev/null
         fi
         if [[ -f "$htpasswd_file" ]]; then
             chmod 600 "$htpasswd_file"
-            log_info "Generated Traefik basic auth: $htpasswd_file (user: $admin_user)"
+            log_info "Generated Traefik basic auth: $htpasswd_file (user: $tunnel_auth_user)"
             # Keep legacy test files in sync so existing middleware configs still work
             for f in "$auth_dir"/htpasswd-test{1,2,3,4}; do
                 cp "$htpasswd_file" "$f" 2>/dev/null || true
             done
         fi
+    elif [[ "$access_mode" != "tunnel" ]]; then
+        rm -f "$htpasswd_file" "$auth_dir"/htpasswd-test{1,2,3,4} 2>/dev/null || true
+        log_info "Tunnel auth disabled for local-only access"
     fi
 
     local service_middlewares_file="$auth_dir/service-middlewares.yml"
     generate_traefik_service_middlewares "$SCRIPT_DIR/.env" "$service_middlewares_file"
-    log_info "Configured Traefik service middlewares for access mode: $(auth_policy_access_mode_from_env "$SCRIPT_DIR/.env")"
+    log_info "Configured Traefik service middlewares for access mode: $access_mode"
 
     # Set FORCE_LINK_MODE in .env to drive link-router URL routing.
     # Match the selected setup access mode so /go/ links stay consistent with Glance.
@@ -1574,10 +1579,6 @@ start_services_with_profiles() {
         echo ""
         log_info "Waiting for services to become healthy..."
         sleep 5
-
-        if ! run_auth_bootstrap_tasks "${profiles[@]}"; then
-            log_warn "Some admin bootstrap tasks failed; check service logs and rerun setup after fixing them"
-        fi
 
         # Show running services
         echo ""

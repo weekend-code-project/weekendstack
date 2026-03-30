@@ -148,18 +148,18 @@ else
 fi
 restore_file ".env"
 
-# Test 10: Generated shared admin password matches setup validation rules
-test_case "Generated DEFAULT_ADMIN_PASSWORD is valid for shared admin bootstrap"
+# Test 10: Generated tunnel auth password matches setup validation rules
+test_case "Generated DEFAULT_TRAEFIK_AUTH_PASS is valid for tunnel auth"
 cd "$PROJECT_ROOT"
 backup_file ".env"
 
 ./tools/env-template-gen.sh >/dev/null 2>&1
-admin_pass=$(grep "^DEFAULT_ADMIN_PASSWORD=" .env | cut -d'=' -f2)
+auth_pass=$(grep "^DEFAULT_TRAEFIK_AUTH_PASS=" .env | cut -d'=' -f2)
 
-if [ -n "$admin_pass" ] && validate_shared_admin_password "$admin_pass"; then
+if [ -n "$auth_pass" ] && validate_shared_admin_password "$auth_pass"; then
     test_pass
 else
-    test_fail "Generated DEFAULT_ADMIN_PASSWORD is not valid for shared admin bootstrap: $admin_pass"
+    test_fail "Generated DEFAULT_TRAEFIK_AUTH_PASS is not valid for tunnel auth: $auth_pass"
 fi
 restore_file ".env"
 

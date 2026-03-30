@@ -445,7 +445,7 @@ services:
       - "${PIHOLE_PORT_WEB:-8088}:80/tcp"
     environment:
       TZ: ${TIMEZONE:-UTC}
-      FTLCONF_webserver_api_password: ${PIHOLE_WEBPASSWORD}
+      FTLCONF_webserver_api_password: ${PIHOLE_WEBPASSWORD:-}
       # Docker bridge deployments need ALL listening mode so queries forwarded
       # through the published host IP are accepted.
       FTLCONF_dns_listeningMode: 'ALL'

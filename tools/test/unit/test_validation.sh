@@ -13,8 +13,8 @@ backup_file ".env"
 ./tools/env-template-gen.sh >/dev/null 2>&1
 
 # Set required values
-sed -i 's/^HOST_IP=.*/HOST_IP=192.168.1.100/' .env
-sed -i 's/^TZ=.*/TZ=America\/New_York/' .env
+perl -0pi -e 's/^HOST_IP=.*/HOST_IP=192.168.1.100/m' .env
+perl -0pi -e 's%^TZ=.*%TZ=America/New_York%m' .env
 
 if ./tools/validate-env.sh >/dev/null 2>&1; then
     test_pass
@@ -23,14 +23,15 @@ else
 fi
 restore_file ".env"
 
-# Test 2: Validation catches weak passwords
-test_case "Validation detects weak passwords"
+# Test 2: Validation catches weak tunnel auth passwords
+test_case "Validation detects weak tunnel auth passwords"
 cd "$PROJECT_ROOT"
 backup_file ".env"
 
 ./tools/env-template-gen.sh >/dev/null 2>&1
-sed -i 's/^DEFAULT_ADMIN_PASSWORD=.*/DEFAULT_ADMIN_PASSWORD=password123/' .env
-sed -i 's/^HOST_IP=.*/HOST_IP=192.168.1.100/' .env
+perl -0pi -e 's/^DOMAIN_MODE=.*/DOMAIN_MODE=tunnel/m' .env
+perl -0pi -e 's/^DEFAULT_TRAEFIK_AUTH_PASS=.*/DEFAULT_TRAEFIK_AUTH_PASS=password123/m' .env
+perl -0pi -e 's/^HOST_IP=.*/HOST_IP=192.168.1.100/m' .env
 
 if ! ./tools/validate-env.sh 2>&1 | grep -q "Weak password detected"; then
     test_fail "Should detect weak password 'password123'"
@@ -45,7 +46,7 @@ cd "$PROJECT_ROOT"
 backup_file ".env"
 
 ./tools/env-template-gen.sh >/dev/null 2>&1
-sed -i 's/^HOST_IP=.*/HOST_IP=/' .env
+perl -0pi -e 's/^HOST_IP=.*/HOST_IP=/m' .env
 
 if ./tools/validate-env.sh 2>&1 | grep -q "Required field is empty"; then
     test_pass
@@ -61,7 +62,7 @@ backup_file ".env"
 
 ./tools/env-template-gen.sh >/dev/null 2>&1
 # Replace HOST_IP line with one that has an inline comment
-sed -i 's|^HOST_IP=.*|HOST_IP=192.168.1.50                    # My IP|' .env
+perl -0pi -e 's/^HOST_IP=.*/HOST_IP=192.168.1.50                    # My IP/m' .env
 
 # Run validation and check that it processed the IP correctly
 validation_output=$(./tools/validate-env.sh 2>&1)
@@ -78,7 +79,7 @@ cd "$PROJECT_ROOT"
 backup_file ".env"
 
 cp .env.example .env
-sed -i 's/^HOST_IP=.*/HOST_IP=192.168.1.100/' .env
+perl -0pi -e 's/^HOST_IP=.*/HOST_IP=192.168.1.100/m' .env
 
 if ./tools/validate-env.sh 2>&1 | grep -q "GENERATE"; then
     test_pass
@@ -93,7 +94,7 @@ cd "$PROJECT_ROOT"
 backup_file ".env"
 
 ./tools/env-template-gen.sh >/dev/null 2>&1
-sed -i 's/^HOST_IP=.*/HOST_IP=10.0.0.50/' .env
+perl -0pi -e 's/^HOST_IP=.*/HOST_IP=10.0.0.50/m' .env
 
 if ./tools/validate-env.sh 2>&1 | grep -q "HOST_IP format valid"; then
     test_pass

@@ -5,9 +5,6 @@ DB_HOST="${RESOURCESPACE_DB_HOST:-resourcespace-db}"
 DB_NAME="${RESOURCESPACE_DB_NAME:-resourcespace}"
 DB_USER="${RESOURCESPACE_DB_USER:-resourcespace}"
 DB_PASS="${RESOURCESPACE_DB_PASS:-resourcespace_password_2024}"
-ADMIN_USERNAME="${RESOURCESPACE_ADMIN_USERNAME:-admin}"
-ADMIN_PASSWORD="${RESOURCESPACE_ADMIN_PASSWORD:-${DEFAULT_ADMIN_PASSWORD:-resourcespace_admin_2024}}"
-ADMIN_EMAIL="${RESOURCESPACE_ADMIN_EMAIL:-${DEFAULT_ADMIN_EMAIL:-admin@localhost}}"
 
 # Wait for database to be ready
 echo "Waiting for database..."
@@ -47,12 +44,6 @@ if [ ! -f "$CONFIG_FILE" ]; then
 \$email_from = 'resourcespace@localhost';
 \$email_notify = 'admin@localhost';
 
-// Admin account (set from RESOURCESPACE_ADMIN_* env vars)
-\$default_admin_username = '$ADMIN_USERNAME';
-\$default_admin_password = '$ADMIN_PASSWORD';
-\$default_admin_email = '$ADMIN_EMAIL';
-\$default_admin_fullname = 'Administrator';
-
 // Trust proxy headers for HTTPS
 if (isset(\$_SERVER['HTTP_X_FORWARDED_PROTO']) && \$_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
     \$_SERVER['HTTPS'] = 'on';
@@ -83,44 +74,10 @@ for i in {1..10}; do
     sleep 2
 done
 
-# Wait for user table to be created
-echo "Waiting for database schema..."
-for i in {1..20}; do
-    if mysql -h"$DB_HOST" -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "SHOW TABLES LIKE 'user';" 2>/dev/null | grep -q user; then
-        echo "Database schema ready!"
-        break
-    fi
-    sleep 2
-done
-
-# Create admin user with proper password hash (bcrypt with HMAC)
-echo "Setting up admin user..."
-ADMIN_PASS_HASH=$(php -r '
-$password = "RSadmin'"$ADMIN_PASSWORD"'";
-$scramble_key = "'"$SCRAMBLE_KEY"'";
-$hmac = hash_hmac("sha256", $password, $scramble_key);
-echo password_hash($hmac, PASSWORD_DEFAULT);
-')
-
-# Check if admin user exists, if not create it
-USER_COUNT=$(mysql -h"$DB_HOST" -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" -se "SELECT COUNT(*) FROM user WHERE username='admin';" 2>/dev/null)
-
-if [ "$USER_COUNT" = "0" ]; then
-    mysql -h"$DB_HOST" -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" << SQLEOF 2>/dev/null
-INSERT INTO user (username, password, fullname, email, usergroup, approved) 
-VALUES ('$ADMIN_USERNAME', '$ADMIN_PASS_HASH', 'Administrator', '$ADMIN_EMAIL', 3, 1);
-SQLEOF
-else
-    mysql -h"$DB_HOST" -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" << SQLEOF 2>/dev/null
-UPDATE user SET password='$ADMIN_PASS_HASH', email='$ADMIN_EMAIL' WHERE username='$ADMIN_USERNAME' LIMIT 1;
-SQLEOF
-fi
-
 echo "========================================="
 echo "ResourceSpace is ready!"
 echo "URL: http://resourcespace.lab/"
-echo "Username: $ADMIN_USERNAME"
-echo "Password: (from RESOURCESPACE_ADMIN_PASSWORD / DEFAULT_ADMIN_PASSWORD)"
+echo "Complete account setup in the web UI."
 echo "========================================="
 
 # Wait for Apache process

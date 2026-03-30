@@ -101,11 +101,15 @@ done
 
 REQUIRED_VARS=(
     "HOST_IP"
-    "DEFAULT_ADMIN_PASSWORD"
     "DEFAULT_DB_PASS"
     "DEFAULT_JWT_SECRET"
-    "DEFAULT_TRAEFIK_AUTH_PASS"
 )
+
+DOMAIN_MODE_VALUE=$(grep "^DOMAIN_MODE=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' "')
+DOMAIN_MODE_VALUE="${DOMAIN_MODE_VALUE:-ip}"
+if [[ "$DOMAIN_MODE_VALUE" == "tunnel" ]]; then
+    REQUIRED_VARS+=("DEFAULT_TRAEFIK_AUTH_PASS")
+fi
 
 for var in "${REQUIRED_VARS[@]}"; do
     VALUE=$(grep "^${var}=" .env | cut -d'=' -f2- | sed 's/#.*//' | tr -d ' ')
@@ -131,14 +135,6 @@ if grep -q "<GENERATE>" .env; then
     echo "    Run: ./tools/env-template-gen.sh"
     PLACEHOLDERS=$((PLACEHOLDERS + 1))
     ERRORS=$((ERRORS + 1))
-fi
-
-if grep -q "example.com" .env && ! grep -q "#.*example.com" .env; then
-    VALUE=$(grep "^DEFAULT_ADMIN_EMAIL=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
-    if [ "$VALUE" = "admin@example.com" ]; then
-        echo -e "${YELLOW}  ⚠ DEFAULT_ADMIN_EMAIL still set to example.com${NC}"
-        WARNINGS=$((WARNINGS + 1))
-    fi
 fi
 
 if [ $PLACEHOLDERS -eq 0 ]; then
@@ -214,29 +210,19 @@ while IFS= read -r line; do
     fi
 done < .env
 
-DEFAULT_ADMIN_PASS=$(grep "^DEFAULT_ADMIN_PASSWORD=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
-if [ -n "$DEFAULT_ADMIN_PASS" ] && ! validate_shared_admin_password "$DEFAULT_ADMIN_PASS"; then
-    echo -e "${RED}  ✗ DEFAULT_ADMIN_PASSWORD ${SHARED_ADMIN_PASSWORD_ERROR}${NC}"
+DEFAULT_TRAEFIK_AUTH_PASS=$(grep "^DEFAULT_TRAEFIK_AUTH_PASS=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+if [[ "$DOMAIN_MODE_VALUE" == "tunnel" ]] && [ -n "$DEFAULT_TRAEFIK_AUTH_PASS" ] && ! validate_shared_admin_password "$DEFAULT_TRAEFIK_AUTH_PASS"; then
+    echo -e "${RED}  ✗ DEFAULT_TRAEFIK_AUTH_PASS ${SHARED_ADMIN_PASSWORD_ERROR}${NC}"
     ERRORS=$((ERRORS + 1))
 fi
-DEFAULT_ADMIN_USER=$(grep "^DEFAULT_ADMIN_USER=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
-COMPOSE_PROFILES_VALUE=$(grep "^COMPOSE_PROFILES=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
-gitea_enabled=false
-if [[ ",${COMPOSE_PROFILES_VALUE}," == *",all,"* ]] || [[ ",${COMPOSE_PROFILES_VALUE}," == *",gitea,"* ]]; then
-    gitea_enabled=true
-fi
-if [ -n "$DEFAULT_ADMIN_USER" ] && ! validate_shared_admin_username "$DEFAULT_ADMIN_USER" "$gitea_enabled"; then
-    echo -e "${RED}  ✗ DEFAULT_ADMIN_USER ${SHARED_ADMIN_USERNAME_ERROR}${NC}"
-    ERRORS=$((ERRORS + 1))
-fi
-if [ ${#DEFAULT_ADMIN_PASS} -lt 32 ]; then
-    echo -e "${YELLOW}  ⚠ Consider using longer passwords (32+ chars)${NC}"
+if [[ "$DOMAIN_MODE_VALUE" == "tunnel" ]] && [ ${#DEFAULT_TRAEFIK_AUTH_PASS} -lt 32 ]; then
+    echo -e "${YELLOW}  ⚠ Consider using longer external auth passwords (32+ chars)${NC}"
 fi
 
 # Check signups
 if grep -E "SIGNUPS_ALLOWED=true|ALLOW_REGISTRATION=true|ENABLE_SIGNUP=True|ENABLE_SIGNUP=true|GITEA_DISABLE_REGISTRATION=false|VIKUNJA_SERVICE_ENABLEREGISTRATION=true" .env >/dev/null 2>&1; then
     echo -e "${YELLOW}  ⚠ Some services have signups enabled${NC}"
-    echo "    Disable after creating your accounts for better security"
+    echo "    This is expected now that app accounts are created manually"
 fi
 
 echo -e "${GREEN}  ✓ Review Section 15 in .env for first-time setup guide${NC}"

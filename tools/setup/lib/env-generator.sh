@@ -413,79 +413,53 @@ generate_env_interactive() {
     fi
     
     # ========================================================================
-    # STEP: Admin Credentials (always shown)
+    # STEP: Tunnel auth credentials (tunnel mode only)
     # ========================================================================
     _step=$((_step + 1))
-    show_progress $_step $total_steps "Default Admin Credentials"
-    
-    echo "These credentials are used only where the stack supports deterministic bootstrap."
-    echo "Today that includes Coder, Gitea, Open WebUI, Paperless, and File Browser."
-    echo "Pi-hole reuses the shared password only. Many other apps still need a first account created in-app."
-    echo ""
-    log_warn "IMPORTANT: Change these after first login — they protect all your services!"
-    echo ""
-    
-    local admin_user="weekendstack"
-    local admin_email="admin@example.com"
-    local admin_password=""  # Will be auto-generated if left blank
-    local enforce_gitea_username_rules=false
+    show_progress $_step $total_steps "Tunnel Access Authentication"
 
-    if [[ " ${selected_profiles[*]} " == *" all "* ]] || [[ "${git_service:-}" == "gitea" ]]; then
-        enforce_gitea_username_rules=true
-    fi
+    local traefik_auth_user="admin"
+    local traefik_auth_password=""
+    local access_mode
+    access_mode="$(normalize_access_mode "$domain_mode")"
 
-    if prompt_yes_no "Customize admin credentials?" "y"; then
+    if [[ "$access_mode" == "tunnel" ]]; then
+        echo "These credentials are only for the Traefik basic-auth popup shown on"
+        echo "selected external tunnel routes."
+        echo "They are not app accounts and are not used for local .lab or local IP access."
         echo ""
-        echo "Shared username requirements:"
-        while IFS= read -r rule_line; do
-            echo "  $rule_line"
-        done < <(shared_admin_username_rules_text)
-        echo ""
-        while true; do
-            admin_user=$(prompt_input "Admin username" "weekendstack")
-            if validate_shared_admin_username "$admin_user" "$enforce_gitea_username_rules"; then
-                break
-            fi
-            log_error "Invalid admin username. DEFAULT_ADMIN_USER ${SHARED_ADMIN_USERNAME_ERROR}"
-        done
-
-        echo ""
-        while true; do
-            admin_email=$(prompt_input "Admin email" "admin@example.com")
-            if validate_email "$admin_email"; then
-                break
-            fi
-            log_error "Invalid email address. Please enter a valid email."
-        done
-
-        echo ""
-        echo "Custom password requirements:"
+        echo "Password requirements:"
         while IFS= read -r rule_line; do
             echo "  $rule_line"
         done < <(shared_admin_password_rules_text)
         echo ""
-        while true; do
-            admin_password=$(prompt_password "Admin password (leave blank to auto-generate a secure one)" "yes")
 
-            if [[ -z "$admin_password" ]]; then
+        traefik_auth_user=$(prompt_input "Traefik auth username" "admin")
+
+        while true; do
+            traefik_auth_password=$(prompt_password "Traefik auth password (leave blank to auto-generate a secure one)" "yes")
+
+            if [[ -z "$traefik_auth_password" ]]; then
                 break
             fi
 
-            if ! validate_shared_admin_password "$admin_password"; then
-                log_error "Admin password $SHARED_ADMIN_PASSWORD_ERROR"
+            if ! validate_shared_admin_password "$traefik_auth_password"; then
+                log_error "Traefik auth password $SHARED_ADMIN_PASSWORD_ERROR"
                 continue
             fi
 
             break
         done
 
-        if [[ -z "$admin_password" ]]; then
+        if [[ -z "$traefik_auth_password" ]]; then
             echo ""
-            log_info "Will use auto-generated random password (you'll see it in .env and SETUP_SUMMARY.md)"
+            log_info "Will use an auto-generated password for external Traefik auth"
         fi
+
+        log_success "Tunnel auth configured"
+    else
+        log_info "Tunnel auth not needed for local-only access"
     fi
-    
-    log_success "Admin credentials configured"
     
     # ========================================================================
     # STEP: File Storage Paths
@@ -568,13 +542,18 @@ generate_env_interactive() {
         echo "  External Access:  disabled"
     fi
     echo ""
-    echo -e "${BOLD}Admin Credentials:${NC}"
-    echo "  Username:         $admin_user"
-    echo "  Email:            $admin_email"
-    if [[ -n "$admin_password" ]]; then
-        echo "  Password:         (custom - set)"
+    if [[ "$access_mode" == "tunnel" ]]; then
+        echo -e "${BOLD}Tunnel Auth:${NC}"
+        echo "  Username:         $traefik_auth_user"
+        if [[ -n "$traefik_auth_password" ]]; then
+            echo "  Password:         (custom - set)"
+        else
+            echo "  Password:         (auto-generated)"
+        fi
+        echo ""
     else
-        echo "  Password:         (auto-generated)"
+        echo -e "${BOLD}Tunnel Auth:${NC}"
+        echo "  External auth:    not enabled"
     fi
     echo ""
     echo -e "${BOLD}Storage:${NC}"
@@ -670,18 +649,12 @@ generate_env_interactive() {
         update_env_var "CLOUDFLARE_API_TOKEN" "$CLOUDFLARE_API_TOKEN" "$env_file"
     fi
     
-    update_env_var "DEFAULT_ADMIN_USER" "$admin_user" "$env_file"
-    update_env_var "DEFAULT_ADMIN_EMAIL" "$admin_email" "$env_file"
-    
-    # Only set custom password if provided
-    if [[ -n "$admin_password" ]]; then
-        update_env_var "DEFAULT_ADMIN_PASSWORD" "$admin_password" "$env_file"
+    if [[ "$access_mode" == "tunnel" ]]; then
+        update_env_var "DEFAULT_TRAEFIK_AUTH_USER" "$traefik_auth_user" "$env_file"
+        if [[ -n "$traefik_auth_password" ]]; then
+            update_env_var "DEFAULT_TRAEFIK_AUTH_PASS" "$traefik_auth_password" "$env_file"
+        fi
     fi
-
-    # Explicitly propagate admin credentials to services that support deterministic
-    # env-based seeding. Values come from the shared auth policy manifest so setup,
-    # summary output, and runtime bootstrap stay in sync.
-    auth_policy_apply_seed_env_defaults "$env_file"
     
     # Set storage paths
     update_env_var "FILES_BASE_DIR" "$files_dir" "$env_file"
@@ -812,16 +785,17 @@ generate_env_interactive() {
     log_info "Final configuration saved to: .env"
     log_info "(Assembled from modular templates based on selected profiles)"
     
-    # Show generated admin password if it was auto-generated
-    if [[ -z "$admin_password" ]]; then
-        local generated_password=$(grep "^DEFAULT_ADMIN_PASSWORD=" "$env_file" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+    # Show generated Traefik auth password when tunnel mode requested auto-generation.
+    if [[ "$access_mode" == "tunnel" ]] && [[ -z "$traefik_auth_password" ]]; then
+        local generated_password
+        generated_password=$(grep "^DEFAULT_TRAEFIK_AUTH_PASS=" "$env_file" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
         echo ""
-        log_warn "IMPORTANT - Save this auto-generated admin password:"
+        log_warn "IMPORTANT - Save this external Traefik auth password:"
         echo ""
-        echo -e "${BOLD}  Username: $admin_user${NC}"
+        echo -e "${BOLD}  Username: $traefik_auth_user${NC}"
         echo -e "${BOLD}  Password: $generated_password${NC}"
         echo ""
-        log_warn "Change this password after your first login to each service!"
+        log_warn "This is only used for external tunnel auth popups."
         echo ""
         pause_for_enter
     fi

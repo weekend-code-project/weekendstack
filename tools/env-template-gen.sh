@@ -46,6 +46,31 @@ log_success() { echo -e "${GREEN}✓${NC} $1"; }
 log_error() { echo -e "${RED}✗${NC} $1" >&2; }
 log_info() { echo -e "${YELLOW}→${NC} $1"; }
 
+replace_env_var() {
+    local var_name="$1"
+    local value="$2"
+    local file="$3"
+    local tmp_file
+    tmp_file="$(mktemp)"
+
+    awk -v var="$var_name" -v val="$value" '
+        BEGIN { updated = 0 }
+        $0 ~ ("^" var "=") {
+            print var "=" val
+            updated = 1
+            next
+        }
+        { print }
+        END {
+            if (!updated) {
+                print var "=" val
+            }
+        }
+    ' "$file" > "$tmp_file"
+
+    mv "$tmp_file" "$file"
+}
+
 random_chars() {
     local charset="$1"
     local length="$2"
@@ -93,7 +118,7 @@ generate_value() {
     local var_name="$1"
     local comment="$2"
 
-    if [[ "$var_name" == "DEFAULT_ADMIN_PASSWORD" ]] || [[ "$comment" =~ "shared-admin-password" ]]; then
+    if [[ "$comment" =~ "shared-admin-password" ]]; then
         generate_shared_admin_password
     elif [[ "$comment" =~ "openssl rand -hex 64" ]]; then
         openssl rand -hex 64
@@ -116,7 +141,7 @@ generate_value() {
 # Process each line with <GENERATE> tag
 while IFS= read -r line; do
     # Skip if not a variable assignment line with <GENERATE> (allow letters, numbers, underscores)
-    if [[ ! "$line" =~ ^[A-Z0-9_]+=.*#.*"<GENERATE>" ]]; then
+    if [[ ! "$line" =~ ^[A-Z0-9_]+= ]] || [[ "$line" != *"<GENERATE>"* ]]; then
         continue
     fi
     
@@ -128,22 +153,16 @@ while IFS= read -r line; do
     random_value=$(generate_value "$var_name" "$comment")
     
     # Replace in .env file
-    sed -i "s|^${var_name}=.*|${var_name}=${random_value}|" "$ENV_FILE"
+    replace_env_var "$var_name" "$random_value" "$ENV_FILE"
     
 done < "$ENV_EXAMPLE"
 
 # Set setup metadata
-sed -i "s/^SETUP_DATE=.*/SETUP_DATE=$(date +%Y-%m-%d)/" "$ENV_FILE"
+replace_env_var "SETUP_DATE" "$(date +%Y-%m-%d)" "$ENV_FILE"
 
-# Strip inline comments from variable assignment lines
-# Docker Compose does not reliably handle inline comments in .env files
-# Pattern: VAR=value  # comment  ->  VAR=value
-# Preserves full-line comments (lines starting with #) and values containing #
-sed -i -E '/^[A-Za-z_][A-Za-z0-9_]*=/ {
-    /^[A-Za-z_][A-Za-z0-9_]*=[^#]*#/ {
-        s/^([A-Za-z_][A-Za-z0-9_]*=[^[:space:]#]*)[[:space:]]+#.*$/\1/
-    }
-}' "$ENV_FILE"
+# Strip inline comments from variable assignment lines.
+# Docker Compose does not reliably handle inline comments in .env files.
+perl -0pi -e 's/^([A-Za-z_][A-Za-z0-9_]*=[^#\n]*?)[ \t]+#.*$/$1/gm' "$ENV_FILE"
 
 # Count generated secrets
 secret_count=$(grep -c "^[A-Z0-9_]*=.*#.*<GENERATE>" "$ENV_EXAMPLE" || true)
