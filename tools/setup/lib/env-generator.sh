@@ -643,25 +643,10 @@ generate_env_interactive() {
         update_env_var "DEFAULT_ADMIN_PASSWORD" "$admin_password" "$env_file"
     fi
 
-    # Explicitly propagate admin credentials to services that support env-based seeding.
-    # .env variable interpolation (${DEFAULT_ADMIN_*}) may not resolve across all Compose versions.
-    local _final_email _final_pass _nocodb_pass
-    _final_email=$(grep "^DEFAULT_ADMIN_EMAIL=" "$env_file" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
-    _final_pass=$(grep "^DEFAULT_ADMIN_PASSWORD=" "$env_file" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
-
-    # NocoDB requires passwords >= 8 characters. Pad if the default is too short.
-    _nocodb_pass="$_final_pass"
-    if [[ ${#_nocodb_pass} -lt 8 ]]; then
-        _nocodb_pass="${_nocodb_pass}Stack24!"
-        log_warn "NocoDB requires ≥8 char password; using padded: ${_nocodb_pass}"
-    fi
-
-    update_env_var "NOCODB_ADMIN_EMAIL"       "$_final_email"  "$env_file"
-    update_env_var "NOCODB_ADMIN_PASSWORD"    "$_nocodb_pass"  "$env_file"
-    update_env_var "POSTIZ_ADMIN_EMAIL"       "$_final_email"  "$env_file"
-    update_env_var "POSTIZ_ADMIN_PASSWORD"    "$_final_pass"   "$env_file"
-    update_env_var "RESOURCESPACE_ADMIN_EMAIL"    "$_final_email" "$env_file"
-    update_env_var "RESOURCESPACE_ADMIN_PASSWORD" "$_final_pass"  "$env_file"
+    # Explicitly propagate admin credentials to services that support deterministic
+    # env-based seeding. Values come from the shared auth policy manifest so setup,
+    # summary output, and runtime bootstrap stay in sync.
+    auth_policy_apply_seed_env_defaults "$env_file"
     
     # Set storage paths
     update_env_var "FILES_BASE_DIR" "$files_dir" "$env_file"

@@ -1388,9 +1388,10 @@ preflight_fix_mounts() {
         fi
     done
 
-    # Generate Traefik basic-auth htpasswd files from DEFAULT_ADMIN_USER/PASSWORD.
-    # These gate external-facing services (AI tools, IT-Tools, SearXNG, Guacamole,
-    # Glance external) when accessed through the Cloudflare tunnel.
+    # Generate Traefik auth assets from the selected access mode.
+    # Tunnel mode keeps file-based basic auth for selected external services.
+    # Local .lab and local IP modes replace those middlewares with a no-op
+    # header middleware so local users are not prompted for extra auth.
     local auth_dir="$SCRIPT_DIR/config/traefik/auth"
     mkdir -p "$auth_dir"
     local admin_user admin_pass
@@ -1420,6 +1421,10 @@ preflight_fix_mounts() {
             done
         fi
     fi
+
+    local service_middlewares_file="$auth_dir/service-middlewares.yml"
+    generate_traefik_service_middlewares "$SCRIPT_DIR/.env" "$service_middlewares_file"
+    log_info "Configured Traefik service middlewares for access mode: $(auth_policy_access_mode_from_env "$SCRIPT_DIR/.env")"
 
     # Set FORCE_LINK_MODE in .env to drive link-router URL routing.
     # Match the selected setup access mode so /go/ links stay consistent with Glance.
@@ -1531,6 +1536,10 @@ start_services_with_profiles() {
         echo ""
         log_info "Waiting for services to become healthy..."
         sleep 5
+
+        if ! run_auth_bootstrap_tasks "${profiles[@]}"; then
+            log_warn "Some admin bootstrap tasks failed; check service logs and rerun setup after fixing them"
+        fi
 
         # Show running services
         echo ""

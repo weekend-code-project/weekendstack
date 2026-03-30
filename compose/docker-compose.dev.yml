@@ -300,6 +300,7 @@ services:
       GITEA__server__SSH_PORT: ${GITEA_SSH_PORT}
       GITEA__server__SSH_LISTEN_PORT: 22
       GITEA__server__START_SSH_SERVER: "false"
+      GITEA__service__DISABLE_REGISTRATION: ${GITEA_DISABLE_REGISTRATION:-true}
       GITEA__actions__ENABLED: ${GITEA_ACTIONS_ENABLED}
       GITEA__security__SECRET_KEY: ${GITEA_SECRET_KEY}
       GITEA__security__INTERNAL_TOKEN: ${GITEA_INTERNAL_TOKEN}
@@ -495,5 +496,4 @@ services:
 volumes:
   coder-db-data:
   gitea-db-data:
-
 

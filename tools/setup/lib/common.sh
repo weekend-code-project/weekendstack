@@ -504,8 +504,10 @@ get_env_value() {
 
 normalize_access_mode() {
     local raw_mode="${1:-}"
+    local normalized
+    normalized=$(printf '%s' "$raw_mode" | tr '[:upper:]' '[:lower:]')
 
-    case "${raw_mode,,}" in
+    case "$normalized" in
         tunnel|cloudflare|both)
             echo "tunnel"
             ;;
@@ -523,8 +525,10 @@ normalize_access_mode() {
 
 has_tunnel_access_mode() {
     local raw_mode="${1:-}"
+    local normalized
+    normalized=$(printf '%s' "$raw_mode" | tr '[:upper:]' '[:lower:]')
 
-    case "${raw_mode,,}" in
+    case "$normalized" in
         tunnel|cloudflare|both)
             return 0
             ;;
@@ -536,8 +540,10 @@ has_tunnel_access_mode() {
 
 has_local_domain_access_mode() {
     local raw_mode="${1:-}"
+    local normalized
+    normalized=$(printf '%s' "$raw_mode" | tr '[:upper:]' '[:lower:]')
 
-    case "${raw_mode,,}" in
+    case "$normalized" in
         local|pihole|both)
             return 0
             ;;

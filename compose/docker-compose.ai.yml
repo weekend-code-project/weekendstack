@@ -203,6 +203,10 @@ services:
       - OLLAMA_BASE_URL=${OLLAMA_HOST:-http://ollama:11434}
       - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY:-secret-key-change-me}
       - WEBUI_NAME=AI Chat - ${COMPUTER_NAME}
+      - WEBUI_ADMIN_NAME=${WEBUI_ADMIN_NAME:-}
+      - WEBUI_ADMIN_EMAIL=${WEBUI_ADMIN_EMAIL:-}
+      - WEBUI_ADMIN_PASSWORD=${WEBUI_ADMIN_PASSWORD:-}
+      - ENABLE_SIGNUP=${ENABLE_SIGNUP:-False}
     deploy:
       resources:
         limits:

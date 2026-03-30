@@ -3,6 +3,48 @@
 # Creates service URL list and credentials summary
 
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
+if [[ -f "$(dirname "${BASH_SOURCE[0]}")/auth-policy.sh" ]]; then
+    # shellcheck source=./auth-policy.sh
+    source "$(dirname "${BASH_SOURCE[0]}")/auth-policy.sh"
+fi
+
+append_auth_policy_group_markdown() {
+    local summary_file="$1"
+    local title="$2"
+    local bucket="$3"
+    shift 3
+    local -a profiles=("$@")
+    local -a services=()
+    local service display_name
+
+    case "$bucket" in
+        seeded)
+            while IFS= read -r service; do
+                [[ -n "$service" ]] && services+=("$service")
+            done < <(auth_policy_seeded_services "${profiles[@]}")
+            ;;
+        manual)
+            while IFS= read -r service; do
+                [[ -n "$service" ]] && services+=("$service")
+            done < <(auth_policy_manual_services "${profiles[@]}")
+            ;;
+        *)
+            while IFS= read -r service; do
+                [[ -n "$service" ]] && services+=("$service")
+            done < <(auth_policy_not_applicable_services "${profiles[@]}")
+            ;;
+    esac
+
+    [[ ${#services[@]} -eq 0 ]] && return 0
+
+    echo "### ${title}" >> "$summary_file"
+    echo "" >> "$summary_file"
+    for service in "${services[@]}"; do
+        display_name=$(auth_policy_service_display_name "$service")
+        echo "- **${display_name}**" >> "$summary_file"
+    done
+    echo "" >> "$summary_file"
+}
 
 generate_setup_summary() {
     local stack_dir="${SCRIPT_DIR}"
@@ -18,6 +60,14 @@ generate_setup_summary() {
     local admin_user=$(grep "^DEFAULT_ADMIN_USER=" "$stack_dir/.env" | cut -d'=' -f2- | sed 's/#.*//' | tr -d ' ' || echo "admin")
     local admin_email=$(grep "^DEFAULT_ADMIN_EMAIL=" "$stack_dir/.env" | cut -d'=' -f2- | sed 's/#.*//' | tr -d ' ' || echo "admin@example.com")
     local admin_password=$(grep "^DEFAULT_ADMIN_PASSWORD=" "$stack_dir/.env" | cut -d'=' -f2- | sed 's/#.*//' | tr -d ' ' || echo "<check .env file>")
+    local access_mode
+    access_mode=$(auth_policy_access_mode_from_env "$stack_dir/.env")
+    local profiles_raw
+    local -a summary_profiles=("${profiles[@]}")
+    profiles_raw=$(grep "^COMPOSE_PROFILES=" "$stack_dir/.env" 2>/dev/null | cut -d'=' -f2- | tr -d '"')
+    if [[ -n "$profiles_raw" ]]; then
+        IFS=',' read -r -a summary_profiles <<< "$profiles_raw"
+    fi
     
     # Generate summary file
     cat > "$summary_file" << 'EOF'
@@ -39,7 +89,7 @@ EOF
     echo "" >> "$summary_file"
     
     # Add service URLs based on profiles
-    add_service_urls "$summary_file" "$lab_domain" "$base_domain" "${profiles[@]}"
+    add_service_urls "$summary_file" "$lab_domain" "$base_domain" "${summary_profiles[@]}"
     
     # Add credentials section
     cat >> "$summary_file" << EOF
@@ -48,7 +98,7 @@ EOF
 
 ## Default Credentials
 
-Many services use these default credentials for initial setup:
+WeekendStack uses one shared default admin identity where a service supports deterministic bootstrap:
 
 - **Username:** \`$admin_user\`
 - **Email:** \`$admin_email\`
@@ -56,21 +106,8 @@ Many services use these default credentials for initial setup:
 
 ⚠️ **IMPORTANT SECURITY NOTICE:**
 1. Change default passwords immediately after first login
-2. Disable user registration on services after creating your account
+2. Review which services were actually seeded before assuming shared credentials apply
 3. Review and update all credentials in production environments
-
-### First-Time Setup Services
-
-These services require you to create the first user account (which becomes admin):
-
-- **Open WebUI** - Visit https://open-webui.$lab_domain and sign up
-- **Immich** - Visit https://immich.$lab_domain and create account
-- **Mealie** - Visit https://mealie.$lab_domain and create account
-- **Home Assistant** - Visit https://hass.$lab_domain and create account
-- **Kavita** - Visit https://kavita.$lab_domain and create account
-- **Navidrome** - Visit https://navidrome.$lab_domain and create account
-
-The first user to register becomes the administrator.
 
 ---
 
@@ -123,6 +160,14 @@ Create development environments using the templates in \`config/coder/v2/templat
 
 EOF
 
+    append_auth_policy_group_markdown "$summary_file" "Seeded Automatically" "seeded" "${summary_profiles[@]}"
+    append_auth_policy_group_markdown "$summary_file" "Manual First Admin Still Required" "manual" "${summary_profiles[@]}"
+    append_auth_policy_group_markdown "$summary_file" "Not Applicable / App-Native Auth" "not_applicable" "${summary_profiles[@]}"
+
+    cat >> "$summary_file" << EOF
+
+EOF
+
     # Add Cloudflare section if enabled
     if grep -q "CLOUDFLARE_TUNNEL_ENABLED=true" "$stack_dir/.env" 2>/dev/null; then
         cat >> "$summary_file" << EOF
@@ -132,9 +177,11 @@ EOF
 Your services are accessible externally via Cloudflare Tunnel:
 
 EOF
-        add_external_service_urls "$summary_file" "$base_domain" "${profiles[@]}"
+        add_external_service_urls "$summary_file" "$base_domain" "${summary_profiles[@]}"
         echo "" >> "$summary_file"
-        echo "**Security Note:** External services are protected by Traefik authentication middleware." >> "$summary_file"
+        if [[ "$access_mode" == "tunnel" ]]; then
+            echo "**Security Note:** Tunnel-exposed services keep Traefik authentication middleware where configured." >> "$summary_file"
+        fi
     fi
     
     # Add maintenance section
@@ -489,6 +536,7 @@ display_summary_to_console() {
         tunnel)
             echo "  Using Cloudflare Tunnel"
             echo "  Base Domain: ${base_domain}"
+            echo "  Traefik basic auth stays enabled on selected tunnel-exposed tools"
             echo ""
             echo "  Example URLs:"
             echo "    • Dashboard:   https://home.${base_domain}"
@@ -497,6 +545,7 @@ display_summary_to_console() {
             ;;
         local)
             echo "  Using local domain .${lab_domain}"
+            echo "  Traefik basic auth is disabled for local .lab routes"
             echo ""
             echo "  Example URLs:"
             echo "    • Dashboard:   https://home.${lab_domain}"
@@ -509,6 +558,7 @@ display_summary_to_console() {
         *)
             echo "  Using direct local IP access"
             echo "  Host IP: ${host_ip}"
+            echo "  Traefik basic auth is disabled for local IP access"
             echo ""
             echo "  Common services:"
             echo "    • Dashboard:   http://${host_ip}:8080"
@@ -526,7 +576,7 @@ display_summary_to_console() {
     
     echo -e "${BOLD}Important:${NC}"
     echo "  • CHANGE DEFAULT PASSWORDS after first login!"
-    echo "  • First account created becomes admin for most services"
+    echo "  • Review SETUP_SUMMARY.md for seeded vs manual-admin services"
     echo "  • Uptime Kuma: add Docker host → Socket: /var/run/docker.sock"
     echo ""
     

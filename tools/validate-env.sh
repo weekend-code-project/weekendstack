@@ -216,7 +216,7 @@ if [ ${#DEFAULT_ADMIN_PASS} -lt 32 ]; then
 fi
 
 # Check signups
-if grep "SIGNUPS_ALLOWED=true" .env >/dev/null 2>&1; then
+if grep -E "SIGNUPS_ALLOWED=true|ALLOW_REGISTRATION=true|ENABLE_SIGNUP=True|ENABLE_SIGNUP=true|GITEA_DISABLE_REGISTRATION=false|VIKUNJA_SERVICE_ENABLEREGISTRATION=true" .env >/dev/null 2>&1; then
     echo -e "${YELLOW}  ⚠ Some services have signups enabled${NC}"
     echo "    Disable after creating your accounts for better security"
 fi
