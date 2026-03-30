@@ -418,8 +418,9 @@ generate_env_interactive() {
     _step=$((_step + 1))
     show_progress $_step $total_steps "Default Admin Credentials"
     
-    echo "Many services (Coder, Gitea, Open WebUI, Paperless, File Browser, etc.) support auto-provisioning"
-    echo "with default credentials. These will be used during initial setup."
+    echo "These credentials are used only where the stack supports deterministic bootstrap."
+    echo "Today that includes Coder, Gitea, Open WebUI, Paperless, and File Browser."
+    echo "Pi-hole reuses the shared password only. Many other apps still need a first account created in-app."
     echo ""
     log_warn "IMPORTANT: Change these after first login — they protect all your services!"
     echo ""

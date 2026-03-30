@@ -93,7 +93,7 @@ auth_policy_bucket_for_service() {
             ;;
         access_password)
             if [[ "$uses_password" == "true" ]]; then
-                echo "seeded"
+                echo "password_only"
             else
                 echo "not_applicable"
             fi
@@ -121,6 +121,17 @@ auth_policy_seeded_services() {
     while IFS= read -r service; do
         [[ -z "$service" ]] && continue
         if [[ "$(auth_policy_bucket_for_service "$service")" == "seeded" ]]; then
+            echo "$service"
+        fi
+    done < <(auth_policy_resolve_services "${profiles[@]}")
+}
+
+auth_policy_password_only_services() {
+    local -a profiles=("$@")
+    local service
+    while IFS= read -r service; do
+        [[ -z "$service" ]] && continue
+        if [[ "$(auth_policy_bucket_for_service "$service")" == "password_only" ]]; then
             echo "$service"
         fi
     done < <(auth_policy_resolve_services "${profiles[@]}")

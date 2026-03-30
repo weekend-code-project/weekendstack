@@ -59,4 +59,11 @@ else
     test_fail "Vaultwarden should be treated as manual account creation, not seeded"
 fi
 
+test_case "password-only services do not bucket as full seeded logins"
+if [[ "$(auth_policy_bucket_for_service pihole)" == "password_only" ]]; then
+    test_pass
+else
+    test_fail "Pi-hole should be treated as shared-password-only, not full seeded credentials"
+fi
+
 test_suite_end

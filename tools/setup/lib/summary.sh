@@ -23,6 +23,11 @@ append_auth_policy_group_markdown() {
                 [[ -n "$service" ]] && services+=("$service")
             done < <(auth_policy_seeded_services "${profiles[@]}")
             ;;
+        password_only)
+            while IFS= read -r service; do
+                [[ -n "$service" ]] && services+=("$service")
+            done < <(auth_policy_password_only_services "${profiles[@]}")
+            ;;
         manual)
             while IFS= read -r service; do
                 [[ -n "$service" ]] && services+=("$service")
@@ -104,9 +109,11 @@ WeekendStack uses one shared default admin identity where a service supports det
 - **Email:** \`$admin_email\`
 - **Password:** \`$admin_password\`
 
+Some services only reuse the shared password and still have their own username or access flow.
+
 ⚠️ **IMPORTANT SECURITY NOTICE:**
 1. Change default passwords immediately after first login
-2. Review which services were actually seeded before assuming shared credentials apply
+2. Review which services were seeded, password-only, or manual before assuming shared credentials apply
 3. Review and update all credentials in production environments
 
 ---
@@ -160,7 +167,8 @@ Create development environments using the templates in \`config/coder/v2/templat
 
 EOF
 
-    append_auth_policy_group_markdown "$summary_file" "Seeded Automatically" "seeded" "${summary_profiles[@]}"
+    append_auth_policy_group_markdown "$summary_file" "Seeded Automatically (Username + Password)" "seeded" "${summary_profiles[@]}"
+    append_auth_policy_group_markdown "$summary_file" "Shared Password Only" "password_only" "${summary_profiles[@]}"
     append_auth_policy_group_markdown "$summary_file" "Manual First Admin Still Required" "manual" "${summary_profiles[@]}"
     append_auth_policy_group_markdown "$summary_file" "Not Applicable / App-Native Auth" "not_applicable" "${summary_profiles[@]}"
 
