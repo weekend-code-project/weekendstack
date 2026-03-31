@@ -62,6 +62,49 @@ update_env_profiles_only() {
     return 0
 }
 
+collect_tunnel_auth_credentials() {
+    local default_user="${1:-admin}"
+    local traefik_auth_user="${default_user:-admin}"
+    local traefik_auth_password=""
+    local generated_password=false
+
+    echo "These credentials are only for the Traefik basic-auth popup shown on"
+    echo "selected external tunnel routes."
+    echo "They are not app accounts and are not used for local .lab or local IP access."
+    echo ""
+    echo "Password requirements:"
+    while IFS= read -r rule_line; do
+        echo "  $rule_line"
+    done < <(shared_admin_password_rules_text)
+    echo ""
+
+    traefik_auth_user=$(prompt_input "Traefik auth username" "$traefik_auth_user")
+
+    while true; do
+        traefik_auth_password=$(prompt_password "Traefik auth password (leave blank to auto-generate a secure one)" "yes")
+
+        if [[ -z "$traefik_auth_password" ]]; then
+            if ! traefik_auth_password=$(generate_shared_admin_password); then
+                return 1
+            fi
+            generated_password=true
+            break
+        fi
+
+        if ! validate_shared_admin_password "$traefik_auth_password"; then
+            log_error "Traefik auth password $SHARED_ADMIN_PASSWORD_ERROR"
+            continue
+        fi
+
+        break
+    done
+
+    COLLECTED_TRAEFIK_AUTH_USER="$traefik_auth_user"
+    COLLECTED_TRAEFIK_AUTH_PASSWORD="$traefik_auth_password"
+    COLLECTED_TRAEFIK_AUTH_PASSWORD_GENERATED="$generated_password"
+    export COLLECTED_TRAEFIK_AUTH_USER COLLECTED_TRAEFIK_AUTH_PASSWORD COLLECTED_TRAEFIK_AUTH_PASSWORD_GENERATED
+}
+
 generate_env_interactive() {
     local env_file="${SCRIPT_DIR}/.env"
     local selected_profiles=("$@")
@@ -420,41 +463,17 @@ generate_env_interactive() {
 
     local traefik_auth_user="admin"
     local traefik_auth_password=""
+    local traefik_auth_password_generated=false
     local access_mode
     access_mode="$(normalize_access_mode "$domain_mode")"
 
     if [[ "$access_mode" == "tunnel" ]]; then
-        echo "These credentials are only for the Traefik basic-auth popup shown on"
-        echo "selected external tunnel routes."
-        echo "They are not app accounts and are not used for local .lab or local IP access."
-        echo ""
-        echo "Password requirements:"
-        while IFS= read -r rule_line; do
-            echo "  $rule_line"
-        done < <(shared_admin_password_rules_text)
-        echo ""
-
-        traefik_auth_user=$(prompt_input "Traefik auth username" "admin")
-
-        while true; do
-            traefik_auth_password=$(prompt_password "Traefik auth password (leave blank to auto-generate a secure one)" "yes")
-
-            if [[ -z "$traefik_auth_password" ]]; then
-                break
-            fi
-
-            if ! validate_shared_admin_password "$traefik_auth_password"; then
-                log_error "Traefik auth password $SHARED_ADMIN_PASSWORD_ERROR"
-                continue
-            fi
-
-            break
-        done
-
-        if [[ -z "$traefik_auth_password" ]]; then
-            echo ""
-            log_info "Will use an auto-generated password for external Traefik auth"
+        if ! collect_tunnel_auth_credentials "$traefik_auth_user"; then
+            return 1
         fi
+        traefik_auth_user="$COLLECTED_TRAEFIK_AUTH_USER"
+        traefik_auth_password="$COLLECTED_TRAEFIK_AUTH_PASSWORD"
+        traefik_auth_password_generated="$COLLECTED_TRAEFIK_AUTH_PASSWORD_GENERATED"
 
         log_success "Tunnel auth configured"
     else
@@ -545,10 +564,10 @@ generate_env_interactive() {
     if [[ "$access_mode" == "tunnel" ]]; then
         echo -e "${BOLD}Tunnel Auth:${NC}"
         echo "  Username:         $traefik_auth_user"
-        if [[ -n "$traefik_auth_password" ]]; then
-            echo "  Password:         (custom - set)"
-        else
+        if [[ "$traefik_auth_password_generated" == "true" ]]; then
             echo "  Password:         (auto-generated)"
+        else
+            echo "  Password:         (custom - set)"
         fi
         echo ""
     else
@@ -651,9 +670,7 @@ generate_env_interactive() {
     
     if [[ "$access_mode" == "tunnel" ]]; then
         update_env_var "DEFAULT_TRAEFIK_AUTH_USER" "$traefik_auth_user" "$env_file"
-        if [[ -n "$traefik_auth_password" ]]; then
-            update_env_var "DEFAULT_TRAEFIK_AUTH_PASS" "$traefik_auth_password" "$env_file"
-        fi
+        update_env_var "DEFAULT_TRAEFIK_AUTH_PASS" "$traefik_auth_password" "$env_file"
     fi
     
     # Set storage paths
@@ -914,4 +931,4 @@ generate_env_quick() {
 
 # Export functions
 export -f generate_env_interactive generate_env_quick
-export -f add_setup_metadata show_progress update_env_profiles_only update_env_var
+export -f add_setup_metadata show_progress update_env_profiles_only update_env_var collect_tunnel_auth_credentials

@@ -40,6 +40,22 @@ else
     test_fail "setup.sh should build htpasswd from tunnel auth credentials only"
 fi
 
+test_case "setup exposes a tunnel-auth-only recovery path"
+if grep -q -- '--tunnel-auth-only' "$SETUP_FILE" && \
+   grep -q 'run_tunnel_auth_setup_only' "$SETUP_FILE"; then
+    test_pass
+else
+    test_fail "setup.sh should expose a tunnel-auth-only recovery command"
+fi
+
+test_case "tunnel-auth-only flow refreshes Traefik auth assets"
+if grep -q 'refresh_traefik_auth_assets' "$SETUP_FILE" && \
+   grep -q 'restart_traefik_if_running' "$SETUP_FILE"; then
+    test_pass
+else
+    test_fail "tunnel-auth-only should regenerate auth assets and apply them to Traefik"
+fi
+
 test_case "manual account services keep signup or setup enabled by default"
 if grep -q 'ENABLE_SIGNUP=${ENABLE_SIGNUP:-True}' "$AI_COMPOSE" && \
    grep -q 'GITEA__service__DISABLE_REGISTRATION: ${GITEA_DISABLE_REGISTRATION:-false}' "$DEV_COMPOSE"; then

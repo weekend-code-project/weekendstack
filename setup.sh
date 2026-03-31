@@ -59,6 +59,7 @@ OPTIONS:
     --cloudflare-only       Run only the Cloudflare Tunnel setup wizard
     --certs-only            Run only certificate generation and CA installation
     --ssh-key-only          Run only the Coder Git provider SSH-key setup step
+    --tunnel-auth-only      Run only the external Traefik auth reset step
     --docker-only           Run only Docker registry authentication
     --start                 Start the stack after setup
     --stop                  Stop all services
@@ -190,6 +191,14 @@ parse_args() {
                     set -a; source "$SCRIPT_DIR/.env"; set +a
                 fi
                 run_coder_git_ssh_setup_only
+                exit $?
+                ;;
+            --tunnel-auth-only)
+                # Load .env if it exists
+                if [[ -f "$SCRIPT_DIR/.env" ]]; then
+                    set -a; source "$SCRIPT_DIR/.env"; set +a
+                fi
+                run_tunnel_auth_setup_only
                 exit $?
                 ;;
             --docker-only)
@@ -734,6 +743,61 @@ run_coder_git_ssh_setup_only() {
     fi
 
     setup_coder_git_provider_ssh_keys "true"
+}
+
+run_tunnel_auth_setup_only() {
+    local env_file="$SCRIPT_DIR/.env"
+    if [[ ! -f "$env_file" ]]; then
+        log_error ".env file not found. Run setup first."
+        return 1
+    fi
+
+    local access_mode
+    access_mode="$(auth_policy_access_mode_from_env "$env_file")"
+    if [[ "$access_mode" != "tunnel" ]]; then
+        log_error "Tunnel auth reset is only available when Access Configuration is set to Tunnel."
+        log_info "Current access mode: $access_mode"
+        return 1
+    fi
+
+    local current_user
+    current_user=$(grep "^DEFAULT_TRAEFIK_AUTH_USER=" "$env_file" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+    current_user="${current_user:-admin}"
+
+    screen_title "Tunnel Access Authentication" "Reset the Traefik basic-auth popup credentials for external tunnel routes."
+    if ! collect_tunnel_auth_credentials "$current_user"; then
+        log_error "Failed to collect tunnel auth credentials"
+        return 1
+    fi
+
+    update_env_var "DEFAULT_TRAEFIK_AUTH_USER" "$COLLECTED_TRAEFIK_AUTH_USER" "$env_file"
+    update_env_var "DEFAULT_TRAEFIK_AUTH_PASS" "$COLLECTED_TRAEFIK_AUTH_PASSWORD" "$env_file"
+
+    if ! refresh_traefik_auth_assets "$env_file"; then
+        return 1
+    fi
+
+    restart_traefik_if_running
+
+    local profiles_raw
+    profiles_raw=$(grep "^COMPOSE_PROFILES=" "$env_file" 2>/dev/null | cut -d'=' -f2- | tr -d '"')
+    if [[ -n "$profiles_raw" ]]; then
+        local -a summary_profiles=()
+        local IFS=','
+        read -r -a summary_profiles <<< "$profiles_raw"
+        if ! generate_setup_summary "${summary_profiles[@]}"; then
+            log_warn "Failed to regenerate setup summary"
+        fi
+    fi
+
+    echo "" >&2
+    log_success "Tunnel access auth updated"
+    echo "  Username: ${COLLECTED_TRAEFIK_AUTH_USER}" >&2
+    echo "  Password: ${COLLECTED_TRAEFIK_AUTH_PASSWORD}" >&2
+    echo "" >&2
+    echo "  You can rerun this anytime with:" >&2
+    echo "  ./setup.sh --tunnel-auth-only" >&2
+    echo "" >&2
 }
 
 # Trigger the first speedtest immediately after setup so the Glance widget
@@ -1430,44 +1494,13 @@ preflight_fix_mounts() {
     # Tunnel mode keeps file-based basic auth for selected external services.
     # Local .lab and local IP modes replace those middlewares with a no-op
     # header middleware so local users are not prompted for extra auth.
-    local auth_dir="$SCRIPT_DIR/config/traefik/auth"
-    mkdir -p "$auth_dir"
-    local access_mode
-    access_mode="$(auth_policy_access_mode_from_env "$SCRIPT_DIR/.env")"
-    local tunnel_auth_user tunnel_auth_pass
-    tunnel_auth_user=$(grep "^DEFAULT_TRAEFIK_AUTH_USER=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
-    tunnel_auth_pass=$(grep "^DEFAULT_TRAEFIK_AUTH_PASS=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
-    tunnel_auth_user=${tunnel_auth_user:-admin}
-    tunnel_auth_pass=${tunnel_auth_pass:-changeme}
-
-    # Check if any htpasswd file already has the right user; regenerate if not.
-    # Always regenerate so password changes from setup are reflected.
-    local needs_regen=true
-    local htpasswd_file="$auth_dir/htpasswd-admin"
-
-    if [[ "$access_mode" == "tunnel" ]] && $needs_regen; then
-        if command -v htpasswd >/dev/null 2>&1; then
-            htpasswd -nbB "$tunnel_auth_user" "$tunnel_auth_pass" > "$htpasswd_file"
-        elif docker info >/dev/null 2>&1; then
-            docker run --rm httpd:2-alpine htpasswd -nbB "$tunnel_auth_user" "$tunnel_auth_pass" \
-                > "$htpasswd_file" 2>/dev/null
-        fi
-        if [[ -f "$htpasswd_file" ]]; then
-            chmod 600 "$htpasswd_file"
-            log_info "Generated Traefik basic auth: $htpasswd_file (user: $tunnel_auth_user)"
-            # Keep legacy test files in sync so existing middleware configs still work
-            for f in "$auth_dir"/htpasswd-test{1,2,3,4}; do
-                cp "$htpasswd_file" "$f" 2>/dev/null || true
-            done
-        fi
-    elif [[ "$access_mode" != "tunnel" ]]; then
-        rm -f "$htpasswd_file" "$auth_dir"/htpasswd-test{1,2,3,4} 2>/dev/null || true
-        log_info "Tunnel auth disabled for local-only access"
+    if ! refresh_traefik_auth_assets "$SCRIPT_DIR/.env"; then
+        log_error "Failed to refresh Traefik access authentication assets"
+        return 1
     fi
 
-    local service_middlewares_file="$auth_dir/service-middlewares.yml"
-    generate_traefik_service_middlewares "$SCRIPT_DIR/.env" "$service_middlewares_file"
-    log_info "Configured Traefik service middlewares for access mode: $access_mode"
+    local access_mode
+    access_mode="$(auth_policy_access_mode_from_env "$SCRIPT_DIR/.env")"
 
     # Set FORCE_LINK_MODE in .env to drive link-router URL routing.
     # Match the selected setup access mode so /go/ links stay consistent with Glance.

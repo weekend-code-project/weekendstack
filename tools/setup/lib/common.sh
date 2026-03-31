@@ -511,6 +511,37 @@ validate_shared_admin_password() {
     return 0
 }
 
+random_chars() {
+    local charset="$1"
+    local length="$2"
+    LC_ALL=C tr -dc "$charset" < /dev/urandom | head -c "$length"
+}
+
+generate_shared_admin_password() {
+    local candidate
+    local attempts=0
+
+    while (( attempts < 20 )); do
+        candidate="$(
+            printf '%s%s%s%s' \
+                "$(random_chars 'A-Z' 1)" \
+                "$(random_chars 'a-z' 1)" \
+                "$(random_chars '0-9' 1)" \
+                "$(random_chars 'A-Za-z0-9._@%+=:!-' 21)"
+        )"
+
+        if validate_shared_admin_password "$candidate"; then
+            printf '%s\n' "$candidate"
+            return 0
+        fi
+
+        attempts=$((attempts + 1))
+    done
+
+    log_error "Failed to generate a valid shared admin password"
+    return 1
+}
+
 validate_path() {
     local path="$1"
     local must_exist="${2:-false}"
