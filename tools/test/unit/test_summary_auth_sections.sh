@@ -8,12 +8,36 @@ source "$PROJECT_ROOT/tools/setup/lib/common.sh"
 source "$PROJECT_ROOT/tools/setup/lib/auth-policy.sh"
 source "$PROJECT_ROOT/tools/setup/lib/summary.sh"
 
+save_optional_file() {
+    local source_path="$1"
+    local backup_path="$2"
+
+    if [[ -f "$source_path" ]]; then
+        mkdir -p "$(dirname "$backup_path")"
+        cp "$source_path" "$backup_path"
+        return 0
+    fi
+
+    return 1
+}
+
+restore_optional_file() {
+    local target_path="$1"
+    local backup_path="$2"
+
+    if [[ -f "$backup_path" ]]; then
+        mv "$backup_path" "$target_path"
+    else
+        rm -f "$target_path"
+    fi
+}
+
 test_suite_start "Summary Auth Sections"
 
 test_case "summary shows tunnel auth credentials without app default-account claims"
 cd "$PROJECT_ROOT"
-backup_file ".env"
-backup_file "SETUP_SUMMARY.md"
+save_optional_file ".env" "$TEST_DIR/original.env"
+save_optional_file "SETUP_SUMMARY.md" "$TEST_DIR/original.SETUP_SUMMARY.md"
 
 cat > .env <<'EOF'
 HOST_IP=192.168.2.195
@@ -41,12 +65,12 @@ else
     test_fail "generate_setup_summary returned non-zero"
 fi
 
-restore_file "SETUP_SUMMARY.md"
-restore_file ".env"
+restore_optional_file "SETUP_SUMMARY.md" "$TEST_DIR/original.SETUP_SUMMARY.md"
+restore_optional_file ".env" "$TEST_DIR/original.env"
 
 test_case "console summary shows tunnel auth credentials for the final setup screen"
 cd "$PROJECT_ROOT"
-backup_file ".env"
+save_optional_file ".env" "$TEST_DIR/original.env.console"
 
 cat > .env <<'EOF'
 HOST_IP=192.168.2.195
@@ -84,6 +108,6 @@ else
     test_fail "Console summary did not show the tunnel auth credentials"
 fi
 
-restore_file ".env"
+restore_optional_file ".env" "$TEST_DIR/original.env.console"
 
 test_suite_end
