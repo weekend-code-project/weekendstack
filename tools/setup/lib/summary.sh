@@ -8,8 +8,18 @@ if [[ -f "$(dirname "${BASH_SOURCE[0]}")/auth-policy.sh" ]]; then
     source "$(dirname "${BASH_SOURCE[0]}")/auth-policy.sh"
 fi
 
+summary_stack_dir() {
+    if [[ -n "${SCRIPT_DIR:-}" && -d "${SCRIPT_DIR}" ]]; then
+        printf '%s\n' "${SCRIPT_DIR}"
+        return 0
+    fi
+
+    cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd
+}
+
 generate_setup_summary() {
-    local stack_dir="${SCRIPT_DIR}"
+    local stack_dir
+    stack_dir=$(summary_stack_dir)
     local profiles=("$@")
     local summary_file="$stack_dir/SETUP_SUMMARY.md"
     
@@ -23,6 +33,13 @@ generate_setup_summary() {
     local traefik_auth_password=$(grep "^DEFAULT_TRAEFIK_AUTH_PASS=" "$stack_dir/.env" | cut -d'=' -f2- | sed 's/#.*//' | tr -d ' ' || echo "<check .env file>")
     local access_mode
     access_mode=$(auth_policy_access_mode_from_env "$stack_dir/.env")
+    local resourcespace_port=$(grep "^RESOURCESPACE_PORT=" "$stack_dir/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ' || echo "8099")
+    local resourcespace_setup_url=""
+    case "$access_mode" in
+        tunnel) resourcespace_setup_url="https://resourcespace.${base_domain}/pages/setup.php" ;;
+        local) resourcespace_setup_url="https://resourcespace.${lab_domain}/pages/setup.php" ;;
+        *) resourcespace_setup_url="http://${host_ip}:${resourcespace_port}/pages/setup.php" ;;
+    esac
     local profiles_raw
     local -a summary_profiles=("${profiles[@]}")
     profiles_raw=$(grep "^COMPOSE_PROFILES=" "$stack_dir/.env" 2>/dev/null | cut -d'=' -f2- | tr -d '"')
@@ -114,6 +131,23 @@ Access at https://coder.$lab_domain
 Create development environments using the templates in \`config/coder/v2/templates/\`
 
 EOF
+
+    local summary_profiles_list=" ${summary_profiles[*]} "
+    if [[ "$summary_profiles_list" == *" all "* || "$summary_profiles_list" == *" productivity "* ]]; then
+        cat >> "$summary_file" << EOF
+#### File Browser
+File Browser creates its own initial admin account on first boot.
+If you missed the generated password in the console summary, check:
+\`\`\`bash
+docker logs filebrowser | grep "randomly generated password"
+\`\`\`
+
+#### ResourceSpace
+Complete the first-run installer here to create the first admin account:
+\`${resourcespace_setup_url}\`
+
+EOF
+    fi
 
     if [[ "$access_mode" == "tunnel" ]]; then
         cat >> "$summary_file" << EOF
@@ -390,8 +424,15 @@ add_external_service_urls() {
     echo "- Other services: https://service-name.$base_domain" >> "$summary_file"
 }
 
+get_filebrowser_initial_password() {
+    docker logs --tail 100 filebrowser 2>&1 \
+        | sed -n "s/.*randomly generated password: //p" \
+        | tail -n 1
+}
+
 display_summary_to_console() {
-    local stack_dir="${SCRIPT_DIR}"
+    local stack_dir
+    stack_dir=$(summary_stack_dir)
     local lab_domain=$(grep "^LAB_DOMAIN=" "$stack_dir/.env" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ' || echo "lab")
     local base_domain=$(grep "^BASE_DOMAIN=" "$stack_dir/.env" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ' || echo "localhost")
     local host_ip=$(grep "^HOST_IP=" "$stack_dir/.env" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
@@ -400,6 +441,9 @@ display_summary_to_console() {
     local traefik_auth_password=$(grep "^DEFAULT_TRAEFIK_AUTH_PASS=" "$stack_dir/.env" 2>/dev/null | cut -d'=' -f2- | sed 's/#.*//' | tr -d ' ' || echo "<check .env file>")
     local access_mode
     access_mode=$(normalize_access_mode "$domain_mode")
+    local resourcespace_port=$(grep "^RESOURCESPACE_PORT=" "$stack_dir/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ' || echo "8099")
+    local filebrowser_password=""
+    local resourcespace_setup_url=""
     
     # Define service subdomain mappings  
     declare -A service_subdomains=(
@@ -498,6 +542,24 @@ display_summary_to_console() {
     else
         echo "  No services running yet. Start them with: docker compose up -d"
     fi
+
+    if printf '%s\n' "$running_services" | grep -q '^filebrowser$'; then
+        filebrowser_password=$(get_filebrowser_initial_password)
+    fi
+
+    if printf '%s\n' "$running_services" | grep -q '^resourcespace$'; then
+        case "$access_mode" in
+            tunnel)
+                resourcespace_setup_url="https://resourcespace.${base_domain}/pages/setup.php"
+                ;;
+            local)
+                resourcespace_setup_url="https://resourcespace.${lab_domain}/pages/setup.php"
+                ;;
+            *)
+                resourcespace_setup_url="http://${host_ip}:${resourcespace_port}/pages/setup.php"
+                ;;
+        esac
+    fi
     
     echo ""
     echo -e "${BOLD}Access Methods:${NC}"
@@ -547,6 +609,21 @@ display_summary_to_console() {
     echo "  • Complete summary: SETUP_SUMMARY.md"
     echo "  • Service guides:   docs/"
     echo ""
+
+    if [[ -n "$filebrowser_password" || -n "$resourcespace_setup_url" ]]; then
+        echo -e "${BOLD}First-Time Service Setup:${NC}"
+        if [[ -n "$filebrowser_password" ]]; then
+            echo "  • File Browser first login:"
+            echo "    Username: admin"
+            echo "    Password: ${filebrowser_password}"
+        fi
+        if [[ -n "$resourcespace_setup_url" ]]; then
+            echo "  • ResourceSpace first run:"
+            echo "    Open ${resourcespace_setup_url}"
+            echo "    Complete the web installer to create the first admin account"
+        fi
+        echo ""
+    fi
     
     echo -e "${BOLD}Important:${NC}"
     echo "  • Review SETUP_SUMMARY.md for tunnel auth and first-time service setup"
