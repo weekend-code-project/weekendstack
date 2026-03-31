@@ -47,20 +47,20 @@ fi
 restore_file ".env"
 
 # Test 3: .env generation with custom values works
-test_case ".env updates with custom admin password"
+test_case ".env updates with custom tunnel auth password"
 cd "$PROJECT_ROOT"
 backup_file ".env"
 
 ./tools/env-template-gen.sh >/dev/null 2>&1
 
-# Simulate what setup.sh does - update admin password
+# Simulate what setup.sh does - update tunnel auth password
 source tools/setup/lib/env-generator.sh
-update_env_var "DEFAULT_ADMIN_PASSWORD" "my_custom_password123" ".env"
+update_env_var "DEFAULT_TRAEFIK_AUTH_PASS" "MyTunnelAuth123!" ".env"
 
 # Check if password was set
-password=$(grep "^DEFAULT_ADMIN_PASSWORD=" .env | head -1 | cut -d'=' -f2)
+password=$(grep "^DEFAULT_TRAEFIK_AUTH_PASS=" .env | head -1 | cut -d'=' -f2)
 
-if [ "$password" = "my_custom_password123" ]; then
+if [ "$password" = "MyTunnelAuth123!" ]; then
     test_pass
 else
     test_fail "Password not updated correctly, got: $password"
@@ -78,7 +78,7 @@ backup_file ".env"
 # Set required values that might be empty
 source tools/setup/lib/env-generator.sh
 update_env_var "HOST_IP" "192.168.1.100" ".env"
-update_env_var "DEFAULT_ADMIN_PASSWORD" "SecurePass123!" ".env"
+update_env_var "DEFAULT_TRAEFIK_AUTH_PASS" "SecureTunnel123!" ".env"
 
 # Run validation
 validation_output=$(./tools/validate-env.sh 2>&1)

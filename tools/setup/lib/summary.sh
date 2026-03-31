@@ -549,8 +549,16 @@ display_summary_to_console() {
     echo ""
     
     echo -e "${BOLD}Important:${NC}"
-    echo "  • CHANGE DEFAULT PASSWORDS after first login!"
-    echo "  • Review SETUP_SUMMARY.md for seeded vs manual-admin services"
+    echo "  • Review SETUP_SUMMARY.md for tunnel auth and first-time service setup"
+    if [[ -n "$running_services" ]] && printf '%s\n' "$running_services" | grep -q '^gitea$'; then
+        local gitea_url
+        case "$access_mode" in
+            tunnel) gitea_url="https://gitea.${base_domain}" ;;
+            local) gitea_url="https://gitea.${lab_domain}" ;;
+            *) gitea_url="http://${host_ip}:3300" ;;
+        esac
+        echo "  • Gitea first run: open ${gitea_url} and complete the web setup if prompted"
+    fi
     echo "  • Uptime Kuma: add Docker host → Socket: /var/run/docker.sock"
     echo ""
     

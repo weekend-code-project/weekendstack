@@ -141,7 +141,7 @@ if [[ -z "$CODER_TOKEN" ]]; then
     log_info "Please complete Coder setup:"
     echo ""
     echo "  1. Open: $CODER_URL/cli-auth"
-    echo "  2. Create your admin account if needed (first user becomes admin)"
+    echo "  2. Sign in to Coder and finish account setup if prompted"
     echo "  3. Copy your session token from the page"
     echo "  4. Add to .env: CODER_SESSION_TOKEN=<your-token>"
     echo ""

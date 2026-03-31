@@ -301,8 +301,8 @@ services:
       GITEA__server__SSH_LISTEN_PORT: 22
       GITEA__server__START_SSH_SERVER: "false"
       GITEA__service__DISABLE_REGISTRATION: ${GITEA_DISABLE_REGISTRATION:-false}
+      GITEA__service__SHOW_REGISTRATION_BUTTON: "true"
       GITEA__actions__ENABLED: ${GITEA_ACTIONS_ENABLED}
-      GITEA__security__INSTALL_LOCK: "true"
       GITEA__security__SECRET_KEY: ${GITEA_SECRET_KEY}
       GITEA__security__INTERNAL_TOKEN: ${GITEA_INTERNAL_TOKEN}
       GITEA__oauth2__JWT_SECRET: ${GITEA_JWT_SECRET}

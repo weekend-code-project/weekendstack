@@ -55,12 +55,12 @@ else
     test_result "env-template-gen.sh creates .env" "FAIL" "Script exited with error"
 fi
 
-# Test 1.2: DEFAULT_ADMIN_PASSWORD is set after generation
-admin_pass=$(grep "^DEFAULT_ADMIN_PASSWORD=" .env 2>/dev/null | cut -d'=' -f2)
-if [[ -n "$admin_pass" ]]; then
-    test_result "DEFAULT_ADMIN_PASSWORD generated" "PASS"
+# Test 1.2: DEFAULT_TRAEFIK_AUTH_PASS is set after generation
+auth_pass=$(grep "^DEFAULT_TRAEFIK_AUTH_PASS=" .env 2>/dev/null | cut -d'=' -f2)
+if [[ -n "$auth_pass" ]]; then
+    test_result "DEFAULT_TRAEFIK_AUTH_PASS generated" "PASS"
 else
-    test_result "DEFAULT_ADMIN_PASSWORD generated" "FAIL" "Variable is empty"
+    test_result "DEFAULT_TRAEFIK_AUTH_PASS generated" "FAIL" "Variable is empty"
 fi
 
 # Test 1.3: All required secrets are generated
@@ -104,7 +104,7 @@ export SCRIPT_DIR="$PROJECT_ROOT"
 if generate_env_quick "core" "networking" >/dev/null 2>&1; then
     values_ok=true
     missing_var=""
-    for var in COMPUTER_NAME HOST_IP PUID PGID COMPOSE_PROFILES DEFAULT_ADMIN_PASSWORD; do
+    for var in COMPUTER_NAME HOST_IP PUID PGID COMPOSE_PROFILES DEFAULT_TRAEFIK_AUTH_PASS; do
         val=$(grep "^${var}=" .env 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
         if [[ -z "$val" ]]; then
             values_ok=false
@@ -161,7 +161,7 @@ fi
 
 # Test 2.2: Validation detects empty required fields
 cp .env .env.backup
-sed -i 's/^DEFAULT_ADMIN_PASSWORD=.*/DEFAULT_ADMIN_PASSWORD=/' .env
+sed -i 's/^DEFAULT_TRAEFIK_AUTH_PASS=.*/DEFAULT_TRAEFIK_AUTH_PASS=/' .env
 
 set +e
 val_output=$(./tools/validate-env.sh 2>&1)
@@ -170,15 +170,15 @@ set -e
 
 mv .env.backup .env
 
-if [[ $val_exit -ne 0 ]] && echo "$val_output" | grep -q "DEFAULT_ADMIN_PASSWORD"; then
-    test_result "Validation detects empty DEFAULT_ADMIN_PASSWORD" "PASS"
+if [[ $val_exit -ne 0 ]] && echo "$val_output" | grep -q "DEFAULT_TRAEFIK_AUTH_PASS"; then
+    test_result "Validation detects empty DEFAULT_TRAEFIK_AUTH_PASS" "PASS"
 else
-    test_result "Validation detects empty DEFAULT_ADMIN_PASSWORD" "FAIL" "Did not detect empty field"
+    test_result "Validation detects empty DEFAULT_TRAEFIK_AUTH_PASS" "FAIL" "Did not detect empty field"
 fi
 
 # Test 2.3: Validation detects weak passwords
 cp .env .env.backup
-sed -i 's/^DEFAULT_ADMIN_PASSWORD=.*/DEFAULT_ADMIN_PASSWORD=admin123/' .env
+sed -i 's/^DEFAULT_TRAEFIK_AUTH_PASS=.*/DEFAULT_TRAEFIK_AUTH_PASS=admin123/' .env
 
 set +e
 val_output=$(./tools/validate-env.sh 2>&1)
@@ -314,7 +314,7 @@ fi
 if [[ -f .env ]]; then
     critical_ok=true
     missing=""
-    for var in HOST_IP DEFAULT_ADMIN_PASSWORD PUID PGID; do
+    for var in HOST_IP DEFAULT_TRAEFIK_AUTH_PASS PUID PGID; do
         val=$(grep "^${var}=" .env 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
         if [[ -z "$val" ]]; then
             critical_ok=false

@@ -71,7 +71,7 @@ if ./setup.sh --quick --skip-pull --skip-certs 2>&1 | tee /tmp/setup-test-output
         critical_vars=(
             "HOST_IP"
             "COMPUTER_NAME"
-            "DEFAULT_ADMIN_PASSWORD"
+            "DEFAULT_TRAEFIK_AUTH_PASS"
             "DEFAULT_DB_PASS"
             "DEFAULT_JWT_SECRET"
             "PUID"

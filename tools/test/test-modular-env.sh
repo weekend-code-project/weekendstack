@@ -120,9 +120,8 @@ test_global_variables_present() {
         "BASE_DOMAIN"
         "FILES_BASE_DIR"
         "DATA_BASE_DIR"
-        "DEFAULT_ADMIN_EMAIL"
-        "DEFAULT_ADMIN_USER"
-        "DEFAULT_ADMIN_PASSWORD"
+        "DEFAULT_TRAEFIK_AUTH_USER"
+        "DEFAULT_TRAEFIK_AUTH_PASS"
         "DEFAULT_DB_USER"
         "DEFAULT_DB_PASS"
     )
