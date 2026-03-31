@@ -396,6 +396,8 @@ display_summary_to_console() {
     local base_domain=$(grep "^BASE_DOMAIN=" "$stack_dir/.env" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ' || echo "localhost")
     local host_ip=$(grep "^HOST_IP=" "$stack_dir/.env" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
     local domain_mode=$(grep "^DOMAIN_MODE=" "$stack_dir/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' ' || echo "ip")
+    local traefik_auth_user=$(grep "^DEFAULT_TRAEFIK_AUTH_USER=" "$stack_dir/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ' || echo "admin")
+    local traefik_auth_password=$(grep "^DEFAULT_TRAEFIK_AUTH_PASS=" "$stack_dir/.env" 2>/dev/null | cut -d'=' -f2- | sed 's/#.*//' | tr -d ' ' || echo "<check .env file>")
     local access_mode
     access_mode=$(normalize_access_mode "$domain_mode")
     
@@ -505,6 +507,10 @@ display_summary_to_console() {
             echo "  Using Cloudflare Tunnel"
             echo "  Base Domain: ${base_domain}"
             echo "  Traefik basic auth stays enabled on selected tunnel-exposed tools"
+            echo ""
+            echo "  External auth credentials:"
+            echo "    • Username:    ${traefik_auth_user}"
+            echo "    • Password:    ${traefik_auth_password}"
             echo ""
             echo "  Example URLs:"
             echo "    • Dashboard:   https://home.${base_domain}"

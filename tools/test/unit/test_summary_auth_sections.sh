@@ -44,4 +44,46 @@ fi
 restore_file "SETUP_SUMMARY.md"
 restore_file ".env"
 
+test_case "console summary shows tunnel auth credentials for the final setup screen"
+cd "$PROJECT_ROOT"
+backup_file ".env"
+
+cat > .env <<'EOF'
+HOST_IP=192.168.2.195
+LAB_DOMAIN=lab
+BASE_DOMAIN=weekendcodeproject.dev
+DOMAIN_MODE=tunnel
+DEFAULT_TRAEFIK_AUTH_USER=edge
+DEFAULT_TRAEFIK_AUTH_PASS=super-secret-password
+EOF
+
+stub_bin="$TEST_DIR/bin"
+mkdir -p "$stub_bin"
+cat > "$stub_bin/docker" <<'EOF'
+#!/bin/sh
+if [ "$1" = "compose" ] && [ "$2" = "ps" ]; then
+  printf '%s\n' "glance" "traefik"
+  exit 0
+fi
+exit 0
+EOF
+chmod +x "$stub_bin/docker"
+
+cat > "$stub_bin/clear" <<'EOF'
+#!/bin/sh
+exit 0
+EOF
+chmod +x "$stub_bin/clear"
+
+summary_output=$(PATH="$stub_bin:$PATH" TERM=xterm display_summary_to_console 2>&1)
+if printf '%s' "$summary_output" | grep -q 'External auth credentials:' && \
+   printf '%s' "$summary_output" | grep -q 'Username:    edge' && \
+   printf '%s' "$summary_output" | grep -q 'Password:    super-secret-password'; then
+    test_pass
+else
+    test_fail "Console summary did not show the tunnel auth credentials"
+fi
+
+restore_file ".env"
+
 test_suite_end
