@@ -47,6 +47,19 @@ generate_setup_summary() {
         IFS=',' read -r -a summary_profiles <<< "$profiles_raw"
     fi
     
+    local quick_access_heading="Local Network Access (.lab domain)"
+    local quick_access_intro="Your WeekendStack is accessible on your local network using the \`.$lab_domain\` domain:"
+    case "$access_mode" in
+        tunnel)
+            quick_access_heading="External Access (Cloudflare Tunnel)"
+            quick_access_intro="Your WeekendStack is accessible externally through Cloudflare Tunnel using \`.$base_domain\` URLs:"
+            ;;
+        ip)
+            quick_access_heading="Local IP Access"
+            quick_access_intro="Your WeekendStack is accessible directly by IP on \`$host_ip\`:"
+            ;;
+    esac
+
     # Generate summary file
     cat > "$summary_file" << 'EOF'
 # WeekendStack Setup Summary
@@ -59,11 +72,12 @@ This document contains important information about your WeekendStack deployment.
 
 ## Quick Access
 
-### Local Network Access (.lab domain)
+### QUICK_ACCESS_HEADING
 EOF
-    
+    sed -i "s|QUICK_ACCESS_HEADING|$quick_access_heading|" "$summary_file"
+
     echo "" >> "$summary_file"
-    echo "Your WeekendStack is accessible on your local network using the \`.$lab_domain\` domain:" >> "$summary_file"
+    echo "$quick_access_intro" >> "$summary_file"
     echo "" >> "$summary_file"
     
     # Add service URLs based on profiles
@@ -85,6 +99,11 @@ EOF
 
 ## Next Steps
 
+EOF
+
+    case "$access_mode" in
+        local)
+            cat >> "$summary_file" << EOF
 ### 1. Trust Local HTTPS Certificate
 
 To avoid browser security warnings:
@@ -116,6 +135,31 @@ Add entries for each service manually.
 
 ### 3. Configure Services
 
+EOF
+            ;;
+        tunnel)
+            cat >> "$summary_file" << EOF
+### 1. External Access Authentication
+
+Use the Traefik basic-auth popup credentials below for selected tunnel-exposed tools.
+No local DNS or local CA certificate setup is required for remote tunnel access.
+
+### 2. Configure Services
+
+EOF
+            ;;
+        *)
+            cat >> "$summary_file" << EOF
+### 1. Configure Services
+
+No local DNS or local CA certificate setup is required for direct IP access.
+
+EOF
+            ;;
+    esac
+
+    cat >> "$summary_file" << EOF
+
 #### Glance Dashboard
 Edit \`config/glance/glance.yml\` to customize your dashboard:
 - Add API keys for weather, calendar, RSS feeds
@@ -127,7 +171,7 @@ Place documents in: \`files/paperless/consume/\`
 They will be automatically processed and indexed.
 
 #### Coder
-Access at https://coder.$lab_domain
+Access at $(case "$access_mode" in tunnel) printf 'https://coder.%s' "$base_domain" ;; local) printf 'https://coder.%s' "$lab_domain" ;; *) printf 'http://%s:7080' "$host_ip" ;; esac)
 Create development environments using the templates in \`config/coder/v2/templates/\`
 
 EOF

@@ -347,10 +347,10 @@ get_services_for_profiles() {
                 services+=("glance" "vaultwarden")
                 ;;
             networking)
-                services+=("traefik" "link-router" "cert-generator" "error-pages")
+                services+=("traefik" "link-router" "error-pages")
                 ;;
             pihole)
-                services+=("pihole" "pihole-dnsmasq-init")
+                services+=("pihole")
                 ;;
             external)
                 services+=("cloudflare-tunnel")

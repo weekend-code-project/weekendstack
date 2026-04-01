@@ -6,7 +6,6 @@ source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 # Init containers that must run first
 INIT_CONTAINERS=(
-    "cert-generator"
     "pihole-dnsmasq-init"
     "coder-init"
     "homeassistant-perms"
@@ -23,18 +22,12 @@ get_init_containers_for_profiles() {
     local profiles=("$@")
     local init_list=()
     
-    # cert-generator is needed when networking (Traefik) is active
-    # pihole-dnsmasq-init is needed when pihole profile is active
+    # cert-generator is handled directly by setup_certificates for local-domain installs.
+    # It should not run as a normal networking init container, especially for tunnel mode.
+    # pihole-dnsmasq-init is needed only when the pihole profile is active.
     for profile in "${profiles[@]}"; do
         case "$profile" in
-            all|networking)
-                init_list+=("cert-generator")
-                ;;
-        esac
-    done
-    for profile in "${profiles[@]}"; do
-        case "$profile" in
-            all|pihole)
+            pihole)
                 init_list+=("pihole-dnsmasq-init")
                 ;;
         esac
@@ -43,7 +36,7 @@ get_init_containers_for_profiles() {
     # coder-init needed for dev profile
     for profile in "${profiles[@]}"; do
         case "$profile" in
-            all|dev)
+            dev)
                 init_list+=("coder-init")
                 ;;
         esac
@@ -52,7 +45,7 @@ get_init_containers_for_profiles() {
     # homeassistant-perms needed for automation profile
     for profile in "${profiles[@]}"; do
         case "$profile" in
-            all|automation)
+            automation)
                 init_list+=("homeassistant-perms")
                 ;;
         esac
@@ -130,7 +123,7 @@ get_startup_order() {
     # 2. Core infrastructure
     for profile in "${profiles[@]}"; do
         case "$profile" in
-            all|networking|dev)
+            networking|dev)
                 order+=("socat")
                 ;;
         esac
@@ -138,7 +131,7 @@ get_startup_order() {
     
     for profile in "${profiles[@]}"; do
         case "$profile" in
-            all|networking)
+            networking)
                 order+=("traefik")
                 ;;
         esac
@@ -146,7 +139,7 @@ get_startup_order() {
     
     for profile in "${profiles[@]}"; do
         case "$profile" in
-            all|pihole)
+            pihole)
                 order+=("pihole")
                 ;;
         esac

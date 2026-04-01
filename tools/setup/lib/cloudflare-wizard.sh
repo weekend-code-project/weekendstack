@@ -766,6 +766,10 @@ display_tunnel_status() {
     local stack_dir="${SCRIPT_DIR}"
     local domain
     domain=$(grep "^BASE_DOMAIN=" "$stack_dir/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+    local domain_mode
+    domain_mode=$(grep "^DOMAIN_MODE=" "$stack_dir/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+    local access_mode
+    access_mode=$(normalize_access_mode "$domain_mode")
     
     echo ""
     echo "${BOLD}Cloudflare Tunnel Setup Complete!${NC}"
@@ -774,13 +778,15 @@ display_tunnel_status() {
     echo "  https://<service>.$domain → Cloudflare → Tunnel → Traefik → Service"
     echo "  No certificates to install on client devices for remote access."
     echo ""
-    echo "Local LAN Access (via Pi-hole DNS + self-signed certs):"
-    local lab_domain
-    lab_domain=$(grep "^LAB_DOMAIN=" "$stack_dir/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
-    lab_domain=${lab_domain:-lab}
-    echo "  https://<service>.$lab_domain → Traefik → Service"
-    echo "  CA cert for LAN devices: config/traefik/certs/ca-cert.pem"
-    echo ""
+    if [[ "$access_mode" == "local" ]]; then
+        echo "Local LAN Access (via local DNS + self-signed certs):"
+        local lab_domain
+        lab_domain=$(grep "^LAB_DOMAIN=" "$stack_dir/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+        lab_domain=${lab_domain:-lab}
+        echo "  https://<service>.$lab_domain → Traefik → Service"
+        echo "  CA cert for LAN devices: config/traefik/certs/ca-cert.pem"
+        echo ""
+    fi
     echo "${BOLD}Next Steps:${NC}"
     echo "1. Start the stack:   ./setup.sh --start"
     echo "2. Check tunnel logs: docker logs cloudflare-tunnel"

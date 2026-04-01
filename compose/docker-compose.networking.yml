@@ -12,12 +12,14 @@
 #   ✗ Wrong:    cd compose && docker compose -f docker-compose.networking.yml up
 #
 # Profiles used by this file:
-#   networking  - Traefik, Link-Router, Cert-Generator, Error-Pages
+#   networking  - Traefik, Link-Router, Error-Pages
 #                 Auto-added by setup.sh when tunnel OR local domain is configured
 #   pihole      - Pi-hole + dnsmasq-init
 #                 Auto-added by setup.sh when local domain + Pi-hole DNS is selected
 #   external    - Cloudflare Tunnel connector
 #                 Auto-added by setup.sh when tunnel is configured
+#   setup       - One-shot helper containers used only during setup
+#                 Used for local certificate generation and other init tasks
 #   proxy       - Alias for networking (legacy)
 # =============================================================================
 
@@ -26,7 +28,7 @@ services:
   # CERT-GENERATOR - AUTOMATIC LOCAL HTTPS CERTIFICATE GENERATION
   # =============================================================================
   # Generates a local Certificate Authority (CA) and wildcard certificate for *.lab domains
-  # Runs once on startup to create certificates if they don't exist
+  # Runs only when setup.sh explicitly invokes it for local-domain installs
   # After first run, you need to manually trust the CA certificate (see docs/local-https-setup.md)
   # =============================================================================
   cert-generator:
@@ -34,7 +36,6 @@ services:
     container_name: cert-generator
     restart: "no"
     profiles:
-      - networking
       - setup
     environment:
       LAB_DOMAIN: ${LAB_DOMAIN:-lab}
@@ -327,8 +328,6 @@ services:
       - coder-network
       - traefik-network
       - shared-network
-    depends_on:
-      - cert-generator
     labels:
       # Glance Configuration
       - glance.id=traefik

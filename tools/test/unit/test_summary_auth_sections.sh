@@ -56,7 +56,9 @@ if generate_setup_summary ai dev; then
        grep -q '\*\*Password:\*\* `super-secret-password`' SETUP_SUMMARY.md && \
        grep -q 'WeekendStack no longer seeds default app accounts automatically' SETUP_SUMMARY.md && \
        ! grep -q 'Seeded Automatically' SETUP_SUMMARY.md && \
-       grep -q 'Tunnel-exposed services keep Traefik authentication middleware where configured' SETUP_SUMMARY.md; then
+       grep -q 'Tunnel-exposed services keep Traefik authentication middleware where configured' SETUP_SUMMARY.md && \
+       ! grep -q '^### 1\. Trust Local HTTPS Certificate$' SETUP_SUMMARY.md && \
+       ! grep -q '^### 2\. Configure DNS$' SETUP_SUMMARY.md; then
         test_pass
     else
         test_fail "Summary file did not include the expected tunnel auth section"
