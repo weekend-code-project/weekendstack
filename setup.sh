@@ -1615,7 +1615,7 @@ start_services_with_profiles() {
 
         # Show running services
         echo ""
-        docker compose ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
+        docker compose $profile_args ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
     else
         log_error "Failed to start services"
         exit 1

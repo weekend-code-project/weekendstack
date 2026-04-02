@@ -33,7 +33,7 @@
     "display_name": "Pi-hole",
     "description": "Network-wide ad blocking and DNS",
     "template": "networking/pihole.env.example",
-    "profile": "networking",
+    "profile": "pihole",
     "support_containers": [
       "pihole-dnsmasq-init"
     ]
@@ -42,7 +42,7 @@
     "display_name": "Certificate Generator",
     "description": "SSL certificate generation",
     "template": "networking/cert-generator.env.example",
-    "profile": "networking"
+    "profile": "setup"
   },
   "error-pages": {
     "display_name": "Error Pages",
@@ -54,7 +54,7 @@
     "display_name": "Cloudflare Tunnel",
     "description": "Secure tunnel to Cloudflare",
     "template": "networking/cloudflare-tunnel.env.example",
-    "profile": "networking"
+    "profile": "external"
   },
   "ollama": {
     "display_name": "Ollama",

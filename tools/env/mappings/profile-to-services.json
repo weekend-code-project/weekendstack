@@ -7,11 +7,7 @@
   ],
   "networking": [
     "traefik",
-    "pihole",
-    "pihole-dnsmasq-init",
-    "cert-generator",
-    "error-pages",
-    "cloudflare-tunnel"
+    "error-pages"
   ],
   "ai": [
     "ollama",
@@ -85,5 +81,12 @@
     "guacamole",
     "guacamole-db",
     "guacd"
+  ],
+  "pihole": [
+    "pihole",
+    "pihole-dnsmasq-init"
+  ],
+  "external": [
+    "cloudflare-tunnel"
   ]
 }

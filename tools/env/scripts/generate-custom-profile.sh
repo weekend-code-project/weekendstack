@@ -32,6 +32,10 @@ NC='\033[0m' # No Color
 # Default values
 PROFILES=""
 
+# Profiles that "all" expands to. Access-mode infrastructure profiles are
+# appended explicitly by setup after the user chooses tunnel/local-domain/IP.
+ALL_BASE_PROFILES=(core monitoring productivity dev ai media)
+
 # Logging functions
 log_info() {
     echo -e "${BLUE}[INFO]${NC} $1" >&2
@@ -113,14 +117,17 @@ get_services_for_profiles() {
     local profiles_array=(${PROFILES//,/ })
     local all_services=()
     
-    # Check if 'all' profile is selected
+    # Expand the abstract "all" profile into the supported base profiles.
+    # Access-mode infrastructure profiles are appended separately by setup.
+    local expanded_profiles=()
     for profile in "${profiles_array[@]}"; do
         if [[ "$profile" == "all" ]]; then
-            # Return all services from all profiles
-            jq -r '.[] | .[]' "${MAPPINGS_DIR}/profile-to-services.json" | sort -u
-            return 0
+            expanded_profiles+=("${ALL_BASE_PROFILES[@]}")
+        else
+            expanded_profiles+=("$profile")
         fi
     done
+    profiles_array=("${expanded_profiles[@]}")
     
     # Collect services for each selected profile
     for profile in "${profiles_array[@]}"; do

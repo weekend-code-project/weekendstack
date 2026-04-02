@@ -37,4 +37,14 @@ fi
 
 restore_file "$PROJECT_ROOT/.env"
 
+test_case "custom profile generation excludes local-only services for tunnel installs"
+rm -f "$PROJECT_ROOT/docker-compose.custom.yml"
+"$PROJECT_ROOT/tools/env/scripts/generate-custom-profile.sh"     --profiles "all,networking,external" >/dev/null 2>&1
+if grep -q '^  traefik:' "$PROJECT_ROOT/docker-compose.custom.yml" &&    grep -q '^  cloudflare-tunnel:' "$PROJECT_ROOT/docker-compose.custom.yml" &&    ! grep -q '^  cert-generator:' "$PROJECT_ROOT/docker-compose.custom.yml" &&    ! grep -q '^  pihole:' "$PROJECT_ROOT/docker-compose.custom.yml" &&    ! grep -q '^  pihole-dnsmasq-init:' "$PROJECT_ROOT/docker-compose.custom.yml"; then
+    test_pass
+else
+    test_fail "Tunnel custom profile still included local-only helper services"
+fi
+rm -f "$PROJECT_ROOT/docker-compose.custom.yml"
+
 test_suite_end
