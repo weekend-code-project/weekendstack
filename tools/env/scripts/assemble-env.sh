@@ -28,8 +28,10 @@ set -euo pipefail
 # Script directory and paths
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+source "${REPO_ROOT}/tools/setup/lib/common.sh"
 TEMPLATES_DIR="${REPO_ROOT}/tools/env/templates"
 MAPPINGS_DIR="${REPO_ROOT}/tools/env/mappings"
+CATALOG_FILE="${MAPPINGS_DIR}/service-metadata.json"
 DEFAULT_OUTPUT=""  # No default - require explicit output path
 
 # Color output
@@ -116,13 +118,8 @@ validate_prerequisites() {
         exit 1
     fi
     
-    if [[ ! -f "${MAPPINGS_DIR}/profile-to-services.json" ]]; then
-        log_error "Profile mapping not found: ${MAPPINGS_DIR}/profile-to-services.json"
-        exit 1
-    fi
-    
-    if [[ ! -f "${MAPPINGS_DIR}/service-metadata.json" ]]; then
-        log_error "Service metadata not found: ${MAPPINGS_DIR}/service-metadata.json"
+    if [[ ! -f "$CATALOG_FILE" ]]; then
+        log_error "Service catalog not found: $CATALOG_FILE"
         exit 1
     fi
     
@@ -132,7 +129,7 @@ validate_prerequisites() {
     fi
 }
 
-# Get list of services for selected profiles
+# Get list of services for selected activation profiles
 get_services_for_profiles() {
     local profiles_array=(${PROFILES//,/ })
     local all_services=()
@@ -149,18 +146,25 @@ get_services_for_profiles() {
     done
     profiles_array=("${expanded_profiles[@]}")
     
-    # Collect services for each selected profile
-    for profile in "${profiles_array[@]}"; do
-        local services=$(jq -r --arg profile "$profile" '.[$profile] // [] | .[]' "${MAPPINGS_DIR}/profile-to-services.json")
-        if [[ -n "$services" ]]; then
-            all_services+=($services)
-        else
-            log_warn "Profile not found or empty: $profile"
-        fi
-    done
-    
-    # Remove duplicates and sort
-    printf '%s\n' "${all_services[@]}" | sort -u
+    local profiles_csv
+    profiles_csv=$(IFS=, ; echo "${profiles_array[*]}")
+
+    jq -r --arg csv "$profiles_csv" '
+        ($csv | split(",") | map(select(length > 0))) as $profiles
+        | to_entries[]
+        | select(.key | startswith("_") | not)
+        | (
+            if ((.value.activation_profiles // []) | length) > 0 then
+              .value.activation_profiles
+            elif (.value.profile // "") != "" then
+              [.value.profile]
+            else
+              []
+            end
+          ) as $activation_profiles
+        | select(any($activation_profiles[]; . as $profile | $profiles | index($profile)))
+        | .key
+    ' "$CATALOG_FILE" | sort -u
 }
 
 # Generate file header
@@ -226,7 +230,9 @@ assemble_env() {
     log_info "Services to include: $services_count"
     
     # Create temporary file for assembly
-    local temp_file=$(mktemp)
+    local output_dir temp_file
+    output_dir="$(cd "$(dirname "$OUTPUT_FILE")" && pwd)"
+    temp_file="$(mktemp_in_dir "$output_dir" "assemble-env")"
     
     # Generate header
     log_section "Generating header..."
@@ -244,7 +250,8 @@ assemble_env() {
     # Add service templates
     log_section "Adding service templates..."
     for service in "${services[@]}"; do
-        local template_path=$(jq -r --arg svc "$service" '.[$svc].template // empty' "${MAPPINGS_DIR}/service-metadata.json")
+        local template_path
+        template_path=$(jq -r --arg svc "$service" '.[$svc].template // empty' "$CATALOG_FILE")
         
         if [[ -z "$template_path" ]]; then
             log_warn "No template found for service: $service"
@@ -276,7 +283,7 @@ assemble_env() {
         cat "$temp_file"
         rm -f "$temp_file"
     else
-        mv "$temp_file" "$OUTPUT_FILE"
+        replace_file_safely "$temp_file" "$OUTPUT_FILE"
         log_success "Assembled environment written to: $OUTPUT_FILE"
         log_info "File size: $(wc -l < "$OUTPUT_FILE") lines (original: 804 lines)"
         log_info "Variables reduced: ~$(grep -c "^[A-Z_]*=" "$OUTPUT_FILE" 2>/dev/null || echo 0) variables"

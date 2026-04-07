@@ -1,39 +1,181 @@
 {
+  "_profiles": {
+    "all": {
+      "display_name": "Everything",
+      "description": "Complete self-hosted suite",
+      "user_selectable": true,
+      "always_included": false,
+      "memory_gb": 48,
+      "disk_gb": 100
+    },
+    "core": {
+      "display_name": "Foundation",
+      "description": "Dashboard, routing, and core utilities",
+      "user_selectable": true,
+      "always_included": true,
+      "memory_gb": 1,
+      "disk_gb": 5
+    },
+    "monitoring": {
+      "display_name": "Monitoring",
+      "description": "Uptime and update monitoring",
+      "user_selectable": true,
+      "always_included": false,
+      "memory_gb": 4,
+      "disk_gb": 10
+    },
+    "productivity": {
+      "display_name": "Productivity",
+      "description": "Business and productivity apps",
+      "user_selectable": true,
+      "always_included": false,
+      "memory_gb": 12,
+      "disk_gb": 20
+    },
+    "dev": {
+      "display_name": "Development",
+      "description": "Development environments and git hosting",
+      "user_selectable": true,
+      "always_included": false,
+      "memory_gb": 8,
+      "disk_gb": 20
+    },
+    "ai": {
+      "display_name": "AI",
+      "description": "Local LLM runtime and optional AI apps",
+      "user_selectable": true,
+      "always_included": false,
+      "memory_gb": 16,
+      "disk_gb": 40
+    },
+    "media": {
+      "display_name": "Media",
+      "description": "Photos, books, and music",
+      "user_selectable": true,
+      "always_included": false,
+      "memory_gb": 7,
+      "disk_gb": 10
+    },
+    "personal": {
+      "display_name": "Personal",
+      "description": "Personal finance, fitness, and recipes",
+      "user_selectable": true,
+      "always_included": false,
+      "memory_gb": 6,
+      "disk_gb": 20
+    },
+    "networking": {
+      "display_name": "Networking",
+      "description": "Traefik and local network helpers",
+      "user_selectable": false,
+      "always_included": false,
+      "memory_gb": 2,
+      "disk_gb": 5,
+      "derived_from_access_modes": [
+        "tunnel",
+        "local"
+      ]
+    },
+    "pihole": {
+      "display_name": "Pi-hole",
+      "description": "Local DNS and ad blocking",
+      "user_selectable": false,
+      "always_included": false,
+      "memory_gb": 1,
+      "disk_gb": 2,
+      "derived_from_dns_modes": [
+        "pihole"
+      ]
+    },
+    "external": {
+      "display_name": "External Tunnel",
+      "description": "Cloudflare tunnel access",
+      "user_selectable": false,
+      "always_included": false,
+      "memory_gb": 1,
+      "disk_gb": 2,
+      "derived_from_access_modes": [
+        "tunnel"
+      ]
+    }
+  },
   "link-router": {
     "display_name": "Link Router",
     "description": "Internal link routing service",
     "template": "core/link-router.env.example",
-    "profile": "core"
+    "profile": "core",
+    "activation_profiles": [
+      "core"
+    ],
+    "compose_file": "compose/docker-compose.core.yml",
+    "subdomain": "go",
+    "first_run_mode": "none",
+    "health_path": "/healthz"
   },
   "glance": {
     "display_name": "Glance",
     "description": "Dashboard for all services",
     "template": "core/glance.env.example",
-    "profile": "core"
+    "profile": "core",
+    "activation_profiles": [
+      "core"
+    ],
+    "compose_file": "compose/docker-compose.core.yml",
+    "subdomain": "home",
+    "ip_port": 8098,
+    "first_run_mode": "none"
   },
   "vaultwarden": {
     "display_name": "Vaultwarden",
     "description": "Password manager",
     "template": "core/vaultwarden.env.example",
-    "profile": "core"
+    "profile": "core",
+    "activation_profiles": [
+      "core"
+    ],
+    "compose_file": "compose/docker-compose.core.yml",
+    "subdomain": "vault",
+    "ip_port": 8082
   },
   "speedtest-tracker": {
     "display_name": "Speedtest Tracker",
     "description": "Network speed monitoring",
     "template": "core/speedtest-tracker.env.example",
-    "profile": "core"
+    "profile": "core",
+    "activation_profiles": [
+      "core"
+    ],
+    "compose_file": "compose/docker-compose.core.yml",
+    "subdomain": "speedtest",
+    "ip_port": 8765,
+    "first_run_mode": "manual",
+    "first_run_note": "App provides its own initial admin login on first start."
   },
   "traefik": {
     "display_name": "Traefik",
     "description": "Reverse proxy and load balancer",
     "template": "networking/traefik.env.example",
-    "profile": "networking"
+    "profile": "networking",
+    "activation_profiles": [
+      "networking"
+    ],
+    "compose_file": "compose/docker-compose.networking.yml",
+    "subdomain": "traefik",
+    "ip_port": 8081,
+    "first_run_mode": "none"
   },
   "pihole": {
     "display_name": "Pi-hole",
     "description": "Network-wide ad blocking and DNS",
     "template": "networking/pihole.env.example",
     "profile": "pihole",
+    "activation_profiles": [
+      "pihole"
+    ],
+    "compose_file": "compose/docker-compose.networking.yml",
+    "subdomain": "pihole",
+    "ip_port": 8088,
+    "first_run_mode": "none",
     "support_containers": [
       "pihole-dnsmasq-init"
     ]
@@ -48,19 +190,36 @@
     "display_name": "Error Pages",
     "description": "Custom error pages for Traefik",
     "template": "networking/error-pages.env.example",
-    "profile": "networking"
+    "profile": "networking",
+    "activation_profiles": [
+      "networking"
+    ],
+    "compose_file": "compose/docker-compose.networking.yml",
+    "first_run_mode": "none"
   },
   "cloudflare-tunnel": {
     "display_name": "Cloudflare Tunnel",
     "description": "Secure tunnel to Cloudflare",
     "template": "networking/cloudflare-tunnel.env.example",
-    "profile": "external"
+    "profile": "external",
+    "activation_profiles": [
+      "external"
+    ],
+    "compose_file": "compose/docker-compose.networking.yml",
+    "first_run_mode": "none"
   },
   "ollama": {
     "display_name": "Ollama",
     "description": "Local LLM runtime",
     "template": "ai/ollama.env.example",
     "profile": "ai",
+    "activation_profiles": [
+      "ai"
+    ],
+    "compose_file": "compose/docker-compose.ai.yml",
+    "subdomain": "ollama",
+    "ip_port": 11434,
+    "first_run_mode": "none",
     "support_containers": [
       "ollama-cpu"
     ]
@@ -69,31 +228,80 @@
     "display_name": "Open WebUI",
     "description": "Web UI for LLMs",
     "template": "ai/open-webui.env.example",
-    "profile": "ai"
+    "profile": "ai",
+    "activation_profiles": [
+      "open-webui"
+    ],
+    "compose_file": "compose/docker-compose.ai.yml",
+    "subdomain": "openwebui",
+    "ip_port": 3000,
+    "selectable_service": true,
+    "first_run_mode": "manual"
   },
   "searxng": {
     "display_name": "SearXNG",
     "description": "Privacy-respecting metasearch engine",
     "template": "ai/searxng.env.example",
-    "profile": "searxng"
+    "profile": "ai",
+    "activation_profiles": [
+      "searxng"
+    ],
+    "compose_file": "compose/docker-compose.ai.yml",
+    "subdomain": "searxng",
+    "ip_port": 8080,
+    "selectable_service": true,
+    "resource_memory_gb": 1,
+    "resource_disk_gb": 2,
+    "first_run_mode": "none"
   },
   "paperclip": {
     "display_name": "Paperclip",
     "description": "AI company control plane",
     "template": "ai/paperclip.env.example",
-    "profile": "paperclip"
+    "profile": "ai",
+    "activation_profiles": [
+      "paperclip"
+    ],
+    "compose_file": "compose/docker-compose.ai.yml",
+    "subdomain": "paperclip",
+    "ip_port": 3100,
+    "selectable_service": true,
+    "resource_memory_gb": 2,
+    "resource_disk_gb": 6,
+    "required_directories": [
+      "data/paperclip"
+    ],
+    "health_path": "/api/health",
+    "first_run_mode": "manual",
+    "first_run_note": "Create the first Paperclip account and company in the browser."
   },
   "anythingllm": {
     "display_name": "AnythingLLM",
     "description": "Full-stack LLM application",
     "template": "ai/anythingllm.env.example",
-    "profile": "ai"
+    "profile": "ai",
+    "activation_profiles": [
+      "anythingllm"
+    ],
+    "compose_file": "compose/docker-compose.ai.yml",
+    "subdomain": "anythingllm",
+    "ip_port": 3001,
+    "selectable_service": true,
+    "first_run_mode": "manual"
   },
   "librechat": {
     "display_name": "LibreChat",
     "description": "ChatGPT alternative",
     "template": "ai/librechat.env.example",
     "profile": "ai",
+    "activation_profiles": [
+      "librechat"
+    ],
+    "compose_file": "compose/docker-compose.ai.yml",
+    "subdomain": "librechat",
+    "ip_port": 3080,
+    "selectable_service": true,
+    "first_run_mode": "manual",
     "support_containers": [
       "librechat-db"
     ]
@@ -102,31 +310,80 @@
     "display_name": "LocalAI",
     "description": "Local AI inference server",
     "template": "ai/localai.env.example",
-    "profile": "ai"
+    "profile": "ai",
+    "activation_profiles": [
+      "localai"
+    ],
+    "compose_file": "compose/docker-compose.ai.yml",
+    "subdomain": "localai",
+    "ip_port": 8080,
+    "selectable_service": true,
+    "resource_memory_gb": 4,
+    "resource_disk_gb": 8,
+    "first_run_mode": "none"
   },
   "whisper": {
     "display_name": "Whisper",
     "description": "Speech-to-text service",
     "template": "ai/whisper.env.example",
-    "profile": "ai"
+    "profile": "ai",
+    "activation_profiles": [
+      "whisper"
+    ],
+    "compose_file": "compose/docker-compose.ai.yml",
+    "subdomain": "whisper",
+    "ip_port": 9002,
+    "selectable_service": true,
+    "resource_memory_gb": 4,
+    "resource_disk_gb": 8,
+    "first_run_mode": "none"
   },
   "whisperx": {
     "display_name": "WhisperX",
     "description": "Enhanced speech-to-text",
     "template": "ai/whisperx.env.example",
-    "profile": "ai"
+    "profile": "ai",
+    "activation_profiles": [
+      "whisperx",
+      "gpu"
+    ],
+    "compose_file": "compose/docker-compose.ai.yml",
+    "subdomain": "whisperx",
+    "selectable_service": true,
+    "resource_memory_gb": 8,
+    "resource_disk_gb": 8,
+    "gpu_optional": true,
+    "first_run_mode": "none"
   },
   "privategpt": {
     "display_name": "PrivateGPT",
     "description": "Private document Q&A with GPT",
     "template": "ai/privategpt.env.example",
-    "profile": "ai"
+    "profile": "ai",
+    "activation_profiles": [
+      "privategpt",
+      "gpu"
+    ],
+    "compose_file": "compose/docker-compose.ai.yml",
+    "subdomain": "privategpt",
+    "selectable_service": true,
+    "resource_memory_gb": 4,
+    "resource_disk_gb": 8,
+    "gpu_optional": true,
+    "first_run_mode": "manual"
   },
   "coder": {
     "display_name": "Coder",
     "description": "Cloud development environments",
     "template": "dev/coder.env.example",
     "profile": "dev",
+    "activation_profiles": [
+      "dev"
+    ],
+    "compose_file": "compose/docker-compose.dev.yml",
+    "subdomain": "coder",
+    "ip_port": 7080,
+    "first_run_mode": "manual",
     "support_containers": [
       "coder-db",
       "coder-init"
@@ -137,6 +394,14 @@
     "description": "Lightweight Git server",
     "template": "dev/gitea.env.example",
     "profile": "dev",
+    "activation_profiles": [
+      "gitea"
+    ],
+    "compose_file": "compose/docker-compose.dev.yml",
+    "subdomain": "gitea",
+    "ip_port": 3000,
+    "selectable_service": true,
+    "first_run_mode": "manual",
     "support_containers": [
       "gitea-db"
     ]
@@ -145,13 +410,27 @@
     "display_name": "GitLab",
     "description": "Complete DevOps platform",
     "template": "dev/gitlab.env.example",
-    "profile": "dev"
+    "profile": "dev",
+    "activation_profiles": [
+      "gitlab"
+    ],
+    "compose_file": "compose/docker-compose.dev.yml",
+    "subdomain": "gitlab",
+    "selectable_service": true,
+    "first_run_mode": "manual"
   },
   "guacamole": {
     "display_name": "Apache Guacamole",
     "description": "Clientless remote desktop gateway",
     "template": "dev/guacamole.env.example",
     "profile": "dev",
+    "activation_profiles": [
+      "guacamole"
+    ],
+    "compose_file": "compose/docker-compose.dev.yml",
+    "subdomain": "guacamole",
+    "selectable_service": true,
+    "first_run_mode": "manual",
     "support_containers": [
       "guacamole-db",
       "guacd"
@@ -161,19 +440,37 @@
     "display_name": "Docker Registry Cache",
     "description": "Caching proxy for Docker registries",
     "template": "dev/registry-cache.env.example",
-    "profile": "dev"
+    "profile": "dev",
+    "activation_profiles": [
+      "dev"
+    ],
+    "compose_file": "compose/docker-compose.dev.yml",
+    "first_run_mode": "none",
+    "resource_disk_gb": 5
   },
   "socat": {
     "display_name": "Socat",
     "description": "Docker socket proxy",
     "template": "dev/socat.env.example",
-    "profile": "dev"
+    "profile": "dev",
+    "activation_profiles": [
+      "dev"
+    ],
+    "compose_file": "compose/docker-compose.dev.yml",
+    "first_run_mode": "none"
   },
   "nocodb": {
     "display_name": "NocoDB",
     "description": "No-code database platform",
     "template": "productivity/nocodb.env.example",
     "profile": "productivity",
+    "activation_profiles": [
+      "productivity"
+    ],
+    "compose_file": "compose/docker-compose.productivity.yml",
+    "subdomain": "nocodb",
+    "ip_port": 8080,
+    "first_run_mode": "manual",
     "support_containers": [
       "nocodb-db"
     ]
@@ -183,6 +480,16 @@
     "description": "Workflow automation",
     "template": "productivity/n8n.env.example",
     "profile": "productivity",
+    "activation_profiles": [
+      "productivity"
+    ],
+    "compose_file": "compose/docker-compose.productivity.yml",
+    "subdomain": "n8n",
+    "ip_port": 5678,
+    "first_run_mode": "manual",
+    "required_directories": [
+      "data/n8n"
+    ],
     "support_containers": [
       "n8n-db"
     ]
@@ -192,6 +499,13 @@
     "description": "Document management system",
     "template": "productivity/paperless-ngx.env.example",
     "profile": "productivity",
+    "activation_profiles": [
+      "productivity"
+    ],
+    "compose_file": "compose/docker-compose.productivity.yml",
+    "subdomain": "paperless",
+    "ip_port": 8000,
+    "first_run_mode": "manual",
     "support_containers": [
       "paperless-db",
       "paperless-redis",
@@ -204,6 +518,12 @@
     "description": "Open source automation platform",
     "template": "productivity/activepieces.env.example",
     "profile": "productivity",
+    "activation_profiles": [
+      "productivity"
+    ],
+    "compose_file": "compose/docker-compose.productivity.yml",
+    "subdomain": "activepieces",
+    "first_run_mode": "manual",
     "support_containers": [
       "activepieces-db",
       "activepieces-redis"
@@ -224,6 +544,12 @@
     "description": "Collaborative documentation",
     "template": "productivity/docmost.env.example",
     "profile": "productivity",
+    "activation_profiles": [
+      "productivity"
+    ],
+    "compose_file": "compose/docker-compose.productivity.yml",
+    "subdomain": "docmost",
+    "first_run_mode": "manual",
     "support_containers": [
       "docmost-db",
       "docmost-redis"
@@ -233,7 +559,13 @@
     "display_name": "Focalboard",
     "description": "Project management",
     "template": "productivity/focalboard.env.example",
-    "profile": "productivity"
+    "profile": "productivity",
+    "activation_profiles": [
+      "productivity"
+    ],
+    "compose_file": "compose/docker-compose.productivity.yml",
+    "subdomain": "focalboard",
+    "first_run_mode": "manual"
   },
   "trilium": {
     "display_name": "Trilium Notes",
@@ -263,7 +595,14 @@
     "display_name": "File Browser",
     "description": "Web-based file manager",
     "template": "productivity/filebrowser.env.example",
-    "profile": "productivity"
+    "profile": "productivity",
+    "activation_profiles": [
+      "productivity"
+    ],
+    "compose_file": "compose/docker-compose.productivity.yml",
+    "subdomain": "filebrowser",
+    "ip_port": 8089,
+    "first_run_mode": "random-password-log"
   },
   "hoarder": {
     "display_name": "Hoarder",
@@ -286,6 +625,14 @@
     "description": "Digital asset management",
     "template": "productivity/resourcespace.env.example",
     "profile": "productivity",
+    "activation_profiles": [
+      "productivity"
+    ],
+    "compose_file": "compose/docker-compose.productivity.yml",
+    "subdomain": "resourcespace",
+    "ip_port": 8099,
+    "first_run_mode": "installer-url",
+    "first_run_path": "/pages/setup.php",
     "support_containers": [
       "resourcespace-db"
     ]
@@ -316,6 +663,13 @@
     "description": "Photo and video management",
     "template": "media/immich.env.example",
     "profile": "media",
+    "activation_profiles": [
+      "media"
+    ],
+    "compose_file": "compose/docker-compose.media.yml",
+    "subdomain": "immich",
+    "ip_port": 2283,
+    "first_run_mode": "manual",
     "support_containers": [
       "immich-db",
       "immich-redis",
@@ -326,13 +680,27 @@
     "display_name": "Kavita",
     "description": "Ebook and manga reader",
     "template": "media/kavita.env.example",
-    "profile": "media"
+    "profile": "media",
+    "activation_profiles": [
+      "media"
+    ],
+    "compose_file": "compose/docker-compose.media.yml",
+    "subdomain": "kavita",
+    "ip_port": 5002,
+    "first_run_mode": "manual"
   },
   "navidrome": {
     "display_name": "Navidrome",
     "description": "Music server and streamer",
     "template": "media/navidrome.env.example",
-    "profile": "media"
+    "profile": "media",
+    "activation_profiles": [
+      "media"
+    ],
+    "compose_file": "compose/docker-compose.media.yml",
+    "subdomain": "navidrome",
+    "ip_port": 4533,
+    "first_run_mode": "manual"
   },
   "cockpit": {
     "display_name": "Cockpit",
@@ -344,13 +712,27 @@
     "display_name": "What's Up Docker",
     "description": "Container update monitoring",
     "template": "monitoring/wud.env.example",
-    "profile": "monitoring"
+    "profile": "monitoring",
+    "activation_profiles": [
+      "monitoring"
+    ],
+    "compose_file": "compose/docker-compose.monitoring.yml",
+    "subdomain": "wud",
+    "ip_port": 3002,
+    "first_run_mode": "none"
   },
   "uptime-kuma": {
     "display_name": "Uptime Kuma",
     "description": "Uptime monitoring",
     "template": "monitoring/uptime-kuma.env.example",
-    "profile": "monitoring"
+    "profile": "monitoring",
+    "activation_profiles": [
+      "monitoring"
+    ],
+    "compose_file": "compose/docker-compose.monitoring.yml",
+    "subdomain": "uptime-kuma",
+    "ip_port": 3001,
+    "first_run_mode": "manual"
   },
   "netdata": {
     "display_name": "Netdata",

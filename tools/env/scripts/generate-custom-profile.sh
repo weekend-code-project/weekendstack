@@ -20,6 +20,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 MAPPINGS_DIR="${REPO_ROOT}/tools/env/mappings"
+CATALOG_FILE="${MAPPINGS_DIR}/service-metadata.json"
 OUTPUT_FILE="${REPO_ROOT}/docker-compose.custom.yml"
 
 # Color output
@@ -101,8 +102,8 @@ parse_arguments() {
 
 # Validate prerequisites
 validate_prerequisites() {
-    if [[ ! -f "${MAPPINGS_DIR}/profile-to-services.json" ]]; then
-        log_error "Profile mapping not found: ${MAPPINGS_DIR}/profile-to-services.json"
+    if [[ ! -f "$CATALOG_FILE" ]]; then
+        log_error "Service catalog not found: $CATALOG_FILE"
         exit 1
     fi
     
@@ -112,7 +113,7 @@ validate_prerequisites() {
     fi
 }
 
-# Get list of services for selected profiles
+# Get list of services for selected activation profiles
 get_services_for_profiles() {
     local profiles_array=(${PROFILES//,/ })
     local all_services=()
@@ -129,18 +130,25 @@ get_services_for_profiles() {
     done
     profiles_array=("${expanded_profiles[@]}")
     
-    # Collect services for each selected profile
-    for profile in "${profiles_array[@]}"; do
-        local services=$(jq -r --arg profile "$profile" '.[$profile] // [] | .[]' "${MAPPINGS_DIR}/profile-to-services.json")
-        if [[ -n "$services" ]]; then
-            all_services+=($services)
-        else
-            log_warn "Profile not found or empty: $profile"
-        fi
-    done
-    
-    # Remove duplicates and sort
-    printf '%s\n' "${all_services[@]}" | sort -u
+    local profiles_csv
+    profiles_csv=$(IFS=, ; echo "${profiles_array[*]}")
+
+    jq -r --arg csv "$profiles_csv" '
+        ($csv | split(",") | map(select(length > 0))) as $profiles
+        | to_entries[]
+        | select(.key | startswith("_") | not)
+        | (
+            if ((.value.activation_profiles // []) | length) > 0 then
+              .value.activation_profiles
+            elif (.value.profile // "") != "" then
+              [.value.profile]
+            else
+              []
+            end
+          ) as $activation_profiles
+        | select(any($activation_profiles[]; . as $profile | $profiles | index($profile)))
+        | .key
+    ' "$CATALOG_FILE" | sort -u
 }
 
 # Generate custom profile file

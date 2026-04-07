@@ -65,7 +65,7 @@ show_usage() {
     echo "CLEANUP LEVELS:"
     echo -e "    ${GREEN}Level 1${NC} - Quick Reset (soft reset)"
     echo "      • Stop and remove all containers"
-    echo "      • Remove .env, docker-compose.custom.yml, SETUP_SUMMARY.md"
+    echo "      • Remove .env, weekendstack.config.json, setup-state.json, docker-compose.custom.yml, SETUP_SUMMARY.md"
     echo "      • Remove all Docker volumes (deletes databases)"
     echo "      • Remove all Docker networks"
     echo "      • Prune dangling/leftover build images
@@ -215,6 +215,8 @@ show_confirmation() {
             echo "This will:"
             echo -e "  ${RED}✗${NC} Stop and remove all containers"
             echo -e "  ${RED}✗${NC} Remove .env file (backed up to _trash/)"
+            echo -e "  ${RED}✗${NC} Remove weekendstack.config.json"
+            echo -e "  ${RED}✗${NC} Remove setup-state.json / setup-plan.json"
             echo -e "  ${RED}✗${NC} Remove docker-compose.custom.yml"
             echo -e "  ${RED}✗${NC} Remove SETUP_SUMMARY.md"
             echo -e "  ${RED}✗${NC} Remove ALL Docker volumes (databases DELETED)"
@@ -313,6 +315,13 @@ backup_env() {
     else
         log_info "No .env file to backup"
     fi
+
+    if [[ -f "$SCRIPT_DIR/weekendstack.config.json" ]]; then
+        local timestamp=$(date +%Y%m%d-%H%M%S)
+        local config_backup="$SCRIPT_DIR/_trash/weekendstack.config.backup.$timestamp.json"
+        cp "$SCRIPT_DIR/weekendstack.config.json" "$config_backup" 2>/dev/null || true
+        [[ -f "$config_backup" ]] && log_success "Backed up weekendstack.config.json to: $config_backup"
+    fi
 }
 
 stop_and_remove_containers() {
@@ -346,6 +355,24 @@ remove_setup_files() {
     if [[ -f "$SCRIPT_DIR/docker-compose.custom.yml" ]]; then
         rm -f "$SCRIPT_DIR/docker-compose.custom.yml"
         log_success "Removed docker-compose.custom.yml"
+        files_removed=$((files_removed + 1))
+    fi
+
+    if [[ -f "$SCRIPT_DIR/weekendstack.config.json" ]]; then
+        rm -f "$SCRIPT_DIR/weekendstack.config.json"
+        log_success "Removed weekendstack.config.json"
+        files_removed=$((files_removed + 1))
+    fi
+
+    if [[ -f "$SCRIPT_DIR/setup-state.json" ]]; then
+        rm -f "$SCRIPT_DIR/setup-state.json"
+        log_success "Removed setup-state.json"
+        files_removed=$((files_removed + 1))
+    fi
+
+    if [[ -f "$SCRIPT_DIR/setup-plan.json" ]]; then
+        rm -f "$SCRIPT_DIR/setup-plan.json"
+        log_success "Removed setup-plan.json"
         files_removed=$((files_removed + 1))
     fi
     

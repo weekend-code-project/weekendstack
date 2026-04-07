@@ -77,8 +77,8 @@ Reference: .env.example (static, committed to git)
 ### File Structure
 
 **Mappings (JSON)**
-- `tools/env/mappings/profile-to-services.json` - Profile → Services mapping
-- `tools/env/mappings/service-metadata.json` - Service display names, descriptions
+- `tools/env/mappings/service-metadata.json` - Canonical service catalog: profiles, activation rules, metadata, resource estimates, health hints
+- `tools/env/mappings/profile-to-services.json` - Legacy compatibility mapping retained for older tests/scripts
 
 **Scripts**
 - `tools/env/scripts/assemble-env.sh` - Combines templates based on profiles
@@ -152,17 +152,6 @@ EOF
 
 ### 2. Update Mappings
 
-**profile-to-services.json:**
-```json
-{
-  "productivity": [
-    "nocodb",
-    "n8n",
-    "newservice"  // Add here
-  ]
-}
-```
-
 **service-metadata.json:**
 ```json
 {
@@ -170,7 +159,10 @@ EOF
     "display_name": "New Service",
     "description": "What it does",
     "template": "productivity/newservice.env.example",
-    "profile": "productivity"
+    "profile": "productivity",
+    "activation_profiles": ["productivity"],
+    "selectable_service": false,
+    "first_run_mode": "manual"
   }
 }
 ```
@@ -215,7 +207,7 @@ tools/test/test-modular-env.sh
 ## Troubleshooting
 
 ### Assembly produces empty file
-Check that service exists in profile-to-services.json and metadata mappings
+Check that the service exists in `service-metadata.json` and has the expected `profile` or `activation_profiles`
 
 ### Service variables missing
 Ensure template file exists at path specified in service-metadata.json

@@ -670,6 +670,8 @@ display_summary_to_console() {
     echo ""
     echo -e "${BOLD}Documentation:${NC}"
     echo "  • Complete summary: SETUP_SUMMARY.md"
+    echo "  • Canonical config: weekendstack.config.json"
+    echo "  • Machine state:    setup-state.json"
     echo "  • Service guides:   docs/"
     echo ""
 
@@ -695,6 +697,7 @@ display_summary_to_console() {
     
     echo -e "${BOLD}Important:${NC}"
     echo "  • Review SETUP_SUMMARY.md for tunnel auth and first-time service setup"
+    echo "  • Agents should read weekendstack.config.json + setup-state.json instead of scraping terminal output"
     if [[ -n "$running_services" ]] && printf '%s\n' "$running_services" | grep -q '^gitea$'; then
         local gitea_url
         case "$access_mode" in

@@ -9,6 +9,7 @@ update_env_var() {
     local var_name="$1"
     local var_value="$2"
     local env_file="$3"
+    local env_dir temp_file
     
     # Strip any newlines or carriage returns from value to prevent line injection  
     var_value="${var_value//$'\n'/}"
@@ -17,10 +18,12 @@ update_env_var() {
     # Use awk to safely replace the line - avoids all escaping issues
     # If the key does not exist in the file, append it.
     if grep -q "^${var_name}=" "$env_file" 2>/dev/null; then
+        env_dir="$(cd "$(dirname "$env_file")" && pwd)"
+        temp_file="$(mktemp_in_dir "$env_dir" "$(basename "$env_file").tmp")"
         awk -v var="$var_name" -v val="$var_value" '
             $0 ~ "^" var "=" { print var "=" val; next }
             { print }
-        ' "$env_file" > "${env_file}.tmp" && mv "${env_file}.tmp" "$env_file"
+        ' "$env_file" > "$temp_file" && replace_file_safely "$temp_file" "$env_file"
     else
         echo "${var_name}=${var_value}" >> "$env_file"
     fi

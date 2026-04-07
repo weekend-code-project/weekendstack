@@ -9,11 +9,15 @@
 #   curl -fsSL https://raw.githubusercontent.com/weekend-code-project/weekendstack/main/install.sh -o install.sh
 #   sudo bash install.sh [FLAGS]
 #
-# Any flags are forwarded to setup.sh (e.g. --quick, --skip-cloudflare)
+# Any flags are forwarded to setup.sh (e.g. --quick, --skip-cloudflare).
+# Agent/non-interactive installs can pass:
+#   sudo bash install.sh --config-url https://example.com/weekendstack.config.json
 # =============================================================================
 
 REPO_URL="https://github.com/weekend-code-project/weekendstack.git"
 INSTALL_DIR_NAME="weekendstack"
+CONFIG_URL=""
+SETUP_ARGS=()
 
 # ---------------------------------------------------------------------------
 # Colour helpers (graceful degradation when terminal has no colour support)
@@ -30,6 +34,21 @@ success() { echo "${GREEN}[install]${NC} $*"; }
 warn()    { echo "${YELLOW}[install]${NC} $*"; }
 error()   { echo "${RED}[install] ERROR:${NC} $*" >&2; }
 die()     { error "$*"; exit 1; }
+
+parse_install_args() {
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --config-url)
+                CONFIG_URL="$2"
+                shift 2
+                ;;
+            *)
+                SETUP_ARGS+=("$1")
+                shift
+                ;;
+        esac
+    done
+}
 
 # ---------------------------------------------------------------------------
 # OS check — Debian/Ubuntu only
@@ -217,6 +236,25 @@ make_executable() {
     find "${INSTALL_DIR}/tools" -name "*.sh" -exec chmod +x {} + 2>/dev/null || true
 }
 
+download_agent_config_if_requested() {
+    local target_config
+    [[ -n "$CONFIG_URL" ]] || return 0
+
+    target_config="${INSTALL_DIR}/weekendstack.config.json"
+    info "Downloading agent config from ${CONFIG_URL}"
+
+    if [[ "$CALLING_USER" == "root" ]]; then
+        curl -fsSL "$CONFIG_URL" -o "$target_config"
+    else
+        sudo -u "$CALLING_USER" -H curl -fsSL "$CONFIG_URL" -o "$target_config"
+    fi
+
+    chown "${CALLING_USER}:${CALLING_USER}" "$target_config" 2>/dev/null || true
+    success "Saved config to ${target_config}"
+
+    SETUP_ARGS=(--apply --config "$target_config" "${SETUP_ARGS[@]}")
+}
+
 # ---------------------------------------------------------------------------
 # Print post-install summary
 # ---------------------------------------------------------------------------
@@ -283,6 +321,8 @@ launch_setup() {
 # Main
 # ---------------------------------------------------------------------------
 main() {
+    parse_install_args "$@"
+
     echo ""
     echo "${BOLD}${CYAN}══════════════════════════════════════════════════════════════════${NC}"
     echo "${BOLD}${CYAN}  WeekendStack Remote Installer${NC}"
@@ -298,10 +338,11 @@ main() {
     add_user_to_docker_group
     clone_or_update_repo
     make_executable
+    download_agent_config_if_requested
     print_summary
 
     # Pass through any flags supplied to install.sh → setup.sh
-    launch_setup "$@"
+    launch_setup "${SETUP_ARGS[@]}"
 }
 
 main "$@"

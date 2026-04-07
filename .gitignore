@@ -11,6 +11,9 @@
 docker-compose.custom.yml
 SETUP_SUMMARY.md
 CLEANUP_SUMMARY.md
+weekendstack.config.json
+setup-state.json
+setup-plan.json
 
 # Coder runtime state — must never be committed so fresh installs always deploy
 config/coder/.template_deployment_complete

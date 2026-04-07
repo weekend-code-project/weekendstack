@@ -15,12 +15,10 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export SCRIPT_DIR
 
-# Load library functions
-for lib in "$SCRIPT_DIR/tools/setup/lib"/*.sh; do
-    if [[ -f "$lib" ]]; then
-        source "$lib"
-    fi
-done
+# Load the minimal common helper set first. Additional libraries are loaded
+# after argument parsing so agent-first commands can avoid the full interactive
+# setup graph.
+source "$SCRIPT_DIR/tools/setup/lib/common.sh"
 
 # Version
 VERSION="1.0.0"
@@ -33,6 +31,37 @@ SKIP_CLOUDFLARE=false
 SKIP_CERTS=false
 DRY_RUN=false
 FORCE_RECONFIGURE=false
+COMMAND_MODE=""
+ENGINE_CONFIG_FILE=""
+OUTPUT_JSON=false
+ADD_PROFILES_CSV=""
+ADD_SERVICES_CSV=""
+REPAIR_SCOPE="infra"
+LIBRARIES_LOADED=false
+
+load_setup_libraries() {
+    local mode="${1:-interactive}"
+    local lib
+
+    if $LIBRARIES_LOADED; then
+        return 0
+    fi
+
+    case "$mode" in
+        plan|doctor)
+            source "$SCRIPT_DIR/tools/setup/lib/setup-engine.sh"
+            ;;
+        *)
+            for lib in "$SCRIPT_DIR/tools/setup/lib"/*.sh; do
+                if [[ -f "$lib" ]]; then
+                    source "$lib"
+                fi
+            done
+            ;;
+    esac
+
+    LIBRARIES_LOADED=true
+}
 
 # Show usage
 show_usage() {
@@ -61,6 +90,15 @@ OPTIONS:
     --ssh-key-only          Run only the Coder Git provider SSH-key setup step
     --tunnel-auth-only      Run only the external Traefik auth reset step
     --docker-only           Run only Docker registry authentication
+    --plan                  Generate an install/add/repair plan from config or existing .env
+    --apply                 Apply weekendstack.config.json non-interactively
+    --config FILE           Use an explicit config file with --plan/--apply/--repair/--doctor
+    --json                  Emit machine-readable JSON for --plan or --doctor
+    --add PROFILES          Add one or more base profiles (comma-separated) to current config, then apply
+    --add-service SERVICES  Add one or more optional services (comma-separated) to current config, then apply
+    --repair                Repair deterministic infrastructure drift
+    --scope SCOPE           Repair scope: infra, cache, network, auth, or storage
+    --doctor                Inspect config, drift, host requirements, and service health
     --start                 Start the stack after setup
     --stop                  Stop all services
     --restart               Restart all services
@@ -205,6 +243,50 @@ parse_args() {
                 source "$SCRIPT_DIR/tools/setup/lib/docker-auth.sh"
                 docker_login_hub
                 exit $?
+                ;;
+            --plan)
+                COMMAND_MODE="plan"
+                shift
+                ;;
+            --apply)
+                COMMAND_MODE="apply"
+                shift
+                ;;
+            --config)
+                ENGINE_CONFIG_FILE="$2"
+                shift 2
+                ;;
+            --json)
+                OUTPUT_JSON=true
+                shift
+                ;;
+            --add)
+                COMMAND_MODE="add"
+                ADD_PROFILES_CSV="$2"
+                shift 2
+                ;;
+            --add-service)
+                if [[ -n "$ADD_SERVICES_CSV" ]]; then
+                    ADD_SERVICES_CSV="${ADD_SERVICES_CSV},$2"
+                else
+                    ADD_SERVICES_CSV="$2"
+                fi
+                if [[ -z "$COMMAND_MODE" ]]; then
+                    COMMAND_MODE="add"
+                fi
+                shift 2
+                ;;
+            --repair)
+                COMMAND_MODE="repair"
+                shift
+                ;;
+            --scope)
+                REPAIR_SCOPE="$2"
+                shift 2
+                ;;
+            --doctor)
+                COMMAND_MODE="doctor"
+                shift
                 ;;
             *)
                 log_error "Unknown option: $1"
@@ -1290,6 +1372,11 @@ main_setup() {
         log_warn "Failed to generate summary (continuing anyway)"
     fi
 
+    if setup_engine_migrate_env_to_config "$SCRIPT_DIR/.env" "$(setup_engine_default_config_path)" >/dev/null 2>&1; then
+        setup_engine_write_plan_file "$(setup_engine_default_config_path)" >/dev/null 2>&1 || true
+        setup_engine_write_state "$(setup_engine_default_config_path)" "interactive" "" >/dev/null 2>&1 || true
+    fi
+
     # Ask to start services
     echo ""
     echo -e "${BOLD}${GREEN}Setup Complete!${NC}"
@@ -1353,12 +1440,19 @@ main_setup() {
         prompt_for_post_install_cleanup
 
         display_summary_to_console
+
+        if [[ -f "$(setup_engine_default_config_path)" ]]; then
+            setup_engine_write_state "$(setup_engine_default_config_path)" "interactive" "" >/dev/null 2>&1 || true
+        fi
     else
         log_info "Services not started. Run './setup.sh --start' when ready."
         echo ""
         echo "To start services later:"
         echo "  docker compose up -d"
         echo ""
+        if [[ -f "$(setup_engine_default_config_path)" ]]; then
+            setup_engine_write_state "$(setup_engine_default_config_path)" "interactive" "" >/dev/null 2>&1 || true
+        fi
     fi
 }
 
@@ -1744,15 +1838,79 @@ restart_services() {
     start_services
 }
 
+run_engine_command() {
+    local config_path
+
+    case "$COMMAND_MODE" in
+        plan)
+            config_path="$(setup_engine_load_or_migrate_config "$ENGINE_CONFIG_FILE")" || {
+                log_error "No config or .env found to plan from"
+                return 1
+            }
+            setup_engine_normalize_config "$config_path"
+            setup_engine_write_plan_file "$config_path"
+            if $OUTPUT_JSON; then
+                cat "$(setup_engine_plan_path)"
+            else
+                setup_engine_render_plan_text "$(setup_engine_plan_path)"
+            fi
+            ;;
+        apply)
+            config_path="$(setup_engine_load_or_migrate_config "$ENGINE_CONFIG_FILE")" || {
+                log_error "No config or .env found to apply"
+                return 1
+            }
+            setup_engine_apply_config "$config_path"
+            ;;
+        add)
+            if [[ -z "$ADD_PROFILES_CSV" && -z "$ADD_SERVICES_CSV" ]]; then
+                log_error "--add or --add-service requires at least one value"
+                return 1
+            fi
+            config_path="$(setup_engine_load_or_migrate_config "$ENGINE_CONFIG_FILE")" || {
+                log_error "No config or .env found to add to"
+                return 1
+            }
+            setup_engine_add_to_config "$config_path" "$ADD_PROFILES_CSV" "$ADD_SERVICES_CSV"
+            setup_engine_apply_config "$config_path"
+            ;;
+        repair)
+            config_path="$(setup_engine_load_or_migrate_config "$ENGINE_CONFIG_FILE")" || {
+                log_error "No config or .env found to repair"
+                return 1
+            }
+            setup_engine_repair "$config_path" "$REPAIR_SCOPE"
+            ;;
+        doctor)
+            if $OUTPUT_JSON; then
+                setup_engine_doctor_json "$ENGINE_CONFIG_FILE"
+            else
+                setup_engine_doctor "$ENGINE_CONFIG_FILE"
+            fi
+            ;;
+        *)
+            log_error "Unknown engine command: $COMMAND_MODE"
+            return 1
+            ;;
+    esac
+}
+
 # Main entry point
 main() {
     parse_args "$@"
+    load_setup_libraries "${COMMAND_MODE:-interactive}"
     
     cd "$SCRIPT_DIR"
     
     if $DRY_RUN; then
         log_info "DRY RUN MODE - No changes will be made"
         SETUP_MODE="interactive"
+    fi
+
+    if [[ -n "$COMMAND_MODE" ]]; then
+        export NON_INTERACTIVE_MODE=true
+        run_engine_command
+        return $?
     fi
     
     main_setup

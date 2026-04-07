@@ -3,6 +3,7 @@
 # Allows users to choose which services to deploy
 
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/service-catalog.sh"
 
 # Profile definitions — networking is no longer a user-visible option;
 # Traefik/Pi-hole/Tunnel sub-profiles are auto-added by setup based on
@@ -330,129 +331,18 @@ select_profiles_quick() {
 }
 
 get_services_for_profiles() {
-    local profiles=("$@")
-    local compose_dir="${SCRIPT_DIR}/.."
-    local services=()
-    
-    # If 'all' is selected, return all profiles
-    if [[ " ${profiles[*]} " =~ " all " ]]; then
-        echo "all"
-        return 0
-    fi
-    
-    # Parse docker-compose files for services in selected profiles
-    for profile in "${profiles[@]}"; do
-        case "$profile" in
-            core)
-                services+=("glance" "vaultwarden")
-                ;;
-            networking)
-                services+=("traefik" "link-router" "error-pages")
-                ;;
-            pihole)
-                services+=("pihole")
-                ;;
-            external)
-                services+=("cloudflare-tunnel")
-                ;;
-            ai)
-                services+=("ollama" "open-webui" "anythingllm" "librechat" "stable-diffusion" "diffrhythm")
-                ;;
-            searxng)
-                services+=("searxng")
-                ;;
-            localai)
-                services+=("localai")
-                ;;
-            whisper)
-                services+=("whisper")
-                ;;
-            paperclip)
-                services+=("paperclip")
-                ;;
-            whisperx)
-                services+=("whisperx")
-                ;;
-            privategpt)
-                services+=("privategpt")
-                ;;
-            dev)
-                services+=("coder" "gitea" "guacamole" "registry")
-                ;;
-            productivity)
-                services+=("nocodb" "n8n" "paperless-ngx" "activepieces" "postiz" "docmost" "focalboard" "trilium" "vikunja" "it-tools" "excalidraw" "filebrowser" "hoarder" "bytestash" "resourcespace")
-                ;;
-            media)
-                services+=("kavita" "navidrome")
-                ;;
-            monitoring)
-                services+=("wud" "uptime-kuma")
-                ;;
-        esac
-    done
-    
-    # Remove duplicates
-    local unique_services=($(echo "${services[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' '))
-    
-    echo "${unique_services[@]}"
+    local profiles_csv
+    profiles_csv=$(IFS=, ; echo "$*")
+    catalog_services_for_activation_profiles "$profiles_csv" | tr '\n' ' ' | sed 's/[[:space:]]*$//'
 }
 
 estimate_resources() {
     local profiles=("$@")
-    local estimated_memory=2 # Base overhead (GB)
-    local estimated_disk=10  # Base requirements (GB)
-    
-    for profile in "${profiles[@]}"; do
-        case "$profile" in
-            all)
-                estimated_memory=48
-                estimated_disk=100
-                return
-                ;;
-            core)
-                estimated_memory=$((estimated_memory + 1))
-                estimated_disk=$((estimated_disk + 5))
-                ;;
-            networking|pihole)
-                estimated_memory=$((estimated_memory + 2))
-                estimated_disk=$((estimated_disk + 5))
-                ;;
-            ai)
-                estimated_memory=$((estimated_memory + 16))
-                estimated_disk=$((estimated_disk + 40))
-                ;;
-            searxng)
-                estimated_memory=$((estimated_memory + 1))
-                estimated_disk=$((estimated_disk + 2))
-                ;;
-            localai|whisper|privategpt)
-                estimated_memory=$((estimated_memory + 4))
-                estimated_disk=$((estimated_disk + 8))
-                ;;
-            paperclip)
-                estimated_memory=$((estimated_memory + 2))
-                estimated_disk=$((estimated_disk + 6))
-                ;;
-            whisperx)
-                estimated_memory=$((estimated_memory + 8))
-                estimated_disk=$((estimated_disk + 8))
-                ;;
-            dev)
-                estimated_memory=$((estimated_memory + 8))
-                estimated_disk=$((estimated_disk + 20))
-                ;;
-            productivity)
-                estimated_memory=$((estimated_memory + 2))
-                estimated_disk=$((estimated_disk + 10))
-                ;;
-            monitoring)
-                estimated_memory=$((estimated_memory + 4))
-                estimated_disk=$((estimated_disk + 10))
-                ;;
-        esac
-    done
-    
-    echo "$estimated_memory $estimated_disk"
+    local profiles_csv
+    local estimates
+    profiles_csv=$(IFS=, ; echo "${profiles[*]}")
+    estimates="$(catalog_sum_resources "$profiles_csv" "")"
+    echo "$estimates"
 }
 
 check_system_resources() {

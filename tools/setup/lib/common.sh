@@ -92,6 +92,30 @@ show_spinner() {
 }
 
 # User prompt functions
+non_interactive_mode_enabled() {
+    [[ "${NON_INTERACTIVE_MODE:-false}" == "true" ]]
+}
+
+mktemp_in_dir() {
+    local target_dir="$1"
+    local prefix="${2:-weekendstack}"
+
+    mkdir -p "$target_dir"
+    mktemp "${target_dir}/.${prefix}.XXXXXX"
+}
+
+replace_file_safely() {
+    local source_file="$1"
+    local target_file="$2"
+
+    if mv "$source_file" "$target_file" 2>/dev/null; then
+        return 0
+    fi
+
+    cat "$source_file" > "$target_file"
+    rm -f "$source_file"
+}
+
 prompt_yes_no() {
     local prompt="$1"
     local default="${2:-n}"
@@ -103,7 +127,11 @@ prompt_yes_no() {
         prompt="$prompt [y/N]: "
     fi
     
-    read -r -p "$(echo -e ${CYAN}?${NC}) $prompt" response </dev/tty
+    if non_interactive_mode_enabled || [[ ! -e /dev/tty ]] || ! (: </dev/tty) 2>/dev/null; then
+        response="$default"
+    else
+        read -r -p "$(echo -e ${CYAN}?${NC}) $prompt" response </dev/tty
+    fi
     response=${response,,} # to lowercase
     
     if [[ -z "$response" ]]; then
@@ -124,7 +152,11 @@ prompt_input() {
         prompt="$prompt: "
     fi
     
-    read -r -p "$(echo -e ${CYAN}?${NC}) $prompt" response </dev/tty
+    if non_interactive_mode_enabled || [[ ! -e /dev/tty ]] || ! (: </dev/tty) 2>/dev/null; then
+        response="$default"
+    else
+        read -r -p "$(echo -e ${CYAN}?${NC}) $prompt" response </dev/tty
+    fi
     
     if [[ -z "$response" && -n "$default" ]]; then
         echo "$default"
@@ -175,7 +207,11 @@ prompt_select() {
     done
     
     while true; do
-        read -r -p "$(echo -e ${CYAN}→${NC}) Select [1-${#options[@]}]: " choice </dev/tty
+        if non_interactive_mode_enabled || [[ ! -e /dev/tty ]] || ! (: </dev/tty) 2>/dev/null; then
+            choice="1"
+        else
+            read -r -p "$(echo -e ${CYAN}→${NC}) Select [1-${#options[@]}]: " choice </dev/tty
+        fi
         
         if [[ "$choice" =~ ^[0-9]+$ ]] && ((choice >= 1 && choice <= ${#options[@]})); then
             echo "$((choice-1))"
@@ -211,7 +247,9 @@ prompt_menu_choice() {
     fi
 
     while true; do
-        if [[ -e /dev/tty ]] && (: </dev/tty) 2>/dev/null; then
+        if non_interactive_mode_enabled; then
+            choice="$default"
+        elif [[ -e /dev/tty ]] && (: </dev/tty) 2>/dev/null; then
             read -r -p "$(echo -e ${CYAN}→${NC}) Select ${default_prompt}: " choice </dev/tty
         else
             choice="$default"
@@ -250,7 +288,9 @@ prompt_number_choice() {
     fi
 
     while true; do
-        if [[ -e /dev/tty ]] && (: </dev/tty) 2>/dev/null; then
+        if non_interactive_mode_enabled; then
+            choice="$default"
+        elif [[ -e /dev/tty ]] && (: </dev/tty) 2>/dev/null; then
             read -r -p "$(echo -e ${CYAN}→${NC}) $prompt ${default_prompt}: " choice </dev/tty
         else
             choice="$default"
@@ -271,6 +311,10 @@ prompt_number_choice() {
 
 pause_for_enter() {
     local prompt="${1:-Press Enter to continue...}"
+
+    if non_interactive_mode_enabled; then
+        return 0
+    fi
 
     if [[ -e /dev/tty ]] && (: </dev/tty) 2>/dev/null; then
         read -r -p "  $prompt" _pause </dev/tty
@@ -728,7 +772,7 @@ add_cleanup_handler() {
 }
 
 run_cleanup_handlers() {
-    for handler in "${cleanup_handlers[@]}"; do
+    for handler in "${cleanup_handlers[@]:-}"; do
         eval "$handler" || true
     done
 }
@@ -738,9 +782,10 @@ trap run_cleanup_handlers EXIT
 # Export functions
 export -f log_info log_success log_warn log_error log_header log_step
 export -f clear_screen screen_title screen_section
-export -f prompt_yes_no prompt_input prompt_password prompt_select prompt_multiselect prompt_menu_choice prompt_number_choice pause_for_enter
+export -f non_interactive_mode_enabled prompt_yes_no prompt_input prompt_password prompt_select prompt_multiselect prompt_menu_choice prompt_number_choice pause_for_enter
 export -f validate_ip validate_domain validate_email validate_path validate_port
 export -f backup_file detect_os detect_init_system check_command check_port_available get_env_value
 export -f normalize_access_mode has_tunnel_access_mode has_local_domain_access_mode
+export -f mktemp_in_dir replace_file_safely
 export -f progress_bar set_error_trap error_handler
 export -f add_cleanup_handler run_cleanup_handlers

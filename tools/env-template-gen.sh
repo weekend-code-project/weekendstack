@@ -50,8 +50,9 @@ replace_env_var() {
     local var_name="$1"
     local value="$2"
     local file="$3"
-    local tmp_file
-    tmp_file="$(mktemp)"
+    local tmp_file file_dir
+    file_dir="$(cd "$(dirname "$file")" && pwd)"
+    tmp_file="$(mktemp_in_dir "$file_dir" "$(basename "$file").envgen")"
 
     awk -v var="$var_name" -v val="$value" '
         BEGIN { updated = 0 }
@@ -68,7 +69,7 @@ replace_env_var() {
         }
     ' "$file" > "$tmp_file"
 
-    mv "$tmp_file" "$file"
+    replace_file_safely "$tmp_file" "$file"
 }
 
 random_chars() {
