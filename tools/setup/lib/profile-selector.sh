@@ -367,6 +367,9 @@ get_services_for_profiles() {
             whisper)
                 services+=("whisper")
                 ;;
+            paperclip)
+                services+=("paperclip")
+                ;;
             whisperx)
                 services+=("whisperx")
                 ;;
@@ -425,6 +428,10 @@ estimate_resources() {
             localai|whisper|privategpt)
                 estimated_memory=$((estimated_memory + 4))
                 estimated_disk=$((estimated_disk + 8))
+                ;;
+            paperclip)
+                estimated_memory=$((estimated_memory + 2))
+                estimated_disk=$((estimated_disk + 6))
                 ;;
             whisperx)
                 estimated_memory=$((estimated_memory + 8))

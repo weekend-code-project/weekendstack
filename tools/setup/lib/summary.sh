@@ -377,7 +377,7 @@ add_service_urls() {
     echo "- [Link Router](https://go.$lab_domain) - Go links service" >> "$summary_file"
     echo "" >> "$summary_file"
 
-    if [[ "$profiles_list" == *" all "* || "$profiles_list" == *" ai "* || "$profiles_list" == *" open-webui "* || "$profiles_list" == *" librechat "* || "$profiles_list" == *" anythingllm "* || "$profiles_list" == *" localai "* || "$profiles_list" == *" whisper "* || "$profiles_list" == *" whisperx "* || "$profiles_list" == *" privategpt "* || "$profiles_list" == *" searxng "* ]]; then
+    if [[ "$profiles_list" == *" all "* || "$profiles_list" == *" ai "* || "$profiles_list" == *" open-webui "* || "$profiles_list" == *" librechat "* || "$profiles_list" == *" anythingllm "* || "$profiles_list" == *" localai "* || "$profiles_list" == *" whisper "* || "$profiles_list" == *" whisperx "* || "$profiles_list" == *" privategpt "* || "$profiles_list" == *" searxng "* || "$profiles_list" == *" paperclip "* ]]; then
         has_ai_services=true
     fi
     
@@ -448,6 +448,9 @@ add_service_urls() {
         if [[ "$profiles_list" == *" all "* || "$profiles_list" == *" localai "* ]]; then
             echo "- [LocalAI](https://localai.$lab_domain) - OpenAI-compatible local API" >> "$summary_file"
         fi
+        if [[ "$profiles_list" == *" all "* || "$profiles_list" == *" paperclip "* ]]; then
+            echo "- [Paperclip](https://paperclip.$lab_domain) - AI company control plane" >> "$summary_file"
+        fi
         echo "" >> "$summary_file"
     fi
 }
@@ -488,6 +491,7 @@ display_summary_to_console() {
     local resourcespace_port=$(grep "^RESOURCESPACE_PORT=" "$stack_dir/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ' || echo "8099")
     local filebrowser_password=""
     local resourcespace_setup_url=""
+    local paperclip_setup_url=""
     
     # Define service subdomain mappings  
     declare -A service_subdomains=(
@@ -512,6 +516,7 @@ display_summary_to_console() {
         ["whisperx"]="whisperx"
         ["librechat"]="librechat"
         ["privategpt"]="privategpt"
+        ["paperclip"]="paperclip"
         # Productivity
         ["nocodb"]="nocodb"
         ["n8n"]="n8n"
@@ -591,6 +596,20 @@ display_summary_to_console() {
         filebrowser_password=$(get_filebrowser_initial_password)
     fi
 
+    if printf '%s\n' "$running_services" | grep -q '^paperclip$'; then
+        case "$access_mode" in
+            tunnel)
+                paperclip_setup_url="https://paperclip.${base_domain}"
+                ;;
+            local)
+                paperclip_setup_url="https://paperclip.${lab_domain}"
+                ;;
+            *)
+                paperclip_setup_url="http://${host_ip}:3100"
+                ;;
+        esac
+    fi
+
     if printf '%s\n' "$running_services" | grep -q '^resourcespace$'; then
         case "$access_mode" in
             tunnel)
@@ -654,7 +673,7 @@ display_summary_to_console() {
     echo "  • Service guides:   docs/"
     echo ""
 
-    if [[ -n "$filebrowser_password" || -n "$resourcespace_setup_url" ]]; then
+    if [[ -n "$filebrowser_password" || -n "$resourcespace_setup_url" || -n "$paperclip_setup_url" ]]; then
         echo -e "${BOLD}First-Time Service Setup:${NC}"
         if [[ -n "$filebrowser_password" ]]; then
             echo "  • File Browser first login:"
@@ -665,6 +684,11 @@ display_summary_to_console() {
             echo "  • ResourceSpace first run:"
             echo "    Open ${resourcespace_setup_url}"
             echo "    Complete the web installer to create the first admin account"
+        fi
+        if [[ -n "$paperclip_setup_url" ]]; then
+            echo "  • Paperclip first run:"
+            echo "    Open ${paperclip_setup_url}"
+            echo "    Create the first Paperclip account and company in the browser"
         fi
         echo ""
     fi

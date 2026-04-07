@@ -477,6 +477,98 @@ services:
       - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
 
   # =============================================================================
+  # PAPERCLIP - AI Company Control Plane
+  # =============================================================================
+  # Official Paperclip Docker image with embedded PostgreSQL and web onboarding.
+  # Create the first account and company in the browser on first boot.
+  # =============================================================================
+  paperclip:
+    image: ghcr.io/paperclipai/paperclip:latest
+    container_name: paperclip
+    restart: unless-stopped
+    networks:
+      - ai-network
+      - shared-network
+    profiles:
+      - paperclip
+    ports:
+      - "${PAPERCLIP_PORT:-3100}:3100"
+    entrypoint:
+      - /bin/sh
+      - -lc
+      - |
+        mkdir -p /paperclip
+        chown -R node:node /paperclip
+        exec /usr/local/bin/docker-entrypoint.sh node --import ./server/node_modules/tsx/dist/loader.mjs server/dist/index.js
+    environment:
+      - HOST=0.0.0.0
+      - PORT=3100
+      - SERVE_UI=true
+      - PAPERCLIP_HOME=/paperclip
+      - USER_UID=${PUID:-1000}
+      - USER_GID=${PGID:-1000}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - PAPERCLIP_DEPLOYMENT_MODE=${PAPERCLIP_DEPLOYMENT_MODE:-authenticated}
+      - PAPERCLIP_DEPLOYMENT_EXPOSURE=${PAPERCLIP_DEPLOYMENT_EXPOSURE:-private}
+      - PAPERCLIP_PUBLIC_URL=${PAPERCLIP_PUBLIC_URL:-http://localhost:3100}
+      - PAPERCLIP_ALLOWED_HOSTNAMES=${PAPERCLIP_ALLOWED_HOSTNAMES:-localhost,127.0.0.1}
+      - PAPERCLIP_TELEMETRY_DISABLED=${PAPERCLIP_TELEMETRY_DISABLED:-1}
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:-paperclip-better-auth-secret-change-me}
+    volumes:
+      - type: bind
+        source: ${DATA_BASE_DIR:-../data}/paperclip
+        target: /paperclip
+        bind:
+          create_host_path: true
+    deploy:
+      resources:
+        limits:
+          memory: ${PAPERCLIP_MEMORY_LIMIT:-2g}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3100/api/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    labels:
+      # Glance Configuration
+      - glance.id=paperclip
+      - glance.group=AI
+      - glance.name=Paperclip
+      - glance.icon=mdi:paperclip
+      - glance.url=/go/paperclip
+      - glance.description=AI company control plane
+
+      # Traefik Configuration
+      - traefik.enable=true
+
+      # External domain (HTTPS via Cloudflare)
+      - traefik.http.routers.paperclip-external.entrypoints=websecure
+      - "traefik.http.routers.paperclip-external.rule=Host(`paperclip.${BASE_DOMAIN}`)"
+      - traefik.http.routers.paperclip-external.tls=true
+      - traefik.http.routers.paperclip-external.middlewares=ai-services-auth@file
+      - traefik.http.routers.paperclip-external.service=paperclip
+
+      # Local .lab domain (HTTP)
+      - traefik.http.routers.paperclip-lab-http.entrypoints=web
+      - "traefik.http.routers.paperclip-lab-http.rule=Host(`paperclip.${LAB_DOMAIN}`)"
+      - traefik.http.routers.paperclip-lab-http.middlewares=redirect-to-https@file
+      - traefik.http.routers.paperclip-lab-http.service=paperclip
+      - traefik.http.routers.paperclip-lab-http.priority=21
+
+      # Local .lab domain (HTTPS)
+      - traefik.http.routers.paperclip-lab.entrypoints=websecure
+      - "traefik.http.routers.paperclip-lab.rule=Host(`paperclip.${LAB_DOMAIN}`)"
+      - traefik.http.routers.paperclip-lab.tls=true
+      - traefik.http.routers.paperclip-lab.service=paperclip
+      - traefik.http.routers.paperclip-lab.priority=21
+
+      # Service definition
+      - traefik.http.services.paperclip.loadbalancer.server.port=3100
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK}
+
+  # =============================================================================
   # WHISPER - Speech-to-Text API
   # =============================================================================
   # OpenAI Whisper for transcription and translation

@@ -22,6 +22,9 @@
   "searxng": [
     "searxng"
   ],
+  "paperclip": [
+    "paperclip"
+  ],
   "dev": [
     "coder",
     "coder-database",

@@ -1480,7 +1480,8 @@ preflight_fix_mounts() {
     # Evaluate variable references (DATA_BASE_DIR may itself contain vars)
     data_base=$(eval echo "$data_base")
     local -A dir_owners=(
-        ["$data_base/n8n"]="1000:1000"   # n8n runs as node (uid 1000)
+        ["$data_base/n8n"]="1000:1000"        # n8n runs as node (uid 1000)
+        ["$data_base/paperclip"]="1000:1000"  # Paperclip stores embedded DB under /paperclip
     )
     for dir in "${!dir_owners[@]}"; do
         if [[ ! -d "$dir" ]]; then

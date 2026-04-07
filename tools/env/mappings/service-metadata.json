@@ -77,6 +77,12 @@
     "template": "ai/searxng.env.example",
     "profile": "searxng"
   },
+  "paperclip": {
+    "display_name": "Paperclip",
+    "description": "AI company control plane",
+    "template": "ai/paperclip.env.example",
+    "profile": "paperclip"
+  },
   "anythingllm": {
     "display_name": "AnythingLLM",
     "description": "Full-stack LLM application",

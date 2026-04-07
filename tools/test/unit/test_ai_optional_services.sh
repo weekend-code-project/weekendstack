@@ -65,4 +65,43 @@ else
     test_fail "Expected assembled env to include SearXNG variables"
 fi
 
+test_case "Paperclip has its own compose profile"
+paperclip_profile=$(awk '
+    /^  paperclip:$/ { in_service=1; next }
+    in_service && /^  [a-z0-9-]+:$/ { exit }
+    in_service && /profiles:/ { getline; gsub(/^[[:space:]]*-[[:space:]]*/, "", $0); print; exit }
+' "$PROJECT_ROOT/compose/docker-compose.ai.yml")
+
+if [[ "$paperclip_profile" == "paperclip" ]]; then
+    test_pass
+else
+    test_fail "Expected paperclip profile, got '$paperclip_profile'"
+fi
+
+test_case "Paperclip metadata uses the paperclip profile"
+if jq -e '.paperclip.profile == "paperclip"' "$PROJECT_ROOT/tools/env/mappings/service-metadata.json" >/dev/null 2>&1; then
+    test_pass
+else
+    test_fail "service-metadata.json does not map paperclip to the paperclip profile"
+fi
+
+test_case "Paperclip profile mapping stays optional"
+if jq -e '.paperclip == ["paperclip"]' "$PROJECT_ROOT/tools/env/mappings/profile-to-services.json" >/dev/null 2>&1 && \
+   jq -e '.ai | index("paperclip") | not' "$PROJECT_ROOT/tools/env/mappings/profile-to-services.json" >/dev/null 2>&1; then
+    test_pass
+else
+    test_fail "Profile mappings still treat Paperclip as part of base ai"
+fi
+
+test_case "Assembled env includes Paperclip variables only when requested"
+create_temp_env
+
+if "$PROJECT_ROOT/tools/env/scripts/assemble-env.sh" --profiles "ai,paperclip" --output "$TEST_ENV" >/dev/null 2>&1 && \
+   grep -q '^PAPERCLIP_' "$TEST_ENV" && \
+   grep -q '^BETTER_AUTH_SECRET=' "$TEST_ENV"; then
+    test_pass
+else
+    test_fail "Expected assembled env to include Paperclip variables"
+fi
+
 test_suite_end

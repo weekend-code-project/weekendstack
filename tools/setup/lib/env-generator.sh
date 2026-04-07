@@ -392,6 +392,7 @@ generate_env_interactive() {
         echo "  2) SearXNG - Privacy-focused search engine         (~1GB RAM)"
         echo "  3) Whisper - OpenAI Whisper speech-to-text API     (~4GB RAM)"
         echo "  4) LocalAI - OpenAI-compatible local API server    (~4GB RAM)"
+        echo "  5) Paperclip - AI control plane for agent teams     (~2GB RAM)"
         echo ""
 
         local ai_extra_input
@@ -404,6 +405,7 @@ generate_env_interactive() {
                 2) ai_extra_services+=("searxng") ;;
                 3) ai_extra_services+=("whisper") ;;
                 4) ai_extra_services+=("localai") ;;
+                5) ai_extra_services+=("paperclip") ;;
                 *) log_warn "Unknown additional service option: $n (skipped)" ;;
             esac
         done
@@ -724,6 +726,29 @@ generate_env_interactive() {
         update_env_var "POSTIZ_BASE_URL" "https://postiz.${lab_domain}" "$env_file"
         update_env_var "NOCODB_PUBLIC_URL" "https://nocodb.${lab_domain}" "$env_file"
         update_env_var "SPEEDTEST_APP_URL" "https://speedtest.${lab_domain}" "$env_file"
+    fi
+
+    if [[ " ${ai_extra_services[*]} " == *" paperclip "* ]]; then
+        case "$access_mode" in
+            tunnel)
+                update_env_var "PAPERCLIP_PUBLIC_URL" "https://paperclip.${base_domain}" "$env_file"
+                update_env_var "PAPERCLIP_ALLOWED_HOSTNAMES" "paperclip.${base_domain},localhost,127.0.0.1" "$env_file"
+                update_env_var "PAPERCLIP_DEPLOYMENT_MODE" "authenticated" "$env_file"
+                update_env_var "PAPERCLIP_DEPLOYMENT_EXPOSURE" "public" "$env_file"
+                ;;
+            local)
+                update_env_var "PAPERCLIP_PUBLIC_URL" "https://paperclip.${lab_domain}" "$env_file"
+                update_env_var "PAPERCLIP_ALLOWED_HOSTNAMES" "paperclip.${lab_domain},localhost,127.0.0.1" "$env_file"
+                update_env_var "PAPERCLIP_DEPLOYMENT_MODE" "authenticated" "$env_file"
+                update_env_var "PAPERCLIP_DEPLOYMENT_EXPOSURE" "private" "$env_file"
+                ;;
+            *)
+                update_env_var "PAPERCLIP_PUBLIC_URL" "http://${host_ip}:${PAPERCLIP_PORT:-3100}" "$env_file"
+                update_env_var "PAPERCLIP_ALLOWED_HOSTNAMES" "${host_ip},localhost,127.0.0.1" "$env_file"
+                update_env_var "PAPERCLIP_DEPLOYMENT_MODE" "authenticated" "$env_file"
+                update_env_var "PAPERCLIP_DEPLOYMENT_EXPOSURE" "private" "$env_file"
+                ;;
+        esac
     fi
     
     # Set registry cache configuration
