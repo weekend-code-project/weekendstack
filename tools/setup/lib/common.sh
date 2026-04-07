@@ -618,18 +618,24 @@ validate_port() {
 # File operations
 backup_file() {
     local file="$1"
-    local timestamp=$(date +%Y%m%d-%H%M%S)
-    local backup_dir="${SCRIPT_DIR}/_trash"
+    local timestamp root_dir backup_dir backup_path
+    timestamp=$(date +%Y%m%d-%H%M%S)
+    root_dir="${SCRIPT_DIR:-${PROJECT_ROOT:-$(pwd)}}"
+    backup_dir="${root_dir}/_trash"
     
     if [[ ! -f "$file" ]]; then
         return 0
     fi
     
     mkdir -p "$backup_dir"
-    local backup_path="${backup_dir}/$(basename "$file").backup.$timestamp"
-    
-    cp "$file" "$backup_path"
-    log_success "Created backup: $backup_path"
+    backup_path="${backup_dir}/$(basename "$file").backup.$timestamp"
+
+    if cp "$file" "$backup_path"; then
+        log_success "Created backup: $backup_path"
+    else
+        log_warn "Failed to create backup: $backup_path"
+        return 1
+    fi
 }
 
 # System detection
