@@ -630,7 +630,7 @@ backup_file() {
     mkdir -p "$backup_dir"
     backup_path="${backup_dir}/$(basename "$file").backup.$timestamp"
 
-    if cp "$file" "$backup_path"; then
+    if cat "$file" > "$backup_path"; then
         log_success "Created backup: $backup_path"
     else
         log_warn "Failed to create backup: $backup_path"

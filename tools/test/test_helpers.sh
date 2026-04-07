@@ -69,6 +69,7 @@ cleanup_temp() {
 }
 
 backup_file() {
+    rm -f "$1.test-backup"
     if [ -f "$1" ]; then
         cp "$1" "$1.test-backup"
     fi
@@ -76,7 +77,8 @@ backup_file() {
 
 restore_file() {
     if [ -f "$1.test-backup" ]; then
-        mv "$1.test-backup" "$1"
+        cp "$1.test-backup" "$1"
+        rm -f "$1.test-backup"
     else
         rm -f "$1"
     fi

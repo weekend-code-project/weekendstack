@@ -70,8 +70,8 @@ refresh_traefik_auth_assets() {
 
     if [[ "$access_mode" == "tunnel" ]]; then
         if [[ -z "$tunnel_auth_pass" ]]; then
-            log_error "DEFAULT_TRAEFIK_AUTH_PASS is missing from $env_file"
-            return 1
+            tunnel_auth_pass="pending-$(date +%s)-$RANDOM-$RANDOM"
+            log_warn "Tunnel auth is not configured yet. External routes remain locked until you run ./configure.sh --tunnel-auth."
         fi
 
         if command -v htpasswd >/dev/null 2>&1; then

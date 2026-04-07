@@ -22,13 +22,14 @@ else
     test_fail "setup.sh should not run shared service-admin bootstrap tasks"
 fi
 
-test_case "env generator prompts for tunnel auth instead of shared app admins"
-if grep -q 'Traefik auth username' "$ENV_GENERATOR" && \
-   grep -q 'only for the Traefik basic-auth popup' "$ENV_GENERATOR" && \
+test_case "env generator defers tunnel auth collection to configure.sh"
+if grep -q './configure.sh --tunnel-auth' "$ENV_GENERATOR" && \
+   ! grep -q 'show_progress .*Tunnel Access Authentication' "$ENV_GENERATOR" && \
+   ! grep -q 'collect_tunnel_auth_credentials "\$traefik_auth_user"' "$ENV_GENERATOR" && \
    ! grep -q 'Customize admin credentials' "$ENV_GENERATOR"; then
     test_pass
 else
-    test_fail "env-generator should prompt only for tunnel auth credentials"
+    test_fail "env-generator should defer tunnel auth collection to configure.sh"
 fi
 
 test_case "setup uses tunnel auth credentials for htpasswd generation"
@@ -42,7 +43,8 @@ fi
 
 test_case "setup exposes a tunnel-auth-only recovery path"
 if grep -q -- '--tunnel-auth-only' "$SETUP_FILE" && \
-   grep -q 'run_tunnel_auth_setup_only' "$SETUP_FILE"; then
+   grep -q 'run_tunnel_auth_setup_only' "$SETUP_FILE" && \
+   grep -q './configure.sh --tunnel-auth' "$SETUP_FILE"; then
     test_pass
 else
     test_fail "setup.sh should expose a tunnel-auth-only recovery command"
@@ -76,7 +78,7 @@ fi
 
 test_case "resourcespace no longer auto-creates an admin account"
 if ! grep -q 'default_admin_username' "$RESOURCESPACE_ENTRYPOINT" && \
-   grep -q 'Complete account setup in the web UI' "$RESOURCESPACE_ENTRYPOINT"; then
+   grep -q 'Complete the first-run installer at /pages/setup.php' "$RESOURCESPACE_ENTRYPOINT"; then
     test_pass
 else
     test_fail "ResourceSpace entrypoint should no longer inject a default admin account"

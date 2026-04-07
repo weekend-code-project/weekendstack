@@ -223,7 +223,7 @@ uninstall: ## Run the uninstall script
 # =============================================================================
 
 cloudflare-setup: ## Run Cloudflare Tunnel setup wizard
-	@./setup.sh --cloudflare-only
+	@./configure.sh --cloudflare
 
 cert-setup: ## Generate and install local certificates
 	@./setup.sh --certs-only

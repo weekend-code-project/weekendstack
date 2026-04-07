@@ -40,6 +40,24 @@ else
 fi
 restore_file ".env"
 
+# Test 2b: Validation warns when tunnel auth is intentionally pending
+test_case "Validation warns when tunnel auth is pending configure"
+cd "$PROJECT_ROOT"
+backup_file ".env"
+
+./tools/env-template-gen.sh >/dev/null 2>&1
+cp .env.example .env
+perl -0pi -e 's/^DOMAIN_MODE=.*/DOMAIN_MODE=tunnel/m' .env
+perl -0pi -e 's/^DEFAULT_TRAEFIK_AUTH_PASS=.*/DEFAULT_TRAEFIK_AUTH_PASS=/m' .env
+perl -0pi -e 's/^HOST_IP=.*/HOST_IP=192.168.1.100/m' .env
+
+if ./tools/validate-env.sh 2>&1 | grep -q "./configure.sh --tunnel-auth"; then
+    test_pass
+else
+    test_fail "Should warn that tunnel auth is pending configure.sh"
+fi
+restore_file ".env"
+
 # Test 3: Validation catches empty required fields
 test_case "Validation detects empty required fields"
 cd "$PROJECT_ROOT"

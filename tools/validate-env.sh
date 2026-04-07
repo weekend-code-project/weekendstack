@@ -107,9 +107,6 @@ REQUIRED_VARS=(
 
 DOMAIN_MODE_VALUE=$(grep "^DOMAIN_MODE=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' "')
 DOMAIN_MODE_VALUE="${DOMAIN_MODE_VALUE:-ip}"
-if [[ "$DOMAIN_MODE_VALUE" == "tunnel" ]]; then
-    REQUIRED_VARS+=("DEFAULT_TRAEFIK_AUTH_PASS")
-fi
 
 for var in "${REQUIRED_VARS[@]}"; do
     VALUE=$(grep "^${var}=" .env | cut -d'=' -f2- | sed 's/#.*//' | tr -d ' ')
@@ -211,6 +208,11 @@ while IFS= read -r line; do
 done < .env
 
 DEFAULT_TRAEFIK_AUTH_PASS=$(grep "^DEFAULT_TRAEFIK_AUTH_PASS=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+if [[ "$DOMAIN_MODE_VALUE" == "tunnel" ]] && [ -z "$DEFAULT_TRAEFIK_AUTH_PASS" ]; then
+    echo -e "${YELLOW}  ⚠ DEFAULT_TRAEFIK_AUTH_PASS is not set yet${NC}"
+    echo "    Run: ./configure.sh --tunnel-auth"
+    WARNINGS=$((WARNINGS + 1))
+fi
 if [[ "$DOMAIN_MODE_VALUE" == "tunnel" ]] && [ -n "$DEFAULT_TRAEFIK_AUTH_PASS" ] && ! validate_shared_admin_password "$DEFAULT_TRAEFIK_AUTH_PASS"; then
     echo -e "${RED}  ✗ DEFAULT_TRAEFIK_AUTH_PASS ${SHARED_ADMIN_PASSWORD_ERROR}${NC}"
     ERRORS=$((ERRORS + 1))
@@ -248,7 +250,7 @@ if [[ "$CF_ENABLED" == "true" ]]; then
     # Check config file exists
     if [[ -n "$CF_CONFIG_FILE" ]] && [[ ! -f "$CF_CONFIG_FILE" ]]; then
         echo -e "${YELLOW}  ⚠ Cloudflare config file not found: $CF_CONFIG_FILE${NC}"
-        echo "    Run setup to create tunnel configuration"
+        echo "    Run ./configure.sh --cloudflare to create tunnel configuration"
         WARNINGS=$((WARNINGS + 1))
     fi
 
@@ -257,7 +259,7 @@ if [[ "$CF_ENABLED" == "true" ]]; then
         CF_CREDS_DIR=$(grep "^CLOUDFLARE_CREDENTIALS_DIR=" .env | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
         if [[ -n "$CF_CREDS_DIR" ]] && [[ ! -f "$CF_CREDS_DIR/$CF_TUNNEL_ID.json" ]]; then
             echo -e "${YELLOW}  ⚠ Cloudflare credentials file not found: $CF_CREDS_DIR/$CF_TUNNEL_ID.json${NC}"
-            echo "    Run setup to configure tunnel credentials"
+            echo "    Run ./configure.sh --cloudflare to configure tunnel credentials"
             WARNINGS=$((WARNINGS + 1))
         elif [[ -n "$CF_CREDS_DIR" ]] && [[ -f "$CF_CREDS_DIR/$CF_TUNNEL_ID.json" ]]; then
             echo -e "${GREEN}  ✓ Cloudflare credentials file found${NC}"
@@ -285,7 +287,7 @@ elif [[ -n "$CF_API_TOKEN" ]]; then
         fi
     fi
     if $_cf_token_ok; then
-        echo -e "${GREEN}  ✓ Cloudflare API token valid — run setup to configure tunnel${NC}"
+        echo -e "${GREEN}  ✓ Cloudflare API token valid — run ./configure.sh --cloudflare to configure tunnel${NC}"
     else
         echo -e "${RED}  ✗ Cloudflare API token invalid or unreachable${NC}"
         echo "    Check your token at: https://dash.cloudflare.com/profile/api-tokens"

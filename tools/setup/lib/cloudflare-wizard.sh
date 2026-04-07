@@ -159,14 +159,14 @@ setup_cloudflare_tunnel() {
     echo ""
     read -p "  Auto-configure with API key? [y/N]: " -r _cf_api_yn </dev/tty
     if [[ ! "$_cf_api_yn" =~ ^[Yy]$ ]]; then
-        log_info "Skipping Cloudflare Tunnel setup — run './setup.sh --cloudflare-only' later."
+        log_info "Skipping Cloudflare Tunnel setup — run './configure.sh --cloudflare' later."
         return 0
     fi
 
     local method
     read -p "  API token: " -r method </dev/tty
     if [[ -z "$method" ]]; then
-        log_info "No token entered — skipping. Run './setup.sh --cloudflare-only' later."
+        log_info "No token entered — skipping. Run './configure.sh --cloudflare' later."
         return 0
     fi
     export CLOUDFLARE_API_TOKEN="$method"
@@ -456,7 +456,7 @@ setup_tunnel_with_api() {
     if ! update_env_cloudflare "$tunnel_name" "$tunnel_id" "$domain"; then
         log_error "Cloudflare Tunnel setup is incomplete"
         log_info "The connector token could not be saved, so the tunnel cannot start yet."
-        log_info "Check the API token permissions, then rerun: ./setup.sh --cloudflare-only"
+        log_info "Check the API token permissions, then rerun: ./configure.sh --cloudflare"
         return 1
     fi
     
@@ -718,7 +718,7 @@ EOF
         done
     elif [[ -z "$tunnel_token" ]]; then
         log_error "Cloudflare account ID is missing; cannot fetch the connector token."
-        log_info "Rerun the Cloudflare wizard with: ./setup.sh --cloudflare-only"
+        log_info "Rerun the Cloudflare wizard with: ./configure.sh --cloudflare"
         sed -i "s|^CLOUDFLARE_TUNNEL_ENABLED=.*|CLOUDFLARE_TUNNEL_ENABLED=false|" "$env_file" 2>/dev/null || true
         return 1
     fi
@@ -754,7 +754,7 @@ EOF
         log_error "Could not retrieve tunnel connector token after $max_token_attempts attempts"
         log_warn "Tunnel is created but the connector token is missing."
         log_warn "The cloudflare-tunnel container will not start until a token is available."
-        log_info "To fix this later, run: ./setup.sh --cloudflare-only"
+        log_info "To fix this later, run: ./configure.sh --cloudflare"
         # Explicitly mark tunnel as disabled so setup.sh gives a clear message
         sed -i "s|^CLOUDFLARE_TUNNEL_ENABLED=.*|CLOUDFLARE_TUNNEL_ENABLED=false|" "$env_file" 2>/dev/null || true
         return 1

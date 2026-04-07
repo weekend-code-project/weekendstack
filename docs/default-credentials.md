@@ -1,11 +1,12 @@
-# Default Credentials Reference
+# Tunnel Auth Reference
 
 ## Traefik Authentication (External Access)
 
-All services without built-in authentication use a shared default credential for external access via `*.weekendcodeproject.dev`:
+Selected services without built-in authentication use a shared Traefik popup credential for external access via `*.weekendcodeproject.dev`.
+This is configured after setup with `./configure.sh --tunnel-auth`.
 
-**Username:** `admin`  
-**Password:** `CHANGEME1234`
+**Username:** Chosen during `./configure.sh --tunnel-auth`  
+**Password:** Chosen or generated during `./configure.sh --tunnel-auth`
 
 ### Services Using Default Auth
 
@@ -23,28 +24,23 @@ These services require the default Traefik credentials when accessed externally:
 
 When accessing services via `*.lab` domain on your local network, **no authentication is required** (trusted network pattern).
 
-### Changing the Default Password
+### Changing The Tunnel Password
 
-1. Update `DEFAULT_TRAEFIK_AUTH_PASS` in your `.env` file
-2. Generate new bcrypt hash:
-   ```bash
-   docker run --rm httpd:alpine htpasswd -nbB admin YOUR_NEW_PASSWORD
-   ```
-3. Update auth files in `config/traefik/auth/` with the new hash (remember to escape `$` as `$$` in YAML)
-4. Restart Traefik:
-   ```bash
-   docker compose restart traefik
-   ```
+Run:
+
+```bash
+./configure.sh --tunnel-auth
+```
 
 ## Configuration in .env
 
-Add these variables to your `.env` file (already included in System Configuration section):
+These variables are written into `.env` after configure:
 
 ```bash
 # Default Traefik Authentication
 # Used for external access to services without built-in auth
 DEFAULT_TRAEFIK_AUTH_USER=admin
-DEFAULT_TRAEFIK_AUTH_PASS=CHANGEME1234
+DEFAULT_TRAEFIK_AUTH_PASS=
 ``` & Access Guide
 
 > **⚠️ IMPORTANT:** These are the default credentials from `.env.example`. **Change all passwords in production!**

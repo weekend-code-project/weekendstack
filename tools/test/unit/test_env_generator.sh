@@ -98,11 +98,14 @@ test_case "Generated secrets are random/unique"
 cd "$PROJECT_ROOT"
 backup_file ".env"
 
-./tools/env-template-gen.sh >/dev/null 2>&1
-secret1=$(grep "^DEFAULT_DB_PASS=" .env | cut -d'=' -f2)
+env_one="$TEST_DIR/generated-1.env"
+env_two="$TEST_DIR/generated-2.env"
 
-./tools/env-template-gen.sh >/dev/null 2>&1
-secret2=$(grep "^DEFAULT_DB_PASS=" .env | cut -d'=' -f2)
+./tools/env-template-gen.sh .env.example "$env_one" >/dev/null 2>&1
+secret1=$(grep "^DEFAULT_DB_PASS=" "$env_one" | cut -d'=' -f2)
+
+./tools/env-template-gen.sh .env.example "$env_two" >/dev/null 2>&1
+secret2=$(grep "^DEFAULT_DB_PASS=" "$env_two" | cut -d'=' -f2)
 
 if [ "$secret1" != "$secret2" ] && [ -n "$secret1" ] && [ -n "$secret2" ]; then
     test_pass
@@ -148,18 +151,18 @@ else
 fi
 restore_file ".env"
 
-# Test 10: Generated tunnel auth password matches setup validation rules
-test_case "Generated DEFAULT_TRAEFIK_AUTH_PASS is valid for tunnel auth"
+# Test 10: Tunnel auth is deferred to configure.sh and not auto-generated in .env
+test_case "DEFAULT_TRAEFIK_AUTH_PASS stays blank until configure.sh runs"
 cd "$PROJECT_ROOT"
 backup_file ".env"
 
 ./tools/env-template-gen.sh >/dev/null 2>&1
 auth_pass=$(grep "^DEFAULT_TRAEFIK_AUTH_PASS=" .env | cut -d'=' -f2)
 
-if [ -n "$auth_pass" ] && validate_shared_admin_password "$auth_pass"; then
+if [ -z "$auth_pass" ]; then
     test_pass
 else
-    test_fail "Generated DEFAULT_TRAEFIK_AUTH_PASS is not valid for tunnel auth: $auth_pass"
+    test_fail "DEFAULT_TRAEFIK_AUTH_PASS should stay blank until configure.sh sets it: $auth_pass"
 fi
 restore_file ".env"
 

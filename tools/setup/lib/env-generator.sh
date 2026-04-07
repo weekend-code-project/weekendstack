@@ -123,7 +123,7 @@ generate_env_interactive() {
         fi
     done
 
-    local total_steps=4  # System Settings + Access Configuration + Admin Credentials + File Storage
+    local total_steps=4  # System Settings + Access Configuration + File Storage + Review
     if $has_dev; then
         ((total_steps++))
     fi
@@ -460,30 +460,10 @@ generate_env_interactive() {
         log_success "AI service configuration complete"
     fi
     
-    # ========================================================================
-    # STEP: Tunnel auth credentials (tunnel mode only)
-    # ========================================================================
-    _step=$((_step + 1))
-    show_progress $_step $total_steps "Tunnel Access Authentication"
-
     local traefik_auth_user="admin"
     local traefik_auth_password=""
-    local traefik_auth_password_generated=false
     local access_mode
     access_mode="$(normalize_access_mode "$domain_mode")"
-
-    if [[ "$access_mode" == "tunnel" ]]; then
-        if ! collect_tunnel_auth_credentials "$traefik_auth_user"; then
-            return 1
-        fi
-        traefik_auth_user="$COLLECTED_TRAEFIK_AUTH_USER"
-        traefik_auth_password="$COLLECTED_TRAEFIK_AUTH_PASSWORD"
-        traefik_auth_password_generated="$COLLECTED_TRAEFIK_AUTH_PASSWORD_GENERATED"
-
-        log_success "Tunnel auth configured"
-    else
-        log_info "Tunnel auth not needed for local-only access"
-    fi
     
     # ========================================================================
     # STEP: File Storage Paths
@@ -566,18 +546,16 @@ generate_env_interactive() {
         echo "  External Access:  disabled"
     fi
     echo ""
+    echo -e "${BOLD}Configure Later:${NC}"
     if [[ "$access_mode" == "tunnel" ]]; then
-        echo -e "${BOLD}Tunnel Auth:${NC}"
-        echo "  Username:         $traefik_auth_user"
-        if [[ "$traefik_auth_password_generated" == "true" ]]; then
-            echo "  Password:         (auto-generated)"
-        else
-            echo "  Password:         (custom - set)"
-        fi
-        echo ""
+        echo "  Tunnel auth:      run ./configure.sh --tunnel-auth"
+        echo "  Cloudflare:       run ./configure.sh --cloudflare"
     else
-        echo -e "${BOLD}Tunnel Auth:${NC}"
-        echo "  External auth:    not enabled"
+        echo "  Tunnel auth:      not needed for local-only access"
+    fi
+    if $has_dev; then
+        echo "  Coder templates:  run ./configure.sh --coder-templates"
+        echo "  Git SSH linking:  run ./configure.sh --git-ssh"
     fi
     echo ""
     echo -e "${BOLD}Storage:${NC}"
@@ -801,10 +779,6 @@ generate_env_interactive() {
     if $use_pihole; then
         profiles_csv="${profiles_csv},pihole"
     fi
-    if has_tunnel_access_mode "$domain_mode"; then
-        profiles_csv="${profiles_csv},external"
-    fi
-    
     # Write the full expanded profile list to COMPOSE_PROFILES in .env so that
     # start_services_with_profiles can read it back (avoiding the in-memory
     # selected_profiles array which only has the base profiles).
@@ -830,19 +804,10 @@ generate_env_interactive() {
     log_info "Final configuration saved to: .env"
     log_info "(Assembled from modular templates based on selected profiles)"
     
-    # Show generated Traefik auth password when tunnel mode requested auto-generation.
-    if [[ "$access_mode" == "tunnel" ]] && [[ -z "$traefik_auth_password" ]]; then
-        local generated_password
-        generated_password=$(grep "^DEFAULT_TRAEFIK_AUTH_PASS=" "$env_file" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+    if [[ "$access_mode" == "tunnel" ]]; then
         echo ""
-        log_warn "IMPORTANT - Save this external Traefik auth password:"
-        echo ""
-        echo -e "${BOLD}  Username: $traefik_auth_user${NC}"
-        echo -e "${BOLD}  Password: $generated_password${NC}"
-        echo ""
-        log_warn "This is only used for external tunnel auth popups."
-        echo ""
-        pause_for_enter
+        log_info "Tunnel access still needs manual configuration."
+        log_info "Run ./configure.sh --all after services are up to set tunnel auth and Cloudflare."
     fi
 }
 

@@ -183,7 +183,7 @@ catalog_build_effective_profiles() {
 
     case "$access_mode" in
         tunnel)
-            effective_profiles+=("networking" "external")
+            effective_profiles+=("networking")
             ;;
         local)
             effective_profiles+=("networking")

@@ -26,7 +26,8 @@ restore_optional_file() {
     local backup_path="$2"
 
     if [[ -f "$backup_path" ]]; then
-        mv "$backup_path" "$target_path"
+        cp "$backup_path" "$target_path"
+        rm -f "$backup_path"
     else
         rm -f "$target_path"
     fi
@@ -111,5 +112,35 @@ else
 fi
 
 restore_optional_file ".env" "$TEST_DIR/original.env.console"
+
+test_case "summary prompts users to run configure.sh when tunnel auth is still pending"
+cd "$PROJECT_ROOT"
+save_optional_file ".env" "$TEST_DIR/original.env.pending"
+save_optional_file "SETUP_SUMMARY.md" "$TEST_DIR/original.SETUP_SUMMARY.pending.md"
+
+cat > .env <<'EOF'
+HOST_IP=192.168.2.195
+LAB_DOMAIN=lab
+BASE_DOMAIN=weekendcodeproject.dev
+DOMAIN_MODE=tunnel
+DEFAULT_TRAEFIK_AUTH_USER=edge
+DEFAULT_TRAEFIK_AUTH_PASS=
+COMPOSE_PROFILES=core,dev,networking
+EOF
+
+if generate_setup_summary core dev; then
+    if grep -q 'Run `./configure.sh --tunnel-auth` before exposing tunnel routes' SETUP_SUMMARY.md && \
+       grep -q '`./configure.sh --coder-templates`' SETUP_SUMMARY.md && \
+       grep -q '`./configure.sh --git-ssh`' SETUP_SUMMARY.md; then
+        test_pass
+    else
+        test_fail "Summary file did not point users at configure.sh when tunnel auth was pending"
+    fi
+else
+    test_fail "generate_setup_summary returned non-zero for pending configure summary"
+fi
+
+restore_optional_file "SETUP_SUMMARY.md" "$TEST_DIR/original.SETUP_SUMMARY.pending.md"
+restore_optional_file ".env" "$TEST_DIR/original.env.pending"
 
 test_suite_end

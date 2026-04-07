@@ -48,7 +48,7 @@ test_case "setup explains when the Coder shared SSH key cannot be fetched yet"
 if grep -q '^show_coder_git_ssh_key_unavailable()' "$SETUP_FILE" && \
    grep -q "Git SSH Key Setup Pending" "$SETUP_FILE" && \
    grep -q "Coder session token is missing from .env." "$SETUP_FILE" && \
-   grep -q "./setup.sh --ssh-key-only" "$SETUP_FILE"; then
+   grep -q "./configure.sh --git-ssh" "$SETUP_FILE"; then
     test_pass
 else
     test_fail "Expected setup.sh to explain why Git SSH key setup was skipped and how to rerun it"

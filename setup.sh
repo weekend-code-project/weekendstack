@@ -78,17 +78,17 @@ OPTIONS:
     -i, --interactive       Interactive setup (default)
     --skip-auth             Skip Docker registry authentication
     --skip-pull             Skip image pulling
-    --skip-cloudflare       Skip Cloudflare Tunnel setup
+    --skip-cloudflare       Legacy flag; Cloudflare is now configured via configure.sh
     --skip-certs            Skip certificate generation
     --reconfigure           Force full configuration wizard (ignore existing .env)
     --dry-run               Show what would be done without executing
     --validate              Validate configuration without starting services
     --status                Show current deployment status
     --rollback              Restore previous .env from backup
-    --cloudflare-only       Run only the Cloudflare Tunnel setup wizard
+    --cloudflare-only       Legacy alias for ./configure.sh --cloudflare
     --certs-only            Run only certificate generation and CA installation
-    --ssh-key-only          Run only the Coder Git provider SSH-key setup step
-    --tunnel-auth-only      Run only the external Traefik auth reset step
+    --ssh-key-only          Legacy alias for ./configure.sh --git-ssh
+    --tunnel-auth-only      Legacy alias for ./configure.sh --tunnel-auth
     --docker-only           Run only Docker registry authentication
     --plan                  Generate an install/add/repair plan from config or existing .env
     --apply                 Apply weekendstack.config.json non-interactively
@@ -126,9 +126,13 @@ EXAMPLES:
     # Start services
     $0 --start
 
+    # Finish secrets and manual integrations after setup
+    ./configure.sh --all
+
 DOCUMENTATION:
     See docs/setup-script-guide.md for detailed instructions
     See SETUP_SUMMARY.md (after setup) for service URLs and credentials
+    Run ./configure.sh after setup for Cloudflare, tunnel auth, Git SSH, and Coder templates
 
 EOF
 }
@@ -184,31 +188,38 @@ parse_args() {
                 shift
                 ;;
             --validate)
+                load_setup_libraries interactive
                 validate_configuration
                 exit $?
                 ;;
             --status)
+                load_setup_libraries interactive
                 show_deployment_status
                 exit $?
                 ;;
             --rollback)
+                load_setup_libraries interactive
                 rollback_configuration
                 exit $?
                 ;;
             --start)
+                load_setup_libraries interactive
                 start_services
                 exit $?
                 ;;
             --stop)
+                load_setup_libraries interactive
                 stop_services
                 exit $?
                 ;;
             --restart)
+                load_setup_libraries interactive
                 restart_services
                 exit $?
                 ;;
             --cloudflare-only)
                 # Load .env if it exists
+                load_setup_libraries interactive
                 if [[ -f "$SCRIPT_DIR/.env" ]]; then
                     set -a; source "$SCRIPT_DIR/.env"; set +a
                 fi
@@ -217,6 +228,7 @@ parse_args() {
                 ;;
             --certs-only)
                 # Load .env if it exists
+                load_setup_libraries interactive
                 if [[ -f "$SCRIPT_DIR/.env" ]]; then
                     set -a; source "$SCRIPT_DIR/.env"; set +a
                 fi
@@ -225,6 +237,7 @@ parse_args() {
                 ;;
             --ssh-key-only)
                 # Load .env if it exists
+                load_setup_libraries interactive
                 if [[ -f "$SCRIPT_DIR/.env" ]]; then
                     set -a; source "$SCRIPT_DIR/.env"; set +a
                 fi
@@ -233,6 +246,7 @@ parse_args() {
                 ;;
             --tunnel-auth-only)
                 # Load .env if it exists
+                load_setup_libraries interactive
                 if [[ -f "$SCRIPT_DIR/.env" ]]; then
                     set -a; source "$SCRIPT_DIR/.env"; set +a
                 fi
@@ -240,6 +254,7 @@ parse_args() {
                 exit $?
                 ;;
             --docker-only)
+                load_setup_libraries interactive
                 source "$SCRIPT_DIR/tools/setup/lib/docker-auth.sh"
                 docker_login_hub
                 exit $?
@@ -591,7 +606,7 @@ show_coder_git_ssh_key_unavailable() {
 
     echo "" >&2
     echo "  Rerun this step after Coder is reachable with:" >&2
-    echo "  ./setup.sh --ssh-key-only" >&2
+    echo "  ./configure.sh --git-ssh" >&2
     echo "" >&2
 }
 
@@ -878,8 +893,48 @@ run_tunnel_auth_setup_only() {
     echo "  Password: ${COLLECTED_TRAEFIK_AUTH_PASSWORD}" >&2
     echo "" >&2
     echo "  You can rerun this anytime with:" >&2
-    echo "  ./setup.sh --tunnel-auth-only" >&2
+    echo "  ./configure.sh --tunnel-auth" >&2
     echo "" >&2
+}
+
+refresh_setup_outputs() {
+    local profiles_raw
+    local -a summary_profiles=()
+
+    if [[ ! -f "$SCRIPT_DIR/.env" ]]; then
+        return 0
+    fi
+
+    profiles_raw=$(grep "^COMPOSE_PROFILES=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2- | tr -d '"')
+    if [[ -n "$profiles_raw" ]]; then
+        local IFS=','
+        read -r -a summary_profiles <<< "$profiles_raw"
+        generate_setup_summary "${summary_profiles[@]}" >/dev/null 2>&1 || true
+    fi
+
+    if [[ -f "$(setup_engine_default_config_path)" ]]; then
+        setup_engine_write_plan_file "$(setup_engine_default_config_path)" >/dev/null 2>&1 || true
+        setup_engine_write_state "$(setup_engine_default_config_path)" "interactive" "" >/dev/null 2>&1 || true
+    fi
+}
+
+start_cloudflare_tunnel_if_configured() {
+    local env_file="$SCRIPT_DIR/.env"
+    local cf_token
+
+    [[ -f "$env_file" ]] || return 0
+
+    cf_token=$(get_env_value "CLOUDFLARE_TUNNEL_TOKEN" "$env_file" 2>/dev/null || true)
+    if [[ -z "$cf_token" ]]; then
+        log_info "Cloudflare tunnel token is still missing. Run ./configure.sh --cloudflare to finish external access."
+        return 0
+    fi
+
+    if docker compose --profile external up -d cloudflare-tunnel >/dev/null 2>&1; then
+        log_success "Cloudflare tunnel started"
+    else
+        log_warn "Cloudflare tunnel did not start cleanly. Check: docker compose --profile external logs cloudflare-tunnel"
+    fi
 }
 
 # Trigger the first speedtest immediately after setup so the Glance widget
@@ -1142,7 +1197,7 @@ main_setup() {
     
     # Check if user wants templates-only mode
     if [[ "${selected_profiles[0]}" == "TEMPLATES_ONLY_MODE" ]]; then
-        deploy_coder_templates_interactive
+        bash "$SCRIPT_DIR/configure.sh" --coder-templates
         echo ""
         log_success "Template management complete!"
         log_info "To make changes to services, run ./setup.sh again"
@@ -1248,21 +1303,16 @@ main_setup() {
         exit 1
     fi
     
-    # 9. Cloudflare Tunnel setup (when external domain is configured)
-    show_setup_progress "Cloudflare Tunnel Configuration"
+    # 9. Configure handoff
+    show_setup_progress "Configure Handoff"
     local _domain_mode
     _domain_mode=$(grep "^DOMAIN_MODE=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d ' "')
-    if ! $SKIP_CLOUDFLARE && [[ "$SETUP_MODE" == "interactive" ]] && \
-       has_tunnel_access_mode "$_domain_mode"; then
-        setup_cloudflare_tunnel || log_warn "Cloudflare Tunnel setup skipped"
-    elif [[ "$(normalize_access_mode "$_domain_mode")" != "tunnel" ]]; then
-        log_info "No external domain configured — skipping Cloudflare Tunnel setup"
+    if has_tunnel_access_mode "$_domain_mode"; then
+        log_info "Tunnel access selected — finish external auth and Cloudflare with:"
+        log_info "  ./configure.sh --all"
     else
-        log_info "Skipping Cloudflare Tunnel setup (--skip-cloudflare or quick mode)"
+        log_info "No tunnel-specific configuration is needed for this access mode"
     fi
-    # Immediately update custom profile after wizard so the tunnel service
-    # is included even if the user skips starting services
-    ensure_cloudflare_in_custom_profile
 
     # 10. Certificate setup (when local domain / Pi-hole is configured)
     # Generates self-signed CA + wildcard cert for local *.lab HTTPS access
@@ -1413,7 +1463,7 @@ main_setup() {
             else
                 log_warn "Cloudflare tunnel enabled but connector token is missing."
                 log_warn "  The cloudflare-tunnel container will NOT start."
-                log_info "  Fix: run './setup.sh --cloudflare-only' to re-fetch the connector token."
+                log_info "  Fix: run './configure.sh --cloudflare' to re-fetch the connector token."
                 log_info "  Then start services again with: docker compose --profile external up -d cloudflare-tunnel"
             fi
         fi
@@ -1421,12 +1471,6 @@ main_setup() {
 
         # Trigger the first speedtest so the Glance widget has data immediately
         provision_speedtest_initial_run
-
-        # Deploy Coder templates if dev profile was selected (or 'all')
-        if [[ " ${selected_profiles[*]} " =~ " dev " ]] || [[ " ${selected_profiles[*]} " =~ " all " ]]; then
-            deploy_coder_templates_interactive
-            setup_coder_git_provider_ssh_keys
-        fi
 
         # Kavita Glance widget — runs after services are up so Kavita is accessible
         if [[ "$SETUP_MODE" == "interactive" ]] && \
@@ -1440,6 +1484,8 @@ main_setup() {
         prompt_for_post_install_cleanup
 
         display_summary_to_console
+        echo ""
+        log_info "Next: run ./configure.sh --all to finish tunnel auth, Cloudflare, Git SSH, and Coder template setup."
 
         if [[ -f "$(setup_engine_default_config_path)" ]]; then
             setup_engine_write_state "$(setup_engine_default_config_path)" "interactive" "" >/dev/null 2>&1 || true
@@ -1449,6 +1495,9 @@ main_setup() {
         echo ""
         echo "To start services later:"
         echo "  docker compose up -d"
+        echo ""
+        echo "After services are running, finish manual integrations with:"
+        echo "  ./configure.sh --all"
         echo ""
         if [[ -f "$(setup_engine_default_config_path)" ]]; then
             setup_engine_write_state "$(setup_engine_default_config_path)" "interactive" "" >/dev/null 2>&1 || true
@@ -1916,5 +1965,6 @@ main() {
     main_setup
 }
 
-# Run main function
-main "$@"
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    main "$@"
+fi

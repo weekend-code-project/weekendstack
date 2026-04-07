@@ -2,6 +2,15 @@
 
 WeekendStack now supports a declarative setup flow alongside the interactive installer.
 
+The user-facing flow is now:
+
+1. `install.sh`
+   - bootstrap host prerequisites and repo checkout
+2. `setup.sh`
+   - choose services and generate/apply desired state
+3. `configure.sh`
+   - collect secrets and finish manual external integrations like tunnel auth, Cloudflare, Git SSH, and Coder templates
+
 ## Canonical Files
 
 - `weekendstack.config.json`
@@ -40,6 +49,14 @@ WeekendStack now supports a declarative setup flow alongside the interactive ins
 ./setup.sh --repair --scope network
 ./setup.sh --repair --scope auth
 ./setup.sh --repair --scope storage
+
+# Finish human-owned configuration after setup/apply
+./configure.sh --all
+./configure.sh --status
+./configure.sh --tunnel-auth
+./configure.sh --cloudflare
+./configure.sh --git-ssh
+./configure.sh --coder-templates
 ```
 
 ## One-Line Installs
@@ -52,6 +69,7 @@ curl -fsSL https://raw.githubusercontent.com/weekend-code-project/weekendstack/m
 ```
 
 `install.sh` downloads that config into the repo root and then runs `setup.sh --apply --config weekendstack.config.json`.
+After apply, agents or setup summaries should prompt the user to run `./configure.sh --all` when tunnel or development integrations are still pending.
 
 ## Service Catalog
 

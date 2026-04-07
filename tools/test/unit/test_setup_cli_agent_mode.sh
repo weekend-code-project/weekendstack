@@ -13,7 +13,7 @@ cat > "$TEST_CONFIG" <<EOF
 {
   "version": 1,
   "system": {"computer_name":"agentbox","host_ip":"192.168.2.50","timezone":"America/New_York","puid":1000,"pgid":1000},
-  "access": {"mode":"tunnel","lab_domain":"lab","base_domain":"weekendcodeproject.dev","local_dns_mode":"none","tunnel_auth":{"username":"weekend","password":"StrongPass123"}},
+  "access": {"mode":"tunnel","lab_domain":"lab","base_domain":"weekendcodeproject.dev","local_dns_mode":"none","tunnel_auth":{"username":"weekend","password":""}},
   "selection": {"profiles":["core","ai"],"services":["open-webui","paperclip"],"ai_runtime":"cpu"},
   "paths": {"files_base_dir":"$TEST_DIR/files","data_base_dir":"$TEST_DIR/data","workspace_dir":"$TEST_DIR/workspace","ssh_key_dir":"$TEST_DIR/ssh"},
   "cloudflare": {"enabled":true,"api_token":"","tunnel_id":"","tunnel_name":"weekendstack-tunnel","account_id":"","tunnel_token":""},
@@ -25,11 +25,12 @@ test_case "setup.sh --plan emits machine-readable JSON"
 plan_output="$(bash "$PROJECT_ROOT/setup.sh" --plan --config "$TEST_CONFIG" --json)"
 plan_mode="$(printf '%s' "$plan_output" | jq -r '.access_mode')"
 plan_profiles="$(printf '%s' "$plan_output" | jq -r '.effective_profiles | join(",")')"
+configure_actions="$(printf '%s' "$plan_output" | jq -r '.configure_actions | map(.id) | join(",")')"
 
-if [[ "$plan_mode" == "tunnel" ]] && [[ "$plan_profiles" == *"external"* ]]; then
+if [[ "$plan_mode" == "tunnel" ]] && [[ "$plan_profiles" == *"networking"* ]] && [[ "$plan_profiles" != *"external"* ]] && [[ "$configure_actions" == *"tunnel-auth"* ]] && [[ "$configure_actions" == *"cloudflare"* ]]; then
     test_pass
 else
-    test_fail "Unexpected CLI plan output: mode=$plan_mode profiles=$plan_profiles"
+    test_fail "Unexpected CLI plan output: mode=$plan_mode profiles=$plan_profiles actions=$configure_actions"
 fi
 
 test_case "setup.sh --doctor emits machine-readable JSON"

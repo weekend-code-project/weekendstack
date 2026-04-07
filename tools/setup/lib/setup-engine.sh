@@ -277,27 +277,29 @@ setup_engine_normalize_config() {
         | .options.cleanup_mode = (.options.cleanup_mode // "auto")
     ' "$config_file" > "$temp_file"
 
-    if [[ "$(jq -r '.access.mode' "$temp_file")" == "tunnel" ]] && \
-       [[ -z "$(jq -r '.access.tunnel_auth.password // empty' "$temp_file")" ]]; then
-        local generated_password
-        generated_password="$(generate_shared_admin_password)"
-        jq --arg password "$generated_password" '.access.tunnel_auth.password = $password' "$temp_file" > "${temp_file}.next"
-        replace_file_safely "${temp_file}.next" "$temp_file"
-    fi
-
     replace_file_safely "$temp_file" "$config_file"
 }
 
 setup_engine_effective_profiles_csv() {
     local config_file="$1"
     local access_mode local_dns_mode ai_runtime base_profiles_csv selected_services_csv
+    local cloudflare_ready=false
     access_mode="$(jq -r '.access.mode // "ip"' "$config_file")"
     local_dns_mode="$(jq -r '.access.local_dns_mode // "none"' "$config_file")"
     ai_runtime="$(jq -r '.selection.ai_runtime // "none"' "$config_file")"
     base_profiles_csv="$(jq -r '.selection.profiles // [] | join(",")' "$config_file")"
     selected_services_csv="$(jq -r '.selection.services // [] | join(",")' "$config_file")"
+    if [[ "$access_mode" == "tunnel" ]] && \
+       { [[ -n "$(jq -r '.cloudflare.api_token // empty' "$config_file")" ]] || [[ -n "$(jq -r '.cloudflare.tunnel_token // empty' "$config_file")" ]]; }; then
+        cloudflare_ready=true
+    fi
 
-    catalog_build_effective_profiles "$access_mode" "$local_dns_mode" "$ai_runtime" "$base_profiles_csv" "$selected_services_csv" | setup_engine_csv_from_lines
+    {
+        catalog_build_effective_profiles "$access_mode" "$local_dns_mode" "$ai_runtime" "$base_profiles_csv" "$selected_services_csv"
+        if $cloudflare_ready; then
+            printf '%s\n' "external"
+        fi
+    } | setup_engine_csv_from_lines
 }
 
 setup_engine_effective_services_csv() {
@@ -331,11 +333,57 @@ setup_engine_required_directories_json() {
     printf '%s\n' "${dirs[@]}" | awk 'NF && !seen[$0]++' | jq -R . | jq -s .
 }
 
+setup_engine_configure_actions_json() {
+    local config_file="$1"
+    local access_mode effective_profiles_csv tunnel_auth_password cloudflare_api_token cloudflare_tunnel_token
+
+    access_mode="$(jq -r '.access.mode // "ip"' "$config_file")"
+    effective_profiles_csv="$(setup_engine_effective_profiles_csv "$config_file")"
+    tunnel_auth_password="$(jq -r '.access.tunnel_auth.password // ""' "$config_file")"
+    cloudflare_api_token="$(jq -r '.cloudflare.api_token // ""' "$config_file")"
+    cloudflare_tunnel_token="$(jq -r '.cloudflare.tunnel_token // ""' "$config_file")"
+
+    {
+        if [[ "$access_mode" == "tunnel" && -z "$tunnel_auth_password" ]]; then
+            jq -nc \
+                --arg id "tunnel-auth" \
+                --arg title "Configure tunnel auth" \
+                --arg command "./configure.sh --tunnel-auth" \
+                --arg reason "Tunnel access is selected, but the Traefik auth popup credentials have not been configured yet." \
+                '{id:$id, title:$title, command:$command, reason:$reason}'
+        fi
+
+        if [[ "$access_mode" == "tunnel" && -z "$cloudflare_api_token" && -z "$cloudflare_tunnel_token" ]]; then
+            jq -nc \
+                --arg id "cloudflare" \
+                --arg title "Configure Cloudflare Tunnel" \
+                --arg command "./configure.sh --cloudflare" \
+                --arg reason "Tunnel access is selected, but Cloudflare credentials have not been configured yet." \
+                '{id:$id, title:$title, command:$command, reason:$reason}'
+        fi
+
+        if [[ ",${effective_profiles_csv}," == *",dev,"* ]]; then
+            jq -nc \
+                --arg id "coder-templates" \
+                --arg title "Install Coder templates" \
+                --arg command "./configure.sh --coder-templates" \
+                --arg reason "Development mode is enabled, so the bundled Coder templates still need to be pushed into the running Coder instance." \
+                '{id:$id, title:$title, command:$command, reason:$reason}'
+            jq -nc \
+                --arg id "git-ssh" \
+                --arg title "Link the shared Coder SSH key" \
+                --arg command "./configure.sh --git-ssh" \
+                --arg reason "Development mode is enabled, so the shared Coder workspace SSH key still needs to be linked to GitHub or Gitea for SSH-based clones." \
+                '{id:$id, title:$title, command:$command, reason:$reason}'
+        fi
+    } | jq -s '.'
+}
+
 setup_engine_plan_json() {
     local config_file="$1"
     local effective_profiles_csv effective_services_csv selected_services_csv access_mode base_domain lab_domain host_ip
     local required_memory required_disk available_memory available_root_disk available_data_disk gpu_available local_dns_mode
-    local blockers_json warnings_json manual_followups_json
+    local blockers_json warnings_json manual_followups_json configure_actions_json
 
     effective_profiles_csv="$(setup_engine_effective_profiles_csv "$config_file")"
     effective_services_csv="$(setup_engine_effective_services_csv "$config_file")"
@@ -368,7 +416,10 @@ setup_engine_plan_json() {
 
     warnings_json="$(
         {
-            if [[ "$access_mode" == "tunnel" && -z "$(jq -r '.cloudflare.api_token // empty' "$config_file")" ]]; then
+            if [[ "$access_mode" == "tunnel" && -z "$(jq -r '.access.tunnel_auth.password // empty' "$config_file")" ]]; then
+                printf 'Tunnel mode is selected but tunnel auth is not configured yet; run ./configure.sh --tunnel-auth after setup.\n'
+            fi
+            if [[ "$access_mode" == "tunnel" && -z "$(jq -r '.cloudflare.api_token // empty' "$config_file")" && -z "$(jq -r '.cloudflare.tunnel_token // empty' "$config_file")" ]]; then
                 printf 'Tunnel mode is selected but no Cloudflare API token is configured; external routing will remain pending.\n'
             fi
             if [[ "$access_mode" == "local" && "$local_dns_mode" == "manual" ]]; then
@@ -381,6 +432,7 @@ setup_engine_plan_json() {
     )"
 
     manual_followups_json="$(catalog_manual_followups_json "$effective_services_csv" "$access_mode" "$base_domain" "$lab_domain" "$host_ip")"
+    configure_actions_json="$(setup_engine_configure_actions_json "$config_file")"
 
     jq -n \
         --arg generated_at "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
@@ -394,6 +446,7 @@ setup_engine_plan_json() {
         --argjson selected_profiles "$(jq '.selection.profiles // []' "$config_file")" \
         --argjson selected_services "$(jq '.selection.services // []' "$config_file")" \
         --argjson manual_followups "$manual_followups_json" \
+        --argjson configure_actions "$configure_actions_json" \
         --argjson cleanup_mode "$(jq '.options.cleanup_mode' "$config_file")" \
         --argjson generated_artifacts '[".env","docker-compose.custom.yml","SETUP_SUMMARY.md","setup-state.json"]' \
         --arg required_memory "$required_memory" \
@@ -441,7 +494,8 @@ setup_engine_plan_json() {
               "currently required images"
             ]
           },
-          manual_followups: $manual_followups
+          manual_followups: $manual_followups,
+          configure_actions: $configure_actions
         }
         '
 }
@@ -453,10 +507,11 @@ setup_engine_write_plan_file() {
 
 setup_engine_render_plan_text() {
     local plan_file="${1:-$(setup_engine_plan_path)}"
-    local blockers_count warnings_count manual_count
+    local blockers_count warnings_count manual_count configure_count
     blockers_count="$(jq '.host_checks.blockers | length' "$plan_file")"
     warnings_count="$(jq '.host_checks.warnings | length' "$plan_file")"
     manual_count="$(jq '.manual_followups | length' "$plan_file")"
+    configure_count="$(jq '.configure_actions | length' "$plan_file")"
 
     log_header "WeekendStack Plan"
     echo "  Config: $(jq -r '.config_file' "$plan_file")"
@@ -483,6 +538,12 @@ setup_engine_render_plan_text() {
     if (( manual_count > 0 )); then
         log_info "Manual follow-ups:"
         jq -r '.manual_followups[] | "  - " + .display_name + " (" + .mode + ")" + (if .url != "" then ": " + .url else "" end)' "$plan_file"
+        echo ""
+    fi
+
+    if (( configure_count > 0 )); then
+        log_info "Run configure.sh after setup:"
+        jq -r '.configure_actions[] | "  - " + .command + " — " + .reason' "$plan_file"
         echo ""
     fi
 
@@ -676,6 +737,7 @@ setup_engine_write_state() {
     local state_file
     local effective_profiles_csv effective_services_csv access_mode base_domain lab_domain host_ip root docker_ok
     local generated_creds_json service_entries_json running_services_json followups_json filebrowser_password
+    local configure_actions_json
     local service url status health_state
 
     root="$(setup_engine_root)"
@@ -687,6 +749,7 @@ setup_engine_write_state() {
     lab_domain="$(jq -r '.access.lab_domain // "lab"' "$config_file")"
     host_ip="$(jq -r '.system.host_ip // ""' "$config_file")"
     followups_json="$(catalog_manual_followups_json "$effective_services_csv" "$access_mode" "$base_domain" "$lab_domain" "$host_ip")"
+    configure_actions_json="$(setup_engine_configure_actions_json "$config_file")"
 
     if docker compose version >/dev/null 2>&1; then
         docker_ok=true
@@ -737,8 +800,20 @@ setup_engine_write_state() {
         --arg filebrowser_password "$filebrowser_password" \
         '
         {
-          traefik_auth: (if $access_mode == "tunnel" then {username:$traefik_user, password:$traefik_pass} else null end),
-          filebrowser: (if $filebrowser_password != "" then {username:"admin", password:$filebrowser_password} else null end)
+          traefik_auth: (
+            if $access_mode == "tunnel" then
+              {configured: ($traefik_pass != ""), username: (if $traefik_pass != "" then $traefik_user else "" end)}
+            else
+              null
+            end
+          ),
+          filebrowser: (
+            if $filebrowser_password != "" then
+              {username:"admin", password_captured:true, source:"container-logs"}
+            else
+              null
+            end
+          )
         }
         '
     )"
@@ -753,6 +828,7 @@ setup_engine_write_state() {
         --arg effective_profiles_csv "$effective_profiles_csv" \
         --arg effective_services_csv "$effective_services_csv" \
         --argjson manual_followups "$followups_json" \
+        --argjson configure_actions "$configure_actions_json" \
         --argjson generated_credentials "$generated_creds_json" \
         --argjson services "$service_entries_json" \
         '
@@ -770,6 +846,7 @@ setup_engine_write_state() {
             summary: "SETUP_SUMMARY.md"
           },
           generated_credentials: $generated_credentials,
+          configure_actions: $configure_actions,
           manual_followups: $manual_followups,
           health: {
             docker_available: true,
@@ -855,7 +932,7 @@ setup_engine_apply_config() {
 setup_engine_doctor_json() {
     local config_file="${1:-}"
     local config_exists env_exists state_exists summary_exists custom_profile_exists docker_ok compose_ok
-    local expected_profiles_csv current_profiles_csv drift_profiles registry_issue
+    local expected_profiles_csv current_profiles_csv drift_profiles registry_issue configure_actions_json
 
     if [[ -n "$config_file" && -f "$config_file" ]]; then
         config_exists=true
@@ -878,6 +955,9 @@ setup_engine_doctor_json() {
     drift_profiles=false
     if $config_exists; then
         expected_profiles_csv="$(setup_engine_effective_profiles_csv "$config_file")"
+        configure_actions_json="$(setup_engine_configure_actions_json "$config_file")"
+    else
+        configure_actions_json='[]'
     fi
     if $env_exists; then
         current_profiles_csv="$(get_env_value "COMPOSE_PROFILES" "$(setup_engine_root)/.env" 2>/dev/null || true)"
@@ -901,6 +981,7 @@ setup_engine_doctor_json() {
         --argjson compose_ok "$compose_ok" \
         --argjson drift_profiles "$drift_profiles" \
         --argjson registry_issue "$registry_issue" \
+        --argjson configure_actions "$configure_actions_json" \
         --arg expected_profiles "$expected_profiles_csv" \
         --arg current_profiles "$current_profiles_csv" \
         --arg memory_gb "$(setup_engine_host_memory_gb)" \
@@ -929,7 +1010,8 @@ setup_engine_doctor_json() {
             current_profiles: ($current_profiles | split(",") | map(select(length > 0))),
             compose_profiles_mismatch: $drift_profiles,
             registry_cache_mirror_broken: $registry_issue
-          }
+          },
+          configure_actions: $configure_actions
         }
         '
 }
@@ -961,6 +1043,12 @@ setup_engine_doctor() {
         ' "$json_file"
     else
         log_success "No infrastructure drift detected"
+    fi
+
+    if jq -e '.configure_actions | length > 0' "$json_file" >/dev/null; then
+        echo ""
+        log_info "Configure next:"
+        jq -r '.configure_actions[] | "  - " + .command + " — " + .reason' "$json_file"
     fi
 
     rm -f "$json_file"
@@ -1050,6 +1138,7 @@ export -f setup_engine_root setup_engine_default_config_path setup_engine_state_
 export -f setup_engine_plan_path setup_engine_migrate_env_to_config
 export -f setup_engine_load_or_migrate_config setup_engine_normalize_config
 export -f setup_engine_effective_profiles_csv setup_engine_effective_services_csv
+export -f setup_engine_configure_actions_json
 export -f setup_engine_plan_json setup_engine_write_plan_file setup_engine_render_plan_text
 export -f setup_engine_write_env_from_config setup_engine_apply_config
 export -f setup_engine_doctor_json setup_engine_doctor setup_engine_add_to_config

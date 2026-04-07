@@ -33,6 +33,11 @@ generate_setup_summary() {
     local traefik_auth_password=$(grep "^DEFAULT_TRAEFIK_AUTH_PASS=" "$stack_dir/.env" | cut -d'=' -f2- | sed 's/#.*//' | tr -d ' ' || echo "<check .env file>")
     local access_mode
     access_mode=$(auth_policy_access_mode_from_env "$stack_dir/.env")
+    local tunnel_auth_configured=false
+    local cloudflare_configured=false
+    local needs_dev_config=false
+    local configure_actions_pending=false
+    local coder_access_url=""
     local resourcespace_port=$(grep "^RESOURCESPACE_PORT=" "$stack_dir/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ' || echo "8099")
     local resourcespace_setup_url=""
     case "$access_mode" in
@@ -46,6 +51,26 @@ generate_setup_summary() {
     if [[ -n "$profiles_raw" ]]; then
         IFS=',' read -r -a summary_profiles <<< "$profiles_raw"
     fi
+    if [[ -n "$traefik_auth_password" && "$traefik_auth_password" != "<check .env file>" ]]; then
+        tunnel_auth_configured=true
+    fi
+    if [[ -n "$(grep "^CLOUDFLARE_TUNNEL_TOKEN=" "$stack_dir/.env" 2>/dev/null | cut -d'=' -f2- | sed 's/#.*//' | tr -d ' ')" ]]; then
+        cloudflare_configured=true
+    fi
+    if [[ " ${summary_profiles[*]} " == *" dev "* ]]; then
+        needs_dev_config=true
+    fi
+    if [[ "$access_mode" == "tunnel" && ( "$tunnel_auth_configured" == "false" || "$cloudflare_configured" == "false" ) ]]; then
+        configure_actions_pending=true
+    fi
+    if $needs_dev_config; then
+        configure_actions_pending=true
+    fi
+    case "$access_mode" in
+        tunnel) coder_access_url="https://coder.${base_domain}" ;;
+        local) coder_access_url="https://coder.${lab_domain}" ;;
+        *) coder_access_url="http://${host_ip}:7080" ;;
+    esac
     
     local quick_access_heading="Local Network Access (.lab domain)"
     local quick_access_intro="Your WeekendStack is accessible on your local network using the \`.$lab_domain\` domain:"
@@ -74,7 +99,11 @@ This document contains important information about your WeekendStack deployment.
 
 ### QUICK_ACCESS_HEADING
 EOF
-    sed -i "s|QUICK_ACCESS_HEADING|$quick_access_heading|" "$summary_file"
+    local summary_dir summary_tmp
+    summary_dir="$(cd "$(dirname "$summary_file")" && pwd)"
+    summary_tmp="$(mktemp_in_dir "$summary_dir" "$(basename "$summary_file").heading")"
+    sed "s|QUICK_ACCESS_HEADING|$quick_access_heading|" "$summary_file" > "$summary_tmp"
+    replace_file_safely "$summary_tmp" "$summary_file"
 
     echo "" >> "$summary_file"
     echo "$quick_access_intro" >> "$summary_file"
@@ -104,7 +133,23 @@ EOF
     case "$access_mode" in
         local)
             cat >> "$summary_file" << EOF
-### 1. Trust Local HTTPS Certificate
+### 1. Run Configure For Optional Integrations
+
+EOF
+            if $needs_dev_config; then
+                cat >> "$summary_file" << EOF
+- \`./configure.sh --coder-templates\`
+- \`./configure.sh --git-ssh\`
+
+EOF
+            else
+                cat >> "$summary_file" << EOF
+No extra configure steps are required for local-only access.
+
+EOF
+            fi
+            cat >> "$summary_file" << EOF
+### 2. Trust Local HTTPS Certificate
 
 To avoid browser security warnings:
 
@@ -125,7 +170,7 @@ Import \`config/traefik/certs/ca-cert.pem\` via Windows certificate manager.
 
 **Browsers:** Restart your browser after installing the certificate.
 
-### 2. Configure DNS
+### 3. Configure DNS
 
 **Option A: Use Pi-hole as DNS**
 Set your device DNS to: \`$host_ip\`
@@ -133,16 +178,46 @@ Set your device DNS to: \`$host_ip\`
 **Option B: Edit /etc/hosts (Linux/macOS) or C:\\Windows\\System32\\drivers\\etc\\hosts (Windows)**
 Add entries for each service manually.
 
-### 3. Configure Services
+### 4. Configure Services
 
 EOF
             ;;
         tunnel)
             cat >> "$summary_file" << EOF
-### 1. External Access Authentication
+### 1. Run Configure
 
-Use the Traefik basic-auth popup credentials below for selected tunnel-exposed tools.
-No local DNS or local CA certificate setup is required for remote tunnel access.
+EOF
+            if $configure_actions_pending; then
+                cat >> "$summary_file" << EOF
+Finish tunnel-specific integrations with:
+
+EOF
+                if ! $tunnel_auth_configured; then
+                    cat >> "$summary_file" << EOF
+- \`./configure.sh --tunnel-auth\`
+EOF
+                fi
+                if ! $cloudflare_configured; then
+                    cat >> "$summary_file" << EOF
+- \`./configure.sh --cloudflare\`
+EOF
+                fi
+                if $needs_dev_config; then
+                    cat >> "$summary_file" << EOF
+- \`./configure.sh --coder-templates\`
+- \`./configure.sh --git-ssh\`
+EOF
+                fi
+                cat >> "$summary_file" << EOF
+
+Use \`./configure.sh --all\` to run the guided configure flow in one pass.
+EOF
+            else
+                cat >> "$summary_file" << EOF
+No configure steps are pending for tunnel access.
+EOF
+            fi
+            cat >> "$summary_file" << EOF
 
 ### 2. Configure Services
 
@@ -150,7 +225,23 @@ EOF
             ;;
         *)
             cat >> "$summary_file" << EOF
-### 1. Configure Services
+### 1. Run Configure For Optional Integrations
+
+EOF
+            if $needs_dev_config; then
+                cat >> "$summary_file" << EOF
+- \`./configure.sh --coder-templates\`
+- \`./configure.sh --git-ssh\`
+
+EOF
+            else
+                cat >> "$summary_file" << EOF
+No extra configure steps are required for direct IP access.
+
+EOF
+            fi
+            cat >> "$summary_file" << EOF
+### 2. Configure Services
 
 No local DNS or local CA certificate setup is required for direct IP access.
 
@@ -171,7 +262,7 @@ Place documents in: \`files/paperless/consume/\`
 They will be automatically processed and indexed.
 
 #### Coder
-Access at $(case "$access_mode" in tunnel) printf 'https://coder.%s' "$base_domain" ;; local) printf 'https://coder.%s' "$lab_domain" ;; *) printf 'http://%s:7080' "$host_ip" ;; esac)
+Access at ${coder_access_url}
 Create development environments using the templates in \`config/coder/v2/templates/\`
 
 EOF
@@ -193,7 +284,7 @@ Complete the first-run installer here to create the first admin account:
 EOF
     fi
 
-    if [[ "$access_mode" == "tunnel" ]]; then
+    if [[ "$access_mode" == "tunnel" ]] && $tunnel_auth_configured; then
         cat >> "$summary_file" << EOF
 ### External Tunnel Auth
 
@@ -202,6 +293,14 @@ EOF
 
 This is only for the Traefik auth popup on selected external routes.
 It is not a default account for the apps themselves.
+
+EOF
+    elif [[ "$access_mode" == "tunnel" ]]; then
+        cat >> "$summary_file" << EOF
+### External Tunnel Auth
+
+Tunnel auth is not configured yet.
+Run \`./configure.sh --tunnel-auth\` before exposing tunnel routes.
 
 EOF
     else
@@ -488,6 +587,10 @@ display_summary_to_console() {
     local traefik_auth_password=$(grep "^DEFAULT_TRAEFIK_AUTH_PASS=" "$stack_dir/.env" 2>/dev/null | cut -d'=' -f2- | sed 's/#.*//' | tr -d ' ' || echo "<check .env file>")
     local access_mode
     access_mode=$(normalize_access_mode "$domain_mode")
+    local tunnel_auth_configured=false
+    local cloudflare_configured=false
+    local needs_dev_config=false
+    local has_configure_actions=false
     local resourcespace_port=$(grep "^RESOURCESPACE_PORT=" "$stack_dir/.env" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ' || echo "8099")
     local filebrowser_password=""
     local resourcespace_setup_url=""
@@ -543,6 +646,19 @@ display_summary_to_console() {
     
     # Get running services (exclude databases and support services)
     local running_services=$(docker compose ps --format "{{.Service}}" 2>/dev/null | grep -v -E 'database|db|postgres|redis|init|socat|guacd|error-pages|cloudflare-tunnel' | sort -u || true)
+    if [[ -n "$traefik_auth_password" && "$traefik_auth_password" != "<check .env file>" ]]; then
+        tunnel_auth_configured=true
+    fi
+    if [[ -n "$(grep "^CLOUDFLARE_TUNNEL_TOKEN=" "$stack_dir/.env" 2>/dev/null | cut -d'=' -f2- | sed 's/#.*//' | tr -d ' ')" ]]; then
+        cloudflare_configured=true
+    fi
+    if [[ -f "$stack_dir/.env" ]]; then
+        local profiles_csv
+        profiles_csv=$(grep "^COMPOSE_PROFILES=" "$stack_dir/.env" 2>/dev/null | cut -d'=' -f2- | tr -d '"')
+        if [[ ",${profiles_csv}," == *",dev,"* ]]; then
+            needs_dev_config=true
+        fi
+    fi
     
     clear
     echo ""
@@ -633,9 +749,14 @@ display_summary_to_console() {
             echo "  Base Domain: ${base_domain}"
             echo "  Traefik basic auth stays enabled on selected tunnel-exposed tools"
             echo ""
-            echo "  External auth credentials:"
-            echo "    • Username:    ${traefik_auth_user}"
-            echo "    • Password:    ${traefik_auth_password}"
+            if $tunnel_auth_configured; then
+                echo "  External auth credentials:"
+                echo "    • Username:    ${traefik_auth_user}"
+                echo "    • Password:    ${traefik_auth_password}"
+            else
+                echo "  External auth is still pending:"
+                echo "    • Run:         ./configure.sh --tunnel-auth"
+            fi
             echo ""
             echo "  Example URLs:"
             echo "    • Dashboard:   https://home.${base_domain}"
@@ -675,6 +796,25 @@ display_summary_to_console() {
     echo "  • Service guides:   docs/"
     echo ""
 
+    echo -e "${BOLD}Configure Next:${NC}"
+    if [[ "$access_mode" == "tunnel" && ! $tunnel_auth_configured ]]; then
+        echo "  • ./configure.sh --tunnel-auth"
+        has_configure_actions=true
+    fi
+    if [[ "$access_mode" == "tunnel" && ! $cloudflare_configured ]]; then
+        echo "  • ./configure.sh --cloudflare"
+        has_configure_actions=true
+    fi
+    if $needs_dev_config; then
+        echo "  • ./configure.sh --coder-templates"
+        echo "  • ./configure.sh --git-ssh"
+        has_configure_actions=true
+    fi
+    if ! $has_configure_actions; then
+        echo "  • No configure steps are pending for this install"
+    fi
+    echo ""
+
     if [[ -n "$filebrowser_password" || -n "$resourcespace_setup_url" || -n "$paperclip_setup_url" ]]; then
         echo -e "${BOLD}First-Time Service Setup:${NC}"
         if [[ -n "$filebrowser_password" ]]; then
@@ -696,7 +836,7 @@ display_summary_to_console() {
     fi
     
     echo -e "${BOLD}Important:${NC}"
-    echo "  • Review SETUP_SUMMARY.md for tunnel auth and first-time service setup"
+    echo "  • Review SETUP_SUMMARY.md for configure steps and first-time service setup"
     echo "  • Agents should read weekendstack.config.json + setup-state.json instead of scraping terminal output"
     if [[ -n "$running_services" ]] && printf '%s\n' "$running_services" | grep -q '^gitea$'; then
         local gitea_url
@@ -710,7 +850,13 @@ display_summary_to_console() {
     echo "  • Uptime Kuma: add Docker host → Socket: /var/run/docker.sock"
     echo ""
     
-    log_success "Your WeekendStack is ready to use!"
+    if { [[ "$access_mode" == "tunnel" && ! $tunnel_auth_configured ]]; } || \
+       { [[ "$access_mode" == "tunnel" && ! $cloudflare_configured ]]; } || \
+       $needs_dev_config; then
+        log_success "Base stack is ready. Run ./configure.sh --all to finish integrations."
+    else
+        log_success "Your WeekendStack is ready to use!"
+    fi
     echo ""
 }
 

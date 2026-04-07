@@ -658,7 +658,7 @@ grep 'protocol' compose/docker-compose.networking.yml
 ```
 
 **Common issues:**
-- **Tunnel exits immediately**: Token is empty or set to "disabled" — run `./setup.sh --cloudflare-only` to configure
+- **Tunnel exits immediately**: Token is empty or set to "disabled" — run `./configure.sh --cloudflare` to configure
 - **QUIC protocol errors in VMs**: The default QUIC protocol requires large UDP buffers that most VMs don't have. The compose file uses `--protocol http2` to avoid this. See [VM/Docker Deployment](#-vmdocker-deployment) below.
 - **Tunnel not starting**: Ensure cloudflare-tunnel is in your custom profile — run `./setup.sh --start` or re-run `./setup.sh` to regenerate
 
