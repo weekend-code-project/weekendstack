@@ -459,7 +459,9 @@ setup_all_directories() {
         log_success "Directory setup complete — all paths are ready."
     fi
     echo ""
-    read -rp "  Press Enter to continue..." </dev/tty
+    if ! non_interactive_mode_enabled && [[ -e /dev/tty ]] && (: </dev/tty) 2>/dev/null; then
+        read -rp "  Press Enter to continue..." </dev/tty
+    fi
 }
 
 # Export functions

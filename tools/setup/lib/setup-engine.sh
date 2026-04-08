@@ -696,9 +696,10 @@ setup_engine_write_env_from_config() {
 
 setup_engine_materialize_config() {
     local config_file="$1"
-    local default_config
+    local default_config config_file_abs
     default_config="$(setup_engine_default_config_path)"
-    if [[ "$config_file" != "$default_config" ]]; then
+    config_file_abs="$(cd "$(dirname "$config_file")" 2>/dev/null && pwd)/$(basename "$config_file")"
+    if [[ "$config_file_abs" != "$default_config" ]]; then
         cp "$config_file" "$default_config"
     fi
     printf '%s\n' "$default_config"

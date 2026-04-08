@@ -660,7 +660,7 @@ display_summary_to_console() {
         fi
     fi
     
-    clear
+    clear_screen
     echo ""
     log_header "Setup Complete!"
     
