@@ -7,6 +7,31 @@ source "$PROJECT_ROOT/tools/setup/lib/service-catalog.sh"
 source "$PROJECT_ROOT/tools/setup/lib/env-generator.sh"
 source "$PROJECT_ROOT/tools/setup/lib/setup-engine.sh"
 
+save_optional_file() {
+    local source_path="$1"
+    local backup_path="$2"
+
+    if [[ -f "$source_path" ]]; then
+        mkdir -p "$(dirname "$backup_path")"
+        cp "$source_path" "$backup_path"
+        return 0
+    fi
+
+    return 1
+}
+
+restore_optional_file() {
+    local target_path="$1"
+    local backup_path="$2"
+
+    if [[ -f "$backup_path" ]]; then
+        cp "$backup_path" "$target_path"
+        rm -f "$backup_path"
+    else
+        rm -f "$target_path"
+    fi
+}
+
 test_suite_start "Setup Engine Config"
 
 TEST_CONFIG="$TEST_DIR/weekendstack.config.json"
@@ -58,8 +83,8 @@ fi
 
 test_case "write env from config emits effective compose profiles"
 cd "$PROJECT_ROOT"
-backup_file ".env"
-backup_file "docker-compose.custom.yml"
+save_optional_file "docker-compose.custom.yml" "$TEST_DIR/original.docker-compose.custom.yml"
+GENERATED_ENV="$TEST_DIR/generated.env"
 
 jq -n '
 {
@@ -73,8 +98,8 @@ jq -n '
 }
 ' > "$TEST_CONFIG"
 
-setup_engine_write_env_from_config "$TEST_CONFIG" "$PROJECT_ROOT/.env"
-compose_profiles="$(grep '^COMPOSE_PROFILES=' "$PROJECT_ROOT/.env" | cut -d'=' -f2-)"
+setup_engine_write_env_from_config "$TEST_CONFIG" "$GENERATED_ENV"
+compose_profiles="$(grep '^COMPOSE_PROFILES=' "$GENERATED_ENV" | cut -d'=' -f2-)"
 
 if [[ "$compose_profiles" == *"core"* && "$compose_profiles" == *"ai"* && "$compose_profiles" == *"open-webui"* && "$compose_profiles" == *"paperclip"* && "$compose_profiles" == *"ollama-cpu"* && "$compose_profiles" == *"networking"* ]]; then
     test_pass
@@ -82,7 +107,15 @@ else
     test_fail "Unexpected COMPOSE_PROFILES: $compose_profiles"
 fi
 
-restore_file "docker-compose.custom.yml"
-restore_file ".env"
+test_case "write env from config backfills compose-only vars for unselected services"
+if grep -q '^CODER_HOSTNAME=' "$GENERATED_ENV" && \
+   grep -q '^GITEA_DBPASS=' "$GENERATED_ENV" && \
+   grep -q '^NOCODB_JWT_SECRET=' "$GENERATED_ENV"; then
+    test_pass
+else
+    test_fail "Expected compose placeholders for unselected services to be backfilled into .env"
+fi
+
+restore_optional_file "docker-compose.custom.yml" "$TEST_DIR/original.docker-compose.custom.yml"
 
 test_suite_end

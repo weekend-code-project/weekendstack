@@ -52,4 +52,29 @@ else
     test_fail "Expected configure actions, tunnel warning, and manual followups, got warnings=$warning_count actions=$configure_actions followups=$manual_followups"
 fi
 
+test_case "planner counts reclaimable Docker image space toward disk feasibility"
+original_disk_free_fn="$(declare -f setup_engine_disk_free_gb)"
+original_reclaim_fn="$(declare -f setup_engine_docker_reclaimable_gb)"
+original_memory_fn="$(declare -f setup_engine_host_memory_gb)"
+
+setup_engine_disk_free_gb() { echo "10"; }
+setup_engine_docker_reclaimable_gb() { echo "60"; }
+setup_engine_host_memory_gb() { echo "128"; }
+
+plan_json="$(setup_engine_plan_json "$TEST_CONFIG")"
+blocker_count="$(printf '%s' "$plan_json" | jq '.host_checks.blockers | length')"
+effective_root_disk="$(printf '%s' "$plan_json" | jq -r '.host_checks.available_effective_root_disk_gb')"
+reclaimable_root_disk="$(printf '%s' "$plan_json" | jq -r '.host_checks.reclaimable_root_disk_gb')"
+reclaim_warning="$(printf '%s' "$plan_json" | jq -r '.host_checks.warnings[] | select(test("reclaimed from unused Docker images"))' | head -n 1)"
+
+eval "$original_disk_free_fn"
+eval "$original_reclaim_fn"
+eval "$original_memory_fn"
+
+if [[ "$blocker_count" == "0" ]] && [[ "$effective_root_disk" == "70" ]] && [[ "$reclaimable_root_disk" == "60" ]] && [[ -n "$reclaim_warning" ]]; then
+    test_pass
+else
+    test_fail "Expected reclaimable disk to clear blockers, got blockers=$blocker_count effective=$effective_root_disk reclaimable=$reclaimable_root_disk warning=$reclaim_warning"
+fi
+
 test_suite_end

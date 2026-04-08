@@ -3,6 +3,7 @@
 
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/service-catalog.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/post-install-cleanup.sh"
 
 setup_engine_root() {
     if [[ -n "${SCRIPT_DIR:-}" && -d "${SCRIPT_DIR}" ]]; then
@@ -51,6 +52,80 @@ setup_engine_disk_free_gb() {
     done
 
     df -Pk "$path" 2>/dev/null | awk 'NR==2 {printf "%d\n", $4 / 1024 / 1024}' | tail -n 1
+}
+
+setup_engine_docker_reclaimable_gb() {
+    local reclaimable_human reclaimable_bytes
+
+    if ! command -v docker >/dev/null 2>&1; then
+        echo "0"
+        return 0
+    fi
+
+    reclaimable_human="$(get_docker_image_reclaimable_human)"
+    reclaimable_bytes="$(human_size_to_bytes "$reclaimable_human")"
+    awk -v bytes="${reclaimable_bytes:-0}" 'BEGIN { printf "%d\n", bytes / 1000000000 }'
+}
+
+setup_engine_cleanup_mode() {
+    local config_file="$1"
+    jq -r '.options.cleanup_mode // "auto"' "$config_file"
+}
+
+setup_engine_cleanup_can_reclaim_before_apply() {
+    local config_file="$1"
+    local cleanup_mode
+    cleanup_mode="$(setup_engine_cleanup_mode "$config_file")"
+    [[ "$cleanup_mode" == "auto" || "$cleanup_mode" == "always" ]]
+}
+
+setup_engine_preflight_cleanup_if_needed() {
+    local config_file="$1"
+    local required_disk="$2"
+    local available_root_disk reclaimable_root_disk effective_root_disk
+
+    available_root_disk="$(setup_engine_disk_free_gb "$(setup_engine_root)")"
+    reclaimable_root_disk="$(setup_engine_docker_reclaimable_gb)"
+    effective_root_disk=$(( available_root_disk + reclaimable_root_disk ))
+
+    if ! setup_engine_cleanup_can_reclaim_before_apply "$config_file"; then
+        return 0
+    fi
+
+    if (( available_root_disk >= required_disk )); then
+        return 0
+    fi
+
+    if (( effective_root_disk < required_disk || reclaimable_root_disk <= 0 )); then
+        return 0
+    fi
+
+    log_info "Root disk is below the current plan requirement. Running safe cleanup first to reclaim Docker image space."
+    run_post_install_cleanup
+}
+
+setup_engine_compose_variable_names() {
+    local root
+    root="$(setup_engine_root)"
+    if command -v rg >/dev/null 2>&1; then
+        rg -o '\$\{[A-Z0-9_]+(?::-[^}]*)?\}' "$root/compose"/*.yml 2>/dev/null \
+            | sed -E 's/.*\$\{([A-Z0-9_]+).*/\1/'
+    else
+        grep -Rho '\${[A-Z0-9_]\+\(:-[^}]*\)\?}' "$root/compose"/*.yml 2>/dev/null \
+            | sed -E 's/.*\$\{([A-Z0-9_]+).*/\1/'
+    fi | awk 'NF && !seen[$0]++'
+}
+
+setup_engine_backfill_optional_compose_vars() {
+    local env_file="$1"
+    local var_name
+
+    while IFS= read -r var_name; do
+        [[ -z "$var_name" ]] && continue
+        if ! grep -q "^${var_name}=" "$env_file" 2>/dev/null; then
+            printf '%s=\n' "$var_name" >> "$env_file"
+        fi
+    done < <(setup_engine_compose_variable_names)
 }
 
 setup_engine_gpu_available() {
@@ -382,7 +457,8 @@ setup_engine_configure_actions_json() {
 setup_engine_plan_json() {
     local config_file="$1"
     local effective_profiles_csv effective_services_csv selected_services_csv access_mode base_domain lab_domain host_ip
-    local required_memory required_disk available_memory available_root_disk available_data_disk gpu_available local_dns_mode
+    local required_memory required_disk available_memory available_root_disk available_data_disk available_effective_root_disk
+    local reclaimable_root_disk cleanup_mode gpu_available local_dns_mode
     local blockers_json warnings_json manual_followups_json configure_actions_json
 
     effective_profiles_csv="$(setup_engine_effective_profiles_csv "$config_file")"
@@ -398,6 +474,13 @@ setup_engine_plan_json() {
     available_memory="$(setup_engine_host_memory_gb)"
     available_root_disk="$(setup_engine_disk_free_gb "$(setup_engine_root)")"
     available_data_disk="$(setup_engine_disk_free_gb "$(jq -r '.paths.data_base_dir' "$config_file")")"
+    cleanup_mode="$(setup_engine_cleanup_mode "$config_file")"
+    reclaimable_root_disk="0"
+    available_effective_root_disk="$available_root_disk"
+    if setup_engine_cleanup_can_reclaim_before_apply "$config_file"; then
+        reclaimable_root_disk="$(setup_engine_docker_reclaimable_gb)"
+        available_effective_root_disk=$(( available_root_disk + reclaimable_root_disk ))
+    fi
     gpu_available="$(setup_engine_gpu_available)"
 
     blockers_json="$(
@@ -405,8 +488,8 @@ setup_engine_plan_json() {
             if [[ "$available_memory" -lt "$required_memory" ]]; then
                 printf 'Host RAM below requirement: %sGB available, %sGB required\n' "$available_memory" "$required_memory"
             fi
-            if [[ "$available_root_disk" -lt "$required_disk" ]]; then
-                printf 'Root disk below requirement: %sGB available, %sGB required\n' "$available_root_disk" "$required_disk"
+            if [[ "$available_effective_root_disk" -lt "$required_disk" ]]; then
+                printf 'Root disk below requirement: %sGB available now, %sGB effective after safe cleanup, %sGB required\n' "$available_root_disk" "$available_effective_root_disk" "$required_disk"
             fi
             if [[ "$(jq -r '.selection.ai_runtime // "none"' "$config_file")" == "gpu" && "$gpu_available" != "true" ]]; then
                 printf 'GPU runtime requested but no NVIDIA GPU was detected\n'
@@ -427,6 +510,9 @@ setup_engine_plan_json() {
             fi
             if [[ "$available_data_disk" -lt 10 ]]; then
                 printf 'Configured data path has less than 10GB free space.\n'
+            fi
+            if [[ "$available_root_disk" -lt "$required_disk" && "$available_effective_root_disk" -ge "$required_disk" ]]; then
+                printf 'Root disk is currently tight, but %sGB can be reclaimed from unused Docker images before apply (cleanup_mode=%s).\n' "$reclaimable_root_disk" "$cleanup_mode"
             fi
         } | jq -R . | jq -s .
     )"
@@ -453,6 +539,8 @@ setup_engine_plan_json() {
         --arg required_disk "$required_disk" \
         --arg available_memory "$available_memory" \
         --arg available_root_disk "$available_root_disk" \
+        --arg reclaimable_root_disk "$reclaimable_root_disk" \
+        --arg available_effective_root_disk "$available_effective_root_disk" \
         --arg available_data_disk "$available_data_disk" \
         --arg gpu_available "$gpu_available" \
         '
@@ -474,6 +562,8 @@ setup_engine_plan_json() {
           host_checks: {
             available_memory_gb: ($available_memory | tonumber),
             available_root_disk_gb: ($available_root_disk | tonumber),
+            reclaimable_root_disk_gb: ($reclaimable_root_disk | tonumber),
+            available_effective_root_disk_gb: ($available_effective_root_disk | tonumber),
             available_data_disk_gb: ($available_data_disk | tonumber),
             gpu_available: ($gpu_available == "true"),
             blockers: $blockers,
@@ -519,6 +609,7 @@ setup_engine_render_plan_text() {
     echo "  Effective profiles: $(jq -r '.effective_profiles | join(", ")' "$plan_file")"
     echo "  Effective services: $(jq -r '.effective_services | length' "$plan_file") services"
     echo "  Resource estimate: $(jq -r '.resources.required_memory_gb' "$plan_file")GB RAM, $(jq -r '.resources.required_disk_gb' "$plan_file")GB disk"
+    echo "  Root disk available: $(jq -r '.host_checks.available_root_disk_gb' "$plan_file")GB now, $(jq -r '.host_checks.available_effective_root_disk_gb' "$plan_file")GB after safe cleanup"
     echo ""
 
     if (( blockers_count > 0 )); then
@@ -690,6 +781,7 @@ setup_engine_write_env_from_config() {
     add_setup_metadata "$env_file" $(jq -r '.selection.profiles[]' "$config_file")
     update_env_var "COMPOSE_PROFILES" "$effective_profiles_csv" "$env_file"
     update_env_var "SELECTED_PROFILES" "$effective_profiles_csv" "$env_file"
+    setup_engine_backfill_optional_compose_vars "$env_file"
 
     "${root}/tools/env/scripts/generate-custom-profile.sh" --profiles "$effective_profiles_csv" >/dev/null
 }
@@ -885,11 +977,19 @@ setup_engine_auto_cleanup() {
 
 setup_engine_apply_config() {
     local config_file="$1"
-    local canonical_config effective_profiles_csv access_mode
+    local canonical_config effective_profiles_csv access_mode required_disk
     local -a effective_profiles=()
 
     canonical_config="$(setup_engine_materialize_config "$config_file")"
     setup_engine_normalize_config "$canonical_config"
+    setup_engine_write_plan_file "$canonical_config"
+    if [[ "$(jq '.host_checks.blockers | length' "$(setup_engine_plan_path)")" -gt 0 ]]; then
+        setup_engine_render_plan_text "$(setup_engine_plan_path)"
+        return 1
+    fi
+
+    required_disk="$(jq -r '.resources.required_disk_gb' "$(setup_engine_plan_path)")"
+    setup_engine_preflight_cleanup_if_needed "$canonical_config" "$required_disk"
     setup_engine_write_plan_file "$canonical_config"
     if [[ "$(jq '.host_checks.blockers | length' "$(setup_engine_plan_path)")" -gt 0 ]]; then
         setup_engine_render_plan_text "$(setup_engine_plan_path)"
@@ -922,12 +1022,12 @@ setup_engine_apply_config() {
             ;;
     esac
 
-    generate_setup_summary "${effective_profiles[@]}"
     start_services_with_profiles "${effective_profiles[@]}"
     provision_speedtest_initial_run
     setup_engine_auto_cleanup "$canonical_config"
-    display_summary_to_console
     setup_engine_write_state "$canonical_config" "apply" ""
+    generate_setup_summary "${effective_profiles[@]}"
+    display_summary_to_console
 }
 
 setup_engine_doctor_json() {

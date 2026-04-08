@@ -122,7 +122,7 @@
     ],
     "compose_file": "compose/docker-compose.core.yml",
     "subdomain": "home",
-    "ip_port": 8098,
+    "ip_port": 8080,
     "first_run_mode": "none"
   },
   "vaultwarden": {
@@ -399,7 +399,7 @@
     ],
     "compose_file": "compose/docker-compose.dev.yml",
     "subdomain": "gitea",
-    "ip_port": 3000,
+    "ip_port": 3300,
     "selectable_service": true,
     "first_run_mode": "manual",
     "support_containers": [
@@ -601,7 +601,7 @@
     ],
     "compose_file": "compose/docker-compose.productivity.yml",
     "subdomain": "filebrowser",
-    "ip_port": 8089,
+    "ip_port": 8096,
     "first_run_mode": "random-password-log"
   },
   "hoarder": {

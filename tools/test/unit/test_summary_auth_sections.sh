@@ -143,4 +143,59 @@ fi
 restore_optional_file "SETUP_SUMMARY.md" "$TEST_DIR/original.SETUP_SUMMARY.pending.md"
 restore_optional_file ".env" "$TEST_DIR/original.env.pending"
 
+test_case "ip-mode summary renders direct host URLs instead of stale .lab links"
+cd "$PROJECT_ROOT"
+save_optional_file ".env" "$TEST_DIR/original.env.ip"
+save_optional_file "SETUP_SUMMARY.md" "$TEST_DIR/original.SETUP_SUMMARY.ip.md"
+save_optional_file "setup-state.json" "$TEST_DIR/original.setup-state.ip.json"
+
+cat > .env <<'EOF'
+HOST_IP=192.168.2.195
+LAB_DOMAIN=lab
+BASE_DOMAIN=
+DOMAIN_MODE=ip
+COMPOSE_PROFILES=core
+EOF
+
+cat > setup-state.json <<'EOF'
+{
+  "effective_profiles": ["core"],
+  "effective_services": ["glance", "vaultwarden", "speedtest-tracker"],
+  "manual_followups": [
+    {
+      "service": "speedtest-tracker",
+      "display_name": "Speedtest Tracker",
+      "mode": "manual",
+      "url": "http://192.168.2.195:8765",
+      "note": "App provides its own initial admin login on first start."
+    }
+  ],
+  "configure_actions": [],
+  "health": {
+    "services": [
+      {"service": "glance", "url": "http://192.168.2.195:8080"},
+      {"service": "vaultwarden", "url": "http://192.168.2.195:8082"},
+      {"service": "speedtest-tracker", "url": "http://192.168.2.195:8765"}
+    ]
+  }
+}
+EOF
+
+if generate_setup_summary core; then
+    if grep -q 'http://192.168.2.195:8080' SETUP_SUMMARY.md && \
+       grep -q 'http://192.168.2.195:8082' SETUP_SUMMARY.md && \
+       ! grep -q 'https://lab' SETUP_SUMMARY.md && \
+       ! grep -q 'vault\.lab' SETUP_SUMMARY.md; then
+        test_pass
+    else
+        test_fail "IP-mode summary did not render the expected direct host URLs"
+    fi
+else
+    test_fail "generate_setup_summary returned non-zero for ip-mode summary"
+fi
+
+restore_optional_file "setup-state.json" "$TEST_DIR/original.setup-state.ip.json"
+restore_optional_file "SETUP_SUMMARY.md" "$TEST_DIR/original.SETUP_SUMMARY.ip.md"
+restore_optional_file ".env" "$TEST_DIR/original.env.ip"
+
 test_suite_end
