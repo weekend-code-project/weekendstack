@@ -5,29 +5,31 @@
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/service-catalog.sh"
 
-# Profile definitions — networking is no longer a user-visible option;
-# Traefik/Pi-hole/Tunnel sub-profiles are auto-added by setup based on
-# the Access Configuration wizard answers.
-declare -A PROFILES=(
-    ["all"]="Everything"
-    ["core"]="Dashboard & speedtest"
-    ["monitoring"]="Uptime & update monitoring"
-    ["productivity"]="Business & productivity apps"
-    ["dev"]="Development tools"
-    ["ai"]="AI & LLM services"
-    ["media"]="Media management"
-)
+profile_display_name() {
+    case "$1" in
+        all) echo "Everything" ;;
+        core) echo "Dashboard & speedtest" ;;
+        monitoring) echo "Uptime & update monitoring" ;;
+        productivity) echo "Business & productivity apps" ;;
+        dev) echo "Development tools" ;;
+        ai) echo "AI & LLM services" ;;
+        media) echo "Media management" ;;
+        *) echo "$1" ;;
+    esac
+}
 
-# RAM requirements per profile (approximate, for display only)
-declare -A PROFILE_RAM=(
-    ["all"]="32GB+"
-    ["core"]="~1GB"
-    ["monitoring"]="~1GB"
-    ["productivity"]="~12GB"
-    ["dev"]="~5GB"
-    ["ai"]="~9GB"
-    ["media"]="~7GB"
-)
+profile_ram_hint() {
+    case "$1" in
+        all) echo "32GB+" ;;
+        core) echo "~1GB" ;;
+        monitoring) echo "~1GB" ;;
+        productivity) echo "~12GB" ;;
+        dev) echo "~5GB" ;;
+        ai) echo "~9GB" ;;
+        media) echo "~7GB" ;;
+        *) echo "" ;;
+    esac
+}
 
 # Core profile is always included (required for basic functionality)
 CORE_REQUIRED=true
@@ -44,9 +46,9 @@ show_profile_matrix() {
     
     for profile in "${PROFILE_ORDER[@]}"; do
         if [[ "$profile" == "core" ]]; then
-            printf "%-15s %s (always included)\n" "$profile" "${PROFILES[$profile]}"
+            printf "%-15s %s (always included)\n" "$profile" "$(profile_display_name "$profile")"
         else
-            printf "%-15s %s\n" "$profile" "${PROFILES[$profile]}"
+            printf "%-15s %s\n" "$profile" "$(profile_display_name "$profile")"
         fi
     done
     
@@ -185,11 +187,14 @@ select_profiles_interactive() {
         echo ""
         for i in $(seq 1 ${#PROFILE_ORDER[@]}); do
             local profile="${PROFILE_ORDER[$((i-1))]}"
-            local ram_hint="${PROFILE_RAM[$profile]:-}"
+            local description
+            local ram_hint
+            description="$(profile_display_name "$profile")"
+            ram_hint="$(profile_ram_hint "$profile")"
             if [[ -n "$ram_hint" ]]; then
-                printf "  %d) %-14s - %-34s (%s)\n" "$i" "$profile" "${PROFILES[$profile]}" "$ram_hint"
+                printf "  %d) %-14s - %-34s (%s)\n" "$i" "$profile" "$description" "$ram_hint"
             else
-                printf "  %d) %-12s - %s\n" "$i" "$profile" "${PROFILES[$profile]}"
+                printf "  %d) %-12s - %s\n" "$i" "$profile" "$description"
             fi
         done
         echo ""
