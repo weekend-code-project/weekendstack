@@ -70,4 +70,12 @@ else
     test_fail "Expected setup mode screen to render through one menu without duplicated option text"
 fi
 
+test_case "Blank profile selection defaults to Foundation only"
+if grep -q "Press Enter for Foundation only (recommended first install)." "$PROJECT_ROOT/tools/setup/lib/profile-selector.sh" && \
+   grep -q 'defaulting to Foundation only' "$PROJECT_ROOT/tools/setup/lib/profile-selector.sh"; then
+    test_pass
+else
+    test_fail "Expected first-run profile selection to default to Foundation only"
+fi
+
 test_suite_end

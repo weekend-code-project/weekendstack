@@ -167,7 +167,7 @@ setup_engine_resolve_config_path() {
 setup_engine_migrate_env_to_config() {
     local env_file="${1:-$(setup_engine_root)/.env}"
     local config_file="${2:-$(setup_engine_default_config_path)}"
-    local compose_profiles_csv selected_profiles_csv selected_services_csv ai_runtime
+    local compose_profiles_csv selected_profiles_source selected_profiles_csv selected_services_csv ai_runtime
     local access_mode local_dns_mode
     local -a selected_profiles=()
     local -a selected_services=()
@@ -179,17 +179,24 @@ setup_engine_migrate_env_to_config() {
     fi
 
     compose_profiles_csv="$(get_env_value "COMPOSE_PROFILES" "$env_file" 2>/dev/null || true)"
+    selected_profiles_source="$(get_env_value "SELECTED_PROFILES" "$env_file" 2>/dev/null || true)"
+    if [[ -z "$selected_profiles_source" ]]; then
+        selected_profiles_source="$compose_profiles_csv"
+    fi
     access_mode="$(normalize_access_mode "$(get_env_value "DOMAIN_MODE" "$env_file" 2>/dev/null || echo "ip")")"
 
     while IFS= read -r profile; do
         [[ -z "$profile" ]] && continue
-        [[ "$profile" == "all" ]] && continue
-        if [[ ",${compose_profiles_csv}," == *",${profile},"* ]]; then
+        if [[ ",${selected_profiles_source}," == *",${profile},"* ]]; then
             selected_profiles+=("$profile")
         fi
     done < <(catalog_profile_ids selectable)
     if [[ ${#selected_profiles[@]} -eq 0 ]]; then
-        selected_profiles=("core")
+        if [[ ",${selected_profiles_source}," == *",all,"* ]]; then
+            selected_profiles=("all")
+        else
+            selected_profiles=("core")
+        fi
     fi
 
     while IFS= read -r service; do
@@ -685,6 +692,7 @@ setup_engine_write_env_from_config() {
     update_env_var "LAB_DOMAIN" "$lab_domain" "$env_file"
     update_env_var "BASE_DOMAIN" "$base_domain" "$env_file"
     update_env_var "DOMAIN_MODE" "$access_mode" "$env_file"
+    update_env_var "LOCAL_DNS_MODE" "$local_dns_mode" "$env_file"
     update_env_var "FILES_BASE_DIR" "$files_dir" "$env_file"
     update_env_var "DATA_BASE_DIR" "$data_dir" "$env_file"
     update_env_var "WORKSPACE_DIR" "$workspace_dir" "$env_file"
@@ -780,7 +788,7 @@ setup_engine_write_env_from_config() {
 
     add_setup_metadata "$env_file" $(jq -r '.selection.profiles[]' "$config_file")
     update_env_var "COMPOSE_PROFILES" "$effective_profiles_csv" "$env_file"
-    update_env_var "SELECTED_PROFILES" "$effective_profiles_csv" "$env_file"
+    update_env_var "SELECTED_PROFILES" "$selected_profiles_csv" "$env_file"
     setup_engine_backfill_optional_compose_vars "$env_file"
 
     "${root}/tools/env/scripts/generate-custom-profile.sh" --profiles "$effective_profiles_csv" >/dev/null

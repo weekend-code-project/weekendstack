@@ -193,8 +193,9 @@ select_profiles_interactive() {
             fi
         done
         echo ""
-        echo "Enter profile numbers (space-separated) or press Enter for 'all':"
-        echo "Example: '1 4' for monitoring + dev"
+        echo "Enter profile numbers (space-separated)."
+        echo "Press Enter for Foundation only (recommended first install)."
+        echo "Example: '1 4' for monitoring + ai"
         echo ""
     } >&2
     
@@ -202,9 +203,9 @@ select_profiles_interactive() {
     
     local selected_indices
     if [[ -z "$user_input" ]]; then
-        selected_indices="${#PROFILE_ORDER[@]}"  # Default to 'all' which is the last option
+        selected_indices=""
         {
-            log_info "No selection made, defaulting to 'all' profiles"
+            log_info "No selection made, defaulting to Foundation only"
         } >&2
     else
         selected_indices="$user_input"
@@ -221,9 +222,9 @@ select_profiles_interactive() {
     
     if [[ ${#new_profiles[@]} -eq 0 ]]; then
         {
-            log_warn "No valid profiles selected, defaulting to 'all'"
+            log_info "Using Foundation only for this install"
         } >&2
-        new_profiles=("all")
+        new_profiles=("core")
     fi
     
     # Always include core profile (unless 'all' is selected, which includes everything)

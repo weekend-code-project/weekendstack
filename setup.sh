@@ -1005,7 +1005,7 @@ setup_kavita_glance_widget() {
     echo ""
     echo "The Kavita widget shows recently added manga/books in your Glance dashboard."
     echo ""
-    if ! prompt_yes_no "Configure the Kavita Glance widget?" "y"; then
+    if ! prompt_yes_no "Configure the Kavita Glance widget?" "n"; then
         log_info "Kavita widget skipped — it will be omitted from Glance"
         if grep -q "^KAVITA_API_KEY=" "$SCRIPT_DIR/.env"; then
             sed -i "s|^KAVITA_API_KEY=.*|KAVITA_API_KEY=|" "$SCRIPT_DIR/.env"
@@ -1223,10 +1223,17 @@ main_setup() {
     
     # 4. Generate environment configuration
     show_setup_progress "Environment Configuration"
+    local canonical_config=""
+
     if [[ "$SETUP_MODE" == "quick" ]]; then
         generate_env_quick "${selected_profiles[@]}"
     else
         generate_env_interactive "${selected_profiles[@]}"
+    fi
+
+    if setup_engine_migrate_env_to_config "$SCRIPT_DIR/.env" "$(setup_engine_default_config_path)" >/dev/null 2>&1; then
+        canonical_config="$(setup_engine_default_config_path)"
+        setup_engine_write_env_from_config "$canonical_config" >/dev/null 2>&1 || true
     fi
     
     # 5. Validate .env file
@@ -1395,7 +1402,7 @@ main_setup() {
         # Ask about keeping cache
         if is_cache_running && [[ "$SETUP_MODE" == "interactive" ]]; then
             echo ""
-            if prompt_yes_no "Keep registry cache running for future pulls?" "n"; then
+            if prompt_yes_no "Keep registry cache running for future pulls?" "y"; then
                 log_info "Registry cache will continue running"
             else
                 stop_registry_cache
@@ -1422,9 +1429,9 @@ main_setup() {
         log_warn "Failed to generate summary (continuing anyway)"
     fi
 
-    if setup_engine_migrate_env_to_config "$SCRIPT_DIR/.env" "$(setup_engine_default_config_path)" >/dev/null 2>&1; then
-        setup_engine_write_plan_file "$(setup_engine_default_config_path)" >/dev/null 2>&1 || true
-        setup_engine_write_state "$(setup_engine_default_config_path)" "interactive" "" >/dev/null 2>&1 || true
+    if [[ -n "$canonical_config" ]]; then
+        setup_engine_write_plan_file "$canonical_config" >/dev/null 2>&1 || true
+        setup_engine_write_state "$canonical_config" "interactive" "" >/dev/null 2>&1 || true
     fi
 
     # Ask to start services
@@ -1483,13 +1490,18 @@ main_setup() {
 
         prompt_for_post_install_cleanup
 
+        if [[ -n "$canonical_config" ]]; then
+            local _effective_profiles_csv
+            local -a _effective_profiles=()
+            _effective_profiles_csv="$(setup_engine_effective_profiles_csv "$canonical_config")"
+            IFS=',' read -r -a _effective_profiles <<< "$_effective_profiles_csv"
+            generate_setup_summary "${_effective_profiles[@]}" >/dev/null 2>&1 || true
+            setup_engine_write_state "$canonical_config" "interactive" "" >/dev/null 2>&1 || true
+        fi
+
         display_summary_to_console
         echo ""
         log_info "Next: run ./configure.sh --all to finish tunnel auth, Cloudflare, Git SSH, and Coder template setup."
-
-        if [[ -f "$(setup_engine_default_config_path)" ]]; then
-            setup_engine_write_state "$(setup_engine_default_config_path)" "interactive" "" >/dev/null 2>&1 || true
-        fi
     else
         log_info "Services not started. Run './setup.sh --start' when ready."
         echo ""

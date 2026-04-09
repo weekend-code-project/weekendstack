@@ -47,4 +47,14 @@ else
     test_fail "Unexpected resource totals: memory=${memory_gb} disk=${disk_gb}"
 fi
 
+test_case "internal support containers do not get invented public URLs"
+hoarder_chrome_url="$(catalog_service_url "hoarder-chrome" "local" "" "lab" "192.168.2.195")"
+immich_ml_url="$(catalog_service_url "immich-ml" "local" "" "lab" "192.168.2.195")"
+
+if [[ -z "$hoarder_chrome_url" && -z "$immich_ml_url" ]]; then
+    test_pass
+else
+    test_fail "Expected internal services to have no public URL, got hoarder-chrome=$hoarder_chrome_url immich-ml=$immich_ml_url"
+fi
+
 test_suite_end

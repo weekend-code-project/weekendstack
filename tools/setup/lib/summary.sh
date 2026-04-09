@@ -598,13 +598,19 @@ display_summary_to_console() {
     echo -e "${BOLD}Services Running:${NC}"
     echo ""
     if [[ -n "$running_services" ]]; then
+        local printed_services=false
         printf "  %-25s %s\n" "SERVICE" "ACCESS URL"
         printf "  %-25s %s\n" "$(printf '%.0s─' {1..25})" "$(printf '%.0s─' {1..50})"
         while IFS= read -r service; do
             [[ -z "$service" ]] && continue
             url="$(summary_service_url "$service" "$access_mode" "$base_domain" "$lab_domain" "$host_ip")"
-            printf "  %-25s %s\n" "$service" "${url:-<no public URL>}"
+            [[ -z "$url" ]] && continue
+            printf "  %-25s %s\n" "$service" "$url"
+            printed_services=true
         done <<< "$running_services"
+        if [[ "$printed_services" != true ]]; then
+            echo "  No public service URLs are available yet."
+        fi
     else
         echo "  No services running yet. Start them with: docker compose up -d"
     fi

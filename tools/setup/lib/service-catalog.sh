@@ -231,15 +231,15 @@ catalog_service_url() {
     local host_ip="$5"
     local subdomain port
 
-    subdomain="$(catalog_service_field "$service" "subdomain" "$service")"
+    subdomain="$(catalog_service_field "$service" "subdomain" "")"
     port="$(catalog_service_field "$service" "ip_port" "")"
 
     case "$access_mode" in
         tunnel)
-            [[ -n "$base_domain" ]] && printf 'https://%s.%s\n' "$subdomain" "$base_domain"
+            [[ -n "$subdomain" && -n "$base_domain" ]] && printf 'https://%s.%s\n' "$subdomain" "$base_domain"
             ;;
         local)
-            [[ -n "$lab_domain" ]] && printf 'https://%s.%s\n' "$subdomain" "$lab_domain"
+            [[ -n "$subdomain" && -n "$lab_domain" ]] && printf 'https://%s.%s\n' "$subdomain" "$lab_domain"
             ;;
         *)
             [[ -n "$host_ip" && -n "$port" ]] && printf 'http://%s:%s\n' "$host_ip" "$port"

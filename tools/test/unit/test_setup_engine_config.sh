@@ -68,6 +68,31 @@ else
     test_fail "Unexpected migrated config: profiles=$migrated_profiles services=$migrated_services mode=$migrated_mode"
 fi
 
+test_case "env migration preserves explicit all selection from SELECTED_PROFILES"
+create_temp_env
+cat > "$TEST_ENV" <<'EOF'
+HOST_IP=192.168.2.50
+TZ=America/New_York
+DOMAIN_MODE=local
+LAB_DOMAIN=lab
+LOCAL_DNS_MODE=pihole
+SELECTED_PROFILES=all
+COMPOSE_PROFILES=all,gitea,open-webui,ollama-cpu,networking,pihole
+GIT_SERVICE=gitea
+EOF
+
+setup_engine_migrate_env_to_config "$TEST_ENV" "$TEST_CONFIG" >/dev/null 2>&1
+
+migrated_profiles="$(jq -r '.selection.profiles | join(",")' "$TEST_CONFIG")"
+migrated_services="$(jq -r '.selection.services | join(",")' "$TEST_CONFIG")"
+migrated_dns_mode="$(jq -r '.access.local_dns_mode' "$TEST_CONFIG")"
+
+if [[ "$migrated_profiles" == "all" && "$migrated_services" == "open-webui,gitea" && "$migrated_dns_mode" == "pihole" ]]; then
+    test_pass
+else
+    test_fail "Unexpected migrated all-profile config: profiles=$migrated_profiles services=$migrated_services dns=$migrated_dns_mode"
+fi
+
 test_case "add flow merges profiles and services without duplicates"
 jq '.selection = {profiles:["core","ai"], services:["open-webui"], ai_runtime:"cpu"}' "$TEST_CONFIG" > "${TEST_CONFIG}.tmp" && mv "${TEST_CONFIG}.tmp" "$TEST_CONFIG"
 setup_engine_add_to_config "$TEST_CONFIG" "monitoring,ai" "paperclip,open-webui"
@@ -105,6 +130,16 @@ if [[ "$compose_profiles" == *"core"* && "$compose_profiles" == *"ai"* && "$comp
     test_pass
 else
     test_fail "Unexpected COMPOSE_PROFILES: $compose_profiles"
+fi
+
+test_case "write env from config keeps selected profiles separate from effective compose profiles"
+selected_profiles="$(grep '^SELECTED_PROFILES=' "$GENERATED_ENV" | cut -d'=' -f2-)"
+local_dns_mode="$(grep '^LOCAL_DNS_MODE=' "$GENERATED_ENV" | cut -d'=' -f2-)"
+
+if [[ "$selected_profiles" == "core,ai" && "$local_dns_mode" == "manual" ]]; then
+    test_pass
+else
+    test_fail "Unexpected selected profile metadata: selected=$selected_profiles dns=$local_dns_mode"
 fi
 
 test_case "write env from config backfills compose-only vars for unselected services"
