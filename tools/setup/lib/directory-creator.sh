@@ -348,6 +348,9 @@ create_ssh_directory() {
         local config_base_dir=$(grep "^CONFIG_BASE_DIR=" "$stack_dir/.env" | cut -d'=' -f2)
         ssh_key_dir="${ssh_key_dir//\$\{CONFIG_BASE_DIR\}/$config_base_dir}"
     fi
+    if [[ "$ssh_key_dir" == "~/"* ]]; then
+        ssh_key_dir="${HOME}/${ssh_key_dir#~/}"
+    fi
     
     if [[ -z "$ssh_key_dir" ]]; then
         return 0

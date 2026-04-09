@@ -1501,7 +1501,13 @@ main_setup() {
 
         display_summary_to_console
         echo ""
-        log_info "Next: run ./configure.sh --all to finish tunnel auth, Cloudflare, Git SSH, and Coder template setup."
+        if [[ -n "$canonical_config" ]]; then
+            local _configure_actions_json
+            _configure_actions_json="$(setup_engine_configure_actions_json "$canonical_config")"
+            if [[ "$(printf '%s' "$_configure_actions_json" | jq 'length')" -gt 0 ]]; then
+                log_info "Next: run ./configure.sh --all to finish tunnel auth, Cloudflare, Git SSH, and Coder template setup."
+            fi
+        fi
     else
         log_info "Services not started. Run './setup.sh --start' when ready."
         echo ""

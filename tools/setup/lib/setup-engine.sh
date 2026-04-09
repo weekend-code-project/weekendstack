@@ -167,7 +167,7 @@ setup_engine_resolve_config_path() {
 setup_engine_migrate_env_to_config() {
     local env_file="${1:-$(setup_engine_root)/.env}"
     local config_file="${2:-$(setup_engine_default_config_path)}"
-    local compose_profiles_csv selected_profiles_source selected_profiles_csv selected_services_csv ai_runtime
+    local compose_profiles_csv selected_profiles_source selected_profiles_csv selected_services_csv ai_runtime default_ssh_key_dir
     local access_mode local_dns_mode
     local -a selected_profiles=()
     local -a selected_services=()
@@ -178,6 +178,7 @@ setup_engine_migrate_env_to_config() {
         return 1
     fi
 
+    default_ssh_key_dir="${HOME}/.weekendstack/ssh"
     compose_profiles_csv="$(get_env_value "COMPOSE_PROFILES" "$env_file" 2>/dev/null || true)"
     selected_profiles_source="$(get_env_value "SELECTED_PROFILES" "$env_file" 2>/dev/null || true)"
     if [[ -z "$selected_profiles_source" ]]; then
@@ -249,7 +250,7 @@ setup_engine_migrate_env_to_config() {
         --arg files_base_dir "$(get_env_value "FILES_BASE_DIR" "$env_file" 2>/dev/null || printf '%s/files' "$(setup_engine_root)")" \
         --arg data_base_dir "$(get_env_value "DATA_BASE_DIR" "$env_file" 2>/dev/null || printf '%s/data' "$(setup_engine_root)")" \
         --arg workspace_dir "$(get_env_value "WORKSPACE_DIR" "$env_file" 2>/dev/null || echo "/mnt/workspace")" \
-        --arg ssh_key_dir "$(get_env_value "SSH_KEY_DIR" "$env_file" 2>/dev/null || echo "\${CONFIG_BASE_DIR}/ssh")" \
+        --arg ssh_key_dir "$(get_env_value "SSH_KEY_DIR" "$env_file" 2>/dev/null || echo "$default_ssh_key_dir")" \
         --arg cf_api_token "$(get_env_value "CLOUDFLARE_API_TOKEN" "$env_file" 2>/dev/null || true)" \
         --arg cf_tunnel_id "$(get_env_value "CLOUDFLARE_TUNNEL_ID" "$env_file" 2>/dev/null || true)" \
         --arg cf_tunnel_name "$(get_env_value "CLOUDFLARE_TUNNEL_NAME" "$env_file" 2>/dev/null || echo "weekendstack-tunnel")" \
@@ -329,7 +330,7 @@ setup_engine_normalize_config() {
     root_dir="$(setup_engine_root)"
     temp_file="$(mktemp_in_dir "$config_dir" "$(basename "$config_file").normalize")"
 
-    jq --arg root_dir "$root_dir" '
+    jq --arg root_dir "$root_dir" --arg home_dir "${HOME}" '
         .version = (.version // 1)
         | .system.computer_name = (.system.computer_name // "weekendstack")
         | .system.host_ip = (.system.host_ip // "")
@@ -353,7 +354,7 @@ setup_engine_normalize_config() {
         | .paths.files_base_dir = (.paths.files_base_dir // ($root_dir + "/files"))
         | .paths.data_base_dir = (.paths.data_base_dir // ($root_dir + "/data"))
         | .paths.workspace_dir = (.paths.workspace_dir // "/mnt/workspace")
-        | .paths.ssh_key_dir = (.paths.ssh_key_dir // "${CONFIG_BASE_DIR}/ssh")
+        | .paths.ssh_key_dir = (.paths.ssh_key_dir // ($home_dir + "/.weekendstack/ssh"))
         | .cloudflare.enabled = (.cloudflare.enabled // (.access.mode == "tunnel"))
         | .cloudflare.tunnel_name = (.cloudflare.tunnel_name // "weekendstack-tunnel")
         | .options.cleanup_mode = (.options.cleanup_mode // "auto")

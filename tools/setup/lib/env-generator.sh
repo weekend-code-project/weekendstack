@@ -486,7 +486,7 @@ generate_env_interactive() {
     local data_dir="${SCRIPT_DIR}/data"
     local config_dir="${SCRIPT_DIR}/config"  # Always use repo config dir
     local workspace_dir="/mnt/workspace"
-    local ssh_key_dir="\${CONFIG_BASE_DIR}/ssh"
+    local ssh_key_dir="${HOME}/.weekendstack/ssh"
     
     if prompt_yes_no "Customize storage paths?" "n"; then
         files_dir=$(prompt_input "User files directory" "${SCRIPT_DIR}/files")

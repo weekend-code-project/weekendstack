@@ -61,11 +61,12 @@ setup_engine_migrate_env_to_config "$TEST_ENV" "$TEST_CONFIG" >/dev/null 2>&1
 migrated_profiles="$(jq -r '.selection.profiles | join(",")' "$TEST_CONFIG")"
 migrated_services="$(jq -r '.selection.services | join(",")' "$TEST_CONFIG")"
 migrated_mode="$(jq -r '.access.mode' "$TEST_CONFIG")"
+migrated_ssh_key_dir="$(jq -r '.paths.ssh_key_dir' "$TEST_CONFIG")"
 
-if [[ "$migrated_profiles" == "core,dev,ai" && "$migrated_services" == "open-webui,gitea" && "$migrated_mode" == "tunnel" ]]; then
+if [[ "$migrated_profiles" == "core,dev,ai" && "$migrated_services" == "open-webui,gitea" && "$migrated_mode" == "tunnel" && "$migrated_ssh_key_dir" == '${CONFIG_BASE_DIR}/ssh' ]]; then
     test_pass
 else
-    test_fail "Unexpected migrated config: profiles=$migrated_profiles services=$migrated_services mode=$migrated_mode"
+    test_fail "Unexpected migrated config: profiles=$migrated_profiles services=$migrated_services mode=$migrated_mode ssh=$migrated_ssh_key_dir"
 fi
 
 test_case "env migration preserves explicit all selection from SELECTED_PROFILES"
@@ -86,11 +87,12 @@ setup_engine_migrate_env_to_config "$TEST_ENV" "$TEST_CONFIG" >/dev/null 2>&1
 migrated_profiles="$(jq -r '.selection.profiles | join(",")' "$TEST_CONFIG")"
 migrated_services="$(jq -r '.selection.services | join(",")' "$TEST_CONFIG")"
 migrated_dns_mode="$(jq -r '.access.local_dns_mode' "$TEST_CONFIG")"
+migrated_ssh_key_dir="$(jq -r '.paths.ssh_key_dir' "$TEST_CONFIG")"
 
-if [[ "$migrated_profiles" == "all" && "$migrated_services" == "open-webui,gitea" && "$migrated_dns_mode" == "pihole" ]]; then
+if [[ "$migrated_profiles" == "all" && "$migrated_services" == "open-webui,gitea" && "$migrated_dns_mode" == "pihole" && "$migrated_ssh_key_dir" == */.weekendstack/ssh ]]; then
     test_pass
 else
-    test_fail "Unexpected migrated all-profile config: profiles=$migrated_profiles services=$migrated_services dns=$migrated_dns_mode"
+    test_fail "Unexpected migrated all-profile config: profiles=$migrated_profiles services=$migrated_services dns=$migrated_dns_mode ssh=$migrated_ssh_key_dir"
 fi
 
 test_case "add flow merges profiles and services without duplicates"
